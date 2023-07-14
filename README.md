@@ -2,8 +2,8 @@
 An x86 bootloader under construction.
 
 ## Roadmap
-- Bootsector (Done)
-- Protected mode (Done)
+- Bootsector *Done*
+- Protected mode *Done*
 
 - Enabling the A20 line
 - Some way of going to and from real mode
@@ -21,6 +21,7 @@ An x86 bootloader under construction.
 - EFI support?
 - Probably some other filesystem
 - Maybe some sort of standard protocol?
+
 
 ## Disclaimer
 This project has been released under the MIT license. For more information, please
