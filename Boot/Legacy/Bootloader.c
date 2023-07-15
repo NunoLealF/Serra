@@ -61,6 +61,24 @@ void __attribute__((noreturn)) Init(void) {
 
 */
 
+/*
+   In terms of the structure of the memory map:
+
+   00000-00500h: Reserved by BIOS
+   00500-07C00h: Free, but probably used as stack
+   07C00-07E00h: First-stage bootloader and BPB. 16-bit real mode.
+
+   07E00-0C000h: Second-stage bootloader. 32-bit protected mode.
+   0C000-0D000h: Assembly protected mode 'environment'. 32-bit protected mode.
+   0D000-0F000h: Assembly real mode 'environment'. 16-bit real mode.
+   0F000-0FC00h: Empty, but reserved. No idea what to do with this, maybe use as data?
+   0FC00-10000h: Empty, non-reserved. Stack smash protector(?)
+
+   10000-20000h: Current stack. 64KiB in size.
+   20000-?????h: Data, probably.
+
+*/
+
 void __attribute__((noreturn)) Bootloader(void) {
 
   // Just test things out (this is just to see if this is actually working)
