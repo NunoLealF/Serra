@@ -2,12 +2,12 @@
 // This file is part of the Serra project, which is released under the MIT license.
 // For more information, please refer to the accompanying license agreement. <3
 
-#ifndef SERRA_BOOTLOADER_H
-#define SERRA_BOOTLOADER_H
+#ifndef SERRA_MEMORY_H
+#define SERRA_MEMORY_H
 
-  // Declare functions in Bootloader.c
+  // Probably should include something about A20 and E820 here
+  // For now, just A20
 
-  void __attribute__((noreturn)) Init(void);
-  void __attribute__((noreturn)) Bootloader(void);
+  // To-do: Add functions related to A20.
 
 #endif

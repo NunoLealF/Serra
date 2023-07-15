@@ -2,7 +2,10 @@
 // This file is part of the Serra project, which is released under the MIT license.
 // For more information, please refer to the accompanying license agreement. <3
 
+#include "Stdint.h"
+
 #include "Bootloader.h"
+#include "Memory/Memory.h"
 
 #ifndef __i686__
 #error "This code is supposed to be compiled with an i686-elf cross-compiler."
@@ -83,7 +86,7 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   // Just test things out (this is just to see if this is actually working)
 
-  char* testString = "Hi, this is Serra! <3\nJul 14 2023";
+  char* testString = "Hi, this is Serra! <3\nJul 15 2023";
 
   int index = 0;
   int count = 0;
@@ -96,9 +99,9 @@ void __attribute__((noreturn)) Bootloader(void) {
       count++;
       continue;
     }
-    unsigned char color = j & 0x0F;
+    uint8 color = j & 0x0F;
     if (count == 1) color = 0x0F;
-    *(unsigned short*)(0xB8000 + (index*2)) = testString[i] | color << 8;
+    *(uint16*)(0xB8000 + (index*2)) = testString[i] | color << 8;
     index++;
   }
   index = 0; count = 0; // reset

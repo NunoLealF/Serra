@@ -46,20 +46,23 @@ CFLAGS = -std=c11 -ffunction-sections -funsigned-char -ffreestanding -Wall -Wext
 # it skips it (for example, for the target 'example.o', if it sees example.o is already there, it skips compiling it),
 # and this can cause problems for targets that don't output anything. These are called 'phony targets'.
 
-.PHONY: All Allrun Clean Run all allrun clean run
+.PHONY: All Clean Run all clean run
 
 
 # Names ->>
 # (By the way, it's assumed that you're on Linux, or at least some sort of Unix-like system)
 
 All: Clean Legacy/Bootsector.bin Legacy/Bootloader.o Legacy/Bootloader.bin Boot.bin
-Allrun: All Run
 
 Clean:
 	@echo "Cleaning leftover files (*.o, *.elf, *.bin).."
+
 	@-rm -f Legacy/*.o
+	@-rm -f Legacy/Memory/*.o
+
 	@-rm -f Legacy/*.elf
 	@-rm -f Legacy/*.bin
+
 	@-rm -f *.bin
 
 Run:
@@ -69,16 +72,23 @@ Run:
 # Lowercase names
 
 all: All
-allrun: Allrun
 clean: Clean
 run: Run
 
 
 # Files themselves
+# (Legacy/Bootloader)
 
 Legacy/Bootloader.o:
 	@echo "Building $@"
 	@$(CC) $(CFLAGS) -c Legacy/Bootloader.c -o Legacy/Bootloader.o
+
+# (Legacy/Memory)
+
+Legacy/Memory/A20.o:
+	@echo "Building $@"
+	@$(CC) $(CFLAGS) -c Legacy/Memory/A20.c -o Legacy/Memory/A20.o
+
 
 # Link the stages into .bin
 
@@ -86,7 +96,7 @@ Legacy/Bootsector.bin:
 	@echo "Building $@"
 	@$(AS) Legacy/Bootsector.asm -f bin -o Legacy/Bootsector.bin
 
-Legacy/Bootloader.bin: Legacy/Bootloader.o
+Legacy/Bootloader.bin: Legacy/Bootloader.o Legacy/Memory/A20.o
 	@echo "Building $@"
 	@$(CC) $(LDFLAGS) -o Legacy/Bootloader.elf -ffreestanding -nolibc -nostdlib -lgcc $^
 	@objcopy -O binary Legacy/Bootloader.elf Legacy/Bootloader.bin
