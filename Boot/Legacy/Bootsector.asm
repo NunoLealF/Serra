@@ -144,7 +144,16 @@ loadDisk:
 ; After all of that, we just need to do a far jump to 7E00h, setting CS to our code selector
 ; (08h), finally moving to our second-stage bootloader.
 
+; Update/edit: (We'll also try to enable A20 here, before doing anything; not guaranteed to
+; work, but hey, /shrug)
+
 protectedMode:
+
+  ; Try to enable A20 via the int 15h, ax 2401h BIOS interrupt. Not guaranteed to work, but
+  ; it might, so..
+
+  mov ax, 2401h
+  int 15h
 
   ; As we'll be messing with the GDT and enabling protected mode, we'll definitely need to
   ; disable interrupts to prevent things from going south.

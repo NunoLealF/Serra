@@ -74,11 +74,13 @@ void __attribute__((noreturn)) Init(void) {
    07E00-0C000h: Second-stage bootloader. 32-bit protected mode.
    0C000-0D000h: Assembly protected mode 'environment'. 32-bit protected mode.
    0D000-0F000h: Assembly real mode 'environment'. 16-bit real mode.
-   0F000-0FC00h: Empty, but reserved. No idea what to do with this, maybe use as data?
-   0FC00-10000h: Empty, non-reserved. Stack smash protector(?)
+   0F000-0FC00h: Empty, but 'reserved'/'loaded'. No idea what to do with this, maybe use as data?
+   0FC00-0FD00h: Empty, reserved for A20 and generally just important data.
+   0FD00-10000h: Empty, non-reserved. Stack smash protector(?)
 
    10000-20000h: Current stack. 64KiB in size.
-   20000-?????h: Data, probably.
+   20000-80000h: Data, probably.
+   80000-FFFFFh: Reserved!
 
 */
 
@@ -86,14 +88,14 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   // Just test things out (this is just to see if this is actually working)
 
-  char* testString = "Hi, this is Serra! <3\nJul 15 2023";
+  char* testString = "Hi, this is Serra! <3\nAugust 1 2023";
 
   int index = 0;
   int count = 0;
 
   for(;;) {
   for (int j = 0x1; j <= 0x0F; j++) {
-  for (int i = 0; i < 34; i++) {
+  for (int i = 0; i < 35; i++) {
     if (testString[i] == '\n') {
       index = ((index / 80) + 1) * 80;
       count++;
@@ -105,6 +107,13 @@ void __attribute__((noreturn)) Bootloader(void) {
     index++;
   }
   index = 0; count = 0; // reset
+
+  if (CheckA20() == true) {
+    *(uint16*)0xB8140 = 'T' | 0x0A << 8;
+  } else {
+    *(uint16*)0xB8140 = 'F' | 0x0C << 8;
+  }
+
   for (int k = 0; k < 50000000; k++) {
     __asm__("nop"); // this is to pause
   }

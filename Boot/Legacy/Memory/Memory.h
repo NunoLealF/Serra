@@ -10,4 +10,6 @@
 
   // To-do: Add functions related to A20.
 
+  bool CheckA20(void);
+
 #endif
