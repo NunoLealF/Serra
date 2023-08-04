@@ -234,10 +234,9 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   // Things left to do:
 
-  // A - Enable A20 line
-  // B - Create a basic string library
-  // C - Find a way to get -back- into real mode (see https://wiki.osdev.org/Real_Mode)
-  // D - Use the above for E820, and other functions
+  // A - Create a basic string library
+  // B - Find a way to get -back- into real mode (see https://wiki.osdev.org/Real_Mode)
+  // C - Use the above for E820, and other functions
 
   for(;;);
 
