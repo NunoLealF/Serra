@@ -5,11 +5,14 @@
 #ifndef SERRA_MEMORY_H
 #define SERRA_MEMORY_H
 
-  // Probably should include something about A20 and E820 here
-  // For now, just A20
-
-  // To-do: Add functions related to A20.
+  // A20 functions, from A20/A20_C.c and A20/A20_Asm.s.
 
   bool CheckA20(void);
+  void WaitA20(void);
+
+  extern void EnableKbdA20(void);
+  extern void EnableFastA20(void);
+
+  // (Todo: other functions)
 
 #endif

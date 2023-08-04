@@ -13,19 +13,20 @@
 
 /* void __attribute__((noreturn)) Init()
 
-   Inputs: (none)
-   Outputs: (none)
+   Inputs:    (none)
+   Outputs:   (none)
 
-   Initializes the segment registers (in this case, DS, ES, FS, GS, and SS) with the data selector (10h) as
-   set in our GDT, sets the stack location to 20000h (where it'll have 64KiB of space), and then jumps to our
-   Bootloader() function.
+   Initializes the segment registers (in this case, DS, ES, FS, GS, and SS) with the data selector
+   (10h) as set in our GDT, sets the stack location to 20000h (where it'll have 64KiB of space),
+   and then jumps to our Bootloader() function.
 
-   This function is defined by our linker to be at 7E00h in memory, which is where our first-stage bootloader
-   (our MBR) jumps to after loading our second-stage bootloader into memory and enabling protected mode.
+   This function is defined by our linker to be at 7E00h in memory, which is where our first-stage
+   bootloader (our MBR) jumps to after loading our second-stage bootloader into memory and enabling
+   protected mode.
 
-   As this is essentially the first code we execute after enabling protected mode, we need to set up a basic
-   environment for our code - specifically, we need to set up the segment registers (except for CS), and
-   set up a basic stack, which in our case is at 20000h.
+   As this is essentially the first code we execute after enabling protected mode, we need to set
+   up a basic environment for our code - specifically, we need to set up the segment registers
+   (except for CS), and set up a basic stack, which in our case is at 20000h.
 
 */
 
@@ -52,15 +53,54 @@ void __attribute__((noreturn)) Init(void) {
 }
 
 
+/* void __attribute__((noreturn)) Crash()
+
+   Inputs:    uint16 Error - The error code to crash with
+   Outputs:   (None)
+
+   This function simply just crashes the system if needed (for example, if something important
+   isn't present in the system, like the lack of a method to enable the A20 line).
+
+   TODO - This isn't even remotely complete, I don't have string functions or anything yet, so it
+   just resets the system without telling the user anything.
+
+   Also, error codes:
+   0:   (Invalid error code)
+   1:   (Couldn't enable A20)
+   ...: (Undefined error code)
+
+*/
+
+void __attribute__((noreturn)) Crash(uint16 Error) {
+
+  if (Error) {
+      __asm__("nop");
+  } // This is just here to stop GCC from going 'hey you didn't use this'
+
+  // Jump to the x86 reset vector using the null entry in the GDT (which should crash literally
+  // any system)
+
+  __asm__("ljmp $0x00, $0xFFFFFFF0");
+
+  // If doing that somehow *doesn't* reset the system, just halt indefinitely until the user
+  // manually resets the system themselves.
+
+  for(;;) {
+    __asm__("cli; hlt");
+  }
+
+}
+
+
 /* void __attribute__((noreturn)) Bootloader()
 
-   Inputs: (none)
-   Outputs: (none)
+   Inputs:    (none)
+   Outputs:   (none)
 
    This is our second-stage bootloader's main function. We jump here after Init().
 
-   Todo: Write a more concise description. (I feel like this is only really possible after
-   actually finishing this part, lol)
+   Todo: Write a more concise description. (I feel like this is only really possible after actually
+   finishing this part, lol)
 
 */
 
@@ -86,9 +126,81 @@ void __attribute__((noreturn)) Init(void) {
 
 void __attribute__((noreturn)) Bootloader(void) {
 
+  // We've finally made it to our second-stage bootloader. We're in 32-bit x86 protected mode with
+  // the stack at 20000h in memory, and our bootloader between 7E00h and FC00h in memory.
+
+
+  // At the moment, we can only reliably access up to the first MiB of data (from 00000h to FFFFFh).
+  // This is because we haven't yet enabled the A20 line, which is a holdover from the 8086 days.
+
+  // Before having loaded our second-stage bootloader, our bootsector actually tried to enable it
+  // using the BIOS function int 15h, ax 2401h. However, this isn't guaranteed to work on all
+  // systems.
+
+  // Before we try to use any methods to enable the A20 line, we want to check if it's already been
+  // enabled (by the firmware, or by the BIOS function we executed earlier). If so, we want to skip
+  // to the next part of the bootloader.
+
+  bool A20EnabledByDefault = false;
+  bool A20EnabledByKbd = false;
+  bool A20EnabledByFast = false;
+
+  if (CheckA20() == true) {
+
+    // If the output of the CheckA20 function is true, then that means that the A20 line has
+    // already been enabled.
+
+    A20EnabledByDefault = true;
+
+  } else {
+
+    // If the output of the CheckA20 function is false, then that means that the A20 line has not
+    // already been enabled.
+
+    // In this case, we want to try out two methods to enable the A20 line, the first of which
+    // involves the 8042 keyboard controller.
+
+    EnableKbdA20();
+    WaitA20();
+
+    if (CheckA20() == true) {
+
+      A20EnabledByKbd = true;
+
+    } else {
+
+      // If the first method didn't work, there's also a second method that works on some systems
+      // called 'fast A20'.
+      // This may crash the system, but we'll have to reset if we can't enable A20 anyways.
+
+      EnableFastA20();
+      WaitA20();
+
+      if (CheckA20() == true) {
+
+        A20EnabledByFast = true;
+
+      } else {
+
+        // At this point, we've exhausted all of the most common methods for enabling A20 (such
+        // as the aforementioned BIOS interrupt, the 8042 keyboard controller method, and the
+        // fast A20 method.
+
+        // As it's necessary for us to enable the A20 line, we'll need to crash the system /
+        // give out an error code if we get to this point.
+
+        Crash(0x01);
+
+      }
+
+    }
+
+  }
+
+
   // Just test things out (this is just to see if this is actually working)
 
-  char* testString = "Hi, this is Serra! <3\nAugust 1 2023";
+  char* testString = "Hi, this is Serra! <3\nAugust 4 2023";
 
   int index = 0;
   int count = 0;

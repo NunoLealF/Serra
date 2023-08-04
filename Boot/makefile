@@ -12,7 +12,9 @@
 AS = nasm
 CC = i686-elf-gcc
 LD = i686-elf-ld
-OBJ = i686-elf-objcopy
+OBJC = i686-elf-objcopy
+OBJD = i686-elf-objdump
+
 
 
 # Compiler flags:
@@ -46,7 +48,7 @@ CFLAGS = -std=c11 -ffunction-sections -funsigned-char -ffreestanding -Wall -Wext
 # it skips it (for example, for the target 'example.o', if it sees example.o is already there, it skips compiling it),
 # and this can cause problems for targets that don't output anything. These are called 'phony targets'.
 
-.PHONY: All Clean Run all clean run
+.PHONY: All Clean Dump Run RunInt all dump clean run runint
 
 
 # Names ->>
@@ -59,21 +61,31 @@ Clean:
 
 	@-rm -f Legacy/*.o
 	@-rm -f Legacy/Memory/*.o
+	@-rm -f Legacy/Memory/A20/*.o
 
 	@-rm -f Legacy/*.elf
 	@-rm -f Legacy/*.bin
 
 	@-rm -f *.bin
 
+Dump:
+	$(OBJD) -S Legacy/Bootloader.elf
+
 Run:
 	@echo "Launching Qemu.."
 	@qemu-system-i386 -cpu pentium3 -m 128 -drive file=Boot.bin,format=raw
+
+RunInt:
+	@echo "Launching Qemu with -d int.."
+	@qemu-system-i386 -cpu pentium3 -m 128 -drive file=Boot.bin,format=raw -d int
 
 # Lowercase names
 
 all: All
 clean: Clean
+dump: Dump
 run: Run
+runint: RunInt
 
 
 # Files themselves
@@ -84,10 +96,15 @@ Legacy/Bootloader.o:
 	@$(CC) $(CFLAGS) -c Legacy/Bootloader.c -o Legacy/Bootloader.o
 
 # (Legacy/Memory)
+# (Legacy/Memory/A20)
 
-Legacy/Memory/A20.o:
+Legacy/Memory/A20/A20_C.o:
 	@echo "Building $@"
-	@$(CC) $(CFLAGS) -c Legacy/Memory/A20.c -o Legacy/Memory/A20.o
+	@$(CC) $(CFLAGS) -c Legacy/Memory/A20/A20_C.c -o Legacy/Memory/A20/A20_C.o
+
+Legacy/Memory/A20/A20_Asm.o:
+	@echo "Building $@"
+	@$(CC) $(CFLAGS) -c Legacy/Memory/A20/A20_Asm.s -o Legacy/Memory/A20/A20_Asm.o
 
 
 # Link the stages into .bin
@@ -96,10 +113,10 @@ Legacy/Bootsector.bin:
 	@echo "Building $@"
 	@$(AS) Legacy/Bootsector.asm -f bin -o Legacy/Bootsector.bin
 
-Legacy/Bootloader.bin: Legacy/Bootloader.o Legacy/Memory/A20.o
+Legacy/Bootloader.bin: Legacy/Bootloader.o Legacy/Memory/A20/A20_C.o Legacy/Memory/A20/A20_Asm.o
 	@echo "Building $@"
 	@$(CC) $(LDFLAGS) -o Legacy/Bootloader.elf -ffreestanding -nolibc -nostdlib -lgcc $^
-	@objcopy -O binary Legacy/Bootloader.elf Legacy/Bootloader.bin
+	@$(OBJC) -O binary Legacy/Bootloader.elf Legacy/Bootloader.bin
 
 # Mix the two together (64 sectors, so 32KiB img)
 

@@ -5,7 +5,7 @@ An x86 bootloader under construction.
 - Bootsector **Done**
 - Protected mode **Done**
 
-- Enabling the A20 line *In progress*
+- Enabling the A20 line **Done**
 - Some way of going to and from real mode
 - E820 / memory map
 - CPUID
