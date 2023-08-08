@@ -2,7 +2,7 @@
 ; This file is part of the Serra project, which is released under the MIT license.
 ; For more information, please refer to the accompanying license agreement. <3
 
-[ORG 7C00h] ; We are at 7C00h.
+[ORG 07C00h] ; We are at 7C00h.
 [BITS 16] ; This is 16-bit code.
 
 

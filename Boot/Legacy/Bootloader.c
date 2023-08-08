@@ -6,6 +6,7 @@
 
 #include "Bootloader.h"
 #include "Memory/Memory.h"
+#include "Rm/Rm.h"
 
 #ifndef __i686__
 #error "This code is supposed to be compiled with an i686-elf cross-compiler."
@@ -108,12 +109,13 @@ void __attribute__((noreturn)) Crash(uint16 Error) {
    In terms of the structure of the memory map:
 
    00000-00500h: Reserved by BIOS
-   00500-07C00h: Free, but probably used as stack
+   00500-07C00h: Free, but used as stack in real-mode
    07C00-07E00h: First-stage bootloader and BPB. 16-bit real mode.
 
    07E00-0C000h: Second-stage bootloader. 32-bit protected mode.
    0C000-0D000h: Assembly protected mode 'environment'. 32-bit protected mode.
-   0D000-0F000h: Assembly real mode 'environment'. 16-bit real mode.
+   0D000-0E000h: Assembly real mode 'environment'. 16-bit real mode.
+   0E000-0F000h: Data for the above.
    0F000-0FC00h: Empty, but 'reserved'/'loaded'. No idea what to do with this, maybe use as data?
    0FC00-0FD00h: Empty, reserved for A20 and generally just important data.
    0FD00-10000h: Empty, non-reserved. Stack smash protector(?)
@@ -197,10 +199,14 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   }
 
+  // Test real mode
+
+  realMode();
+
 
   // Just test things out (this is just to see if this is actually working)
 
-  char* testString = "Hi, this is Serra! <3\nAugust 4 2023";
+  char* testString = "Hi, this is Serra! <3\nAugust 8 2023";
 
   int index = 0;
   int count = 0;
