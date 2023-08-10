@@ -124,14 +124,17 @@ setupRealMode:
   mov bh, 0
   mov bl, 07h
 
-  int 10h
+  ; Test
+  mov cl, 'R'
+  mov ch, 'm'
 
+  int 10h
 
   ; Export data back to the realModeRegisters struct at CE00h
 
   push bp
-  mov bp, 0CE00h
 
+  mov bp, 0CE00h
   mov [bp], eax
   mov [bp+4], ebx
   mov [bp+8], ecx
@@ -140,12 +143,13 @@ setupRealMode:
   mov [bp+18], di
 
   pop bp
-  mov ax, bp
-  mov [bp+20], ax
+
+  mov si, 0CE00h
+  mov [si+20], bp
 
   pushfd
   pop eax
-  mov [bp+22], eax
+  mov [si+22], eax
 
   ; Go back to protected mode
 
