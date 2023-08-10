@@ -7,6 +7,8 @@
 
 ; Start of our program pretty much
 
+extern realModeRegisters
+
 ; - [Preparations]
 ; - Prepare a 16-bit real mode 'payload' (ideally at 0D00-0F00h)
 ; - Prepare a suitable 16-bit real mode GDT and IDT
@@ -100,19 +102,52 @@ initRealMode:
 
 setupRealMode:
 
+  ; Import data from the realModeRegisters struct at CE00h
+
+  mov bp, 0CE00h
+
+  mov eax, [bp]
+  mov ebx, [bp+4]
+  mov ecx, [bp+8]
+  mov edx, [bp+12]
+  mov si, [bp+16]
+  mov di, [bp+18]
+  mov bp, [bp+20]
+
+
   ; Test (this should display a <3 on the screen)
 
   sti
 
-  mov ah, 0Eh
-  mov al, '<'
+  ;mov ah, 0Eh
+  ;mov al, '<'
   mov bh, 0
   mov bl, 07h
 
   int 10h
 
-  mov al, '3'
-  int 10h
+
+  ; Export data back to the realModeRegisters struct at CE00h
+
+  push bp
+  mov bp, 0CE00h
+
+  mov [bp], eax
+  mov [bp+4], ebx
+  mov [bp+8], ecx
+  mov [bp+12], edx
+  mov [bp+16], si
+  mov [bp+18], di
+
+  pop bp
+  mov ax, bp
+  mov [bp+20], ax
+
+  pushfd
+  pop eax
+  mov [bp+22], eax
+
+  ; Go back to protected mode
 
   jmp prepareProtectedMode16
 
@@ -174,7 +209,6 @@ prepareProtectedMode32:
 
 saveStack: dd 0
 
-
 ; -----------------------------------
 
 ; 16-bit real and protected mode GDT descriptor.
@@ -222,7 +256,6 @@ realModeIdtDescriptor:
   dw (400h - 1) ; The real-mode IDT is pretty much always 400h bytes long.
   dd 0 ; It's also usually at the very start of memory (0h).
 
-
 ; -----------------------------------
 
 ; 32-bit protected mode GDT descriptor.
@@ -267,6 +300,6 @@ protectedModeGdt:
 ; -----------------------------------
 
 ; This tells our assembler that we want the rest of our program (essentially any areas that haven't
-; been used) to be filled with zeroes, up to the 1000h (4096th) byte.
+; been used) to be filled with zeroes, up to the E00h (3584th) byte.
 
-times 1000h-($-$$) db 0
+times 0E00h-($-$$) db 0

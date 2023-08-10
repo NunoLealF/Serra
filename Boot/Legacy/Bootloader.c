@@ -201,6 +201,10 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   // Test real mode
 
+  loadRegisters(0x00000E00 + '<', 0, 0, 0, 0, 0, 0);
+  realMode();
+
+  loadRegisters(0x00000E00 + '3', 0, 0, 0, 0, 0, 0);
   realMode();
 
 

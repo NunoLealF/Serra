@@ -74,6 +74,9 @@ Clean:
 Dump:
 	$(OBJD) -S Legacy/Bootloader.elf
 
+Dumpbin:
+	$(OBJD) -Mintel,i386 -b binary -m i386 --adjust-vma=0x7C00 -D Boot.bin
+
 Run:
 	@echo "Launching Qemu.."
 	@qemu-system-i386 -cpu pentium3 -m 128 -drive file=Boot.bin,format=raw
@@ -87,6 +90,7 @@ RunInt:
 all: All
 clean: Clean
 dump: Dump
+dumpbin: Dumpbin
 run: Run
 runint: RunInt
 
@@ -138,4 +142,4 @@ Boot.bin: Legacy/Bootsector.bin Legacy/Bootloader.bin Legacy/Rm/Rm.bin
 	@dd if=/dev/zero of=Boot.bin bs=512 count=64 status=none
 	@dd if=Legacy/Bootsector.bin of=Boot.bin conv=notrunc bs=512 count=1 status=none
 	@dd if=Legacy/Bootloader.bin of=Boot.bin conv=notrunc bs=512 count=32 seek=1 status=none
-	@dd if=Legacy/Rm/Rm.bin of=Boot.bin conv=notrunc bs=512 count=8 seek=34 status=none
+	@dd if=Legacy/Rm/Rm.bin of=Boot.bin conv=notrunc bs=512 count=7 seek=34 status=none

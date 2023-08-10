@@ -13,32 +13,48 @@ void realMode(void) {
 
 }
 
-// C000-C800: Protected -> real mode code
-// C800-D000: Real -> protected mode code
-// D000-DE00: Real mode payload
-// DE00-E000: Data
-
 // (This is supposed to be stored and then later on read by the real-mode code btw.)
-// (Probably should allocate it at like, DF00 tbh)
-// You want a function that 'initializes' this I think, DF00 would be the best area imo.
+// (Allocate at CE00)
 
-// Right now, this is 36 bytes long
-// Also, it's a typedef, so you have to declare like a new struct at DF00
+// Right now, this is 22 bytes long
+// Also, it's a typedef, so you have to declare like a new struct at CE00
+
+// This is input and output, so we can read eflags later
 
 typedef struct {
+
+  // General purpose registers
 
   uint32 Eax;
   uint32 Ebx;
   uint32 Ecx;
   uint32 Edx;
 
-  uint32 Esi;
-  uint32 Edi;
-  uint32 Ebp;
+  // Increment/decrement registers
 
-  uint16 Ds;
-  uint16 Es;
-  uint16 Fs;
-  uint16 Gs;
+  uint16 Si;
+  uint16 Di;
+  uint16 Bp;
+
+  // Eflags (output only)
+
+  uint32 Eflags;
 
 } __attribute__((packed)) realModeRegisters;
+
+// Function
+
+void loadRegisters(uint32 Eax, uint32 Ebx, uint32 Ecx, uint32 Edx, uint16 Si, uint16 Di, uint16 Bp) {
+
+  realModeRegisters* Table = (void*)0xCE00;
+
+  Table->Eax = Eax;
+  Table->Ebx = Ebx;
+  Table->Ecx = Ecx;
+  Table->Edx = Edx;
+
+  Table->Si = Si;
+  Table->Di = Di;
+  Table->Bp = Bp;
+
+}

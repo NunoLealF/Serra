@@ -5,9 +5,10 @@
 #ifndef SERRA_RM_H_
 #define SERRA_RM_H
 
-  // Real mode functions.
-  // Todo: implement them lol
+  // Real mode functions
 
   void realMode(void);
+  void loadRegisters(uint32 Eax, uint32 Ebx, uint32 Ecx, uint32 Edx, uint16 Si, uint16 Di, uint16 Bp);
+
 
 #endif
