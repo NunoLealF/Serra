@@ -120,10 +120,6 @@ Legacy/Rm/Rm.bin:
 	@echo "Building $@"
 	@$(AS) Legacy/Rm/Rm.asm -f bin -o Legacy/Rm/Rm.bin
 
-Legacy/Rm/RmEntry.bin:
-	@echo "Building $@"
-	@$(AS) Legacy/Rm/RmEntry.asm -f bin -o Legacy/Rm/RmEntry.bin
-
 Legacy/Rm/RmWrapper.o:
 	@echo "Building $@"
 	@$(CC) $(CFLAGS) -c Legacy/Rm/RmWrapper.c -o Legacy/Rm/RmWrapper.o
@@ -137,10 +133,9 @@ Legacy/Bootloader.bin: Legacy/Bootloader.o Legacy/Memory/A20/A20_C.o Legacy/Memo
 
 # Mix all of the different stages together (64 sectors, so 32KiB img)
 
-Boot.bin: Legacy/Bootsector.bin Legacy/Bootloader.bin Legacy/Rm/Rm.bin Legacy/Rm/RmEntry.bin
+Boot.bin: Legacy/Bootsector.bin Legacy/Bootloader.bin Legacy/Rm/Rm.bin
 	@echo "Building $@"
 	@dd if=/dev/zero of=Boot.bin bs=512 count=64 status=none
 	@dd if=Legacy/Bootsector.bin of=Boot.bin conv=notrunc bs=512 count=1 status=none
 	@dd if=Legacy/Bootloader.bin of=Boot.bin conv=notrunc bs=512 count=32 seek=1 status=none
-	@dd if=Legacy/Rm/RmEntry.bin of=Boot.bin conv=notrunc bs=512 count=8 seek=34 status=none
-	@dd if=Legacy/Rm/Rm.bin of=Boot.bin conv=notrunc bs=512 count=8 seek=42 status=none
+	@dd if=Legacy/Rm/Rm.bin of=Boot.bin conv=notrunc bs=512 count=8 seek=34 status=none
