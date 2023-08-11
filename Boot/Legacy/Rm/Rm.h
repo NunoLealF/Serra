@@ -36,6 +36,33 @@
 
   } __attribute__((packed)) realModeTable;
 
+  // Check for a specific flag in realModeTable->Eflags.
+
+  #define hasFlag(cpuFlags, checkFlag) (cpuFlags & checkFlag)
+
+  // Regular CPU flags - most of these are present on the 8086/286.
+
+  #define carryFlag (1 << 0)
+  #define parityFlag (1 << 2)
+  #define auxCarryFlag (1 << 4)
+  #define zeroFlag (1 << 6)
+  #define signFlag (1 << 7)
+  #define trapFlag (1 << 8)
+  #define interruptFlag (1 << 9)
+  #define directionFlag (1 << 10)
+  #define overflowFlag (1 << 11)
+  #define ioPrivilegeFlag (1 << 12)
+  #define nestedFlag (1 << 14)
+
+  // Extended CPU flags (eflags) - most of these are present on the 386/486.
+
+  #define resumeFlag (1 << 16)
+  #define virtual86Flag (1 << 17)
+  #define alignFlag (1 << 18)
+  #define virtualInterruptFlag (1 << 19)
+  #define virtualInterruptPendingFlag (1 << 20)
+  #define cpuidFlag (1 << 21)
+
   // Real mode functions.
 
   void realMode(void);
