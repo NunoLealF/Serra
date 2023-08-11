@@ -60,14 +60,19 @@ Clean:
 	@echo "Cleaning leftover files (*.o, *.elf, *.bin).."
 
 	@-rm -f Legacy/*.o
+	@-rm -f Legacy/*.elf
+	@-rm -f Legacy/*.bin
+
 	@-rm -f Legacy/Memory/*.o
 	@-rm -f Legacy/Memory/A20/*.o
-
+	@-rm -f Legacy/Memory/Mmap/*.o
+	
 	@-rm -f Legacy/Rm/*.o
 	@-rm -f Legacy/Rm/*.bin
 
-	@-rm -f Legacy/*.elf
-	@-rm -f Legacy/*.bin
+	@-rm -f Efi/*.o
+	@-rm -f Efi/*.elf
+	@-rm -f Efi/*.bin
 
 	@-rm -f *.bin
 
@@ -108,6 +113,11 @@ Legacy/Bootloader.o:
 	@$(CC) $(CFLAGS) -c Legacy/Bootloader.c -o Legacy/Bootloader.o
 
 # (Legacy/Memory)
+
+Legacy/Memory/Memory.o:
+	@echo "Building $@"
+	@$(CC) $(CFLAGS) -c Legacy/Memory/Memory.c -o Legacy/Memory/Memory.o
+
 # (Legacy/Memory/A20)
 
 Legacy/Memory/A20/A20_C.o:
@@ -117,6 +127,12 @@ Legacy/Memory/A20/A20_C.o:
 Legacy/Memory/A20/A20_Asm.o:
 	@echo "Building $@"
 	@$(CC) $(CFLAGS) -c Legacy/Memory/A20/A20_Asm.s -o Legacy/Memory/A20/A20_Asm.o
+
+# (Legacy/Memory/Mmap)
+
+Legacy/Memory/Mmap/Mmap.o:
+	@echo "Building $@"
+	@$(CC) $(CFLAGS) -c Legacy/Memory/Mmap/Mmap.c -o Legacy/Memory/Mmap/Mmap.o
 
 # (Legacy/Rm)
 
@@ -130,7 +146,7 @@ Legacy/Rm/RmWrapper.o:
 
 # Link the stages into .bin
 
-Legacy/Bootloader.bin: Legacy/Bootloader.o Legacy/Memory/A20/A20_C.o Legacy/Memory/A20/A20_Asm.o Legacy/Rm/RmWrapper.o
+Legacy/Bootloader.bin: Legacy/Bootloader.o Legacy/Memory/Memory.o Legacy/Memory/A20/A20_C.o Legacy/Memory/A20/A20_Asm.o Legacy/Memory/Mmap/Mmap.o Legacy/Rm/RmWrapper.o
 	@echo "Building $@"
 	@$(CC) $(LDFLAGS) -o Legacy/Bootloader.elf -ffreestanding -nolibc -nostdlib -lgcc $^
 	@$(OBJC) -O binary Legacy/Bootloader.elf Legacy/Bootloader.bin
