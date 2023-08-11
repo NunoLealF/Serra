@@ -135,7 +135,7 @@ Legacy/Bootloader.bin: Legacy/Bootloader.o Legacy/Memory/A20/A20_C.o Legacy/Memo
 	@$(CC) $(LDFLAGS) -o Legacy/Bootloader.elf -ffreestanding -nolibc -nostdlib -lgcc $^
 	@$(OBJC) -O binary Legacy/Bootloader.elf Legacy/Bootloader.bin
 
-# Mix all of the different stages together (64 sectors, so 32KiB img)
+# Mix all of the different stages together (128 sectors, so 64KiB img)
 
 Boot.bin: Legacy/Bootsector.bin Legacy/Bootloader.bin Legacy/Rm/Rm.bin
 	@echo "Building $@"

@@ -5,23 +5,29 @@
 [ORG 0C000h] ; We are at C000h.
 [BITS 32] ; This is 32-bit code.. for now.
 
-; Start of our program pretty much
-
-extern realModeRegisters
-
-; - [Preparations]
-; - Prepare a 16-bit real mode 'payload' (ideally at 0D00-0F00h)
-; - Prepare a suitable 16-bit real mode GDT and IDT
-; - Prepare a suitable 32-bit protected mode GDT
-; - Prepare some sort of data area to tell the payload what to do
-
-; - [Process]
-; - https://xem.github.io/minix86/manual/intel-x86-and-64-manual-vol3/o_fe12b1e2a880e0ce-326.html
-; - (Essentially, disable interrupts, go into 16 bit protected mode, switch from protected to real
-; - mode, execute your payload, and do the reverse of that)
-
-; ...
-; ...
+; void prepareRealMode32()
+;
+; Inputs: (None)
+; Outputs: (None)
+;
+; This is the beginning of our 'program' that's called by realMode() - it's right at C000h, and
+; it's the code that's called by the realMode() function in RmWrapper.c.
+;
+; Right now, we're in 32-bit protected mode, like the rest of our 2nd stage bootloader. The
+; purpose of this function is to prepare to downgrade ourselves to 16-bit protected mode, and so,
+; we do the following:
+;
+; - Disable interrupts (to keep them from crashing the system)
+;
+; - Push all registers (and the flags) to the stack, to keep them from becoming affected by the
+; rest of our code
+;
+; - Save our current stack pointer in the saveStack label, so we can preserve our stack
+;
+; - Load a 16-bit GDT (General Descriptor Table) suitable for real mode
+;
+; - Execute a far jump (setting CS to our code selector, 08h) to the next stage
+;
 
 prepareRealMode32:
 
@@ -30,27 +36,55 @@ prepareRealMode32:
 
   cli
 
-  ; Save ESP (stack pointer)
+  ; Push all registers (and the flags) to the stack
+
+  pushfd
+  pushad
+
+  ; Save our current ESP (stack pointer) in the saveStack label, to be retrieved later.
 
   mov [saveStack], esp
 
-  ; Load 16-bit GDT
+  ; Load our 16-bit GDT
 
   lgdt [realModeGdtDescriptor]
 
-  ; Far jump to 16-bit protected mode (setting cs to our code selector, 08h)
+  ; Far jump to 16-bit protected mode (setting CS to our code selector, 08h)
 
   jmp 08h:prepareRealMode16
 
 
-; ...
-; ...
+; void prepareRealMode16()
+;
+; Inputs: (None)
+; Outputs: (None)
+;
+; We're now in 16-bit mode, but we're not in real mode yet - there are a couple things we need to
+; do before jumping to our real mode payload.
+;
+; Unlike switching from real to protected mode, switching from protected to real mode involves an
+; intermediate step where we're still executing 16-bit instructions, but in protected mode.
+;
+; This is because there are a few steps that need to be taken in 16-bit mode before switching to
+; real mode. In this function, we:
+;
+; - Initialize the segment registers with our code (08h) and data (10h) selectors respectively
+;
+; - Load the 16-bit real mode IDT/IVT
+;
+; - Disable protected mode by clearing the first bit of CR0
+;
+; - Execute another far jump, this time to our 16-bit real mode code.
+;
+; Also, we tell our assembler that we're executing 16-bit code with [BITS 16], since we're now
+; in 16-bit protected mode. This will also extend to our 16-bit real mode code.
+;
 
 [BITS 16]
 
 prepareRealMode16:
 
-  ; Load ds-ss with our new GDT's data segment.
+  ; Load our (non-code) segment registers with our new GDT's data selector (10h).
 
   mov ax, 10h
   mov ds, ax
@@ -69,40 +103,77 @@ prepareRealMode16:
   and eax, 0FFFFFFFEh
   mov cr0, eax
 
-  ; Far jump to our real mode code
+  ; Far jump to our 16-bit real mode code.
+  ; As segment registers don't matter the way they do in protected mode, we set CS to 00h
 
   jmp 00h:initRealMode
 
 
-; ...
-; ...
+; void initRealMode()
+;
+; Inputs: (None)
+; Outputs: (None)
+;
+; We've finally made to a 16-bit real mode environment. Hooray! (This is legitimately hard lol)
+;
+; There are a few things we still need to do though; namely, we still need to reset the rest of
+; our segment registers to 0 (they don't work the same way in real mode as they do in protected
+; mode), and we also need to set up the stack.
+;
+; Because of how real mode addressing works, it's genuinely just much more convenient to set the
+; stack to a location below FFFFh; we have our protected mode stack pointer (ESP) already saved
+; in [saveStack], so we shouldn't need to worry about that.
+;
 
 initRealMode:
 
-  ; Just in case
+  ; Reset our (non-code) segment registers to 00h - don't worry, this works differently in real
+  ; mode, we're not actually setting them to our GDT's null selector lol.
 
-  cli
-
-  ; Reset segment registers to 0 (for some reason real mode's like that)
-
-  mov ax, 0
+  mov ax, 00h
   mov ds, ax
   mov es, ax
   mov fs, ax
   mov gs, ax
   mov ss, ax
 
-  ; Set stack to 7C00h
+  ; Set our stack pointer to 7C00h. Our protected mode stack pointer has been saved, so no
+  ; worries.
 
   mov sp, 7C00h
 
+  ; Jump to our real mode payload.
 
-; ...
-; ...
+  jmp realModePayload
 
-setupRealMode:
 
-  ; Import data from the realModeRegisters struct at CE00h
+; void realModePayload()
+;
+; Inputs: (None)
+; Outputs: (None)
+;
+; This is our real mode payload. Right now, we're in 16-bit real mode, and we have all of the
+; regular BIOS interrupts available to us. This is a pretty similar environment to what we have
+; with our bootsector.
+;
+; We essentially do three things in this stage:
+;
+; - First, we import data from the realModeRegisters struct at CE00h (the value of the data at
+; realModeRegisters->Eax is saved in eax, etc.)
+;
+; - Second, we disable the carry flag, enable interrupts, and execute the interrupt given in
+; realModeRegisters->Int (which is at bp+26)
+;
+; - Third, we export data back to the realModeRegisters struct at CE00h (including eflags), and
+; then jump to the next stage (prepareProtectedMode16), which restores protected mode.
+;
+
+realModePayload:
+
+  ; Import data from the realModeRegisters struct at CE00h.
+
+  ; It's defined using __attribute__((packed)), so there's no padding between different values,
+  ; and we know exactly where each field/attribute is located.
 
   mov bp, 0CE00h
 
@@ -112,25 +183,42 @@ setupRealMode:
   mov edx, [bp+12]
   mov si, [bp+16]
   mov di, [bp+18]
+
+  push ax
+  mov al, [bp+26]
+  mov [saveInt], al
+  pop ax
+
   mov bp, [bp+20]
 
+  ; Disable the carry flag, and enable interrupts. We've loaded the real mode IVT (located
+  ; between 0 and 400h), so we can safely do this.
 
-  ; Test (this should display a <3 on the screen)
-
+  clc
   sti
 
-  ;mov ah, 0Eh
-  ;mov al, '<'
-  mov bh, 0
-  mov bl, 07h
+  ; Actually execute the given interrupt (stored in saveInt).
 
-  ; Test
-  mov cl, 'R'
-  mov ch, 'm'
+  ; We have to do something that's a little hacky. The 'int' instruction only takes immediate
+  ; operands (like int 10h, int 3Fh, etc.), *not* memory locations (like int [saveInt]), or
+  ; registers (like int [al]).
 
-  int 10h
+  ; Because we don't know what interrupt number we're going to call here until after compilation,
+  ; we instead just manually emit the opcode for int, and then tell the code at the beginning of
+  ; this function (which reads realModeRegisters->Int) that the saveInt label is located right
+  ; after the int opcode, so that it calls the interrupt number we want it to.
 
-  ; Export data back to the realModeRegisters struct at CE00h
+  ; As an example - imagine you want to execute int 13h. You'd set realModeRegisters->Int to 13h,
+  ; and then the previous code would write 13h to the saveInt label, which is right after CDh (the
+  ; opcode for int), therefore resulting in CD 13h (int 13h).
+
+  db 0CDh
+  saveInt: db 0h
+
+  ; Export data back to the realModeRegisters struct at CE00h, including eflags.
+
+  ; It's defined using __attribute__((packed)), so there's no padding between different values,
+  ; and we know exactly where each field/attribute is located.
 
   push bp
 
@@ -147,40 +235,82 @@ setupRealMode:
   mov si, 0CE00h
   mov [si+20], bp
 
+  ; Use pushfd to also write the value of eflags to the struct. This is important, since it lets
+  ; us check whether certain flags (like the carry flag / CF) are set later on.
+
   pushfd
   pop eax
   mov [si+22], eax
 
-  ; Go back to protected mode
+  ; Jump to the stage that prepares us to go back to protected mode.
 
   jmp prepareProtectedMode16
 
-; ...
-; ...
+
+; void prepareProtectedMode16()
+;
+; Inputs: (None)
+; Outputs: (None)
+;
+; This section of the code prepares us to jump back into protected mode. We need to do this in
+; two stages:
+;
+; - One in 16-bit real mode (which prepares the system for, and jumps to protected mode);
+;
+; - And another in 32-bit protected mode (which just sets up the 32-bit protected mode
+; environment, letting us go back to our 2nd stage bootloader).
+;
+; This function represents the first stage of the process. We essentially just disable interrupts,
+; load our 32-bit protected mode GDT (which is a copy of the one in Bootsector.asm), and then
+; set the first bit of the CR0 register to actually enable protected mode.
+;
 
 prepareProtectedMode16:
 
-  ; Disable interrupts
+  ; Disable interrupts; these can interfere with the process and cause the system to crash.
 
   cli
 
-  ; Load protected mode GDT
+  ; Load our 32-bit protected mode GDT.
 
   lgdt [protectedModeGdtDescriptor]
 
-  ; Enable protected mode
+  ; Enable protected mode by setting the first bit of the CR0 register.
 
   mov eax, cr0
   or eax, 1
   mov cr0, eax
 
-  ; Far jump
+  ; Do a far jump to the next stage (which is already in 32-bit protected mode), setting CS to
+  ; our GDT's code selector (08h).
 
   jmp 08h:prepareProtectedMode32
 
 
-; ...
-; ...
+; void prepareProtectedMode32()
+;
+; Inputs: (None)
+; Outputs: (None)
+;
+; We're finally back in 32-bit protected mode. There are a few things we need to do before we can
+; return to our 2nd stage bootloader though:
+;
+; - First, we need to set up the rest of the segment registers (DS, ES, FS, GS and SS) with our
+; GDT's data selector (10h).
+;
+; - Second, we need to restore our stack pointer. We initially saved it at [saveStack] back in the
+; prepareRealMode32 function, and we'll need to restore it so we can carry on normally.
+;
+; - Third, we need to pop the registers (and the flags) we initially pushed onto the stack in the
+; aforementioned function, as to restore the system state.
+;
+; - Finally, after all of this, we can just execute the ret instruction to return back to our
+; 2nd stage bootloader. Right now, the stack is in the same state as it was when we called the
+; realMode() function in RmWrapper.c, so it's safe to do this.
+;
+; Also, we tell our assembler that we're executing 32-bit code again with [BITS 32], since we're
+; now back in 32-bit protected mode.
+;
 
 [BITS 32]
 
@@ -196,11 +326,18 @@ prepareProtectedMode32:
   mov gs, eax
   mov ss, eax
 
-  ; Restore ESP
+  ; Restore our protected mode stack pointer, which was saved in [saveStack]
 
   mov esp, [saveStack]
 
-  ; Return (because of the C calling convention, everything else should be saved)
+  ; Restore all registers (and the flags), to restore the state we initially had when we called
+  ; realMode() (and subsequently, the prepareRealMode32 function/label)
+
+  popfd
+  popad
+
+  ; Return with the ret instruction. Because of the C calling convention, this shouldn't be
+  ; an issue.
 
   ret
 
@@ -214,6 +351,7 @@ prepareProtectedMode32:
 saveStack: dd 0
 
 ; -----------------------------------
+
 
 ; 16-bit real and protected mode GDT descriptor.
 

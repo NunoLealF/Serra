@@ -6,7 +6,7 @@ An x86 bootloader under construction.
 - Protected mode **Done**
 
 - Enabling the A20 line **Done**
-- Some way of going to and from real mode *In progress (almost complete)*
+- Some way of going to and from real mode **Done**
 - E820 / memory map
 - CPUID
 - VESA

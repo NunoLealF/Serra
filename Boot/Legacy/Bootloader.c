@@ -199,25 +199,41 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   }
 
-  // Test real mode
-
-  loadRegisters(0x00000E00 + '<', 0, 0, 0, 0, 0, 0);
-  realMode();
-
-  loadRegisters(0x00000E00 + '3', 0, 0, 0, 0, 0, 0);
-  realMode();
-
-
   // Just test things out (this is just to see if this is actually working)
 
-  char* testString = "Hi, this is Serra! <3\nAugust 8 2023";
+  char* testString = "Hi, this is Serra! <3\nAugust 11 2023";
+
+  // Test real mode
+
+
+  realModeTable* Table = initializeRealModeTable();
+
+  Table->Eax = 0x0013;
+  Table->Int = 0x10;
+
+  realMode();
+
+  Table->Eax = 0x0C0B;
+  Table->Ebx = 0;
+  Table->Ecx = 160;
+  Table->Edx = 100;
+
+  realMode();
+  
+
+  // this should display eflags
+
+  // testString[0] = (*(uint8*)(0xCE19)) + 0x30;
+  // testString[1] = (*(uint8*)(0xCE18)) + 0x30;
+  // testString[2] = (*(uint8*)(0xCE17)) + 0x30;
+  // testString[3] = (*(uint8*)(0xCE16)) + 0x30;
 
   int index = 0;
   int count = 0;
 
   for(;;) {
   for (int j = 0x1; j <= 0x0F; j++) {
-  for (int i = 0; i < 35; i++) {
+  for (int i = 0; i < 36; i++) {
     if (testString[i] == '\n') {
       index = ((index / 80) + 1) * 80;
       count++;
