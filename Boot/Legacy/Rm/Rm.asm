@@ -333,8 +333,8 @@ prepareProtectedMode32:
   ; Restore all registers (and the flags), to restore the state we initially had when we called
   ; realMode() (and subsequently, the prepareRealMode32 function/label)
 
-  popfd
   popad
+  popfd
 
   ; Return with the ret instruction. Because of the C calling convention, this shouldn't be
   ; an issue.
