@@ -158,19 +158,19 @@ initRealMode:
 ;
 ; We essentially do three things in this stage:
 ;
-; - First, we import data from the realModeRegisters struct at CE00h (the value of the data at
-; realModeRegisters->Eax is saved in eax, etc.)
+; - First, we import data from the realModeTable struct at CE00h (the value of the data at
+; realModeTable->Eax is saved in eax, etc.)
 ;
 ; - Second, we disable the carry flag, enable interrupts, and execute the interrupt given in
-; realModeRegisters->Int (which is at bp+26)
+; realModeTable->Int (which is at bp+26)
 ;
-; - Third, we export data back to the realModeRegisters struct at CE00h (including eflags), and
+; - Third, we export data back to the realModeTable struct at CE00h (including eflags), and
 ; then jump to the next stage (prepareProtectedMode16), which restores protected mode.
 ;
 
 realModePayload:
 
-  ; Import data from the realModeRegisters struct at CE00h.
+  ; Import data from the realModeTable struct at CE00h.
 
   ; It's defined using __attribute__((packed)), so there's no padding between different values,
   ; and we know exactly where each field/attribute is located.
@@ -205,17 +205,17 @@ realModePayload:
 
   ; Because we don't know what interrupt number we're going to call here until after compilation,
   ; we instead just manually emit the opcode for int, and then tell the code at the beginning of
-  ; this function (which reads realModeRegisters->Int) that the saveInt label is located right
+  ; this function (which reads realModeTable->Int) that the saveInt label is located right
   ; after the int opcode, so that it calls the interrupt number we want it to.
 
-  ; As an example - imagine you want to execute int 13h. You'd set realModeRegisters->Int to 13h,
+  ; As an example - imagine you want to execute int 13h. You'd set realModeTable->Int to 13h,
   ; and then the previous code would write 13h to the saveInt label, which is right after CDh (the
   ; opcode for int), therefore resulting in CD 13h (int 13h).
 
   db 0CDh
   saveInt: db 0h
 
-  ; Export data back to the realModeRegisters struct at CE00h, including eflags.
+  ; Export data back to the realModeTable struct at CE00h, including eflags.
 
   ; It's defined using __attribute__((packed)), so there's no padding between different values,
   ; and we know exactly where each field/attribute is located.
