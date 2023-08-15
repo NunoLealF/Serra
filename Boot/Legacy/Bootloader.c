@@ -201,12 +201,16 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   // Just test things out (this is just to see if this is actually working)
 
-  char* testString = "Hi, this is Serra! <3\nAugust 11 2023";
+  char* testString = "Hi, this is Serra! <3\nAugust 15 2023";
+
+  // Test memset
+  // Memset(0xB8000, 0x00, 4000);
 
   // Test real mode
 
+  // realModeTable* Table = initializeRealModeTable();
 
-  realModeTable* Table = initializeRealModeTable();
+  /*
 
   Table->Eax = 0x0013;
   Table->Int = 0x10;
@@ -217,9 +221,9 @@ void __attribute__((noreturn)) Bootloader(void) {
   Table->Ebx = 0;
   Table->Ecx = 160;
   Table->Edx = 100;
+  */
 
-  realMode();
-  
+  // realMode();
 
   // this should display eflags
 
