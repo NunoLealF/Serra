@@ -7,7 +7,7 @@ An x86 bootloader under construction.
 
 - Enabling the A20 line **Done**
 - Some way of going to and from real mode **Done**
-- E820 / memory map
+- E820 / memory map *In progress, incomplete*
 - CPUID
 - VESA
 - Interrupts(?)
