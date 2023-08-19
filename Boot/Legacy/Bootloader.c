@@ -5,8 +5,9 @@
 #include "Stdint.h"
 
 #include "Bootloader.h"
-#include "Memory/Memory.h"
 #include "Rm/Rm.h"
+#include "Memory/Memory.h"
+
 
 #ifndef __i686__
 #error "This code is supposed to be compiled with an i686-elf cross-compiler."
@@ -113,9 +114,9 @@ void __attribute__((noreturn)) Crash(uint16 Error) {
    07C00-07E00h: First-stage bootloader and BPB. 16-bit real mode.
 
    07E00-0C000h: Second-stage bootloader. 32-bit protected mode.
-   0C000-0D000h: Assembly protected mode 'environment'. 32-bit protected mode.
-   0D000-0E000h: Assembly real mode 'environment'. 16-bit real mode.
-   0E000-0F000h: Data for the above.
+   0C000-0CE00h: Assembly protected and real mode 'environment'.
+   0CE00-0D000h: Data area for the above (real mode).
+   0D000-0F000h: General data area. Accessible from within 16-bit real mode with ES=0.
    0F000-0FC00h: Empty, but 'reserved'/'loaded'. No idea what to do with this, maybe use as data?
    0FC00-0FD00h: Empty, reserved for A20 and generally just important data.
    0FD00-10000h: Empty, non-reserved. Stack smash protector(?)
@@ -201,7 +202,25 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   // Just test things out (this is just to see if this is actually working)
 
-  char* testString = "Hi, this is Serra! <3\nAugust 15 2023";
+  char* testString = "Hi, this is Serra! <3\nAugust 19 2023";
+
+  // Test E820
+  /*
+  uint32 E820SuccessfulEntries = getMmap_E820((void*)0xD000, 64);
+
+  for (uint32 i = 0; i < (E820SuccessfulEntries*24); i++) {
+
+    for (int j = 0; j < 8; j++) {
+
+      uint8 Character1 = *(uint8*)(0xD000+i) & (1 << (7-j));
+      if (Character1 != 0) Character1 = 1;
+      uint16 Character2 = (Character1+0x30) | 0x0F << 8;
+      *(uint16*)(0xB8000 + (16*i) + (2*j)) = Character2;
+
+    }
+
+  }
+  */
 
   // Test memset
   // Memset(0xB8000, 0x00, 4000);
