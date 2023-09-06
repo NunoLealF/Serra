@@ -5,9 +5,9 @@
 #include "Stdint.h"
 
 #include "Bootloader.h"
-#include "Rm/Rm.h"
+#include "Graphics/Graphics.h"
 #include "Memory/Memory.h"
-
+#include "Rm/Rm.h"
 
 #ifndef __i686__
 #error "This code is supposed to be compiled with an i686-elf cross-compiler."
@@ -202,9 +202,13 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   // Just test things out (this is just to see if this is actually working)
 
-  char* testString = "Hi, this is Serra! <3\nAugust 19 2023";
+  char* testString = "Hi, this is Serra! <3\nSeptember 6th 2023";
+
+  // Just to see if it's linking properly with Graphics.o (it is)
+  // Test(0x00);
 
   // Test E820
+
   /*
   uint32 E820SuccessfulEntries = getMmap_E820((void*)0xD000, 64);
 
@@ -256,7 +260,7 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   for(;;) {
   for (int j = 0x1; j <= 0x0F; j++) {
-  for (int i = 0; i < 36; i++) {
+  for (int i = 0; i < 40; i++) {
     if (testString[i] == '\n') {
       index = ((index / 80) + 1) * 80;
       count++;

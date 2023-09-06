@@ -63,10 +63,12 @@ Clean:
 	@-rm -f Legacy/*.elf
 	@-rm -f Legacy/*.bin
 
+	@-rm -f Legacy/Graphics/*.o
+
 	@-rm -f Legacy/Memory/*.o
 	@-rm -f Legacy/Memory/A20/*.o
 	@-rm -f Legacy/Memory/Mmap/*.o
-	
+
 	@-rm -f Legacy/Rm/*.o
 	@-rm -f Legacy/Rm/*.bin
 
@@ -112,6 +114,12 @@ Legacy/Bootloader.o:
 	@echo "Building $@"
 	@$(CC) $(CFLAGS) -c Legacy/Bootloader.c -o Legacy/Bootloader.o
 
+# (Legacy/Graphics)
+
+Legacy/Graphics/Graphics.o:
+	@echo "Building $@"
+	@$(CC) $(CFLAGS) -c Legacy/Graphics/Graphics.c -o Legacy/Graphics/Graphics.o
+
 # (Legacy/Memory)
 
 Legacy/Memory/Memory.o:
@@ -146,7 +154,7 @@ Legacy/Rm/RmWrapper.o:
 
 # Link the stages into .bin
 
-Legacy/Bootloader.bin: Legacy/Bootloader.o Legacy/Memory/Memory.o Legacy/Memory/A20/A20_C.o Legacy/Memory/A20/A20_Asm.o Legacy/Memory/Mmap/Mmap.o Legacy/Rm/RmWrapper.o
+Legacy/Bootloader.bin: Legacy/Bootloader.o Legacy/Graphics/Graphics.o Legacy/Memory/Memory.o Legacy/Memory/A20/A20_C.o Legacy/Memory/A20/A20_Asm.o Legacy/Memory/Mmap/Mmap.o Legacy/Rm/RmWrapper.o
 	@echo "Building $@"
 	@$(CC) $(LDFLAGS) -o Legacy/Bootloader.elf -ffreestanding -nolibc -nostdlib -lgcc $^
 	@$(OBJC) -O binary Legacy/Bootloader.elf Legacy/Bootloader.bin
