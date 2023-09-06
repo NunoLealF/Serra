@@ -204,8 +204,10 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   char* testString = "Hi, this is Serra! <3\nSeptember 6th 2023";
 
-  // Just to see if it's linking properly with Graphics.o (it is)
-  // Test(0x00);
+  // Terminal test
+
+  initializeTerminal(80, 25, 0xB8000);
+  clearTerminal();
 
   // Test E820
 
