@@ -36,7 +36,7 @@ OBJD = i686-elf-objdump
 
 # -Os: Optimize for size (and hope the code doesn't break).
 
-LDFLAGS = -T Legacy/Linker.ld
+LDFLAGS = -T Legacy/Linker.ld -Wl,--no-warn-rwx-segments
 CFLAGS = -std=c11 -ffunction-sections -funsigned-char -ffreestanding -Wall -Wextra -Wpedantic
 
 
