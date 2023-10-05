@@ -209,11 +209,6 @@ void __attribute__((noreturn)) Bootloader(void) {
   InitializeTerminal(80, 25, 0xB8000);
   ClearTerminal();
 
-  PutcharAt('T', 0x0B, 38, 11);
-  PutcharAt('e', 0x0B, 39, 11);
-  PutcharAt('s', 0x0B, 40, 11);
-  PutcharAt('t', 0x0B, 41, 11);
-
   // Test E820
 
   /*
@@ -267,7 +262,7 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   for(;;) {
   for (int j = 0x1; j <= 0x0F; j++) {
-  for (int i = 0; i < 40; i++) {
+  for (int i = 0; i < 39; i++) {
     if (testString[i] == '\n') {
       index = ((index / 80) + 1) * 80;
       count++;

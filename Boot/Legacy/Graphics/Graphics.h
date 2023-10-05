@@ -28,10 +28,6 @@
 
   terminalDataStruct TerminalTable;
 
-  // this isn't meant to be here it's just a placeholder to see if it works
-
-  void PutcharAt(const char Character, uint8 Color, uint16 PosX, uint16 PosY)
-
   // ...
 
   void InitializeTerminal(uint16 LimitX, uint16 LimitY, uint32 Framebuffer);

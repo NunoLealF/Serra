@@ -68,6 +68,8 @@ void ClearTerminal(void) {
 
 void Scroll(void) {
 
+  // Move
+
   uint32 Size = 2 * TerminalTable.LimitX * (TerminalTable.LimitY - 1);
   uint32 Offset = 2 * TerminalTable.LimitX;
 
@@ -76,12 +78,70 @@ void Scroll(void) {
 
   Memmove(Destination, Source, Size);
 
+  // Clear the last line as well
+
+  Size = Offset;
+  Destination = (void*)(TerminalTable.Framebuffer + (24 * Offset));
+
+  Memset((void*)Destination, 0, Size);
+
+}
+
+
+// UpdateTerminal function
+
+static void UpdateTerminal(const char Character) {
+
+  // Character checks
+
+  switch(Character) {
+
+    // Newline.
+
+    case '\n':
+
+      TerminalTable.PosX = 0;
+      TerminalTable.PosY++;
+      break;
+
+    // Tab.
+
+    case '\t':
+
+      TerminalTable.PosX += 4;
+      break;
+
+    // Any other regular character.
+
+    default:
+      TerminalTable.PosX++;
+
+  }
+
+  // Check for overflows.
+
+  if (TerminalTable.PosX >= TerminalTable.LimitX) {
+
+    TerminalTable.PosX = 0;
+    TerminalTable.PosY++;
+
+  }
+
+  if (TerminalTable.PosY >= TerminalTable.LimitY) {
+
+    TerminalTable.PosX = 0;
+    TerminalTable.PosY = (TerminalTable.LimitY - 1);
+
+    Scroll();
+
+  }
+
 }
 
 
 // PutcharAt function
 
-void PutcharAt(const char Character, uint8 Color, uint16 PosX, uint16 PosY) {
+static void PutcharAt(const char Character, uint8 Color, uint16 PosX, uint16 PosY) {
 
   uint32 Offset = 2 * (PosX + (TerminalTable.LimitX * PosY));
   uint8* Framebuffer = (TerminalTable.Framebuffer + Offset);
@@ -98,20 +158,43 @@ void Putchar(const char Character, uint8 Color) {
 
   switch (Character) {
 
+    // Null bytes and other escape sequences (these will pretty much be ignored)
+
     case '\0':
-      // ...
       break;
+
+    case '\b':
+      break;
+
+    case '\f':
+      break;
+
+    case '\r':
+      break;
+
+    case '\v':
+      break;
+
+    // Newlines
 
     case '\n':
-      // ...
+
+      UpdateTerminal(Character);
       break;
+
+    // Tabs.
 
     case '\t':
-      // ...
+
+      UpdateTerminal(Character);
       break;
 
+    // Regular character.
+
     default:
-      // ...
+
+      PutcharAt(Character, Color, TerminalTable.PosX, TerminalTable.PosY);
+      UpdateTerminal(Character);
 
   }
 
