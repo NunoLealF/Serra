@@ -34,4 +34,6 @@
   void Putchar(const char Character, uint8 Color);
   void Print(const char* String, uint8 Color);
 
+  // TODO - Functions from format.c; itoa, atoi, etc.
+
 #endif
