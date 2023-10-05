@@ -202,12 +202,17 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   // Just test things out (this is just to see if this is actually working)
 
-  char* testString = "Hi, this is Serra! <3\nSeptember 6th 2023";
+  char* testString = "Hi, this is Serra! <3\nOctober 5th 2023";
 
   // Terminal test
 
-  initializeTerminal(80, 25, 0xB8000);
-  clearTerminal();
+  InitializeTerminal(80, 25, 0xB8000);
+  ClearTerminal();
+
+  PutcharAt('T', 0x0B, 38, 11);
+  PutcharAt('e', 0x0B, 39, 11);
+  PutcharAt('s', 0x0B, 40, 11);
+  PutcharAt('t', 0x0B, 41, 11);
 
   // Test E820
 

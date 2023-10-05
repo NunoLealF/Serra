@@ -37,7 +37,7 @@ terminalDataStruct TerminalTable;
 
 // Initialize terminal function
 
-void initializeTerminal(uint16 LimitX, uint16 LimitY, uint32 Framebuffer) {
+void InitializeTerminal(uint16 LimitX, uint16 LimitY, uint32 Framebuffer) {
 
   TerminalTable.PosX = 0;
   TerminalTable.PosY = 0;
@@ -51,14 +51,79 @@ void initializeTerminal(uint16 LimitX, uint16 LimitY, uint32 Framebuffer) {
 
 // Clear terminal function
 
-void clearTerminal(void) {
+void ClearTerminal(void) {
 
   uint16 LimitX = TerminalTable.LimitX;
   uint16 LimitY = TerminalTable.LimitY;
   void* Framebuffer = (void*)TerminalTable.Framebuffer;
 
   uint32 Size = (LimitX * LimitY) * 2;
-  
+
   Memset(Framebuffer, '\0', Size);
+
+}
+
+
+// Scroll function
+
+void Scroll(void) {
+
+  uint32 Size = 2 * TerminalTable.LimitX * (TerminalTable.LimitY - 1);
+  uint32 Offset = 2 * TerminalTable.LimitX;
+
+  void* Destination = (void*)(TerminalTable.Framebuffer);
+  void* Source = (void*)(TerminalTable.Framebuffer + Offset);
+
+  Memmove(Destination, Source, Size);
+
+}
+
+
+// PutcharAt function
+
+void PutcharAt(const char Character, uint8 Color, uint16 PosX, uint16 PosY) {
+
+  uint32 Offset = 2 * (PosX + (TerminalTable.LimitX * PosY));
+  uint8* Framebuffer = (TerminalTable.Framebuffer + Offset);
+
+  Framebuffer[0] = Character;
+  Framebuffer[1] = Color;
+
+}
+
+
+// Putchar function
+
+void Putchar(const char Character, uint8 Color) {
+
+  switch (Character) {
+
+    case '\0':
+      // ...
+      break;
+
+    case '\n':
+      // ...
+      break;
+
+    case '\t':
+      // ...
+      break;
+
+    default:
+      // ...
+
+  }
+
+}
+
+
+// Print function
+
+void Print(const char* String, uint8 Color) {
+
+  for (unsigned int i = 0; i < Strlen(String); i++) {
+    Putchar(String[i], Color);
+  }
 
 }

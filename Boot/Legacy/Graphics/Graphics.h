@@ -9,6 +9,8 @@
   // For now we only plan to support 80x25 text mode
   // Also itoa and all
 
+  // ...
+
   typedef volatile struct {
 
     // General info
@@ -26,7 +28,19 @@
 
   terminalDataStruct TerminalTable;
 
-  void initializeTerminal(uint16 LimitX, uint16 LimitY, uint32 Framebuffer);
-  void clearTerminal(void);
+  // this isn't meant to be here it's just a placeholder to see if it works
+
+  void PutcharAt(const char Character, uint8 Color, uint16 PosX, uint16 PosY)
+
+  // ...
+
+  void InitializeTerminal(uint16 LimitX, uint16 LimitY, uint32 Framebuffer);
+  void ClearTerminal(void);
+
+  // ...
+
+  void Scroll(void);
+  void Putchar(const char Character, uint8 Color);
+  void Print(const char* String, uint8 Color);
 
 #endif
