@@ -5,11 +5,7 @@
 #ifndef SERRA_STDINT_H
 #define SERRA_STDINT_H
 
-  // Todo - graphics functions.
-  // For now we only plan to support 80x25 text mode
-  // Also itoa and all
-
-  // ...
+  // The terminalDataStruct type, and TerminalTable{}.
 
   typedef volatile struct {
 
@@ -28,14 +24,13 @@
 
   terminalDataStruct TerminalTable;
 
-  // ...
+  // Functions that directly interact with the TerminalTable{} structure.
 
   void InitializeTerminal(uint16 LimitX, uint16 LimitY, uint32 Framebuffer);
   void ClearTerminal(void);
 
-  // ...
+  // Functions that print data to the terminal.
 
-  void Scroll(void);
   void Putchar(const char Character, uint8 Color);
   void Print(const char* String, uint8 Color);
 

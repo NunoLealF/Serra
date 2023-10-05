@@ -5,17 +5,29 @@
 #include "../Stdint.h"
 #include "../Memory/Memory.h"
 
-// Todo - graphics functions.
-/*
-- [For Graphics.c]
-- a function to initialize/clear the terminal
-- a function to scroll through the terminal
-- some sort of standard data area to store the current data (X/Y, color, etc.) in
-- some sort of putchar function (that takes advantage of print)
-- some sort of print function
-*/
+/* (typedef) volatile struct terminalDataStruct{}
 
-// Data area struct
+   Inputs:  uint16 PosX - The current X (horizontal) position in the terminal;
+            uint16 PosY - The current Y (vertical) position in the terminal;
+            uint32 Framebuffer - The address of the framebuffer being used.
+
+            uint16 LimitX - The width (or horizontal limit) of the terminal being used;
+            uint16 LimitY - The height (or the vertical limit) of the terminal being used.
+
+   Outputs: (Same as above)
+
+   This is a template for the structure which will contain important data about our terminal:
+   where it's located, what the current position is, what the horizontal/vertical limits are, etc.
+
+   Whenever we use any of the terminal functions, like InitializeTerminal(), ClearTerminal(),
+   Scroll(), Putchar(), Print(), etc., we refer to a certain copy of this structure named
+   TerminalTable{}, which should contain information about the current terminal being used.
+
+   In order to initialize this table, one should use the InitializeTerminal() function. Keep in
+   mind that, unlike the realModeTable{} structure in RmWrapper.c, this one isn't necessarily
+   defined or declared at a specific location.
+
+*/
 
 typedef volatile struct {
 
@@ -35,7 +47,28 @@ typedef volatile struct {
 terminalDataStruct TerminalTable;
 
 
-// Initialize terminal function
+/* void InitializeTerminal()
+
+   Inputs: uint16 LimitX - The width (or horizontal limit) of our terminal;
+           uint16 LimitY - The height (or vertical limit) of our terminal;
+           uint32 Framebuffer - The memory address of the framebuffer being used.
+
+   Outputs: (None)
+
+   This function initializes the TerminalTable{} (type: terminalDataStruct{}) structure with the
+   information given (except for PosX and PosY, which are set to zero).
+
+   Before using any other functions (with the exception of Strlen()) in this file, one should
+   always run this function at least once, in order to initialize the TerminalTable{} structure.
+
+   Given that this is an x86 platform, and that we're *probably* on 80x25 VGA text mode, it's
+   usually safe to initialize it like this:
+   - InitializeTerminal(80, 25, 0xB8000)
+
+   Also, keep in mind that this doesn't clear the terminal/framebuffer; in order to do so, you
+   should use the ClearTerminal() function.
+
+*/
 
 void InitializeTerminal(uint16 LimitX, uint16 LimitY, uint32 Framebuffer) {
 
@@ -49,7 +82,15 @@ void InitializeTerminal(uint16 LimitX, uint16 LimitY, uint32 Framebuffer) {
 }
 
 
-// Clear terminal function
+/* void ClearTerminal()
+
+   Inputs: (None)
+   Outputs: (None)
+
+   This function essentially just clears the terminal, using the data in the TerminalTable{}
+   structure (which requires InitializeTerminal() to have been run at least once).
+
+*/
 
 void ClearTerminal(void) {
 
@@ -64,11 +105,29 @@ void ClearTerminal(void) {
 }
 
 
-// Scroll function
+/* static void Scroll()
 
-void Scroll(void) {
+   Inputs: (None)
+   Outputs: (None)
 
-  // Move
+   This function 'scrolls' the terminal, using the data in the TerminalTable{} structure (which
+   requires InitializeTerminal() to have been run at least once).
+
+   Whenever the terminal gets full, this function is called in order to scroll the terminal one
+   line up (discarding the first line) to make way for another line.
+
+   Keep in mind that this function doesn't actually make any changes to the TerminalTable{}
+   structure; that role belongs to UpdateTerminal(). If that function isn't accessible for
+   whatever reason, do the following steps:
+
+   - Change TerminalTable.PosX to 0;
+   - Change TerminalTable.PosY to TerminalTable.LimitY - 1.
+
+*/
+
+static void Scroll(void) {
+
+  // Move every line (except the first line) up, discarding the first line.
 
   uint32 Size = 2 * TerminalTable.LimitX * (TerminalTable.LimitY - 1);
   uint32 Offset = 2 * TerminalTable.LimitX;
@@ -78,25 +137,40 @@ void Scroll(void) {
 
   Memmove(Destination, Source, Size);
 
-  // Clear the last line as well
+  // Clear out the last line.
 
   Size = Offset;
-  Destination = (void*)(TerminalTable.Framebuffer + (24 * Offset));
+  Destination = (void*)(TerminalTable.Framebuffer + ((TerminalTable.LimitY - 1) * Offset));
 
   Memset((void*)Destination, 0, Size);
 
 }
 
 
-// UpdateTerminal function
+/* static void UpdateTerminal()
+
+   Inputs: const char Character - The character being processed.
+   Outputs: (None)
+
+   This function essentially updates the positions in the TerminalTable{} structure (which
+   requires InitializeTerminal() to have been run at least once) depending on what's needed.
+
+   It takes one input, the character being processed, so that it can emit a newline/tab/etc.
+   if necessary.
+
+   The only purpose of this function is to be called by Putchar(); after printing a given
+   character, it calls this function to properly update the positions, and to move onto
+   the next line / scroll / etc. if necessary.
+
+*/
 
 static void UpdateTerminal(const char Character) {
 
-  // Character checks
+  // Analyze the character we were given, so we can know which changes we should make.
 
   switch(Character) {
 
-    // Newline.
+    // If it's a newline ('\n'), move onto the next line, set PosX to 0, and move on.
 
     case '\n':
 
@@ -104,21 +178,21 @@ static void UpdateTerminal(const char Character) {
       TerminalTable.PosY++;
       break;
 
-    // Tab.
+    // If it's a tab ('\t'), move us forward by 4 spaces/characters, and move on.
 
     case '\t':
 
       TerminalTable.PosX += 4;
       break;
 
-    // Any other regular character.
+    // If it's any other character, just increment PosX to move us onto the next character.
 
     default:
       TerminalTable.PosX++;
 
   }
 
-  // Check for overflows.
+  // Check for PosX/PosY overflowing, and move onto the next line / scroll if necessary.
 
   if (TerminalTable.PosX >= TerminalTable.LimitX) {
 
@@ -139,7 +213,24 @@ static void UpdateTerminal(const char Character) {
 }
 
 
-// PutcharAt function
+/* static void PutcharAt()
+
+   Inputs: const char Character - The character we want to display on the screen;
+           uint8 Color - The (VGA) color we want to display on the screen.
+
+           uint16 PosX - The horizontal (X) position to display it at;
+           uint16 PosY - The vertical (Y) position to display it at.
+
+   Outputs: (None)
+
+   This function does one simple task: using the data in the TerminalTable{} structure, it
+   displays a given character (and color) on the screen, at a certain X/Y position.
+
+   The main function of this function is to be called by Putchar() (so it can display a character
+   on the screen), but you can also call it if you want (it can be pretty useful for debugging).
+   Just keep in mind that it's a static function, so it can't be called outside of Graphics.c.
+
+*/
 
 static void PutcharAt(const char Character, uint8 Color, uint16 PosX, uint16 PosY) {
 
@@ -152,9 +243,25 @@ static void PutcharAt(const char Character, uint8 Color, uint16 PosX, uint16 Pos
 }
 
 
-// Putchar function
+/* void Putchar()
+
+   Inputs: const char Character - The character we want to display on the screen;
+           uint8 Color - The (VGA) color we want to display on the screen.
+
+   Outputs: (None)
+
+   This function displays a character on the screen, using the data in the TerminalTable{}
+   structure (which requires InitializeTerminal() to have been run at least once), and updates
+   the positions in that table and/or scrolls the terminal if necessary.
+
+   It can be called by any function, even outside of this file (as it's not a static function),
+   but its main purpose is to be called by Print().
+
+*/
 
 void Putchar(const char Character, uint8 Color) {
+
+  // Depending on the character, we want to handle each of these differently:
 
   switch (Character) {
 
@@ -189,7 +296,7 @@ void Putchar(const char Character, uint8 Color) {
       UpdateTerminal(Character);
       break;
 
-    // Regular character.
+    // Regular characters.
 
     default:
 
@@ -201,7 +308,20 @@ void Putchar(const char Character, uint8 Color) {
 }
 
 
-// Print function
+/* void Print()
+
+   Inputs: const char* String - The string we want to display on the screen;
+           uint8 Color - The (VGA) color we want to display on the screen.
+
+   Outputs: (None)
+
+   This function displays a string on the screen, using the data in the TerminalTable{} structure
+   (which requires InitializeTerminal() to have been run at least once).
+
+   It essentially serves the same function as Putchar(), but for strings instead of individual
+   characters.
+
+*/
 
 void Print(const char* String, uint8 Color) {
 

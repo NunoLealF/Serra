@@ -9,7 +9,7 @@
 
 // .
 
-uint32 getMmap_E820(void* Buffer, uint32 NumEntries) {
+uint32 GetMmap_E820(void* Buffer, uint32 NumEntries) {
 
   // First call
 

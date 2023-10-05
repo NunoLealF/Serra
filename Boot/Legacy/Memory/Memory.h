@@ -24,7 +24,7 @@
 
   // Todo: Memory map (E820 functions), from Mmap.c
 
-  uint32 getMmap_E820(void* Buffer, uint32 NumEntries);
+  uint32 GetMmap_E820(void* Buffer, uint32 NumEntries);
 
   // (Todo: other functions)
 
