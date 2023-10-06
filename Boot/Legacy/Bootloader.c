@@ -200,10 +200,6 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   }
 
-  // Just test things out (this is just to see if this is actually working)
-
-  char* testString = "Hi, this is Serra! <3\nOctober 5th 2023";
-
   // Terminal test
 
   InitializeTerminal(80, 25, 0xB8000);
@@ -235,63 +231,32 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   // realModeTable* Table = initializeRealModeTable();
 
-  /*
+  for (;;) {
 
-  Table->Eax = 0x0013;
-  Table->Int = 0x10;
+    for (int i = 0x01; i <= 0x0F; i++) {
 
-  realMode();
+      InitializeTerminal(80, 25, 0xB8000);
+      Print("Hi, this is Serra!\n", i);
+      Print("October 6th 2023\n\n", 0x0F);
 
-  Table->Eax = 0x0C0B;
-  Table->Ebx = 0;
-  Table->Ecx = 160;
-  Table->Edx = 100;
-  */
+      if (CheckA20() == true) {
+        Print("A20 is enabled, hooray!\n", 0x0A);
+      } else {
+        Print("A20 is disabled. :(\n", 0x0C);
+      }
 
-  // realMode();
+      for (int j = 0; j < 50000000; j++) {
+        __asm__("nop");
+      }
 
-  // this should display eflags
-
-  // testString[0] = (*(uint8*)(0xCE19)) + 0x30;
-  // testString[1] = (*(uint8*)(0xCE18)) + 0x30;
-  // testString[2] = (*(uint8*)(0xCE17)) + 0x30;
-  // testString[3] = (*(uint8*)(0xCE16)) + 0x30;
-
-  int index = 0;
-  int count = 0;
-
-  for(;;) {
-  for (int j = 0x1; j <= 0x0F; j++) {
-  for (int i = 0; i < 39; i++) {
-    if (testString[i] == '\n') {
-      index = ((index / 80) + 1) * 80;
-      count++;
-      continue;
     }
-    uint8 color = j & 0x0F;
-    if (count == 1) color = 0x0F;
-    *(uint16*)(0xB8000 + (index*2)) = testString[i] | color << 8;
-    index++;
-  }
-  index = 0; count = 0; // reset
 
-  if (CheckA20() == true) {
-    *(uint16*)0xB8140 = 'T' | 0x0A << 8;
-  } else {
-    *(uint16*)0xB8140 = 'F' | 0x0C << 8;
-  }
-
-  for (int k = 0; k < 50000000; k++) {
-    __asm__("nop"); // this is to pause
-  }
-  }
   }
 
   // Things left to do:
 
-  // A - Create a basic string library
-  // B - Find a way to get -back- into real mode (see https://wiki.osdev.org/Real_Mode)
-  // C - Use the above for E820, and other functions
+  // A - Implement itoa, atoi, string functions basically.
+  // B - Work on E820, memory map, etc.
 
   for(;;);
 
