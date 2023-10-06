@@ -267,9 +267,8 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   // Things left to do:
 
-  // A - Implement itoa, atoi, string functions basically.
-  // B - Work on E820, memory map, etc.
-  // C - Uhh, CPUID?
+  // A - Work on E820, memory map, etc.
+  // B - Uhh, CPUID?
 
   for(;;);
 

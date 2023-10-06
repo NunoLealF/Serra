@@ -5,7 +5,7 @@ An x86 bootloader under construction.
 - Bootsector **Done**
 - Protected mode **Done**
 
-- String/terminal functions **Almost done, close though!**
+- String/terminal functions **Done**
 - Enabling the A20 line **Done**
 - Some way of going to and from real mode **Done**
 - E820 / memory map *In progress, incomplete*
