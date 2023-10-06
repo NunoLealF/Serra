@@ -4,6 +4,7 @@
 
 #include "../Stdint.h"
 #include "../Memory/Memory.h"
+#include "Graphics.h"
 
 /* (typedef) volatile struct terminalDataStruct{}
 

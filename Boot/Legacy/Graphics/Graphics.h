@@ -5,6 +5,11 @@
 #ifndef SERRA_STDINT_H
 #define SERRA_STDINT_H
 
+  // Format.c
+
+  uint32 Strlen(const char* String);
+  
+
   // The terminalDataStruct type, and TerminalTable{}.
 
   typedef volatile struct {

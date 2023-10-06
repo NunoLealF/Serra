@@ -174,37 +174,3 @@ void Memset(void* Buffer, uint8 Character, uint32 Size) {
   }
 
 }
-
-
-/* uint32 Strlen()
-
-   Inputs:  const char* String - The string you want to get the length of.
-
-   Outputs: uint32 - The length of the given string.
-
-   This function calculates the length of a (regular, null-terminated) string by counting the
-   amount of characters in it before getting to the final byte (which should be '\0').
-
-   It's assumed that the string in question is a regular ASCII or UTF-8 string (not UTF-16 or
-   UTF-32, where each character is 16 or 32 bits respectively).
-
-   For example, if you wanted to know the length of a given string, you could do the following:
-   > unsigned int Length = Strlen(ExampleString);
-
-*/
-
-uint32 Strlen(const char* String) {
-
-  uint32 Length = 0;
-
-  // Go through each byte in the string, and only stop when we hit a '\0' (null byte).
-
-  while (String[Length] != '\0') {
-    Length++;
-  }
-
-  // Return the string's length.
-
-  return Length;
-
-}

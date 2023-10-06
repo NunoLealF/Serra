@@ -12,8 +12,6 @@
   void Memmove(void* Destination, void* Source, uint32 Size);
   void Memset(void* Buffer, uint8 Character, uint32 Size);
 
-  uint32 Strlen(const char* String);
-
   // A20 functions, from A20/A20_C.c and A20/A20_Asm.s.
 
   bool CheckA20(void);
