@@ -240,12 +240,24 @@ void __attribute__((noreturn)) Bootloader(void) {
       Print("October 6th 2023\n\n", 0x0F);
 
       if (CheckA20() == true) {
-        Print("A20 is enabled, hooray!\n", 0x0A);
+        Print("A20 is enabled, hooray!\n\n", 0x0A);
       } else {
-        Print("A20 is disabled. :(\n", 0x0C);
+        Print("A20 is disabled. :(\n\n", 0x0C);
       }
 
-      for (int j = 0; j < 50000000; j++) {
+      // Test out itoa
+
+      char Buffer[64];
+
+      Print("Test 1: ", 0x0F);
+      Print(Itoa(0x65363231, Buffer, 16), i);
+      Print("h\n", i);
+
+      Print("Test 2: ", 0x0F);
+      Print(Itoa(0x65363231, Buffer, 2), i);
+      Print("b\n", i);
+
+      for (int j = 0; j < 60000000; j++) {
         __asm__("nop");
       }
 

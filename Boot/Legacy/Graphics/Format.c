@@ -38,13 +38,34 @@ uint32 Strlen(const char* String) {
 
 }
 
+
 // String reverse
 
 char* Strrev(char* String) {
 
+  // Indexes
 
+  uint32 Start = 0;
+  uint32 End = Strlen(String) - 1; // We do -1 to avoid messing with the null byte
+
+  // Reverse characters in the string.
+
+  while (Start < End) {
+
+    char Save = String[Start];
+
+    String[Start] = String[End];
+    String[End] = Save;
+
+    Start++;
+    End--;
+
+  }
+
+  return String;
 
 }
+
 
 // Itoa - unsigned only
 
@@ -87,5 +108,8 @@ char* Itoa(uint32 Number, char* Buffer, uint8 Base) {
   }
 
   // Reverse string, from 0 to (Index-1), and add a null byte at [Index]
+
+  Buffer[Index] = '\0';
+  return Strrev(Buffer);
 
 }

@@ -8,7 +8,8 @@
   // Format.c
 
   uint32 Strlen(const char* String);
-  
+  char* Strrev(char* String);
+  char* Itoa(uint32 Number, char* Buffer, uint8 Base);
 
   // The terminalDataStruct type, and TerminalTable{}.
 
