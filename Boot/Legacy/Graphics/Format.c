@@ -3,12 +3,10 @@
 // For more information, please refer to the accompanying license agreement. <3
 
 #include "../Stdint.h"
-#include "../Memory/Memory.h"
 
 /* uint32 Strlen()
 
-   Inputs:  const char* String - The string you want to get the length of.
-
+   Inputs: const char* String - The string you want to get the length of.
    Outputs: uint32 - The length of the given string.
 
    This function calculates the length of a (regular, null-terminated) string by counting the
@@ -18,7 +16,7 @@
    UTF-32, where each character is 16 or 32 bits respectively).
 
    For example, if you wanted to know the length of a given string, you could do the following:
-   > unsigned int Length = Strlen(ExampleString);
+   - uint32 Length = Strlen(ExampleString);
 
 */
 
@@ -39,16 +37,31 @@ uint32 Strlen(const char* String) {
 }
 
 
-// String reverse
+/* char* Strrev()
+
+   Inputs: char* String - The string you want to reverse.
+   Outputs: char* - The reversed string. (Same string as the input one, actually)
+
+   This function serves one pretty simple purpose - it reverses a (null-terminated) string.
+
+   Like every other function that involves strings, it's assumed that the string in question is
+   ASCII or UTF-8, not UTF-16 or UTF-32 (which are 16 and 32 bytes respectively).
+
+   For example, if you wanted to reverse the string ExampleString, you could do the following:
+   - ExampleString = Strrev(ExampleString);
+
+*/
 
 char* Strrev(char* String) {
 
-  // Indexes
+  // In order to reverse our string, we'll be using two indexes/pointers; one of them at the
+  // very start of our string, and one of them at the very end (before the null byte).
 
   uint32 Start = 0;
-  uint32 End = Strlen(String) - 1; // We do -1 to avoid messing with the null byte
+  uint32 End = Strlen(String) - 1;
 
-  // Reverse characters in the string.
+  // Now, all we need to do is to swap String[Start] with String[End], and to increment or
+  // decrement those two variables until they both meet the middle.
 
   while (Start < End) {
 
@@ -62,16 +75,49 @@ char* Strrev(char* String) {
 
   }
 
+  // We can now return our reversed string!
+
   return String;
 
 }
 
 
-// Itoa - unsigned only
+/* char* Itoa()
+
+   Inputs: uint32 Number - The (unsigned) integer we want to convert into a string.
+           char* Buffer - The buffer we want to use in our conversion.
+           uint8 Base - The number base we want to use in our conversion.
+                        Also known as the 'radix' number in some implementations.
+
+   Outputs: char* - The output string, converted from the given integer.
+
+   This function essentially just converts an (unsigned) integer into a string.
+
+   It takes three parameters; the integer we want to convert into a string (Number), a buffer
+   for the function to play around with (Buffer - needs to be larger than the output string),
+   and the number base/radix we want to use (Base).
+
+   Those last two parameters might be a little hard to understand, so, essentially - the Buffer
+   is basically just the space we'll use to 'compose' our output string (which means it can't be
+   smaller than the output), and the Base is simply just the numbering system we'll be using.
+
+   This function accepts numbering systems between 2 and 36, which encompasses most numbering
+   systems. Some common examples are:
+   - Binary, which corresponds to base 2 (0-1);
+   - Decimal, which corresponds to base 10 (0-9);
+   - Hexadecimal, which corresponds to base 16 (0-F);
+
+   For example, if you wanted to convert the hexadecimal number 7C00h into the string "7C00h",
+   you could do:
+   - char Buffer[100];
+   - char* ExampleStringB = Itoa(0x7C00, Buffer, 16);
+
+*/
 
 char* Itoa(uint32 Number, char* Buffer, uint8 Base) {
 
-  // If the base is below 2 (binary) or above 36 (0-9 + A-Z), return nothing.
+  // It isn't really possible to convert using bases below 2 or 36, so if that's the case,
+  // just return an empty string.
 
   if ((Base < 2) || (Base > 36)) {
 
@@ -80,8 +126,8 @@ char* Itoa(uint32 Number, char* Buffer, uint8 Base) {
 
   }
 
-  // Now that we've gotten that out of the way, let's actually handle this
-  // First, let's try to handle 0.
+  // If the given integer is just 0, then we'll want to return a string that just contains "0".
+  // The following code can't handle numbers below 1, so this ends up being necessary
 
   if (Number == 0) {
 
@@ -91,7 +137,8 @@ char* Itoa(uint32 Number, char* Buffer, uint8 Base) {
 
   }
 
-  // Do the thing
+  // Now that we've made sure that the number in question *can* be converted, it's time to
+  // actually do so.
 
   int Index = 0;
   const char* Reference = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -107,7 +154,8 @@ char* Itoa(uint32 Number, char* Buffer, uint8 Base) {
 
   }
 
-  // Reverse string, from 0 to (Index-1), and add a null byte at [Index]
+  // At this point, we've successfully converted every single digit.. in reverse order.
+  // In order to not have the string come out backwards, we'll reverse it, and return it as such.
 
   Buffer[Index] = '\0';
   return Strrev(Buffer);
