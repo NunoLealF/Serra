@@ -5,13 +5,13 @@
 #ifndef SERRA_STDINT_H
 #define SERRA_STDINT_H
 
-  // Format.c
+  // String functions. (Format.c)
 
   uint32 Strlen(const char* String);
   char* Strrev(char* String);
   char* Itoa(uint32 Number, char* Buffer, uint8 Base);
 
-  // The terminalDataStruct type, and TerminalTable{}.
+  // The terminalDataStruct type, and TerminalTable{}. (Graphics.c)
 
   typedef volatile struct {
 
@@ -30,16 +30,14 @@
 
   terminalDataStruct TerminalTable;
 
-  // Functions that directly interact with the TerminalTable{} structure.
+  // Functions that directly interact with the TerminalTable{} structure. (Graphics.c)
 
   void InitializeTerminal(uint16 LimitX, uint16 LimitY, uint32 Framebuffer);
   void ClearTerminal(void);
 
-  // Functions that print data to the terminal.
+  // Functions that print data to the terminal. (Graphics.c)
 
   void Putchar(const char Character, uint8 Color);
   void Print(const char* String, uint8 Color);
-
-  // TODO - Functions from format.c; itoa, atoi, etc.
 
 #endif
