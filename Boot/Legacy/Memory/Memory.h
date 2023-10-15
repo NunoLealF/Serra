@@ -5,7 +5,7 @@
 #ifndef SERRA_MEMORY_H
 #define SERRA_MEMORY_H
 
-  // Todo: Implement standard memory functions; memset, memcpy, memmove.., from Memory.c
+  // Standard memory functions; memset, memcpy, memmove.., from Memory.c
 
   int Memcmp(const void* PtrA, const void* PtrB, uint32 Size);
   void Memcpy(void* Destination, void* Source, uint32 Size);
@@ -20,7 +20,25 @@
   extern void EnableKbdA20(void);
   extern void EnableFastA20(void);
 
-  // Todo: Memory map (E820 functions), from Mmap.c
+  // Memory map (E820) structures, from Mmap.c.
+
+  typedef struct {
+
+    uint64 Base;
+    uint64 Limit;
+    uint32 Type;
+
+    uint32 Acpi;
+
+  } __attribute__((packed)) mmapEntry;
+
+  #define mmapEntryFree 1
+  #define mmapEntryReserved 2
+  #define mmapEntryAcpiReclaimable 3
+  #define mmapEntryAcpiNvs 4
+  #define mmapEntryBad 5
+
+  // Memory map (E820) functions, from Mmap.c.
 
   uint32 GetMmapEntry(void* Buffer, uint32 Size, uint32 Continuation);
 

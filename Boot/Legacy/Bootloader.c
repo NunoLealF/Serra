@@ -256,7 +256,7 @@ void __attribute__((noreturn)) Bootloader(void) {
       Print(Itoa(*(uint32*)(Mmap+8), Buffer, 16), 0x0B);
 
       Print("\nFlags: ", 0x0F);
-      Print(Itoa(*(uint32*)(Mmap+16), Buffer, 2), 0x0B);
+      Print(Itoa(*(uint32*)(Mmap+16), Buffer, 16), 0x0B);
 
       Print("\nAcpi: ", 0x0F);
       Print(Itoa(*(uint32*)(Mmap+20), Buffer, 2), 0x0B);
