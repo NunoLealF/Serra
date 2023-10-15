@@ -222,7 +222,7 @@ void __attribute__((noreturn)) Bootloader(void) {
     Continuation = GetMmapEntry(Entry, 24, Continuation);
 
     if (Continuation != 0) MmapEntries++;
-    if (MmapEntries >= 5) break;
+    if (MmapEntries >= 128) break;
 
   } while (Continuation != 0);
 
