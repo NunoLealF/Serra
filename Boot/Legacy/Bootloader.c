@@ -69,6 +69,7 @@ void __attribute__((noreturn)) Init(void) {
    Also, error codes:
    0:   (Invalid error code)
    1:   (Couldn't enable A20)
+   2:   (E820 doesn't work, can't get memory map)
    ...: (Undefined error code)
 
 */
@@ -134,7 +135,6 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   // We've finally made it to our second-stage bootloader. We're in 32-bit x86 protected mode with
   // the stack at 20000h in memory, and our bootloader between 7E00h and FC00h in memory.
-
 
   // At the moment, we can only reliably access up to the first MiB of data (from 00000h to FFFFFh).
   // This is because we haven't yet enabled the A20 line, which is a holdover from the 8086 days.
@@ -203,30 +203,61 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   }
 
-  // Terminal test
 
-  InitializeTerminal(80, 25, 0xB8000);
-  ClearTerminal();
+  // In order to figure out which memory areas we can use, and which areas we can't, we'll
+  // need to obtain what's known as a memory map from our BIOS/firmware.
 
-  // Test e820
-  // Max 128 entries, D000h to DC00h.
+  // There are several methods of doing this, but the most common is via the BIOS interrupt call
+  // int 15h / eax E820h. We won't be directly calling it from here though; instead, we have a
+  // function that will do it for us (GetMmapEntry(), in Memory/Mmap.c).
+
+  // However, before we can start, we'll need to take care of two things - first, we'll need to
+  // figure out where to put our memory map (in our case, this is at D000h), and second, we'll
+  // also need what's known as a 'continuation number', which will be used later.
 
   void* Mmap = 0xD000;
-  uint8 MmapEntries = 0;
-
   uint32 Continuation = 0;
+
+  // Now that we've taken care of that, we can finally request our system's memory map. We have
+  // to do this entry by entry, and we have a total limit of 128 entries.
+
+  uint8 MmapEntries = 0;
 
   do {
 
-    void* Entry = (0xD000 + (MmapEntries * 24));
-    Continuation = GetMmapEntry(Entry, 24, Continuation);
+    // In order to request a memory map entry from our system, we first need to calculate the
+    // necessary offset in memory, so that we don't overwrite any existing entries.
+
+    uint32 Offset = (MmapEntries * 24);
+
+    // After that, we just need to call GetMmapEntry() with the right parameters.
+
+    Continuation = GetMmapEntry(Mmap + Offset, 24, Continuation);
+
+    // If the 'continuation number' reaches 0, or if we've already read more than 128 entries
+    // from the system, stop the loop.
 
     if (Continuation != 0) MmapEntries++;
-    if (MmapEntries >= 128) break;
+
+    if (MmapEntries >= 128) {
+      break;
+    }
 
   } while (Continuation != 0);
 
-  // Display a message, a
+  // Finally, if we weren't able to get *any* memory map entries from the system, give out an
+  // error code / crash the system, as it's necessary for us to have a memory map.
+
+  if (MmapEntries == 0) {
+    Crash(0x02);
+  }
+
+
+  // Terminal test
+  // (this just shows the date / whether A20 and E820 are enabled / etc.)
+
+  InitializeTerminal(80, 25, 0xB8000);
+  ClearTerminal();
 
   mmapEntry* Test = 0xD000;
 
