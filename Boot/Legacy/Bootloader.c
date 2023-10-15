@@ -228,6 +228,8 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   // Display a message, a
 
+  mmapEntry* Test = 0xD000;
+
   for (;;) {
 
     for (int i = 0x01; i <= 0x0F; i++) {
@@ -248,18 +250,16 @@ void __attribute__((noreturn)) Bootloader(void) {
       Print(Itoa(MmapEntries, Buffer, 10), 0x0B);
 
       Print("\nBase: ", 0x0F);
-      Print(Itoa(*(uint32*)(Mmap+4), Buffer, 16), 0x0B);
-      Print(Itoa(*(uint32*)(Mmap+0), Buffer, 16), 0x0B);
+      Print(Itoa((uint32)Test->Base, Buffer, 16), 0x0B);
 
       Print("\nLimit: ", 0x0F);
-      Print(Itoa(*(uint32*)(Mmap+12), Buffer, 16), 0x0B);
-      Print(Itoa(*(uint32*)(Mmap+8), Buffer, 16), 0x0B);
+      Print(Itoa((uint32)Test->Limit, Buffer, 16), 0x0B);
 
       Print("\nFlags: ", 0x0F);
-      Print(Itoa(*(uint32*)(Mmap+16), Buffer, 16), 0x0B);
+      Print(Itoa(Test->Type, Buffer, 16), 0x0B);
 
       Print("\nAcpi: ", 0x0F);
-      Print(Itoa(*(uint32*)(Mmap+20), Buffer, 2), 0x0B);
+      Print(Itoa(Test->Acpi, Buffer, 2), 0x0B);
 
       for (int j = 0; j < 60000000; j++) {
         __asm__("nop");
