@@ -124,6 +124,9 @@ void __attribute__((noreturn)) Crash(uint16 Error) {
    10000-20000h: Current stack. 64KiB in size.
    20000-80000h: Data, probably.
    80000-FFFFFh: Reserved!
+   (QEMU reserves anything above 9FC00, probably because of the EBDA)
+   (A0000-BFFFFh is always considered reserved as well, video mmeory.)
+   (E0000-EFFFFh as well.)
 
 */
 
@@ -205,63 +208,25 @@ void __attribute__((noreturn)) Bootloader(void) {
   InitializeTerminal(80, 25, 0xB8000);
   ClearTerminal();
 
-  // Test E820
+  // Test e820
+  // Max 128 entries, D000h to DC00h.
 
-  uint32 E820SuccessfulEntries = GetMmap_E820((void*)0xD000, 64);
+  void* Mmap = 0xD000;
+  uint8 MmapEntries = 0;
 
-  Print("\n\n\n\n\n", 0x0F);
+  uint32 Continuation = 0;
 
-  for (uint32 i = 0; i < 3; i++) {
+  do {
 
-    char Buffer[64];
+    void* Entry = (0xD000 + (MmapEntries * 24));
+    Continuation = GetMmapEntry(Entry, 24, Continuation);
 
-    // Get details
+    if (Continuation != 0) MmapEntries++;
+    if (MmapEntries >= 5) break;
 
-    void* Entry = (0xD000 + (i*24));
+  } while (Continuation != 0);
 
-    uint32 BaseLow = *(uint32*)(Entry+0);
-    uint32 BaseHigh = *(uint32*)(Entry+4);
-
-    uint32 LengthLow = *(uint32*)(Entry+8);
-    uint32 LengthHigh = *(uint32*)(Entry+12);
-
-    uint32 Type = *(uint32*)(Entry+16);
-    uint32 Acpi = *(uint32*)(Entry+20);
-
-    // Print
-
-    Print("Entry ", 0x0F);
-    Print(Itoa(i, Buffer, 10), 0x0F);
-    Print(":", 0x0F);
-
-    Print("\nBase address: ", 0x0B);
-    Print("0x", 0x0F);
-    Print(Itoa(BaseHigh, Buffer, 16), 0x0F);
-    Print(Itoa(BaseLow, Buffer, 16), 0x0F);
-
-    Print("\nLength address: ", 0x0B);
-    Print("0x", 0x0F);
-    Print(Itoa(LengthHigh, Buffer, 16), 0x0F);
-    Print(Itoa(LengthLow, Buffer, 16), 0x0F);
-
-    Print("\nType field: ", 0x0B);
-    Print(Itoa(Type, Buffer, 2), 0x0F);
-    Print("b", 0x0F);
-
-    Print("\nAcpi field: ", 0x0B);
-    Print(Itoa(Acpi, Buffer, 2), 0x0F);
-    Print("b\n\n", 0x0F);
-
-  }
-
-  InitializeTerminal(80, 25, 0xB8000);
-
-  // Test memset
-  // Memset(0xB8000, 0x00, 4000);
-
-  // Test real mode
-
-  // realModeTable* Table = initializeRealModeTable();
+  // Display a message, a
 
   for (;;) {
 
@@ -276,6 +241,25 @@ void __attribute__((noreturn)) Bootloader(void) {
       } else {
         Print("A20 is disabled. :(\n\n", 0x0C);
       }
+
+      char Buffer[64];
+
+      Print("Number of E820 entries: ", 0x0F);
+      Print(Itoa(MmapEntries, Buffer, 10), 0x0B);
+
+      Print("\nBase: ", 0x0F);
+      Print(Itoa(*(uint32*)(Mmap+4), Buffer, 16), 0x0B);
+      Print(Itoa(*(uint32*)(Mmap+0), Buffer, 16), 0x0B);
+
+      Print("\nLimit: ", 0x0F);
+      Print(Itoa(*(uint32*)(Mmap+12), Buffer, 16), 0x0B);
+      Print(Itoa(*(uint32*)(Mmap+8), Buffer, 16), 0x0B);
+
+      Print("\nFlags: ", 0x0F);
+      Print(Itoa(*(uint32*)(Mmap+16), Buffer, 2), 0x0B);
+
+      Print("\nAcpi: ", 0x0F);
+      Print(Itoa(*(uint32*)(Mmap+20), Buffer, 2), 0x0B);
 
       for (int j = 0; j < 60000000; j++) {
         __asm__("nop");

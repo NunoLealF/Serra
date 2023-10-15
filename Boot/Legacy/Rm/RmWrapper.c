@@ -94,7 +94,7 @@ typedef struct {
 
 */
 
-void realMode(void) {
+void RealMode(void) {
 
   __asm__("movl $0xC000, %%eax; call *%%eax" : : : "eax");
 
@@ -111,7 +111,7 @@ void realMode(void) {
 
 */
 
-realModeTable* initializeRealModeTable(void) {
+realModeTable* InitializeRealModeTable(void) {
 
   realModeTable* Table = (void*)0xCE00;
 

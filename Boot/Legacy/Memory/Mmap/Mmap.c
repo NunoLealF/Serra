@@ -6,61 +6,36 @@
 #include "../../Rm/Rm.h"
 
 // (Todo: memory map functions)
+// We just use e820
 
 // .
 
-uint32 GetMmap_E820(void* Buffer, uint32 NumEntries) {
+uint32 GetMmapEntry(void* Buffer, uint32 Size, uint32 Continuation) {
 
-  // First call
+  // ...
 
-  realModeTable* Table = initializeRealModeTable();
+  realModeTable* Table = InitializeRealModeTable();
 
   Table->Eax = 0xE820;
-  Table->Ebx = 0;
-  Table->Ecx = 24;
+  Table->Ebx = Continuation;
+  Table->Ecx = Size;
   Table->Edx = 0x534D4150;
 
   Table->Di = (uint16)Buffer;
-
   Table->Int = 0x15;
 
-  realMode();
+  // ...
 
-  // Check to see if it worked, either with the carry flag
+  RealMode();
 
-  if (Table->Eax != 0x534D4150) {
+  // ...
 
-    // It didn't work on the first try; likely broken.
+  if (hasFlag(Table->Eflags, carryFlag)) {
 
     return 0;
 
   }
 
-  // If we're here, it's because we did; let's fill the rest of this out uwu
-  // (we start at 1 because entry 0 is already filled out)
-
-  for (uint32 i = 1; i < NumEntries; i++) {
-
-    if (Table->Ebx == 0) {
-
-      return i;
-
-    }
-
-    Table->Eax = 0xE820;
-    Table->Ecx = 24;
-    Table->Edx = 0x534D4150;
-
-    Table->Di = (uint16)Buffer + (24*i);
-
-    Table->Int = 0x15;
-
-    realMode();
-
-  }
-
-  // If we've gotten to the end, then just return the total number of entries found
-
-  return NumEntries - 1;
+  return Table->Ebx;
 
 }

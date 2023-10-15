@@ -65,7 +65,7 @@
 
   // Real mode functions.
 
-  void realMode(void);
-  realModeTable* initializeRealModeTable(void);
+  void RealMode(void);
+  realModeTable* InitializeRealModeTable(void);
 
 #endif
