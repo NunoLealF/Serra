@@ -131,8 +131,8 @@ char* Itoa(uint32 Number, char* Buffer, uint8 Base) {
 
   if (Number == 0) {
 
-    Buffer[0] == '0';
-    Buffer[1] == '\0';
+    Buffer[0] = '0';
+    Buffer[1] = '\0';
     return Buffer;
 
   }

@@ -207,22 +207,54 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   // Test E820
 
-  /*
-  uint32 E820SuccessfulEntries = getMmap_E820((void*)0xD000, 64);
+  uint32 E820SuccessfulEntries = GetMmap_E820((void*)0xD000, 64);
 
-  for (uint32 i = 0; i < (E820SuccessfulEntries*24); i++) {
+  Print("\n\n\n\n\n", 0x0F);
 
-    for (int j = 0; j < 8; j++) {
+  for (uint32 i = 0; i < 3; i++) {
 
-      uint8 Character1 = *(uint8*)(0xD000+i) & (1 << (7-j));
-      if (Character1 != 0) Character1 = 1;
-      uint16 Character2 = (Character1+0x30) | 0x0F << 8;
-      *(uint16*)(0xB8000 + (16*i) + (2*j)) = Character2;
+    char Buffer[64];
 
-    }
+    // Get details
+
+    void* Entry = (0xD000 + (i*24));
+
+    uint32 BaseLow = *(uint32*)(Entry+0);
+    uint32 BaseHigh = *(uint32*)(Entry+4);
+
+    uint32 LengthLow = *(uint32*)(Entry+8);
+    uint32 LengthHigh = *(uint32*)(Entry+12);
+
+    uint32 Type = *(uint32*)(Entry+16);
+    uint32 Acpi = *(uint32*)(Entry+20);
+
+    // Print
+
+    Print("Entry ", 0x0F);
+    Print(Itoa(i, Buffer, 10), 0x0F);
+    Print(":", 0x0F);
+
+    Print("\nBase address: ", 0x0B);
+    Print("0x", 0x0F);
+    Print(Itoa(BaseHigh, Buffer, 16), 0x0F);
+    Print(Itoa(BaseLow, Buffer, 16), 0x0F);
+
+    Print("\nLength address: ", 0x0B);
+    Print("0x", 0x0F);
+    Print(Itoa(LengthHigh, Buffer, 16), 0x0F);
+    Print(Itoa(LengthLow, Buffer, 16), 0x0F);
+
+    Print("\nType field: ", 0x0B);
+    Print(Itoa(Type, Buffer, 2), 0x0F);
+    Print("b", 0x0F);
+
+    Print("\nAcpi field: ", 0x0B);
+    Print(Itoa(Acpi, Buffer, 2), 0x0F);
+    Print("b\n\n", 0x0F);
 
   }
-  */
+
+  InitializeTerminal(80, 25, 0xB8000);
 
   // Test memset
   // Memset(0xB8000, 0x00, 4000);
@@ -237,25 +269,13 @@ void __attribute__((noreturn)) Bootloader(void) {
 
       InitializeTerminal(80, 25, 0xB8000);
       Print("Hi, this is Serra!\n", i);
-      Print("October 6th 2023\n\n", 0x0F);
+      Print("October 15th 2023\n\n", 0x0F);
 
       if (CheckA20() == true) {
         Print("A20 is enabled, hooray!\n\n", 0x0A);
       } else {
         Print("A20 is disabled. :(\n\n", 0x0C);
       }
-
-      // Test out itoa
-
-      char Buffer[64];
-
-      Print("Test 1: ", 0x0F);
-      Print(Itoa(0x65363231, Buffer, 16), i);
-      Print("h\n", i);
-
-      Print("Test 2: ", 0x0F);
-      Print(Itoa(0x65363231, Buffer, 2), i);
-      Print("b\n", i);
 
       for (int j = 0; j < 60000000; j++) {
         __asm__("nop");
