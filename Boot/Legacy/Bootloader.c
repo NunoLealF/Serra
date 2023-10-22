@@ -96,6 +96,23 @@ void __attribute__((noreturn)) Crash(uint16 Error) {
 }
 
 
+// ...
+
+void ErrorStubA(void) {
+
+  Print("\n\nError stub A (Fault)", 0x0F);
+
+}
+
+void ErrorStubB(void) {
+
+  Print("\n\nError stub B (Abort)", 0x0F);
+  for(;;) {
+    __asm__("cli; hlt");
+  }
+
+}
+
 /* void __attribute__((noreturn)) Bootloader()
 
    Inputs:    (none)
@@ -120,6 +137,7 @@ void __attribute__((noreturn)) Crash(uint16 Error) {
    0CE00-0D000h: Data area for the above (real mode).
    0D000-0D800h: Protected mode IDT. Accessible from within 16-bit real mode with ES=0.
    0D800-0F000h: General data area. Accessible from within 16-bit real mode with ES=0.
+   (E000 is our E820 mmap)
    0F000-0FC00h: Empty, but 'reserved'/'loaded'. No idea what to do with this, maybe use as data?
    0FC00-0FD00h: Empty, reserved for A20 and generally just important data.
    0FD00-10000h: Empty, non-reserved. Stack smash protector(?)
@@ -137,18 +155,6 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   // We've finally made it to our second-stage bootloader. We're in 32-bit x86 protected mode with
   // the stack at 20000h in memory, and our bootloader between 7E00h and FC00h in memory.
-
-
-  // Our IDT; this is off for now (with cli), but we need to implement ISRs later on
-
-  descriptorTable* IdtDescriptor;
-  IdtDescriptor->Size = (2048 - 1);
-  IdtDescriptor->Offset = 0xD000;
-
-  LoadIdt(IdtDescriptor);
-
-  // MakeIdtEntry(IdtDescriptor, 0, offset, selector, gate, dpl);
-
 
   // At the moment, we can only reliably access up to the first MiB of data (from 00000h to FFFFFh).
   // This is because we haven't yet enabled the A20 line, which is a holdover from the 8086 days.
@@ -225,10 +231,10 @@ void __attribute__((noreturn)) Bootloader(void) {
   // function that will do it for us (GetMmapEntry(), in Memory/Mmap.c).
 
   // However, before we can start, we'll need to take care of two things - first, we'll need to
-  // figure out where to put our memory map (in our case, this is at D000h), and second, we'll
+  // figure out where to put our memory map (in our case, this is at E000h), and second, we'll
   // also need what's known as a 'continuation number', which will be used later.
 
-  void* Mmap = 0xD000;
+  void* Mmap = 0xE000;
   uint32 Continuation = 0;
 
   // Now that we've taken care of that, we can finally request our system's memory map. We have
@@ -266,13 +272,52 @@ void __attribute__((noreturn)) Bootloader(void) {
   }
 
 
+  // Our IDT; this is very incomplete, and should be implemented in a better way, but uhh
+
+  InitializeTerminal(80, 25, 0xB8000);
+  ClearTerminal();
+
+  descriptorTable* IdtDescriptor;
+  IdtDescriptor->Size = (2048 - 1);
+  IdtDescriptor->Offset = 0xD000;
+
+  // By the way - we haven't remapped the PIC or anything, so we *will* get a random double
+  // fault.
+
+  MakeIdtEntry(IdtDescriptor, 0, IsrFaultStub, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 1, IsrNoErrorStub, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 2, IsrNoErrorStub, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 3, IsrNoErrorStub, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 4, IsrNoErrorStub, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 5, IsrNoErrorStub, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 6, IsrFaultStub, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 7, IsrFaultStub, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 8, IsrAbortStub, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 9, IsrNoErrorStub, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 10, IsrAbortStub, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 11, IsrAbortStub, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 12, IsrAbortStub, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 13, IsrAbortStub, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 14, IsrAbortStub, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 15, IsrNoErrorStub, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 16, IsrFaultStub, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 17, IsrFaultStub, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 18, IsrAbortStub, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 19, IsrFaultStub, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 20, IsrFaultStub, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 30, IsrAbortStub, 0x08, 0x0F, 0x00);
+
+  LoadIdt(IdtDescriptor);
+  // __asm__("sti");
+
+
   // Terminal test
   // (this just shows the date / whether A20 and E820 are enabled / etc.)
 
   InitializeTerminal(80, 25, 0xB8000);
   ClearTerminal();
 
-  mmapEntry* Test = 0xD000;
+  mmapEntry* Test = 0xE000;
 
   for (;;) {
 

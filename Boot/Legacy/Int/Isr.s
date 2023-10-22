@@ -2,10 +2,17 @@
 # This file is part of the Serra project, which is released under the MIT license.
 # For more information, please refer to the accompanying license agreement. <3
 
+# ...
+
+.extern ErrorStubA
+.extern ErrorStubB
+
 # We want to be able to call these functions from the rest of our bootloader, so we use .globl
 # to turn them into global functions.
 
-# .globl ?
+.globl IsrNoErrorStub
+.globl IsrFaultStub
+.globl IsrAbortStub
 
 # 0 - divide error (DE), fault
 # 1 - debug (DB), fault/trap
@@ -30,3 +37,14 @@
 # 20 - virt. exception (VE), fault
 # 21 to 31 - reserved, ?
 # 32 to 255 - user defined, int
+
+IsrNoErrorStub:
+  iret
+
+IsrFaultStub:
+  call ErrorStubA
+  iret
+
+IsrAbortStub:
+  call ErrorStubB
+  iret

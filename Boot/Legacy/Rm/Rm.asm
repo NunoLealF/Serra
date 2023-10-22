@@ -271,9 +271,10 @@ prepareProtectedMode16:
 
   cli
 
-  ; Load our 32-bit protected mode GDT.
+  ; Load our 32-bit protected mode GDT and IDT.
 
   lgdt [protectedModeGdtDescriptor]
+  lidt [protectedModeIdtDescriptor]
 
   ; Enable protected mode by setting the first bit of the CR0 register.
 
@@ -438,6 +439,12 @@ protectedModeGdt:
   db 11001111b ; Limit (bits 16-19) and flags (bits 0-7)
   db 00h ; Base (bits 24-31)
 
+; 32-bit protected mode IDT descriptor.
+
+protectedModeIdtDescriptor:
+
+  dw 2048 - 1 ; 256 eight-byte segments, minus one byte.
+  dd 0D000h ; The location of our IDT is at D000h.
 
 ; -----------------------------------
 

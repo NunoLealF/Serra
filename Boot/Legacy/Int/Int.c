@@ -37,6 +37,12 @@ typedef struct {
 
 // ...
 
+extern void IsrNoErrorStub(void);
+extern void IsrFaultStub(void);
+extern void IsrAbortStub(void);
+
+// ...
+
 void LoadIdt(descriptorTable* IdtDescriptor) {
 
   __asm__("lidt %0" : : "m"(*IdtDescriptor));
