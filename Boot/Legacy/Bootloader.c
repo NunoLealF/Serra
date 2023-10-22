@@ -7,6 +7,7 @@
 #include "Bootloader.h"
 #include "Graphics/Graphics.h"
 #include "Memory/Memory.h"
+#include "Int/Int.h"
 #include "Rm/Rm.h"
 
 #ifndef __i686__
@@ -117,7 +118,8 @@ void __attribute__((noreturn)) Crash(uint16 Error) {
    07E00-0C000h: Second-stage bootloader. 32-bit protected mode.
    0C000-0CE00h: Assembly protected and real mode 'environment'.
    0CE00-0D000h: Data area for the above (real mode).
-   0D000-0F000h: General data area. Accessible from within 16-bit real mode with ES=0.
+   0D000-0D800h: Protected mode IDT. Accessible from within 16-bit real mode with ES=0.
+   0D800-0F000h: General data area. Accessible from within 16-bit real mode with ES=0.
    0F000-0FC00h: Empty, but 'reserved'/'loaded'. No idea what to do with this, maybe use as data?
    0FC00-0FD00h: Empty, reserved for A20 and generally just important data.
    0FD00-10000h: Empty, non-reserved. Stack smash protector(?)
@@ -203,7 +205,6 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   }
 
-
   // In order to figure out which memory areas we can use, and which areas we can't, we'll
   // need to obtain what's known as a memory map from our BIOS/firmware.
 
@@ -267,7 +268,7 @@ void __attribute__((noreturn)) Bootloader(void) {
 
       InitializeTerminal(80, 25, 0xB8000);
       Print("Hi, this is Serra!\n", i);
-      Print("October 15th 2023\n\n", 0x0F);
+      Print("October 22nd 2023\n\n", 0x0F);
 
       if (CheckA20() == true) {
         Print("A20 is enabled, hooray!\n\n", 0x0A);
