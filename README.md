@@ -4,6 +4,7 @@ An x86 bootloader under construction.
 ## Roadmap
 - Bootsector **Done**
 - Protected mode **Done**
+- Set up a proper IDT *Just starting, in progress*
 
 - String/terminal functions **Done**
 - Enabling the A20 line **Done**

@@ -303,8 +303,9 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   // Things left to do:
 
-  // A - Work on E820, memory map, etc.
-  // B - Uhh, CPUID?
+  // A - Set up a proper IDT
+  // B - Finish working on E820, memory map, etc.
+  // C - Uhh, CPUID?
 
   for(;;);
 
