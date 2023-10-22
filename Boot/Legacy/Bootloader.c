@@ -138,6 +138,18 @@ void __attribute__((noreturn)) Bootloader(void) {
   // We've finally made it to our second-stage bootloader. We're in 32-bit x86 protected mode with
   // the stack at 20000h in memory, and our bootloader between 7E00h and FC00h in memory.
 
+
+  // Our IDT; this is off for now (with cli), but we need to implement ISRs later on
+
+  descriptorTable* IdtDescriptor;
+  IdtDescriptor->Size = (2048 - 1);
+  IdtDescriptor->Offset = 0xD000;
+
+  LoadIdt(IdtDescriptor);
+
+  // MakeIdtEntry(IdtDescriptor, 0, offset, selector, gate, dpl);
+
+
   // At the moment, we can only reliably access up to the first MiB of data (from 00000h to FFFFFh).
   // This is because we haven't yet enabled the A20 line, which is a holdover from the 8086 days.
 

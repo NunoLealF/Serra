@@ -7,4 +7,30 @@
 
   // Todo - everything
 
+  // ...
+
+  typedef struct {
+
+    uint16 Size;
+    uint32 Offset;
+
+  } __attribute__((packed)) descriptorTable;
+
+  /// ...
+
+  typedef struct {
+
+    uint16 OffsetLow;
+    uint16 Selector;
+    uint8 Reserved;
+    uint8 Flags;
+    uint16 OffsetHigh;
+
+  } __attribute__((packed)) idtEntry;
+
+  // ...
+
+  void LoadIdt(descriptorTable* IdtDescriptor);
+  void MakeIdtEntry(descriptorTable* IdtDescriptor, uint16 EntryNum, uint32 Offset, uint16 Selector, uint8 Gate, uint8 Dpl);
+
 #endif
