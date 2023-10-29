@@ -36,9 +36,9 @@
 
   // ...
 
-  uint8 Inb(uint8 Port);
-  void Outb(uint8 Port, uint8 Data);
-  
+  uint8 Inb(uint16 Port);
+  void Outb(uint16 Port, uint8 Data);
+
   void DisablePic(void);
 
   // ...
