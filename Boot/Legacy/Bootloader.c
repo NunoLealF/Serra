@@ -308,7 +308,7 @@ void __attribute__((noreturn)) Bootloader(void) {
   MakeIdtEntry(IdtDescriptor, 30, IsrAbortStub, 0x08, 0x0F, 0x00);
 
   LoadIdt(IdtDescriptor);
-  // __asm__("sti");
+  __asm__("sti"); DisablePic();
 
 
   // Terminal test

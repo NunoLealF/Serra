@@ -36,6 +36,10 @@
 
   // ...
 
+  extern void DisablePic(void);
+
+  // ...
+
   void LoadIdt(descriptorTable* IdtDescriptor);
   void MakeIdtEntry(descriptorTable* IdtDescriptor, uint16 EntryNum, uint32 Offset, uint16 Selector, uint8 Gate, uint8 Dpl);
 
