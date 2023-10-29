@@ -38,6 +38,8 @@
 # 21 to 31 - reserved, ?
 # 32 to 255 - user defined, int
 
+# Error stubs.
+
 IsrNoErrorStub:
   iret
 
