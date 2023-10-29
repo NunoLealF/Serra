@@ -160,7 +160,7 @@ Legacy/Int/Isr.o:
 
 Legacy/Int/Irq.o:
 	@echo "Building $@"
-	@$(CC) $(CFLAGS) -c Legacy/Int/Irq.s -o Legacy/Int/Irq.o
+	@$(CC) $(CFLAGS) -c Legacy/Int/Irq.c -o Legacy/Int/Irq.o
 
 # (Legacy/Rm)
 

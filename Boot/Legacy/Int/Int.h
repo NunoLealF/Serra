@@ -36,7 +36,10 @@
 
   // ...
 
-  extern void DisablePic(void);
+  uint8 Inb(uint8 Port);
+  void Outb(uint8 Port, uint8 Data);
+  
+  void DisablePic(void);
 
   // ...
 
