@@ -284,31 +284,37 @@ void __attribute__((noreturn)) Bootloader(void) {
   // By the way - we haven't remapped the PIC or anything, so we *will* get a random double
   // fault.
 
-  MakeIdtEntry(IdtDescriptor, 0, IsrFaultStub, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 1, IsrNoErrorStub, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 2, IsrNoErrorStub, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 3, IsrNoErrorStub, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 4, IsrNoErrorStub, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 5, IsrNoErrorStub, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 6, IsrFaultStub, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 7, IsrFaultStub, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 8, IsrAbortStub, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 9, IsrNoErrorStub, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 10, IsrAbortStub, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 11, IsrAbortStub, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 12, IsrAbortStub, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 13, IsrAbortStub, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 14, IsrAbortStub, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 15, IsrNoErrorStub, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 16, IsrFaultStub, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 17, IsrFaultStub, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 18, IsrAbortStub, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 19, IsrFaultStub, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 20, IsrFaultStub, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 30, IsrAbortStub, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x00, IsrFaultStub, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x01, IsrNoErrorStub, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x02, IsrNoErrorStub, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x03, IsrNoErrorStub, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x04, IsrNoErrorStub, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x05, IsrNoErrorStub, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x06, IsrFaultStub, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x07, IsrFaultStub, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x08, IsrAbortStub, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x09, IsrNoErrorStub, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x0A, IsrAbortStub, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x0B, IsrAbortStub, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x0C, IsrAbortStub, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x0D, IsrAbortStub, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x0E, IsrAbortStub, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x0F, IsrNoErrorStub, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x10, IsrFaultStub, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x11, IsrFaultStub, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x12, IsrAbortStub, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x13, IsrFaultStub, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x14, IsrFaultStub, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x1E, IsrAbortStub, 0x08, 0x0F, 0x00);
 
   LoadIdt(IdtDescriptor);
-  __asm__("sti"); DisablePic();
+
+  MaskPic(0xFF); // Full mask, don't enable anything
+  InitPic(0x20, 0x28); // IRQ1 is at 0x20-0x27, IRQ2 is at 0x28-0x2F
+
+  __asm__("sti");
+  MaskPic(0xFD); // Test by enabling keyboard.
+  // It'll double fault (since there's no interrupt handler for IRQ1, or 0x21)
 
 
   // Terminal test
@@ -325,7 +331,7 @@ void __attribute__((noreturn)) Bootloader(void) {
 
       InitializeTerminal(80, 25, 0xB8000);
       Print("Hi, this is Serra!\n", i);
-      Print("October 22nd 2023\n\n", 0x0F);
+      Print("October 29th 2023\n\n", 0x0F);
 
       if (CheckA20() == true) {
         Print("A20 is enabled, hooray!\n\n", 0x0A);
