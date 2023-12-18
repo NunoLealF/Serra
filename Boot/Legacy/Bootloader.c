@@ -100,15 +100,15 @@ void __attribute__((noreturn)) Crash(uint16 Error) {
 
 void ErrorStubA(unsigned char Code) {
 
-  Print("\n\nError stub A (Fault): ", 0x0F);
-  Putchar((Code + 0x30), 0x0F);
+  Print("\n\nError stub A (Fault) -> <", 0x0F);
+  Putchar((Code + 0x30), 0x0C);
 
 }
 
 void ErrorStubB(unsigned char Code) {
 
-  Print("\n\nError stub B (Abort): ", 0x0F);
-  Putchar((Code + 0x30), 0x0F);
+  Print("\n\nError stub B (Abort) -> ", 0x0F);
+  Putchar((Code + 0x30), 0x0C);
 
   for(;;) {
     __asm__("cli; hlt");
@@ -286,29 +286,40 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   // By the way - we haven't remapped the PIC or anything, so we *will* get a random double
   // fault.
+  // (edit: we have lmao)
 
   MakeIdtEntry(IdtDescriptor, 0x00, IsrDivideFault, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x01, IsrNoErrorStub, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x02, IsrNoErrorStub, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x03, IsrNoErrorStub, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x04, IsrNoErrorStub, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x05, IsrNoErrorStub, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x06, IsrFaultStub, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x07, IsrFaultStub, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x01, IsrDebug, 0x08, 0x0F, 0x00);
+  // 02
+  // 03
+  // 04
+  MakeIdtEntry(IdtDescriptor, 0x05, IsrOutOfBounds, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x06, IsrInvalidOpcode, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x07, IsrDeviceFault, 0x08, 0x0F, 0x00);
   MakeIdtEntry(IdtDescriptor, 0x08, IsrDoubleFault, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x09, IsrNoErrorStub, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x0A, IsrAbortStub, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x0B, IsrAbortStub, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x0C, IsrAbortStub, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x09, IsrNoFault, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x0A, IsrInvalidTss, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x0B, IsrSegmentFault, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x0C, IsrStackFault, 0x08, 0x0F, 0x00);
   MakeIdtEntry(IdtDescriptor, 0x0D, IsrGpFault, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x0E, IsrAbortStub, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x0F, IsrNoErrorStub, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x10, IsrFaultStub, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x11, IsrFaultStub, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x12, IsrAbortStub, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x13, IsrFaultStub, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x14, IsrFaultStub, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x1E, IsrAbortStub, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x0E, IsrPageFault, 0x08, 0x0F, 0x00);
+  // 0F
+  MakeIdtEntry(IdtDescriptor, 0x10, Isr87Fault, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x11, IsrAlignCheck, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x12, IsrMachineCheck, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x13, IsrSimdFault, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x14, IsrVirtFault, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x15, IsrControlFault, 0x08, 0x0F, 0x00);
+  // 16
+  // 17
+  // 18
+  // 19
+  // 1A
+  // 1B
+  MakeIdtEntry(IdtDescriptor, 0x1C, IsrHypervisorFault, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x1D, IsrVmmFault, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x1E, IsrSecurityFault, 0x08, 0x0F, 0x00);
+  // 1F
 
   LoadIdt(IdtDescriptor);
 

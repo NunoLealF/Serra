@@ -10,28 +10,35 @@
 # We want to be able to call these functions from the rest of our bootloader, so we use .globl
 # to turn them into global functions.
 
-.globl IsrNoErrorStub
-.globl IsrFaultStub
-.globl IsrAbortStub
-
-# don't forget to add the rest
-
-.globl IsrDoubleFault
-.globl IsrGpFault
+.globl IsrNoFault
 .globl IsrDivideFault
 
-# Error stubs.
+.globl IsrDebug
+.globl IsrOutOfBounds
+.globl IsrInvalidOpcode
 
-IsrNoErrorStub:
-  iret
+.globl IsrDeviceFault
+.globl IsrDoubleFault
 
-IsrFaultStub:
-  call ErrorStubA
-  iret
+.globl IsrInvalidTss
+.globl IsrSegmentFault
 
-IsrAbortStub:
-  call ErrorStubB
-  iret
+.globl IsrStackFault
+.globl IsrGpFault
+.globl IsrPageFault
+
+.globl Isr87Fault
+
+.globl IsrAlignCheck
+.globl IsrMachineCheck
+
+.globl IsrSimdFault
+.globl IsrVirtFault
+
+.globl IsrControlFault
+.globl IsrHypervisorFault
+.globl IsrVmmFault
+.globl IsrSecurityFault
 
 # ...
 # Only faults related to interrupt numbers 10, 11, 12, 13, 14, and 17 use an error code.

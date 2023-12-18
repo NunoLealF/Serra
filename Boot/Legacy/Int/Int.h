@@ -16,7 +16,7 @@
 
   } __attribute__((packed)) descriptorTable;
 
-  /// ...
+  // ...
 
   typedef struct {
 
@@ -30,15 +30,35 @@
 
   // ...
 
-  extern void IsrNoErrorStub(void);
-  extern void IsrFaultStub(void);
-  extern void IsrAbortStub(void);
-
-  // DON'T FORGET TO ADD THE REST
-
-  extern void IsrDoubleFault(void);
-  extern void IsrGpFault(void);
+  extern void IsrNoFault(void);
   extern void IsrDivideFault(void);
+
+  extern void IsrDebug(void);
+  extern void IsrOutOfBounds(void);
+  extern void IsrInvalidOpcode(void);
+
+  extern void IsrDeviceFault(void);
+  extern void IsrDoubleFault(void);
+
+  extern void IsrInvalidTss(void);
+  extern void IsrSegmentFault(void);
+
+  extern void IsrStackFault(void);
+  extern void IsrGpFault(void);
+  extern void IsrPageFault(void);
+
+  extern void Isr87Fault(void);
+
+  extern void IsrAlignCheck(void);
+  extern void IsrMachineCheck(void);
+
+  extern void IsrSimdFault(void);
+  extern void IsrVirtFault(void);
+
+  extern void IsrControlFault(void);
+  extern void IsrHypervisorFault(void);
+  extern void IsrVmmFault(void);
+  extern void IsrSecurityFault  (void);
 
   // ...
 
