@@ -6,47 +6,10 @@
 #include "../Memory/Memory.h"
 #include "Graphics.h"
 
-/* (typedef) volatile struct terminalDataStruct{}
-
-   Inputs:  uint16 PosX - The current X (horizontal) position in the terminal;
-            uint16 PosY - The current Y (vertical) position in the terminal;
-            uint32 Framebuffer - The address of the framebuffer being used.
-
-            uint16 LimitX - The width (or horizontal limit) of the terminal being used;
-            uint16 LimitY - The height (or the vertical limit) of the terminal being used.
-
-   Outputs: (Same as above)
-
-   This is a template for the structure which will contain important data about our terminal:
-   where it's located, what the current position is, what the horizontal/vertical limits are, etc.
-
-   Whenever we use any of the terminal functions, like InitializeTerminal(), ClearTerminal(),
-   Scroll(), Putchar(), Print(), etc., we refer to a certain copy of this structure named
-   TerminalTable{}, which should contain information about the current terminal being used.
-
-   In order to initialize this table, one should use the InitializeTerminal() function. Keep in
-   mind that, unlike the realModeTable{} structure in RmWrapper.c, this one isn't necessarily
-   defined or declared at a specific location.
-
-*/
-
-typedef volatile struct {
-
-  // General info
-
-  uint16 PosX;
-  uint16 PosY;
-  uint32 Framebuffer;
-
-  // Mode info
-
-  uint16 LimitX;
-  uint16 LimitY;
-
-} terminalDataStruct;
+// (I haven't really figured out a good way to comment this without clogging up my header file,
+// but this was already defined in Graphics.h basically)
 
 terminalDataStruct TerminalTable;
-
 
 /* void InitializeTerminal()
 
@@ -236,7 +199,7 @@ static void UpdateTerminal(const char Character) {
 static void PutcharAt(const char Character, uint8 Color, uint16 PosX, uint16 PosY) {
 
   uint32 Offset = 2 * (PosX + (TerminalTable.LimitX * PosY));
-  uint8* Framebuffer = (TerminalTable.Framebuffer + Offset);
+  uint8* Framebuffer = (uint8*)(TerminalTable.Framebuffer + Offset);
 
   Framebuffer[0] = Character;
   Framebuffer[1] = Color;
@@ -326,7 +289,7 @@ void Putchar(const char Character, uint8 Color) {
 
 void Print(const char* String, uint8 Color) {
 
-  for (unsigned int i = 0; i < Strlen(String); i++) {
+  for (int i = 0; i < Strlen(String); i++) {
     Putchar(String[i], Color);
   }
 

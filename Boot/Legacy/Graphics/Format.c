@@ -20,9 +20,9 @@
 
 */
 
-uint32 Strlen(const char* String) {
+int Strlen(const char* String) {
 
-  uint32 Length = 0;
+  int Length = 0;
 
   // Go through each byte in the string, and only stop when we hit a '\0' (null byte).
 
@@ -121,7 +121,7 @@ char* Itoa(uint32 Number, char* Buffer, uint8 Base) {
 
   if ((Base < 2) || (Base > 36)) {
 
-    Buffer[0] == '\0';
+    Buffer[0] = '\0';
     return Buffer;
 
   }

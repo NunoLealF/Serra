@@ -111,7 +111,7 @@ IsrOutOfBounds:
   IsrFaultStub $0x05
 
 IsrInvalidOpcode:
-  IsrFaultStub $0x06
+  IsrAbortStub $0x06
 
 IsrDeviceFault:
   IsrFaultStub $0x07

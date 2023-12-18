@@ -3,12 +3,7 @@
 // For more information, please refer to the accompanying license agreement. <3
 
 #include "Stdint.h"
-
 #include "Bootloader.h"
-#include "Graphics/Graphics.h"
-#include "Memory/Memory.h"
-#include "Int/Int.h"
-#include "Rm/Rm.h"
 
 #ifndef __i686__
 #error "This code is supposed to be compiled with an i686-elf cross-compiler."
@@ -100,7 +95,7 @@ void __attribute__((noreturn)) Crash(uint16 Error) {
 
 void ErrorStubA(unsigned char Code) {
 
-  Print("\n\nError stub A (Fault) -> <", 0x0F);
+  Print("\n\nError stub A (Fault) -> ", 0x0F);
   Putchar((Code + 0x30), 0x0C);
 
 }
@@ -237,7 +232,7 @@ void __attribute__((noreturn)) Bootloader(void) {
   // figure out where to put our memory map (in our case, this is at E000h), and second, we'll
   // also need what's known as a 'continuation number', which will be used later.
 
-  void* Mmap = 0xE000;
+  void* Mmap = (void*)0xE000;
   uint32 Continuation = 0;
 
   // Now that we've taken care of that, we can finally request our system's memory map. We have
@@ -254,7 +249,7 @@ void __attribute__((noreturn)) Bootloader(void) {
 
     // After that, we just need to call GetMmapEntry() with the right parameters.
 
-    Continuation = GetMmapEntry(Mmap + Offset, 24, Continuation);
+    Continuation = GetMmapEntry((void*)((uint32)Mmap + Offset), 24, Continuation);
 
     // If the 'continuation number' reaches 0, or if we've already read more than 128 entries
     // from the system, stop the loop.
@@ -288,38 +283,38 @@ void __attribute__((noreturn)) Bootloader(void) {
   // fault.
   // (edit: we have lmao)
 
-  MakeIdtEntry(IdtDescriptor, 0x00, IsrDivideFault, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x01, IsrDebug, 0x08, 0x0F, 0x00);
-  // 02
-  // 03
-  // 04
-  MakeIdtEntry(IdtDescriptor, 0x05, IsrOutOfBounds, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x06, IsrInvalidOpcode, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x07, IsrDeviceFault, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x08, IsrDoubleFault, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x09, IsrNoFault, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x0A, IsrInvalidTss, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x0B, IsrSegmentFault, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x0C, IsrStackFault, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x0D, IsrGpFault, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x0E, IsrPageFault, 0x08, 0x0F, 0x00);
-  // 0F
-  MakeIdtEntry(IdtDescriptor, 0x10, Isr87Fault, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x11, IsrAlignCheck, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x12, IsrMachineCheck, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x13, IsrSimdFault, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x14, IsrVirtFault, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x15, IsrControlFault, 0x08, 0x0F, 0x00);
-  // 16
-  // 17
-  // 18
-  // 19
-  // 1A
-  // 1B
-  MakeIdtEntry(IdtDescriptor, 0x1C, IsrHypervisorFault, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x1D, IsrVmmFault, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x1E, IsrSecurityFault, 0x08, 0x0F, 0x00);
-  // 1F
+  MakeIdtEntry(IdtDescriptor, 0x00, (uint32)&IsrDivideFault, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x01, (uint32)&IsrDebug, 0x08, 0x0F, 0x00);
+  // 02, NMI
+  // 03, Break
+  // 04, Overflow
+  MakeIdtEntry(IdtDescriptor, 0x05, (uint32)&IsrOutOfBounds, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x06, (uint32)&IsrInvalidOpcode, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x07, (uint32)&IsrDeviceFault, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x08, (uint32)&IsrDoubleFault, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x09, (uint32)&IsrNoFault, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x0A, (uint32)&IsrInvalidTss, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x0B, (uint32)&IsrSegmentFault, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x0C, (uint32)&IsrStackFault, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x0D, (uint32)&IsrGpFault, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x0E, (uint32)&IsrPageFault, 0x08, 0x0F, 0x00);
+  // 0F: Deprecated, use IsrNoFault
+  MakeIdtEntry(IdtDescriptor, 0x10, (uint32)&Isr87Fault, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x11, (uint32)&IsrAlignCheck, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x12, (uint32)&IsrMachineCheck, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x13, (uint32)&IsrSimdFault, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x14, (uint32)&IsrVirtFault, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x15, (uint32)&IsrControlFault, 0x08, 0x0F, 0x00);
+  // 16, Reserved
+  // 17, Reserved
+  // 18, Reserved
+  // 19, Reserved
+  // 1A, Reserved
+  // 1B, Reserved
+  MakeIdtEntry(IdtDescriptor, 0x1C, (uint32)&IsrHypervisorFault, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x1D, (uint32)&IsrVmmFault, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x1E, (uint32)&IsrSecurityFault, 0x08, 0x0F, 0x00);
+  // 1F, Reserved
 
   LoadIdt(IdtDescriptor);
 
@@ -329,6 +324,7 @@ void __attribute__((noreturn)) Bootloader(void) {
   __asm__("sti");
   MaskPic(0xFD); // Test by enabling keyboard.
   // It'll double fault (since there's no interrupt handler for IRQ1, or 0x21)
+  // (or, well, it'll GPF, but I don't even know why lol)
 
   // Terminal test
   // (this just shows the date / whether A20 and E820 are enabled / etc.)
@@ -336,7 +332,7 @@ void __attribute__((noreturn)) Bootloader(void) {
   InitializeTerminal(80, 25, 0xB8000);
   ClearTerminal();
 
-  mmapEntry* Test = 0xE000;
+  mmapEntry* Test = (mmapEntry*)0xE000;
 
   for (;;) {
 
