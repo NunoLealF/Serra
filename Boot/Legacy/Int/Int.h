@@ -34,6 +34,12 @@
   extern void IsrFaultStub(void);
   extern void IsrAbortStub(void);
 
+  // DON'T FORGET TO ADD THE REST
+
+  extern void IsrDoubleFault(void);
+  extern void IsrGpFault(void);
+  extern void IsrDivideFault(void);
+
   // ...
 
   #define PicA_Data 0x20

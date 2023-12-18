@@ -14,29 +14,11 @@
 .globl IsrFaultStub
 .globl IsrAbortStub
 
-# 0 - divide error (DE), fault
-# 1 - debug (DB), fault/trap
-# 2 - NMI, int
-# 3 - break (BP), trap
-# 4 - overflow (OF), trap
-# 5 - bound exceeded (BR), fault
-# 6 - invalid opcode (UD), fault
-# 7 - device not available (NM), fault
-# 8 - double fault (DF), abort
-# 9 - reserved, fault
-# 10 - invalid tss (TS), fault
-# 11 - segment not present (NP), fault
-# 12 - stack segment fault (SS), fault
-# 13 - general protection (GP/GPF), fault
-# 14 - page fault (PF), fault
-# 15 - reserved, ?
-# 16 - x87 error (MF), fault
-# 17 - align check (AC), fault
-# 18 - machine check (MC), abort
-# 19 - simd exception (XM), fault
-# 20 - virt. exception (VE), fault
-# 21 to 31 - reserved, ?
-# 32 to 255 - user defined, int
+# don't forget to add the rest
+
+.globl IsrDoubleFault
+.globl IsrGpFault
+.globl IsrDivideFault
 
 # Error stubs.
 
@@ -50,3 +32,134 @@ IsrFaultStub:
 IsrAbortStub:
   call ErrorStubB
   iret
+
+# ...
+# Only faults related to interrupt numbers 10, 11, 12, 13, 14, and 17 use an error code.
+# These are macros and they're the best thing known to man <3
+
+# ...
+
+.macro IsrFaultStub vNum
+
+  pushal
+  mov \vNum, %edx
+
+  push %edx
+  call ErrorStubA
+  pop %edx
+
+  popal
+  iret
+
+.endm
+
+# ...
+
+.macro IsrFaultStubWithError vNum
+
+  pushal
+  mov \vNum, %edx
+
+  push %edx
+  call ErrorStubA
+  pop %edx
+
+  popal
+  pop %eax
+  iret
+
+.endm
+
+# ...
+
+.macro IsrAbortStub vNum
+
+  pushal
+  mov \vNum, %edx
+
+  push %edx
+  call ErrorStubB
+  pop %edx
+
+  popal
+  iret
+
+.endm
+
+
+# ---
+
+IsrNoFault:
+  iret
+
+# ---
+
+IsrDivideFault:
+  IsrAbortStub $0x00
+
+IsrDebug:
+  IsrFaultStub $0x01
+
+IsrOutOfBounds:
+  IsrFaultStub $0x05
+
+IsrInvalidOpcode:
+  IsrFaultStub $0x06
+
+IsrDeviceFault:
+  IsrFaultStub $0x07
+
+# ---
+
+IsrDoubleFault: # returns err (always 0)
+  IsrAbortStub $0x08
+
+IsrInvalidTss: # returns err
+  IsrFaultStubWithError $0x0A
+
+IsrSegmentFault: # returns err
+  IsrFaultStubWithError $0x0B
+
+IsrStackFault: # returns err
+  IsrFaultStubWithError $0x0C
+
+IsrGpFault: # returns err
+  IsrFaultStubWithError $0x0D
+
+IsrPageFault: # returns err
+  IsrFaultStubWithError $0x0E
+
+# ---
+
+Isr87Fault:
+  IsrFaultStub $0x10
+
+# ---
+
+IsrAlignCheck: # returns err
+  IsrFaultStubWithError $0x11
+
+IsrMachineCheck:
+  IsrAbortStub $0x12
+
+# ---
+
+IsrSimdFault:
+  IsrFaultStub $0x13
+
+IsrVirtFault:
+  IsrFaultStub $0x14
+
+# ---
+
+IsrControlFault: # returns err
+  IsrFaultStubWithError $0x15
+
+IsrHypervisorFault:
+  IsrFaultStub $0x1C
+
+IsrVmmFault: # returns err
+  IsrFaultStubWithError $0x1D
+
+IsrSecurityFault: # returns err
+  IsrFaultStubWithError $0x1E

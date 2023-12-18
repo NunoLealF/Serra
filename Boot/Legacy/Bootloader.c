@@ -98,15 +98,18 @@ void __attribute__((noreturn)) Crash(uint16 Error) {
 
 // ...
 
-void ErrorStubA(void) {
+void ErrorStubA(unsigned char Code) {
 
-  Print("\n\nError stub A (Fault)", 0x0F);
+  Print("\n\nError stub A (Fault): ", 0x0F);
+  Putchar((Code + 0x30), 0x0F);
 
 }
 
-void ErrorStubB(void) {
+void ErrorStubB(unsigned char Code) {
 
-  Print("\n\nError stub B (Abort)", 0x0F);
+  Print("\n\nError stub B (Abort): ", 0x0F);
+  Putchar((Code + 0x30), 0x0F);
+
   for(;;) {
     __asm__("cli; hlt");
   }
@@ -284,7 +287,7 @@ void __attribute__((noreturn)) Bootloader(void) {
   // By the way - we haven't remapped the PIC or anything, so we *will* get a random double
   // fault.
 
-  MakeIdtEntry(IdtDescriptor, 0x00, IsrFaultStub, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x00, IsrDivideFault, 0x08, 0x0F, 0x00);
   MakeIdtEntry(IdtDescriptor, 0x01, IsrNoErrorStub, 0x08, 0x0F, 0x00);
   MakeIdtEntry(IdtDescriptor, 0x02, IsrNoErrorStub, 0x08, 0x0F, 0x00);
   MakeIdtEntry(IdtDescriptor, 0x03, IsrNoErrorStub, 0x08, 0x0F, 0x00);
@@ -292,12 +295,12 @@ void __attribute__((noreturn)) Bootloader(void) {
   MakeIdtEntry(IdtDescriptor, 0x05, IsrNoErrorStub, 0x08, 0x0F, 0x00);
   MakeIdtEntry(IdtDescriptor, 0x06, IsrFaultStub, 0x08, 0x0F, 0x00);
   MakeIdtEntry(IdtDescriptor, 0x07, IsrFaultStub, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x08, IsrAbortStub, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x08, IsrDoubleFault, 0x08, 0x0F, 0x00);
   MakeIdtEntry(IdtDescriptor, 0x09, IsrNoErrorStub, 0x08, 0x0F, 0x00);
   MakeIdtEntry(IdtDescriptor, 0x0A, IsrAbortStub, 0x08, 0x0F, 0x00);
   MakeIdtEntry(IdtDescriptor, 0x0B, IsrAbortStub, 0x08, 0x0F, 0x00);
   MakeIdtEntry(IdtDescriptor, 0x0C, IsrAbortStub, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x0D, IsrAbortStub, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x0D, IsrGpFault, 0x08, 0x0F, 0x00);
   MakeIdtEntry(IdtDescriptor, 0x0E, IsrAbortStub, 0x08, 0x0F, 0x00);
   MakeIdtEntry(IdtDescriptor, 0x0F, IsrNoErrorStub, 0x08, 0x0F, 0x00);
   MakeIdtEntry(IdtDescriptor, 0x10, IsrFaultStub, 0x08, 0x0F, 0x00);
@@ -316,7 +319,6 @@ void __attribute__((noreturn)) Bootloader(void) {
   MaskPic(0xFD); // Test by enabling keyboard.
   // It'll double fault (since there's no interrupt handler for IRQ1, or 0x21)
 
-
   // Terminal test
   // (this just shows the date / whether A20 and E820 are enabled / etc.)
 
@@ -331,7 +333,7 @@ void __attribute__((noreturn)) Bootloader(void) {
 
       InitializeTerminal(80, 25, 0xB8000);
       Print("Hi, this is Serra!\n", i);
-      Print("October 29th 2023\n\n", 0x0F);
+      Print("December 18th 2023\n\n", 0x0F);
 
       if (CheckA20() == true) {
         Print("A20 is enabled, hooray!\n\n", 0x0A);
