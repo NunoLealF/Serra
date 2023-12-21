@@ -19,6 +19,31 @@
 
   // Declare functions in Exceptions.c
 
+  typedef enum {
+
+    Info = 0,
+
+    Kernel = 1,
+    Ok = 2,
+    Fail = 3,
+    Warning = 4,
+
+    Error = 5
+
+  } messageType;
+
+  void Message(messageType Type, char* String);
+  void __attribute__((noreturn)) Panic(char* String, uint32 Eip);
+
+  void IsrFault(uint8 Vector, uint32 Eip);
+  void IsrFaultWithError(uint8 Vector, uint32 Eip, uint32 Error);
+  void IsrAbort(uint8 Vector, uint32 Eip);
+  void IsrLog(uint8 Vector, uint32 Eip);
+
+  void IrqHandler(uint8 Vector, bool ReadFromPort, uint8 Port);
+
+  
+
   // todo...
 
 #endif

@@ -237,7 +237,7 @@ IsrVmmFault: # returns err
 IsrSecurityFault: # returns err
   IsrFaultStubWithError $0x1E
 
-# ---
+# --- (IRQ-A, master PIC, 0x20->0x27 (0 to 7))
 
 Irq0:
   IrqStubA $0x00
@@ -262,6 +262,8 @@ Irq6:
 
 Irq7:
   IrqStubA $0x07
+
+# --- (IRQ-B, slave PIC, 0x28->0x2F (8 to 15))
 
 Irq8:
   IrqStubB $0x00

@@ -173,6 +173,11 @@ void __attribute__((noreturn)) Bootloader(void) {
   // We've finally made it to our second-stage bootloader. We're in 32-bit x86 protected mode with
   // the stack at 20000h in memory, and our bootloader between 7E00h and FC00h in memory.
 
+  // ...
+
+  InitializeTerminal(80, 25, 0xB8000);
+  ClearTerminal();
+
   // At the moment, we can only reliably access up to the first MiB of data (from 00000h to FFFFFh).
   // This is because we haven't yet enabled the A20 line, which is a holdover from the 8086 days.
 
@@ -377,7 +382,7 @@ void __attribute__((noreturn)) Bootloader(void) {
 
       InitializeTerminal(80, 25, 0xB8000);
       Print("Hi, this is Serra!\n", i);
-      Print("December 18th 2023\n\n", 0x0F);
+      Print("December 21st 2023\n\n", 0x0F);
 
       if (CheckA20() == true) {
         Print("A20 is enabled, hooray!\n\n", 0x0A);
@@ -402,13 +407,19 @@ void __attribute__((noreturn)) Bootloader(void) {
       Print("\nAcpi: ", 0x0F);
       Print(Itoa(Test->Acpi, Buffer, 2), 0x0B);
 
+      Print("\n\n", 0x0F);
+
       for (int j = 0; j < 60000000; j++) {
         __asm__("nop");
+        if (j == 0) {
+          IsrAbort(0x0D, 0x1234567);
+        }
       }
 
     }
 
   }
+
 
   // Things left to do:
 
