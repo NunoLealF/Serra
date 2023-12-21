@@ -337,6 +337,10 @@ prepareProtectedMode32:
   popad
   popfd
 
+  ; Turn on interrupts again.
+
+  sti
+
   ; Return with the ret instruction. Because of the C calling convention, this shouldn't be
   ; an issue.
 

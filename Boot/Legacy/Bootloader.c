@@ -221,55 +221,6 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   }
 
-  // In order to figure out which memory areas we can use, and which areas we can't, we'll
-  // need to obtain what's known as a memory map from our BIOS/firmware.
-
-  // There are several methods of doing this, but the most common is via the BIOS interrupt call
-  // int 15h / eax E820h. We won't be directly calling it from here though; instead, we have a
-  // function that will do it for us (GetMmapEntry(), in Memory/Mmap.c).
-
-  // However, before we can start, we'll need to take care of two things - first, we'll need to
-  // figure out where to put our memory map (in our case, this is at E000h), and second, we'll
-  // also need what's known as a 'continuation number', which will be used later.
-
-  void* Mmap = (void*)0xE000;
-  uint32 Continuation = 0;
-
-  // Now that we've taken care of that, we can finally request our system's memory map. We have
-  // to do this entry by entry, and we have a total limit of 128 entries.
-
-  uint8 MmapEntries = 0;
-
-  do {
-
-    // In order to request a memory map entry from our system, we first need to calculate the
-    // necessary offset in memory, so that we don't overwrite any existing entries.
-
-    uint32 Offset = (MmapEntries * 24);
-
-    // After that, we just need to call GetMmapEntry() with the right parameters.
-
-    Continuation = GetMmapEntry((void*)((uint32)Mmap + Offset), 24, Continuation);
-
-    // If the 'continuation number' reaches 0, or if we've already read more than 128 entries
-    // from the system, stop the loop.
-
-    if (Continuation != 0) MmapEntries++;
-
-    if (MmapEntries >= 128) {
-      break;
-    }
-
-  } while (Continuation != 0);
-
-  // Finally, if we weren't able to get *any* memory map entries from the system, give out an
-  // error code / crash the system, as it's necessary for us to have a memory map.
-
-  if (MmapEntries == 0) {
-    Crash(0x02);
-  }
-
-
   // Our IDT; this is very incomplete, and should be implemented in a better way, but uhh
 
   InitializeTerminal(80, 25, 0xB8000);
@@ -323,8 +274,57 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   __asm__("sti");
   MaskPic(0xFD); // Test by enabling keyboard.
+
   // It'll double fault (since there's no interrupt handler for IRQ1, or 0x21)
   // (or, well, it'll GPF, but I don't even know why lol)
+
+  // In order to figure out which memory areas we can use, and which areas we can't, we'll
+  // need to obtain what's known as a memory map from our BIOS/firmware.
+
+  // There are several methods of doing this, but the most common is via the BIOS interrupt call
+  // int 15h / eax E820h. We won't be directly calling it from here though; instead, we have a
+  // function that will do it for us (GetMmapEntry(), in Memory/Mmap.c).
+
+  // However, before we can start, we'll need to take care of two things - first, we'll need to
+  // figure out where to put our memory map (in our case, this is at E000h), and second, we'll
+  // also need what's known as a 'continuation number', which will be used later.
+
+  void* Mmap = (void*)0xE000;
+  uint32 Continuation = 0;
+
+  // Now that we've taken care of that, we can finally request our system's memory map. We have
+  // to do this entry by entry, and we have a total limit of 128 entries.
+
+  uint8 MmapEntries = 0;
+
+  do {
+
+    // In order to request a memory map entry from our system, we first need to calculate the
+    // necessary offset in memory, so that we don't overwrite any existing entries.
+
+    uint32 Offset = (MmapEntries * 24);
+
+    // After that, we just need to call GetMmapEntry() with the right parameters.
+
+    Continuation = GetMmapEntry((void*)((uint32)Mmap + Offset), 24, Continuation);
+
+    // If the 'continuation number' reaches 0, or if we've already read more than 128 entries
+    // from the system, stop the loop.
+
+    if (Continuation != 0) MmapEntries++;
+
+    if (MmapEntries >= 128) {
+      break;
+    }
+
+  } while (Continuation != 0);
+
+  // Finally, if we weren't able to get *any* memory map entries from the system, give out an
+  // error code / crash the system, as it's necessary for us to have a memory map.
+
+  if (MmapEntries == 0) {
+    Crash(0x02);
+  }
 
   // Terminal test
   // (this just shows the date / whether A20 and E820 are enabled / etc.)
