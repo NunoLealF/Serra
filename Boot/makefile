@@ -116,6 +116,10 @@ Legacy/Bootloader.o:
 	@echo "Building $@"
 	@$(CC) $(CFLAGS) -c Legacy/Bootloader.c -o Legacy/Bootloader.o
 
+Legacy/Exceptions.o:
+	@echo "Building $@"
+	@$(CC) $(CFLAGS) -c Legacy/Exceptions.c -o Legacy/Exceptions.o
+
 # (Legacy/Graphics)
 
 Legacy/Graphics/Format.o:
@@ -174,7 +178,7 @@ Legacy/Rm/RmWrapper.o:
 
 # Link the stages into .bin
 
-Legacy/Bootloader.bin: Legacy/Bootloader.o Legacy/Graphics/Format.o Legacy/Graphics/Graphics.o Legacy/Memory/Memory.o Legacy/Memory/A20/A20_C.o Legacy/Memory/A20/A20_Asm.o Legacy/Memory/Mmap/Mmap.o Legacy/Int/Int.o Legacy/Int/Isr.o Legacy/Int/Irq.o Legacy/Rm/RmWrapper.o
+Legacy/Bootloader.bin: Legacy/Bootloader.o Legacy/Exceptions.o Legacy/Graphics/Format.o Legacy/Graphics/Graphics.o Legacy/Memory/Memory.o Legacy/Memory/A20/A20_C.o Legacy/Memory/A20/A20_Asm.o Legacy/Memory/Mmap/Mmap.o Legacy/Int/Int.o Legacy/Int/Isr.o Legacy/Int/Irq.o Legacy/Rm/RmWrapper.o
 	@echo "Building $@"
 	@$(CC) $(LDFLAGS) -o Legacy/Bootloader.elf -ffreestanding -nolibc -nostdlib -lgcc $^
 	@$(OBJC) -O binary Legacy/Bootloader.elf Legacy/Bootloader.bin
