@@ -111,6 +111,25 @@ void ErrorStubB(unsigned char Code) {
 
 }
 
+void IrqStub(unsigned char Code) {
+
+  Print("\n\nIrq -> ", 0x0F);
+
+  if (Code <= 0x07) {
+
+    Putchar((Code + 0x30), 0x0B);
+    Print(" (PIC-A)", 0x0B);
+
+  } else {
+
+    Code -= 0x08;
+    Putchar((Code + 0x30), 0x0B);
+    Print(" (PIC-B)", 0x0B);
+
+  }
+
+}
+
 /* void __attribute__((noreturn)) Bootloader()
 
    Inputs:    (none)
@@ -267,13 +286,31 @@ void __attribute__((noreturn)) Bootloader(void) {
   MakeIdtEntry(IdtDescriptor, 0x1E, (uint32)&IsrSecurityFault, 0x08, 0x0F, 0x00);
   // 1F, Reserved
 
-  LoadIdt(IdtDescriptor);
+  // IRQs now
+
+  MakeIdtEntry(IdtDescriptor, 0x20, (uint32)&Irq0, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x21, (uint32)&Irq1, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x22, (uint32)&Irq2, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x23, (uint32)&Irq3, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x24, (uint32)&Irq4, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x25, (uint32)&Irq5, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x26, (uint32)&Irq6, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x27, (uint32)&Irq7, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x28, (uint32)&Irq8, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x29, (uint32)&Irq9, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x2A, (uint32)&Irq10, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x2B, (uint32)&Irq11, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x2C, (uint32)&Irq12, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x2D, (uint32)&Irq13, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x2E, (uint32)&Irq14, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x2F, (uint32)&Irq15, 0x08, 0x0F, 0x00);
 
   MaskPic(0xFF); // Full mask, don't enable anything
   InitPic(0x20, 0x28); // IRQ1 is at 0x20-0x27, IRQ2 is at 0x28-0x2F
 
   __asm__("sti");
-  MaskPic(0xFD); // Test by enabling keyboard.
+  MaskPic(0xFF); // I've already tested it and it works but let's not enable anything for now
+
 
   // It'll double fault (since there's no interrupt handler for IRQ1, or 0x21)
   // (or, well, it'll GPF, but I don't even know why lol)
