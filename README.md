@@ -1,10 +1,14 @@
 # Serra
 An x86 bootloader under construction.
 
+&nbsp;
+
 ## Roadmap
 - Bootsector **Done**
 - Protected mode **Done**
 - Set up a proper IDT *Somewhat done*
+
+&nbsp;
 
 - String/terminal functions **Done**
 - Enabling the A20 line **Done**
@@ -13,6 +17,8 @@ An x86 bootloader under construction.
 - CPUID
 - VESA
 - Interrupts(?) *Somewhat done*
+
+&nbsp;
 
 - Paging
 - TSS, ring 0-3(?)
@@ -24,6 +30,7 @@ An x86 bootloader under construction.
 - Maybe some sort of standard protocol?
 - Might want Multiboot support and stuff too
 
+&nbsp;
 
 ## Disclaimer
 This project has been released under the MIT license. For more information, please
