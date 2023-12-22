@@ -107,6 +107,12 @@
   uint8 Inb(uint16 Port);
   void Outb(uint16 Port, uint8 Data);
 
+  // ...
+
+  void IrqHandler(uint8 Vector, uint8 Port);
+
+  // ...
+
   void MaskPic(uint8 Mask);
   void InitPic(uint8 PicA_Offset, uint8 PicB_Offset);
 
@@ -114,5 +120,10 @@
 
   void LoadIdt(descriptorTable* IdtDescriptor);
   void MakeIdtEntry(descriptorTable* IdtDescriptor, uint16 EntryNum, uint32 Offset, uint16 Selector, uint8 Gate, uint8 Dpl);
+
+  void IsrFault(uint8 Vector, uint32 Eip);
+  void IsrFaultWithError(uint8 Vector, uint32 Eip, uint32 Error);
+  void IsrAbort(uint8 Vector, uint32 Eip);
+  void IsrLog(uint8 Vector);
 
 #endif

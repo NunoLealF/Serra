@@ -3,6 +3,7 @@
 // For more information, please refer to the accompanying license agreement. <3
 
 #include "../Stdint.h"
+#include "../Exceptions.h"
 
 // ...
 
@@ -33,6 +34,54 @@ void Outb(uint16 Port, uint8 Data) {
 static inline void Wait(void) {
 
   __asm__("nop");
+
+}
+
+// ...
+
+static char* Irqs[] = {
+
+  "Timer (IRQ 0)",
+  "PS/2 Keyboard (IRQ 1)",
+  "Internal (IRQ 2)",
+  "COM2 (IRQ 3)",
+  "COM1 (IRQ 4)",
+  "LPT2 (IRQ 5)",
+  "Floppy disk (IRQ 6)",
+  "LPT1 (IRQ 7)",
+
+  "CMOS clock (IRQ 8)",
+  "Peripheral port A (IRQ 9)",
+  "Peripheral port B (IRQ 10)",
+  "Peripheral port C (IRQ 11)",
+  "PS/2 Mouse (IRQ 12)",
+  "FPU/Coprocessor (IRQ 13)",
+  "Primary ATA hard drive (IRQ 14)",
+  "Secondary ATA hard drive (IRQ 15)"
+
+};
+
+// irq
+
+void IrqHandler(uint8 Vector, uint8 Port) {
+
+  // ...
+
+  Message(Kernel, "An IRQ has occured.");
+  Message(Info, Irqs[Vector]);
+
+  // ... (port has to be >0x00 to do anything)
+
+  if (Port != 0x00) {
+
+    int a = Inb(Port);
+    (void)a;
+
+  }
+
+  // ...
+
+  return;
 
 }
 

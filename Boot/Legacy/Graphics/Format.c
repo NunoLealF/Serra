@@ -3,6 +3,7 @@
 // For more information, please refer to the accompanying license agreement. <3
 
 #include "../Stdint.h"
+#include "../Memory/Memory.h"
 
 /* uint32 Strlen()
 
@@ -159,5 +160,30 @@ char* Itoa(uint32 Number, char* Buffer, uint8 Base) {
 
   Buffer[Index] = '\0';
   return Strrev(Buffer);
+
+}
+
+// "Translate" address
+// TODO - COMMENTS !!!
+
+char* TranslateAddress(char* Buffer, uint32 Address) {
+
+  if (Address > 0) {
+
+    Memset(Buffer, '\0', 10);
+    Itoa(Address, Buffer, 16);
+
+    int AddressLength = Strlen(Buffer);
+
+    Buffer[AddressLength + 0] = 'h';
+    Buffer[AddressLength + 1] = '\0';
+
+  } else {
+
+    Buffer = "(Unknown)";
+
+  }
+
+  return Buffer;
 
 }

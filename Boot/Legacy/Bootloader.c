@@ -385,11 +385,11 @@ void __attribute__((noreturn)) Bootloader(void) {
       for (int j = 0; j < 60000000; j++) {
         __asm__("nop");
         if (j == 1984404) {
-          __asm__("int $15");
-          Print("\n", 0);
           __asm__("int $0x0A");
           Print("\n", 0);
           __asm__("int $0x21");
+          Print("\n", 0);
+          j /= 0;
         }
       }
 

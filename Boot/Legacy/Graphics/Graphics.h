@@ -10,6 +10,7 @@
   int Strlen(const char* String);
   char* Strrev(char* String);
   char* Itoa(uint32 Number, char* Buffer, uint8 Base);
+  char* TranslateAddress(char* Buffer, uint32 Address);
 
   // The terminalDataStruct type, and TerminalTable{}. (Graphics.c)
 
