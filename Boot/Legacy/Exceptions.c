@@ -278,7 +278,7 @@ void IrqHandler(uint8 Vector, uint8 Port) {
 
   // ...
 
-  Message(Info, "An IRQ has occured.");
+  Message(Kernel, "An IRQ has occured.");
   Message(Info, Irqs[Vector]);
 
   // ... (port has to be >0x00 to do anything)

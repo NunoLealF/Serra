@@ -6,17 +6,17 @@ An x86 bootloader under construction.
 ## Roadmap
 - Bootsector **Done**
 - Protected mode **Done**
-- Set up a proper IDT *Somewhat done*
+- Set up a proper IDT **Done**
 
 &nbsp;
 
 - String/terminal functions **Done**
 - Enabling the A20 line **Done**
 - Some way of going to and from real mode **Done**
-- E820 / memory map **Done**
+- E820 / memory map *Done, still need to add comments*
 - CPUID
 - VESA
-- Interrupts(?) *Somewhat done*
+- Interrupts and exceptions *Mostly done*
 
 &nbsp;
 
