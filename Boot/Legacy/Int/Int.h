@@ -33,10 +33,15 @@
   extern void IsrNoFault(void);
   extern void IsrDivideFault(void);
 
+  extern void IsrNmi(void);
+  extern void IsrBreakpoint(void);
+  extern void IsrOverflow(void);
+
   extern void IsrDebug(void);
   extern void IsrOutOfBounds(void);
   extern void IsrInvalidOpcode(void);
 
+  extern void IsrCoprocessorOverrun(void);
   extern void IsrDeviceFault(void);
   extern void IsrDoubleFault(void);
 
@@ -47,39 +52,49 @@
   extern void IsrGpFault(void);
   extern void IsrPageFault(void);
 
-  extern void Isr87Fault(void);
+  extern void IsrReservedA(void);
 
+  extern void Isr87Fault(void);
   extern void IsrAlignCheck(void);
   extern void IsrMachineCheck(void);
 
   extern void IsrSimdFault(void);
   extern void IsrVirtFault(void);
 
+  extern void IsrReservedB(void);
+  extern void IsrReservedC(void);
+  extern void IsrReservedD(void);
+  extern void IsrReservedE(void);
+  extern void IsrReservedF(void);
+  extern void IsrReservedG(void);
+
   extern void IsrControlFault(void);
   extern void IsrHypervisorFault(void);
   extern void IsrVmmFault(void);
   extern void IsrSecurityFault(void);
 
+  extern void IsrReservedH(void);
+
   // god has abandoned us
   // IRQs 0-7 are on the master PIC (PIC A), while 8-15 are on the slave PIC (PIC B).
 
-  extern void Irq0(void);
-  extern void Irq1(void);
-  extern void Irq2(void);
-  extern void Irq3(void);
-  extern void Irq4(void);
-  extern void Irq5(void);
-  extern void Irq6(void);
-  extern void Irq7(void);
+  extern void IrqTimer(void);
+  extern void IrqKeyboard(void);
+  extern void IrqCascade(void);
+  extern void IrqCom2(void);
+  extern void IrqCom1(void);
+  extern void IrqLpt2(void);
+  extern void IrqFloppy(void);
+  extern void IrqLpt1(void);
 
-  extern void Irq8(void);
-  extern void Irq9(void);
-  extern void Irq10(void);
-  extern void Irq11(void);
-  extern void Irq12(void);
-  extern void Irq13(void);
-  extern void Irq14(void);
-  extern void Irq15(void);
+  extern void IrqCmos(void);
+  extern void IrqPeripheralA(void);
+  extern void IrqPeripheralB(void);
+  extern void IrqPeripheralC(void);
+  extern void IrqMouse(void);
+  extern void IrqFpu(void);
+  extern void IrqHddA(void);
+  extern void IrqHddB(void);
 
   // ...
 

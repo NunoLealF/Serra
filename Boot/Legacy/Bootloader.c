@@ -90,46 +90,6 @@ void __attribute__((noreturn)) Crash(uint16 Error) {
 
 }
 
-
-// ...
-
-void ErrorStubA(unsigned char Code) {
-
-  Print("\n\nError stub A (Fault) -> ", 0x0F);
-  Putchar((Code + 0x30), 0x0C);
-
-}
-
-void ErrorStubB(unsigned char Code) {
-
-  Print("\n\nError stub B (Abort) -> ", 0x0F);
-  Putchar((Code + 0x30), 0x0C);
-
-  for(;;) {
-    __asm__("cli; hlt");
-  }
-
-}
-
-void IrqStub(unsigned char Code) {
-
-  Print("\n\nIrq -> ", 0x0F);
-
-  if (Code <= 0x07) {
-
-    Putchar((Code + 0x30), 0x0B);
-    Print(" (PIC-A)", 0x0B);
-
-  } else {
-
-    Code -= 0x08;
-    Putchar((Code + 0x30), 0x0B);
-    Print(" (PIC-B)", 0x0B);
-
-  }
-
-}
-
 /* void __attribute__((noreturn)) Bootloader()
 
    Inputs:    (none)
@@ -258,57 +218,70 @@ void __attribute__((noreturn)) Bootloader(void) {
   // fault.
   // (edit: we have lmao)
 
-  MakeIdtEntry(IdtDescriptor, 0x00, (uint32)&IsrDivideFault, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x01, (uint32)&IsrDebug, 0x08, 0x0F, 0x00);
-  // 02, NMI
-  // 03, Break
-  // 04, Overflow
-  MakeIdtEntry(IdtDescriptor, 0x05, (uint32)&IsrOutOfBounds, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x06, (uint32)&IsrInvalidOpcode, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x07, (uint32)&IsrDeviceFault, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x08, (uint32)&IsrDoubleFault, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x09, (uint32)&IsrNoFault, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x0A, (uint32)&IsrInvalidTss, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x0B, (uint32)&IsrSegmentFault, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x0C, (uint32)&IsrStackFault, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x0D, (uint32)&IsrGpFault, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x0E, (uint32)&IsrPageFault, 0x08, 0x0F, 0x00);
-  // 0F: Deprecated, use IsrNoFault
-  MakeIdtEntry(IdtDescriptor, 0x10, (uint32)&Isr87Fault, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x11, (uint32)&IsrAlignCheck, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x12, (uint32)&IsrMachineCheck, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x13, (uint32)&IsrSimdFault, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x14, (uint32)&IsrVirtFault, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x15, (uint32)&IsrControlFault, 0x08, 0x0F, 0x00);
-  // 16, Reserved
-  // 17, Reserved
-  // 18, Reserved
-  // 19, Reserved
-  // 1A, Reserved
-  // 1B, Reserved
-  MakeIdtEntry(IdtDescriptor, 0x1C, (uint32)&IsrHypervisorFault, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x1D, (uint32)&IsrVmmFault, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x1E, (uint32)&IsrSecurityFault, 0x08, 0x0F, 0x00);
-  // 1F, Reserved
+  MakeIdtEntry(IdtDescriptor, 0, (uint32)&IsrDivideFault, 0x08, 0x0F, 0x00);
+
+  MakeIdtEntry(IdtDescriptor, 1, (uint32)&IsrDebug, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 2, (uint32)&IsrNmi, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 3, (uint32)&IsrBreakpoint, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 4, (uint32)&IsrOverflow, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 5, (uint32)&IsrOutOfBounds, 0x08, 0x0F, 0x00);
+
+  MakeIdtEntry(IdtDescriptor, 6, (uint32)&IsrInvalidOpcode, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 7, (uint32)&IsrDeviceFault, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 8, (uint32)&IsrDoubleFault, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 9, (uint32)&IsrCoprocessorOverrun, 0x08, 0x0F, 0x00);
+
+  MakeIdtEntry(IdtDescriptor, 10, (uint32)&IsrInvalidTss, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 11, (uint32)&IsrSegmentFault, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 12, (uint32)&IsrStackFault, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 13, (uint32)&IsrGpFault, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 14, (uint32)&IsrPageFault, 0x08, 0x0F, 0x00);
+
+  MakeIdtEntry(IdtDescriptor, 15, (uint32)&IsrReservedA, 0x08, 0x0F, 0x00);
+
+  MakeIdtEntry(IdtDescriptor, 16, (uint32)&Isr87Fault, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 17, (uint32)&IsrAlignCheck, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 18, (uint32)&IsrMachineCheck, 0x08, 0x0F, 0x00);
+
+  MakeIdtEntry(IdtDescriptor, 19, (uint32)&IsrSimdFault, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 20, (uint32)&IsrVirtFault, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 21, (uint32)&IsrControlFault, 0x08, 0x0F, 0x00);
+
+  MakeIdtEntry(IdtDescriptor, 22, (uint32)&IsrReservedB, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 23, (uint32)&IsrReservedC, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 24, (uint32)&IsrReservedD, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 25, (uint32)&IsrReservedE, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 26, (uint32)&IsrReservedF, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 27, (uint32)&IsrReservedG, 0x08, 0x0F, 0x00);
+
+  MakeIdtEntry(IdtDescriptor, 28, (uint32)&IsrHypervisorFault, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 29, (uint32)&IsrVmmFault, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 30, (uint32)&IsrSecurityFault, 0x08, 0x0F, 0x00);
+
+  MakeIdtEntry(IdtDescriptor, 31, (uint32)&IsrReservedH, 0x08, 0x0F, 0x00);
+
 
   // IRQs now
 
-  MakeIdtEntry(IdtDescriptor, 0x20, (uint32)&Irq0, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x21, (uint32)&Irq1, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x22, (uint32)&Irq2, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x23, (uint32)&Irq3, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x24, (uint32)&Irq4, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x25, (uint32)&Irq5, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x26, (uint32)&Irq6, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x27, (uint32)&Irq7, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x28, (uint32)&Irq8, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x29, (uint32)&Irq9, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x2A, (uint32)&Irq10, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x2B, (uint32)&Irq11, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x2C, (uint32)&Irq12, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x2D, (uint32)&Irq13, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x2E, (uint32)&Irq14, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x2F, (uint32)&Irq15, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x20, (uint32)&IrqTimer, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x21, (uint32)&IrqKeyboard, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x22, (uint32)&IrqCascade, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x23, (uint32)&IrqCom2, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x24, (uint32)&IrqCom1, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x25, (uint32)&IrqLpt2, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x26, (uint32)&IrqFloppy, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x27, (uint32)&IrqLpt1, 0x08, 0x0F, 0x00);
+
+  MakeIdtEntry(IdtDescriptor, 0x28, (uint32)&IrqCmos, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x29, (uint32)&IrqPeripheralA, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x2A, (uint32)&IrqPeripheralB, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x2B, (uint32)&IrqPeripheralC, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x2C, (uint32)&IrqMouse, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x2D, (uint32)&IrqFpu, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x2E, (uint32)&IrqHddA, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 0x2F, (uint32)&IrqHddB, 0x08, 0x0F, 0x00);
+
+  // ...
 
   MaskPic(0xFF); // Full mask, don't enable anything
   InitPic(0x20, 0x28); // IRQ1 is at 0x20-0x27, IRQ2 is at 0x28-0x2F
@@ -382,7 +355,7 @@ void __attribute__((noreturn)) Bootloader(void) {
 
       InitializeTerminal(80, 25, 0xB8000);
       Print("Hi, this is Serra!\n", i);
-      Print("December 21st 2023\n\n", 0x0F);
+      Print("December 22nd 2023\n\n", 0x0F);
 
       if (CheckA20() == true) {
         Print("A20 is enabled, hooray!\n\n", 0x0A);
@@ -411,9 +384,7 @@ void __attribute__((noreturn)) Bootloader(void) {
 
       for (int j = 0; j < 60000000; j++) {
         __asm__("nop");
-        if (j == 0) {
-          IsrAbort(0x0D, 0x1234567);
-        }
+        if (j == 1984404) __asm__("nop; nop; int $8");
       }
 
     }

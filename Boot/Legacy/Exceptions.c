@@ -55,6 +55,30 @@ void Message(messageType Type, char* String) {
 }
 
 
+// "Translate" address
+
+char* TranslateAddress(char* Buffer, uint32 Address) {
+
+  if (Address > 0) {
+
+    Memset(Buffer, '\0', 10);
+    Itoa(Address, Buffer, 16);
+
+    int AddressLength = Strlen(Buffer);
+
+    Buffer[AddressLength + 0] = 'h';
+    Buffer[AddressLength + 1] = '\0';
+
+  } else {
+
+    Buffer = "(Unknown)";
+
+  }
+
+  return Buffer;
+
+}
+
 // panic
 
 void __attribute__((noreturn)) Panic(char* String, uint32 Eip) {
@@ -65,8 +89,8 @@ void __attribute__((noreturn)) Panic(char* String, uint32 Eip) {
 
   __asm__("cli");
 
-  char Buffer[8];
-  char* EipString = Itoa(Eip, Buffer, 16);
+  char Buffer[16];
+  Memset(Buffer, '\0', 16);
 
   // ...
 
@@ -75,9 +99,9 @@ void __attribute__((noreturn)) Panic(char* String, uint32 Eip) {
 
   // ...
 
-  Print("EIP: ", 0x0F);
-  Print(EipString, 0x07);
-  Print("h\n\n", 0x07);
+  Print("Instruction pointer: ", 0x0F);
+  Print(TranslateAddress(Buffer, Eip), 0x07);
+  Print("\n\n", 0);
 
   // ...
 
@@ -151,20 +175,19 @@ void IsrFault(uint8 Vector, uint32 Eip) {
 
   // ...
 
+  Message(Warning, "An exception has occured.");
   Message(Info, Exceptions[Vector]);
 
   // ...
 
-  char Buffer[8];
-  char* EipString = Itoa(Eip, Buffer, 16);
+  char Buffer[16];
+  Memset(Buffer, '\0', 16);
 
-  Print("EIP: ", 0x0F);
-  Print(EipString, 0x07);
-  Print("h\n", 0x07);
+  Print("Instruction pointer: ", 0x0F);
+  Print(TranslateAddress(Buffer, Eip), 0x07);
+  Putchar('\n', 0);
 
   // ...
-
-  Message(Warning, "A fault has occured.");
 
   return;
 
@@ -175,29 +198,23 @@ void IsrFaultWithError(uint8 Vector, uint32 Eip, uint32 Error) {
 
   // ...
 
+  Message(Warning, "An exception has occured.");
   Message(Info, Exceptions[Vector]);
 
   // ...
 
-  char Buffer[8];
-  char* ErrorString = Itoa(Error, Buffer, 16);
+  char Buffer[16];
+  Memset(Buffer, '\0', 16);
 
   Print("Error code: ", 0x0F);
-  Print(ErrorString, 0x07);
-  Print("h\n", 0x07);
+  Print(TranslateAddress(Buffer, Error), 0x07);
+
+  Print("\nInstruction pointer: ", 0x0F);
+  Print(TranslateAddress(Buffer, Eip), 0x07);
+
+  Putchar('\n', 0);
 
   // ...
-
-  Memset(Buffer, 0, 8);
-  char* EipString = Itoa(Eip, Buffer, 16);
-
-  Print("EIP: ", 0x0F);
-  Print(EipString, 0x07);
-  Print("h\n", 0x07);
-
-  // ...
-
-  Message(Warning, "A fault has occured.");
 
   return;
 
@@ -208,29 +225,24 @@ void IsrAbort(uint8 Vector, uint32 Eip) {
 
   // ...
 
-  Message(Info, Exceptions[Vector]);
+  Message(Warning, "An exception has occured.");
+  Panic(Exceptions[Vector], Eip);
 
   // ...
 
-  Panic("An exception has occured.", Eip);
   return;
 
 }
 
 
-void IsrLog(uint8 Vector, uint32 Eip) {
+void IsrLog(uint8 Vector) {
 
   // ...
 
-  Message(Info, "An interrupt has occured.");
-
-  // ...
-
+  Message(Kernel, "An interrupt has occured.");
   Message(Info, Exceptions[Vector]);
 
   // ...
-
-  Message(Info, "An interrupt has occured.");
 
   return;
 
@@ -240,17 +252,41 @@ void IsrLog(uint8 Vector, uint32 Eip) {
 // irq
 // if ReadFromPort is false ignore Port
 
-void IrqHandler(uint8 Vector, bool ReadFromPort, uint8 Port) {
+static char* Irqs[] = {
+
+  "Timer (IRQ 0)",
+  "PS/2 Keyboard (IRQ 1)",
+  "Internal (IRQ 2)",
+  "COM2 (IRQ 3)",
+  "COM1 (IRQ 4)",
+  "LPT2 (IRQ 5)",
+  "Floppy disk (IRQ 6)",
+  "LPT1 (IRQ 7)",
+
+  "CMOS clock (IRQ 8)",
+  "Peripheral port A (IRQ 9)",
+  "Peripheral port B (IRQ 10)",
+  "Peripheral port C (IRQ 11)",
+  "PS/2 Mouse (IRQ 12)",
+  "FPU/Coprocessor (IRQ 13)",
+  "Primary ATA hard drive (IRQ 14)",
+  "Secondary ATA hard drive (IRQ 15)"
+
+};
+
+void IrqHandler(uint8 Vector, uint8 Port) {
 
   // ...
 
   Message(Info, "An IRQ has occured.");
+  Message(Info, Irqs[Vector]);
 
-  // ...
+  // ... (port has to be >0x00 to do anything)
 
-  if (ReadFromPort == true) {
+  if (Port != 0x00) {
 
-    (void)Inb(Port);
+    int a = Inb(Port);
+    (void)a;
 
   }
 

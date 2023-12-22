@@ -33,16 +33,17 @@
   } messageType;
 
   void Message(messageType Type, char* String);
+  char* TranslateAddress(char* Buffer, uint32 Address);
   void __attribute__((noreturn)) Panic(char* String, uint32 Eip);
 
   void IsrFault(uint8 Vector, uint32 Eip);
   void IsrFaultWithError(uint8 Vector, uint32 Eip, uint32 Error);
   void IsrAbort(uint8 Vector, uint32 Eip);
-  void IsrLog(uint8 Vector, uint32 Eip);
+  void IsrLog(uint8 Vector);
 
-  void IrqHandler(uint8 Vector, bool ReadFromPort, uint8 Port);
+  void IrqHandler(uint8 Vector, uint8 Port);
 
-  
+
 
   // todo...
 

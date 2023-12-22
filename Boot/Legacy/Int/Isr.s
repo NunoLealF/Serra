@@ -4,9 +4,12 @@
 
 # ...
 
-.extern ErrorStubA
-.extern ErrorStubB
-.extern IrqStub
+.extern IsrFault
+.extern IsrFaultWithError
+.extern IsrAbort
+.extern IsrLog
+
+.extern IrqHandler
 
 # We want to be able to call these functions from the rest of our bootloader, so we use .globl
 # to turn them into global functions.
@@ -14,12 +17,17 @@
 .globl IsrNoFault
 .globl IsrDivideFault
 
+.globl IsrNmi
+.globl IsrBreakpoint
+.globl IsrOverflow
 .globl IsrDebug
+
 .globl IsrOutOfBounds
 .globl IsrInvalidOpcode
 
 .globl IsrDeviceFault
 .globl IsrDoubleFault
+.globl IsrCoprocessorOverrun
 
 .globl IsrInvalidTss
 .globl IsrSegmentFault
@@ -28,6 +36,7 @@
 .globl IsrGpFault
 .globl IsrPageFault
 
+.globl IsrReservedA
 .globl Isr87Fault
 
 .globl IsrAlignCheck
@@ -36,29 +45,39 @@
 .globl IsrSimdFault
 .globl IsrVirtFault
 
+.globl IsrReservedB
+.globl IsrReservedC
+.globl IsrReservedD
+.globl IsrReservedE
+.globl IsrReservedF
+.globl IsrReservedG
+
 .globl IsrControlFault
 .globl IsrHypervisorFault
 .globl IsrVmmFault
 .globl IsrSecurityFault
 
+.globl IsrReservedH
+
 # ...
 
-.globl Irq0
-.globl Irq1
-.globl Irq2
-.globl Irq3
-.globl Irq4
-.globl Irq5
-.globl Irq6
-.globl Irq7
-.globl Irq8
-.globl Irq9
-.globl Irq10
-.globl Irq11
-.globl Irq12
-.globl Irq13
-.globl Irq14
-.globl Irq15
+.globl IrqTimer
+.globl IrqKeyboard
+.globl IrqCascade
+.globl IrqCom2
+.globl IrqCom1
+.globl IrqLpt2
+.globl IrqFloppy
+.globl IrqLpt1
+
+.globl IrqCmos
+.globl IrqPeripheralA
+.globl IrqPeripheralB
+.globl IrqPeripheralC
+.globl IrqMouse
+.globl IrqFpu
+.globl IrqHddA
+.globl IrqHddB
 
 
 # ...
@@ -69,45 +88,118 @@
 
 .macro IsrFaultStub vNum
 
+  # get eip
+
+  push %ecx
+  mov 4(%esp), %ecx
+
+  # ...
+
   pushal
   mov \vNum, %edx
 
+  # EIP is already pushed to the stack
+
+  push %ecx
   push %edx
-  call ErrorStubA
+
+  call IsrFault
+
   pop %edx
+  pop %ecx
 
   popal
+  pop %ecx
   iret
 
 .endm
+
 
 # ...
 
 .macro IsrFaultStubWithError vNum
 
+  # get eip/error
+
+  push %ebx
+  push %ecx
+
+  mov 12(%esp), %ebx
+  mov 8(%esp), %ecx
+
+  # ...
+
   pushal
   mov \vNum, %edx
 
+  # EIP is already pushed to the stack
+
+  push %ebx
+  push %ecx
   push %edx
-  call ErrorStubA
+
+  call IsrFaultWithError
+
   pop %edx
+  pop %ecx
+  pop %ebx
+
+  # ...
 
   popal
-  pop %eax
+  pop %ebx
+  pop %ecx
   iret
 
 .endm
+
 
 # ...
 
 .macro IsrAbortStub vNum
 
+  # get eip
+
+  push %ecx
+  mov 4(%esp), %ecx
+
+  # ...
+
   pushal
   mov \vNum, %edx
 
+  # EIP is already pushed to the stack
+
+  push %ecx
   push %edx
-  call ErrorStubB
+
+  call IsrAbort
+
   pop %edx
+  pop %ecx
+
+  # ...
+
+  popal
+  pop %ecx
+  iret
+
+.endm
+
+# ...
+
+.macro IsrLogStub vNum
+
+  pushal
+  mov \vNum, %edx
+
+  # ...
+
+  push %edx
+  call IsrLog
+  pop %edx
+
+  # ...
 
   popal
   iret
@@ -116,43 +208,26 @@
 
 # ...
 
-.macro IrqStubA vNum
+.macro IrqStub vNum pNum
 
   pushal
+
   mov \vNum, %edx
+  mov \pNum, %ecx
 
+  push %ecx
   push %edx
-  call IrqStub
+
+  call IrqHandler
+
   pop %edx
+  pop %ecx
 
-  push %eax
-  # inb $0x60, %al -> for keyboard
-  mov $0x20, %al
-  outb %al, $0x20
-  pop %eax
+  # ...
 
-  popal
-  iret
-
-.endm
-
-# ...
-
-.macro IrqStubB vNum
-
-  pushal
-  mov \vNum, %edx
-
-  add $0x08, %edx
-  push %edx
-  call IrqStub
-  pop %edx
-
-  push %eax
   mov $0x20, %al
   outb %al, $0x20
   outb %al, $0xA0
-  pop %eax
 
   popal
   iret
@@ -168,123 +243,165 @@ IsrNoFault:
 # ---
 
 IsrDivideFault:
-  IsrAbortStub $0x00
+  IsrAbortStub $0
 
 IsrDebug:
-  IsrFaultStub $0x01
+  IsrFaultStub $1
+
+IsrNmi:
+  IsrLogStub $2
+
+IsrBreakpoint:
+  IsrLogStub $3
+
+IsrOverflow:
+  IsrFaultStub $4
 
 IsrOutOfBounds:
-  IsrFaultStub $0x05
+  IsrFaultStub $5
 
 IsrInvalidOpcode:
-  IsrAbortStub $0x06
+  IsrAbortStub $6
 
 IsrDeviceFault:
-  IsrFaultStub $0x07
+  IsrFaultStub $7
 
 # ---
 
 IsrDoubleFault: # returns err (always 0)
-  IsrAbortStub $0x08
+  IsrAbortStub $8
+
+IsrCoprocessorOverrun:
+  IsrFaultStub $9
 
 IsrInvalidTss: # returns err
-  IsrFaultStubWithError $0x0A
+  IsrFaultStubWithError $10
 
 IsrSegmentFault: # returns err
-  IsrFaultStubWithError $0x0B
+  IsrFaultStubWithError $11
 
 IsrStackFault: # returns err
-  IsrFaultStubWithError $0x0C
+  IsrFaultStubWithError $12
 
 IsrGpFault: # returns err
-  IsrFaultStubWithError $0x0D
+  IsrFaultStubWithError $13
 
 IsrPageFault: # returns err
-  IsrFaultStubWithError $0x0E
+  IsrFaultStubWithError $14
+
+# ---
+
+IsrReservedA:
+  IsrLogStub $15
 
 # ---
 
 Isr87Fault:
-  IsrFaultStub $0x10
+  IsrFaultStub $16
 
 # ---
 
 IsrAlignCheck: # returns err
-  IsrFaultStubWithError $0x11
+  IsrFaultStubWithError $17
 
 IsrMachineCheck:
-  IsrAbortStub $0x12
+  IsrAbortStub $18
 
 # ---
 
 IsrSimdFault:
-  IsrFaultStub $0x13
+  IsrFaultStub $19
 
 IsrVirtFault:
-  IsrFaultStub $0x14
+  IsrFaultStub $20
+
+IsrControlFault: # returns err
+  IsrFaultStubWithError $21
 
 # ---
 
-IsrControlFault: # returns err
-  IsrFaultStubWithError $0x15
+IsrReservedB:
+  IsrLogStub $22
+
+IsrReservedC:
+  IsrLogStub $23
+
+IsrReservedD:
+  IsrLogStub $24
+
+IsrReservedE:
+  IsrLogStub $25
+
+IsrReservedF:
+  IsrLogStub $26
+
+IsrReservedG:
+  IsrLogStub $27
+
+# ---
 
 IsrHypervisorFault:
-  IsrFaultStub $0x1C
+  IsrFaultStub $28
 
 IsrVmmFault: # returns err
-  IsrFaultStubWithError $0x1D
+  IsrFaultStubWithError $29
 
 IsrSecurityFault: # returns err
-  IsrFaultStubWithError $0x1E
+  IsrFaultStubWithError $30
+
+# ---
+
+IsrReservedH:
+  IsrLogStub $31
 
 # --- (IRQ-A, master PIC, 0x20->0x27 (0 to 7))
 
-Irq0:
-  IrqStubA $0x00
+IrqTimer:
+  IrqStub $0 $0x00
 
-Irq1:
-  IrqStubA $0x01
+IrqKeyboard:
+  IrqStub $1 $0x60
 
-Irq2:
-  IrqStubA $0x02
+IrqCascade:
+  IrqStub $2 $0x00
 
-Irq3:
-  IrqStubA $0x03
+IrqCom2:
+  IrqStub $3 $0x00
 
-Irq4:
-  IrqStubA $0x04
+IrqCom1:
+  IrqStub $4 $0x00
 
-Irq5:
-  IrqStubA $0x05
+IrqLpt2:
+  IrqStub $5 $0x00
 
-Irq6:
-  IrqStubA $0x06
+IrqFloppy:
+  IrqStub $6 $0x00
 
-Irq7:
-  IrqStubA $0x07
+IrqLpt1:
+  IrqStub $7 $0x00
 
 # --- (IRQ-B, slave PIC, 0x28->0x2F (8 to 15))
 
-Irq8:
-  IrqStubB $0x00
+IrqCmos:
+  IrqStub $8 $0x00
 
-Irq9:
-  IrqStubB $0x01
+IrqPeripheralA:
+  IrqStub $9 $0x00
 
-Irq10:
-  IrqStubB $0x02
+IrqPeripheralB:
+  IrqStub $10 $0x00
 
-Irq11:
-  IrqStubB $0x03
+IrqPeripheralC:
+  IrqStub $11 $0x00
 
-Irq12:
-  IrqStubB $0x04
+IrqMouse:
+  IrqStub $12 $0x00
 
-Irq13:
-  IrqStubB $0x05
+IrqFpu:
+  IrqStub $13 $0x00
 
-Irq14:
-  IrqStubB $0x06
+IrqHddA:
+  IrqStub $14 $0x00
 
-Irq15:
-  IrqStubB $0x07
+IrqHddB:
+  IrqStub $15 $0x00
