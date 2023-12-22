@@ -5,10 +5,10 @@
 #include "../Stdint.h"
 #include "../Memory/Memory.h"
 
-/* uint32 Strlen()
+/* int Strlen()
 
    Inputs: const char* String - The string you want to get the length of.
-   Outputs: uint32 - The length of the given string.
+   Outputs: int - The length of the given string.
 
    This function calculates the length of a (regular, null-terminated) string by counting the
    amount of characters in it before getting to the final byte (which should be '\0').
@@ -17,7 +17,7 @@
    UTF-32, where each character is 16 or 32 bits respectively).
 
    For example, if you wanted to know the length of a given string, you could do the following:
-   - uint32 Length = Strlen(ExampleString);
+   - int Length = Strlen(ExampleString);
 
 */
 
@@ -163,12 +163,35 @@ char* Itoa(uint32 Number, char* Buffer, uint8 Base) {
 
 }
 
-// "Translate" address
-// TODO - COMMENTS !!!
+
+/* char* TranslateAddress()
+
+   Inputs: char* Buffer - The buffer to use when 'translating the address into a string.
+           uint32 Address - The actual address we want to translate.
+
+   Outputs: char* - The same buffer from before.
+
+   This function, like its name suggests, essentially translates a (32-bit) address into a
+   string (that can then be used in a function like Print()). In simpler terms, it's basically
+   just a wrapper for Itoa(), to be used in a few functions (like ISRs).
+
+   As with Itoa(), you need a buffer to use this function (at least 16 bytes, but it doesn't
+   have to be any bigger than that).
+
+   The resulting string is in hexadecimal, and has a 'h' appended to the end (for example,
+   0xCAFEBABE becomes CAFEBABEh). The only exception is if the address is 0, in which case it
+   is "(Unknown)".
+
+*/
 
 char* TranslateAddress(char* Buffer, uint32 Address) {
 
+  // Translate the address from an integer value into a string (in hexadecimal/base-16
+  // notation), unless the address is 0, in which case it gets translated as "(Unknown)".
+
   if (Address > 0) {
+
+    // The given buffer must always be at least 16 bytes long.
 
     Memset(Buffer, '\0', 10);
     Itoa(Address, Buffer, 16);
@@ -183,6 +206,8 @@ char* TranslateAddress(char* Buffer, uint32 Address) {
     Buffer = "(Unknown)";
 
   }
+
+  // Return the resulting buffer/string.
 
   return Buffer;
 

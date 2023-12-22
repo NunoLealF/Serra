@@ -4,18 +4,24 @@
 
 #include "../Stdint.h"
 #include "../Memory/Memory.h"
+#include "../Graphics/Graphics.h"
 #include "../Exceptions.h"
 
-// Todo - uhhh, probably everything at this point.
-// IDT should be at D000h.
-// IDTR should be (2048-1), D000h.
+/* (typedef) struct __attribute__((packed)) descriptorTable{}
 
-// We should probably try to initialize it as soon as possible, so that we can deal with
-// exceptions.
+   Location: (User-defined)
 
-// Also, we need to implement it in Rm.asm when we're coming back from real mode.
+   Elements: uint16 Size - The size of the GDT/IDT, in bytes.
+             uint32 Offset - The location of the GDT/IDT, expressed as a 32-bit memory address.
 
-// ...
+   This structure defines an important structure for both the GDT (General Descriptor Table)
+   and the IDT (Interrupt Descriptor Table) - its descriptor.
+
+   It contains two values - the size of the GDT/IDT, and the 'offset' (or, more accurately,
+   the location) of the GDT/IDT, expressed as a memory address. As we're in 32-bit mode right
+   now, that memory address is also 32 bits wide.
+
+*/
 
 typedef struct {
 
@@ -24,7 +30,27 @@ typedef struct {
 
 } __attribute__((packed)) descriptorTable;
 
-/// ...
+
+/* (typedef) struct __attribute__((packed)) idtEntry{}
+
+   Location: (D000h + (vNum * 8))
+
+   Elements: uint16 OffsetLow - ...
+             uint16 Selector - ...
+             uint8 Reserved - ...
+             uint8 Flags - ...
+             uint16 OffsetHigh - ...
+
+   This structure defines an IDT (gate) entry. It contains four main values:
+   - The offset, which indicates the location of the ISR assigned to that IDT entry;
+   - The segment selector, which must point to a valid code segment in our GDT;
+   - The reserved area, which isn't really used for anything;
+   - The flags, which contain important information about the nature of the IDT entry.
+
+   For more information, please refer to volume 3 of the Intel(R) 64 and IA-32 Architectures
+   Software Developer's Manual.
+
+*/
 
 typedef struct {
 
@@ -36,7 +62,19 @@ typedef struct {
 
 } __attribute__((packed)) idtEntry;
 
-// ...
+
+/* void LoadIdt()
+
+   Inputs: descriptorTable* IdtDescriptor - The IDT descriptor that we want to load.
+   Outputs: (None)
+
+   This function takes the role of one simple, but very important job - it loads an IDT.
+   Specifically, it's a wrapper around the 'lidt' instruction, that takes the address to an
+   IDT descriptor table.
+
+   Essentially speaking, the purpose of this function is to load an IDT.
+
+*/
 
 void LoadIdt(descriptorTable* IdtDescriptor) {
 
@@ -44,17 +82,49 @@ void LoadIdt(descriptorTable* IdtDescriptor) {
 
 }
 
-// ...
+
+/* void MakeIdtEntry()
+
+   Inputs: descriptorTable* IdtDescriptor - The IDT descriptor that we want to use.
+           uint16 EntryNum - The entry/vector number of the entry we want to make.
+           uint32 Offset - The location of the entry point of the ISR of our entry.
+           uint16 Selector - The segment selector of the IDT entry we want to make.
+           uint8 Gate - The gate type of the IDT entry we want to make.
+           uint8 Dpl - The privilege level(s) allowed to access the IDT entry we want to make.
+
+   Outputs: (None)
+
+   This function writes an IDT entry to memory using the given information. With the exception
+   of IdtDescriptor, each parameter (roughly) corresponds to a value in idtEntry{} - for more
+   details, check the documentation on that function, or consult section 6.11 / volume 3 of the
+   Intel(R) 64 and IA-32 Architectures Software Developer's Manual.
+
+   As an example, if you wanted to make an IDT entry with the following characteristics:
+
+   - Using an IDT descriptor named TestIdt (descriptorTable* TestIdt);
+   - For the entry/vector number 04h (which means it would be triggered with "int $0x04");
+   - Corresponds to an ISR with an entry point at CAFEBABEh in memory;
+   - Uses a segment selector of 08h;
+   - Which functions as a 32-bit trap gate (0Fh);
+   - That can only be accessed from CPU privilege level 0 (00h);
+
+   You would do the following:
+
+   -> MakeIdtEntry(TestIdt, 0x04, 0xCAFEBABE, 0x08, 0x0F, 0x00);
+
+*/
 
 void MakeIdtEntry(descriptorTable* IdtDescriptor, uint16 EntryNum, uint32 Offset, uint16 Selector, uint8 Gate, uint8 Dpl) {
 
-  // IDT location is IdtDescriptor->Offset
-  // We add (EntryNum*8) (each entry is 8 bytes long) to get the actual memory address
+  // The location of our IDT is at IdtDescriptor->Offset, and the location of our entry should
+  // be at (IdtDescriptor->Offset) + (EntryNum * 8), as each entry occupies 8 bytes.
 
   uint32 EntryLocation = (IdtDescriptor->Offset) + (EntryNum * 8);
-  idtEntry* Entry = (idtEntry*)EntryLocation;
 
-  // Fill in values
+  // Now, we want to make an entry at that memory location (using the idtEntry{} struct), and
+  // fill it in with the proper values.
+
+  idtEntry* Entry = (idtEntry*)EntryLocation;
 
   Entry->OffsetLow = (uint16)(Offset & 0xFFFF);
   Entry->OffsetHigh = (uint16)((Offset >> 16) & 0xFFFF);
@@ -66,10 +136,12 @@ void MakeIdtEntry(descriptorTable* IdtDescriptor, uint16 EntryNum, uint32 Offset
 
 }
 
-// - ISR/IRQ handlers (code, [eax], ebp, eip)
 
-// exceptions
-// using the names from intel's manual (except for the last 3, which come from AMD's)
+// This is an array of strings that essentially indicates which one belongs to each ISR (not
+// IRQ - that's defined in a separate file).
+
+// For example, if you received an ISR 7 ("int $0x07"), you could look up Exceptions[7] and
+// figure out that it corresponds to "Device not available (ISR 7)".
 
 static char* Exceptions[] = {
 

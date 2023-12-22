@@ -5,7 +5,7 @@
 #ifndef SERRA_EXCEPTIONS_H
 #define SERRA_EXCEPTIONS_H
 
-  // Declare functions in Exceptions.c
+  // Data structures in Exceptions.c.
 
   typedef enum {
 
@@ -20,17 +20,9 @@
 
   } messageType;
 
+  // Functions in Exceptions.c.
+
   void Message(messageType Type, char* String);
   void __attribute__((noreturn)) Panic(char* String, uint32 Eip);
-
-  void IsrFault(uint8 Vector, uint32 Eip);
-  void IsrFaultWithError(uint8 Vector, uint32 Eip, uint32 Error);
-  void IsrAbort(uint8 Vector, uint32 Eip);
-  void IsrLog(uint8 Vector);
-
-  // This can avoid errors when including from other files.
-
-  #include "Memory/Memory.h"
-  #include "Graphics/Graphics.h"
 
 #endif

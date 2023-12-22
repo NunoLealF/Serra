@@ -2,7 +2,8 @@
 # This file is part of the Serra project, which is released under the MIT license.
 # For more information, please refer to the accompanying license agreement. <3
 
-# ...
+# There are functions (defined elsewhere in our bootloader) we want to have access to, so we
+# use the .extern keyword.
 
 .extern IsrFault
 .extern IsrFaultWithError
@@ -11,10 +12,10 @@
 
 .extern IrqHandler
 
-# We want to be able to call these functions from the rest of our bootloader, so we use .globl
-# to turn them into global functions.
 
-.globl IsrNoFault
+# We want to be able to reference the functions in here from the rest of our bootloader, so we
+# use .globl to turn them into global functions that can be called from anywhere else.
+
 .globl IsrDivideFault
 
 .globl IsrNmi
@@ -59,8 +60,6 @@
 
 .globl IsrReservedH
 
-# ...
-
 .globl IrqTimer
 .globl IrqKeyboard
 .globl IrqCascade
@@ -80,25 +79,38 @@
 .globl IrqHddB
 
 
-# ...
-# Only faults related to interrupt numbers 10, 11, 12, 13, 14, and 17 use an error code.
-# These are macros and they're the best thing known to man <3
-
-# ...
+# (macro) IsrFaultStub()
+#
+# Inputs: \vNum/%edx - The specific vector number of our interrupt.
+#         (%eip/ecx - The address of the instruction that caused the exception.)
+#
+# Outputs: (None)
+#
+# This macro essentially serves as a template ISR (interrupt service handler) / 'handler' for
+# exceptions that are problematic, but that aren't unrecoverable, and that *don't* provide an
+# error code (if they do, use IsrFaultStubWithError).
+#
+# It takes one explicit argument ('vNum', the vector/interrupt number), and one implicit
+# argument (%eip/ecx, the instruction pointer at the time of the exception, which has already
+# been pushed onto the stack by our firmware).
+#
+# After that, it calls IsrFault(), which is defined in Int.c.
 
 .macro IsrFaultStub vNum
 
-  # get eip
+  # Push %ecx to the stack (to save the original value of it), and move the instruction
+  # pointer of the instruction that caused the exception to %ecx.
 
   push %ecx
   mov 4(%esp), %ecx
 
-  # ...
+  # Push everything to the stack (including %ecx), and change the value of %edx to the given
+  # vector number (vNum).
 
   pushal
   mov \vNum, %edx
 
-  # EIP is already pushed to the stack
+  # Call the IsrFault() function with two arguments - %ecx (%eip), and %edx (vNum).
 
   push %ecx
   push %edx
@@ -108,6 +120,9 @@
   pop %edx
   pop %ecx
 
+  # Pop everything from the stack (and then pop %ecx), and finally, after everything, use
+  # the 'iret' instruction to return from our ISR.
+
   popal
   pop %ecx
   iret
@@ -115,11 +130,29 @@
 .endm
 
 
-# ...
+# (macro) IsrFaultStubWithError()
+#
+# Inputs: \vNum/%edx - The specific vector number of our interrupt.
+#         (%eip/ebx - The address of the instruction that caused the exception.)
+#         (%ecx - The error code pushed to the stack by the exception.)
+#
+# Outputs: (None)
+#
+# This macro essentially serves as a template ISR (interrupt service handler) / 'handler' for
+# exceptions that are problematic, but that aren't unrecoverable, and that *do* provide an
+# error code (if they don't, use IsrFaultStub).
+#
+# It takes one explicit argument ('vNum', the vector/interrupt number), and two implicit
+# arguments (%eip/ebx, the instruction pointer at the time of the exception, and %ecx, the
+# error code pushed to the stack by the exception).
+#
+# After that, it calls IsrFaultWithError(), which is defined in Int.c.
 
 .macro IsrFaultStubWithError vNum
 
-  # get eip/error
+  # Push %ebx and %ecx to the stack (to save the original value of it), and move the error code
+  # and the instruction pointer of the instruction that caused the exception to %ecx and %ebx
+  # respectively.
 
   push %ebx
   push %ecx
@@ -127,12 +160,14 @@
   mov 12(%esp), %ebx
   mov 8(%esp), %ecx
 
-  # ...
+  # Push everything to the stack (including %ebx and %ecx), and change the value of %edx to
+  # the given vector number (vNum).
 
   pushal
   mov \vNum, %edx
 
-  # EIP is already pushed to the stack
+  # Call the IsrFaultWithError() function with three arguments - %ebx (the error code from
+  # earlier), %ecx (%eip), and %edx (vNum).
 
   push %ebx
   push %ecx
@@ -144,31 +179,51 @@
   pop %ecx
   pop %ebx
 
-  # ...
+  # Pop everything from the stack (and then pop %ebx and %ecx), and finally, after everything,
+  # use the 'iret' instruction to return from our ISR.
 
   popal
   pop %ebx
   pop %ecx
+
   iret
 
 .endm
 
 
-# ...
+# (macro) IsrAbortStub()
+#
+# Inputs: \vNum/%edx - The specific vector number of our interrupt.
+#         (%eip/ecx - The address of the instruction that caused the exception.)
+#
+# Outputs: (None; in fact, it doesn't even return)
+#
+# This macro essentially serves as a template ISR (interrupt service handler) / 'handler' for
+# exceptions that are problematic *and* unrecoverable, regardless of whether they provide an
+# error code or not.
+#
+# It takes one explicit argument ('vNum', the vector/interrupt number), and one implicit
+# argument (%eip/ecx, the instruction pointer at the time of the exception, which has already
+# been pushed onto the stack by our firmware).
+#
+# After that, it calls IsrAbort(), which is defined in Int.c, and which does not return - in
+# fact, it displays an error message and halts the entire system.
 
 .macro IsrAbortStub vNum
 
-  # get eip
+  # Push %ecx to the stack (to save the original value of it), and move the instruction
+  # pointer of the instruction that caused the exception to %ecx.
 
   push %ecx
   mov 4(%esp), %ecx
 
-  # ...
+  # Push everything to the stack (including %ecx), and change the value of %edx to the given
+  # vector number (vNum).
 
   pushal
   mov \vNum, %edx
 
-  # EIP is already pushed to the stack
+  # Call the IsrAbort() function with two arguments - %ecx (%eip), and %edx (vNum).
 
   push %ecx
   push %edx
@@ -178,7 +233,8 @@
   pop %edx
   pop %ecx
 
-  # ...
+  # The function we just called *really* shouldn't return, but if it somehow does, pop everything
+  # from the stack (and then %ecx again), and finally return from our ISR.
 
   popal
   pop %ecx
@@ -186,34 +242,70 @@
 
 .endm
 
-# ...
+
+# (macro) IsrLogStub()
+#
+# Inputs: \vNum/%edx - The specific vector number of our interrupt.
+#
+# Outputs: (None)
+#
+# This macro is a little like the other template ISRs above, but it's more limited. It only
+# takes one explicit argument ('vNum', the vector/interrupt number), and it only shows a simple
+# information message on the screen (by calling IsrLog(), which is defined in Int.c).
+#
+# It's intended for interrupts/'exceptions' that aren't really problematic, like NMIs (which
+# aren't even considered exceptions).
 
 .macro IsrLogStub vNum
+
+  # Push everything to the stack, and change the value of %edx to the given vector number
+  # (vNum).
 
   pushal
   mov \vNum, %edx
 
-  # ...
+  # Call the IsrLog() function with one argument - %edx (vNum).
 
   push %edx
   call IsrLog
   pop %edx
 
-  # ...
+  # Pop everything from the stack, and use iret to return from our ISR.
 
   popal
   iret
 
 .endm
 
-# ...
+
+# (macro) IrqStub()
+#
+# Inputs: \vNum/%edx - The specific IRQ number of our interrupt.
+#         \pNum/%ecx - The port we want to read from, if applicable (if not, use $00h).
+#
+# Outputs: (None)
+#
+# This macro is also a template ISR, but it's a little different from the other ones, in that
+# it's supposed to be used with IRQs.
+#
+# Because of that, it doesn't take any implicit arguments, and it takes *two* explicit
+# arguments instead of one - 'vNum', the IRQ number, and 'pNum', the port we want to read from,
+# if applicable (some IRQs, like the PS/2 keyboard IRQ, require this).
+#
+# Other than that though, it works largely like a regular ISR, and it forwards those two
+# arguments to IrqHandler(), which is defined in Irq.c.
 
 .macro IrqStub vNum pNum
+
+  # Push everything to the stack, and change the value of %edx and %ecx to the given vector
+  # number (vNum) and port number (pNum) respectively.
 
   pushal
 
   mov \vNum, %edx
   mov \pNum, %ecx
+
+  # Call the IrqHandler() with two arguments - %edx (vNum) and %ecx (pNum).
 
   push %ecx
   push %edx
@@ -223,11 +315,14 @@
   pop %edx
   pop %ecx
 
-  # ...
+  # Tell the PIC that we acknowledge its IRQ, by sending the command $20h to the command ports
+  # for both PIC-A ($20h) and PIC-B ($A0h).
 
   mov $0x20, %al
   outb %al, $0x20
   outb %al, $0xA0
+
+  # Pop everything from the stack, and use iret to return from our ISR.
 
   popal
   iret
@@ -235,12 +330,11 @@
 .endm
 
 
-# ---
+# Our bootloader's ISRs. Each one of these will need to be specified as the offset in an IDT
+# entry when we initialize the IDT later on, from $00h to $1Fh.
 
-IsrNoFault:
-  iret
-
-# ---
+# For reference, see volume 3 of the Intel(R) 64 and IA-32 Architectures Software Developer’s
+# Manual, and volume 2 of the AMD64 Architecture Programmer’s Manual.
 
 IsrDivideFault:
   IsrAbortStub $0
@@ -266,48 +360,38 @@ IsrInvalidOpcode:
 IsrDeviceFault:
   IsrFaultStub $7
 
-# ---
-
-IsrDoubleFault: # returns err (always 0)
+IsrDoubleFault:
   IsrAbortStub $8
 
 IsrCoprocessorOverrun:
   IsrFaultStub $9
 
-IsrInvalidTss: # returns err
+IsrInvalidTss:
   IsrFaultStubWithError $10
 
-IsrSegmentFault: # returns err
+IsrSegmentFault:
   IsrFaultStubWithError $11
 
-IsrStackFault: # returns err
+IsrStackFault:
   IsrFaultStubWithError $12
 
-IsrGpFault: # returns err
+IsrGpFault:
   IsrFaultStubWithError $13
 
-IsrPageFault: # returns err
+IsrPageFault:
   IsrFaultStubWithError $14
-
-# ---
 
 IsrReservedA:
   IsrLogStub $15
 
-# ---
-
 Isr87Fault:
   IsrFaultStub $16
 
-# ---
-
-IsrAlignCheck: # returns err
+IsrAlignCheck:
   IsrFaultStubWithError $17
 
 IsrMachineCheck:
   IsrAbortStub $18
-
-# ---
 
 IsrSimdFault:
   IsrFaultStub $19
@@ -315,10 +399,8 @@ IsrSimdFault:
 IsrVirtFault:
   IsrFaultStub $20
 
-IsrControlFault: # returns err
+IsrControlFault:
   IsrFaultStubWithError $21
-
-# ---
 
 IsrReservedB:
   IsrLogStub $22
@@ -338,23 +420,20 @@ IsrReservedF:
 IsrReservedG:
   IsrLogStub $27
 
-# ---
-
 IsrHypervisorFault:
   IsrFaultStub $28
 
-IsrVmmFault: # returns err
+IsrVmmFault:
   IsrFaultStubWithError $29
 
-IsrSecurityFault: # returns err
+IsrSecurityFault:
   IsrFaultStubWithError $30
-
-# ---
 
 IsrReservedH:
   IsrLogStub $31
 
-# --- (IRQ-A, master PIC, 0x20->0x27 (0 to 7))
+# Our bootloader's ISRs for IRQs between $20h and $2Fh. Again, for reference, see volume 3 of
+# the Intel(R) 64 and IA-32 Architectures Software Developer's Manual.
 
 IrqTimer:
   IrqStub $0 $0x00
@@ -379,8 +458,6 @@ IrqFloppy:
 
 IrqLpt1:
   IrqStub $7 $0x00
-
-# --- (IRQ-B, slave PIC, 0x28->0x2F (8 to 15))
 
 IrqCmos:
   IrqStub $8 $0x00

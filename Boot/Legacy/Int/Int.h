@@ -30,7 +30,6 @@
 
   // ...
 
-  extern void IsrNoFault(void);
   extern void IsrDivideFault(void);
 
   extern void IsrNmi(void);
@@ -104,6 +103,8 @@
   #define PicB_Data 0xA0
   #define PicB_Command 0xA1
 
+  // ...
+
   uint8 Inb(uint16 Port);
   void Outb(uint16 Port, uint8 Data);
 
@@ -113,8 +114,8 @@
 
   // ...
 
-  void MaskPic(uint8 Mask);
   void InitPic(uint8 PicA_Offset, uint8 PicB_Offset);
+  void MaskPic(uint8 Mask);
 
   // ...
 
