@@ -70,6 +70,8 @@ void __attribute__((noreturn)) Init(void) {
 
 */
 
+// TODO - get rid of this, replaced by Panic().
+
 void __attribute__((noreturn)) Crash(uint16 Error) {
 
   if (Error) {
@@ -133,10 +135,90 @@ void __attribute__((noreturn)) Bootloader(void) {
   // We've finally made it to our second-stage bootloader. We're in 32-bit x86 protected mode with
   // the stack at 20000h in memory, and our bootloader between 7E00h and FC00h in memory.
 
-  // ...
+  // (Set up terminal)
 
   InitializeTerminal(80, 25, 0xB8000);
   ClearTerminal();
+
+  // (Set up IDT)
+
+  descriptorTable* IdtDescriptor;
+  IdtDescriptor->Size = (2048 - 1);
+  IdtDescriptor->Offset = 0xD000;
+
+  MakeIdtEntry(IdtDescriptor, 0, (uint32)&IsrDivideFault, 0x08, 0x0F, 0x00);
+
+  MakeIdtEntry(IdtDescriptor, 1, (uint32)&IsrDebug, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 2, (uint32)&IsrNmi, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 3, (uint32)&IsrBreakpoint, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 4, (uint32)&IsrOverflow, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 5, (uint32)&IsrOutOfBounds, 0x08, 0x0F, 0x00);
+
+  MakeIdtEntry(IdtDescriptor, 6, (uint32)&IsrInvalidOpcode, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 7, (uint32)&IsrDeviceFault, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 8, (uint32)&IsrDoubleFault, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 9, (uint32)&IsrCoprocessorOverrun, 0x08, 0x0F, 0x00);
+
+  MakeIdtEntry(IdtDescriptor, 10, (uint32)&IsrInvalidTss, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 11, (uint32)&IsrSegmentFault, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 12, (uint32)&IsrStackFault, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 13, (uint32)&IsrGpFault, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 14, (uint32)&IsrPageFault, 0x08, 0x0F, 0x00);
+
+  MakeIdtEntry(IdtDescriptor, 15, (uint32)&IsrReservedA, 0x08, 0x0F, 0x00);
+
+  MakeIdtEntry(IdtDescriptor, 16, (uint32)&Isr87Fault, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 17, (uint32)&IsrAlignCheck, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 18, (uint32)&IsrMachineCheck, 0x08, 0x0F, 0x00);
+
+  MakeIdtEntry(IdtDescriptor, 19, (uint32)&IsrSimdFault, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 20, (uint32)&IsrVirtFault, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 21, (uint32)&IsrControlFault, 0x08, 0x0F, 0x00);
+
+  MakeIdtEntry(IdtDescriptor, 22, (uint32)&IsrReservedB, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 23, (uint32)&IsrReservedC, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 24, (uint32)&IsrReservedD, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 25, (uint32)&IsrReservedE, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 26, (uint32)&IsrReservedF, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 27, (uint32)&IsrReservedG, 0x08, 0x0F, 0x00);
+
+  MakeIdtEntry(IdtDescriptor, 28, (uint32)&IsrHypervisorFault, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 29, (uint32)&IsrVmmFault, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 30, (uint32)&IsrSecurityFault, 0x08, 0x0F, 0x00);
+
+  MakeIdtEntry(IdtDescriptor, 31, (uint32)&IsrReservedH, 0x08, 0x0F, 0x00);
+
+
+  // (Set up PIC/IRQs)
+
+  MakeIdtEntry(IdtDescriptor, 32+0, (uint32)&IrqTimer, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 32+1, (uint32)&IrqKeyboard, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 32+2, (uint32)&IrqCascade, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 32+3, (uint32)&IrqCom2, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 32+4, (uint32)&IrqCom1, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 32+5, (uint32)&IrqLpt2, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 32+6, (uint32)&IrqFloppy, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 32+7, (uint32)&IrqLpt1, 0x08, 0x0F, 0x00);
+
+  MakeIdtEntry(IdtDescriptor, 32+8, (uint32)&IrqCmos, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 32+9, (uint32)&IrqPeripheralA, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 32+10, (uint32)&IrqPeripheralB, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 32+11, (uint32)&IrqPeripheralC, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 32+12, (uint32)&IrqMouse, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 32+13, (uint32)&IrqFpu, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 32+14, (uint32)&IrqHddA, 0x08, 0x0F, 0x00);
+  MakeIdtEntry(IdtDescriptor, 32+15, (uint32)&IrqHddB, 0x08, 0x0F, 0x00);
+
+
+  MaskPic(0xFF); // Full mask, don't enable anything
+  InitPic(0x20, 0x28); // IRQ1 is at 0x20-0x27, IRQ2 is at 0x28-0x2F
+  LoadIdt(IdtDescriptor); // load the idt lol
+
+  __asm__("sti");
+  MaskPic(0xFF); // I've already tested it and it works but let's not enable anything for now
+
+
+  // (Set up A20)
 
   // At the moment, we can only reliably access up to the first MiB of data (from 00000h to FFFFFh).
   // This is because we haven't yet enabled the A20 line, which is a holdover from the 8086 days.
@@ -205,93 +287,8 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   }
 
-  // Our IDT; this is very incomplete, and should be implemented in a better way, but uhh
 
-  InitializeTerminal(80, 25, 0xB8000);
-  ClearTerminal();
-
-  descriptorTable* IdtDescriptor;
-  IdtDescriptor->Size = (2048 - 1);
-  IdtDescriptor->Offset = 0xD000;
-
-  // By the way - we haven't remapped the PIC or anything, so we *will* get a random double
-  // fault.
-  // (edit: we have lmao)
-
-  MakeIdtEntry(IdtDescriptor, 0, (uint32)&IsrDivideFault, 0x08, 0x0F, 0x00);
-
-  MakeIdtEntry(IdtDescriptor, 1, (uint32)&IsrDebug, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 2, (uint32)&IsrNmi, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 3, (uint32)&IsrBreakpoint, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 4, (uint32)&IsrOverflow, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 5, (uint32)&IsrOutOfBounds, 0x08, 0x0F, 0x00);
-
-  MakeIdtEntry(IdtDescriptor, 6, (uint32)&IsrInvalidOpcode, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 7, (uint32)&IsrDeviceFault, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 8, (uint32)&IsrDoubleFault, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 9, (uint32)&IsrCoprocessorOverrun, 0x08, 0x0F, 0x00);
-
-  MakeIdtEntry(IdtDescriptor, 10, (uint32)&IsrInvalidTss, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 11, (uint32)&IsrSegmentFault, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 12, (uint32)&IsrStackFault, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 13, (uint32)&IsrGpFault, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 14, (uint32)&IsrPageFault, 0x08, 0x0F, 0x00);
-
-  MakeIdtEntry(IdtDescriptor, 15, (uint32)&IsrReservedA, 0x08, 0x0F, 0x00);
-
-  MakeIdtEntry(IdtDescriptor, 16, (uint32)&Isr87Fault, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 17, (uint32)&IsrAlignCheck, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 18, (uint32)&IsrMachineCheck, 0x08, 0x0F, 0x00);
-
-  MakeIdtEntry(IdtDescriptor, 19, (uint32)&IsrSimdFault, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 20, (uint32)&IsrVirtFault, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 21, (uint32)&IsrControlFault, 0x08, 0x0F, 0x00);
-
-  MakeIdtEntry(IdtDescriptor, 22, (uint32)&IsrReservedB, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 23, (uint32)&IsrReservedC, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 24, (uint32)&IsrReservedD, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 25, (uint32)&IsrReservedE, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 26, (uint32)&IsrReservedF, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 27, (uint32)&IsrReservedG, 0x08, 0x0F, 0x00);
-
-  MakeIdtEntry(IdtDescriptor, 28, (uint32)&IsrHypervisorFault, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 29, (uint32)&IsrVmmFault, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 30, (uint32)&IsrSecurityFault, 0x08, 0x0F, 0x00);
-
-  MakeIdtEntry(IdtDescriptor, 31, (uint32)&IsrReservedH, 0x08, 0x0F, 0x00);
-
-
-  // IRQs now
-
-  MakeIdtEntry(IdtDescriptor, 0x20, (uint32)&IrqTimer, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x21, (uint32)&IrqKeyboard, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x22, (uint32)&IrqCascade, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x23, (uint32)&IrqCom2, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x24, (uint32)&IrqCom1, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x25, (uint32)&IrqLpt2, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x26, (uint32)&IrqFloppy, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x27, (uint32)&IrqLpt1, 0x08, 0x0F, 0x00);
-
-  MakeIdtEntry(IdtDescriptor, 0x28, (uint32)&IrqCmos, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x29, (uint32)&IrqPeripheralA, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x2A, (uint32)&IrqPeripheralB, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x2B, (uint32)&IrqPeripheralC, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x2C, (uint32)&IrqMouse, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x2D, (uint32)&IrqFpu, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x2E, (uint32)&IrqHddA, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 0x2F, (uint32)&IrqHddB, 0x08, 0x0F, 0x00);
-
-  // ...
-
-  MaskPic(0xFF); // Full mask, don't enable anything
-  InitPic(0x20, 0x28); // IRQ1 is at 0x20-0x27, IRQ2 is at 0x28-0x2F
-
-  __asm__("sti");
-  MaskPic(0xFF); // I've already tested it and it works but let's not enable anything for now
-
-
-  // It'll double fault (since there's no interrupt handler for IRQ1, or 0x21)
-  // (or, well, it'll GPF, but I don't even know why lol)
+  // (Set up E820 / memory map)
 
   // In order to figure out which memory areas we can use, and which areas we can't, we'll
   // need to obtain what's known as a memory map from our BIOS/firmware.
@@ -341,11 +338,8 @@ void __attribute__((noreturn)) Bootloader(void) {
     Crash(0x02);
   }
 
-  // Terminal test
-  // (this just shows the date / whether A20 and E820 are enabled / etc.)
 
-  InitializeTerminal(80, 25, 0xB8000);
-  ClearTerminal();
+  // (Test everything out)
 
   mmapEntry* Test = (mmapEntry*)0xE000;
 
@@ -384,13 +378,6 @@ void __attribute__((noreturn)) Bootloader(void) {
 
       for (int j = 0; j < 60000000; j++) {
         __asm__("nop");
-        if (j == 1984404) {
-          __asm__("int $0x0A");
-          Print("\n", 0);
-          __asm__("int $0x21");
-          Print("\n", 0);
-          j /= 0;
-        }
       }
 
     }
@@ -400,9 +387,9 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   // Things left to do:
 
-  // A - Set up a proper IDT
-  // B - Finish working on E820, memory map, etc.
-  // C - Uhh, CPUID?
+  // A - Revamp the thing above [WILL START AFTER THIS COMMIT]
+  // B - Finish working on E820, memory map, etc. [ALMOST DONE]
+  // C - Uhh, CPUID? [NOTHING DONE YET]
 
   for(;;);
 

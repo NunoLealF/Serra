@@ -5,9 +5,7 @@
 #ifndef SERRA_INT_H
 #define SERRA_INT_H
 
-  // Todo - everything
-
-  // ...
+  // Data structures from Idt.c.
 
   typedef struct {
 
@@ -15,8 +13,6 @@
     uint32 Offset;
 
   } __attribute__((packed)) descriptorTable;
-
-  // ...
 
   typedef struct {
 
@@ -28,7 +24,8 @@
 
   } __attribute__((packed)) idtEntry;
 
-  // ...
+  // ISRs for interrupt vectors between 0 and 31 (00h and 1Fh), defined in Isr.s.
+  // These are just here so we can use them later on when making IDT entries.
 
   extern void IsrDivideFault(void);
 
@@ -74,8 +71,8 @@
 
   extern void IsrReservedH(void);
 
-  // god has abandoned us
-  // IRQs 0-7 are on the master PIC (PIC A), while 8-15 are on the slave PIC (PIC B).
+  // Same as above, but for IRQs, usually between 32 and 47 (20h and 2Fh), also defined in
+  // Isr.s.
 
   extern void IrqTimer(void);
   extern void IrqKeyboard(void);
@@ -95,7 +92,7 @@
   extern void IrqHddA(void);
   extern void IrqHddB(void);
 
-  // ...
+  // Definitions from Irq.c.
 
   #define PicA_Data 0x20
   #define PicA_Command 0x21
@@ -103,21 +100,17 @@
   #define PicB_Data 0xA0
   #define PicB_Command 0xA1
 
-  // ...
+  // Functions from Irq.c.
 
   uint8 Inb(uint16 Port);
   void Outb(uint16 Port, uint8 Data);
 
-  // ...
-
   void IrqHandler(uint8 Vector, uint8 Port);
-
-  // ...
 
   void InitPic(uint8 PicA_Offset, uint8 PicB_Offset);
   void MaskPic(uint8 Mask);
 
-  // ...
+  // Functions from Idt.c.
 
   void LoadIdt(descriptorTable* IdtDescriptor);
   void MakeIdtEntry(descriptorTable* IdtDescriptor, uint16 EntryNum, uint32 Offset, uint16 Selector, uint8 Gate, uint8 Dpl);

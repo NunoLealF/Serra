@@ -186,43 +186,84 @@ static char* Exceptions[] = {
 
 };
 
-// A -> fault
-// B -> fault with error
-// C -> abort (with or without error)
-// D -> note/log
-// Irq -> irq handler
+
+/* void IsrFault()
+
+   Inputs: uint8 Vector - The specific vector number of our interrupt.
+           uint32 Eip - The address of the instruction that caused the exception.
+
+   Outputs: (None, except a warning message on the screen)
+
+   This function serves as an interrupt handler for an exception. It's called by any ISR which
+   uses the 'IsrFaultStub' macro in Isr.s, and it takes two parameters - the specific vector
+   number of the interrupt, and the instruction pointer pushed onto the stack at the time of
+   the exception (which represents the address of the faulty instruction).
+
+   Using the Message() function from Exceptions.c, it shows to the user that an exception has
+   occured, and shows information about which exception occured (using the Exceptions[] list),
+   and about what caused it (by showing Eip).
+
+   This interrupt handler should only be used by ISRs that correspond to a fault that can be
+   recovered from, and that *doesn*'t contain an error code - if the latter doesn't apply, use
+   IsrFaultWithError() instead.
+
+*/
 
 void IsrFault(uint8 Vector, uint32 Eip) {
 
-  // ...
+  // Tell the user that an exception has happened, and using the Exceptions[] list, show which
+  // one did.
 
   Message(Warning, "An exception has occured.");
   Message(Info, Exceptions[Vector]);
 
-  // ...
+  // Use the TranslateAddress() function to show the user the instruction pointer of the faulty
+  // instruction.
 
   char Buffer[16];
   Memset(Buffer, '\0', 16);
 
   Print("Instruction pointer: ", 0x0F);
   Print(TranslateAddress(Buffer, Eip), 0x07);
+
   Putchar('\n', 0);
-
-  // ...
-
-  return;
 
 }
 
 
+/* void IsrFaultWithError()
+
+   Inputs: uint8 Vector - The specific vector number of our interrupt.
+           uint32 Eip - The address of the instruction that caused the exception.
+           uint32 Error - The error code pushed onto the stack by the exception.
+
+   Outputs: (None, except a warning message on the screen)
+
+   This function serves as an interrupt handler for an exception. It's called by any ISR which
+   uses the 'IsrFaultStubWithError' macro in Isr.s, and it takes three parameters - the specific
+   vector number of the interrupt, the instruction pointer pushed onto the stack at the time of
+   the exception, and the error code (also pushed onto the stack).
+
+   Using the Message() function from Exceptions.c, it shows to the user that an exception has
+   occured, and shows information about which exception occured (using the Exceptions[] list),
+   and about what caused it (by showing Eip and Error).
+
+   This interrupt handler should only be used by ISRs that correspond to a fault that can be
+   recovered from, and that *does* contain an error code - if the latter doesn't apply, use
+   IsrFault() instead.
+
+*/
+
 void IsrFaultWithError(uint8 Vector, uint32 Eip, uint32 Error) {
 
-  // ...
+  // Tell the user that an exception has occured, and using the Exceptions[] list, show which
+  // one did.
 
   Message(Warning, "An exception has occured.");
   Message(Info, Exceptions[Vector]);
 
-  // ...
+  // Use the TranslateAddress() function to show the user the instruction pointer of the faulty
+  // instruction, and the error code pushed onto the stack by the exception.
 
   char Buffer[16];
   Memset(Buffer, '\0', 16);
@@ -235,36 +276,67 @@ void IsrFaultWithError(uint8 Vector, uint32 Eip, uint32 Error) {
 
   Putchar('\n', 0);
 
-  // ...
-
-  return;
-
 }
 
 
+/* void IsrAbort()
+
+   Inputs: uint8 Vector - The specific vector number of our interrupt.
+           uint32 Eip - The address of the instruction that caused the exception.
+
+   Outputs: (None, except a warning message on the screen)
+
+   This function serves as an interrupt handler for an unrecoverable exception/fault. It's called
+   by any ISR which uses the 'IsrAbortStub' macro in Isr.s, and it takes two parameters - the
+   specific vector number of the interrupt, and the instruction pointer pushed onto the stack at
+   the time of the exception (which represents the address of the faulty instruction).
+
+   Using the Message() and Panic() functions from Exceptions.c, it shows to the user that an
+   exception has occured, shows information about which exception occured (using the Exceptions[]
+   list), and then halts the system (this occurs inside of Panic()).
+
+   This interrupt handler should only be used by ISRs that correspond to a fault that cannot be
+   recovered from, whether or not it contains an error code - if the former doesn't apply, use
+   any other Isr...() function instead.
+
+*/
+
 void IsrAbort(uint8 Vector, uint32 Eip) {
 
-  // ...
+  // Tell the user that an exception has occured, and using the Exceptions[] list, show which
+  // one did, before halting the system (this happens inside of Panic()).
 
   Message(Warning, "An exception has occured.");
   Panic(Exceptions[Vector], Eip);
 
-  // ...
-
-  return;
-
 }
 
 
+/* void IsrLog()
+
+   Inputs: uint8 Vector - The specific vector number of our interrupt.
+   Outputs: (None, except an information message on the screen)
+
+   This function serves as a generic interrupt handler / ISR for any interrupt that isn't
+   necessarily problematic (like an NMI interrupt).
+
+   Using the Message() function from Exception.c, it shows to the user that an interrupt has
+   occured, shows information about which one has (using the Exceptions[] list from earlier),
+   and then returns.
+
+   This function is intended to be called from the 'IsrLogStub' macro in Isr.s, and it should
+   only be used for interrupts that aren't considered to be faults/exceptions, that don't push
+   an error code onto the stack, and that don't require some sort of action before returning
+   (like with certain IRQs).
+
+*/
+
 void IsrLog(uint8 Vector) {
 
-  // ...
+  // Tell the user that an interrupt has occured, and using the Exceptions[] list, show which
+  // one did.
 
   Message(Kernel, "An interrupt has occured.");
   Message(Info, Exceptions[Vector]);
-
-  // ...
-
-  return;
 
 }
