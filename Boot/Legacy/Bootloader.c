@@ -140,11 +140,17 @@ void __attribute__((noreturn)) Bootloader(void) {
   InitializeTerminal(80, 25, 0xB8000);
   ClearTerminal();
 
+  Message(Kernel, "Entered second-stage bootloader.");
+  Message(Ok, "Successfully initialized the terminal (at B8000h).");
+
   // (Set up IDT)
 
   descriptorTable* IdtDescriptor;
   IdtDescriptor->Size = (2048 - 1);
   IdtDescriptor->Offset = 0xD000;
+
+  Putchar('\n', 0);
+  Message(Kernel, "Preparing to initialize the IDT.");
 
   MakeIdtEntry(IdtDescriptor, 0, (uint32)&IsrDivideFault, 0x08, 0x0F, 0x00);
 
@@ -209,13 +215,18 @@ void __attribute__((noreturn)) Bootloader(void) {
   MakeIdtEntry(IdtDescriptor, 32+14, (uint32)&IrqHddA, 0x08, 0x0F, 0x00);
   MakeIdtEntry(IdtDescriptor, 32+15, (uint32)&IrqHddB, 0x08, 0x0F, 0x00);
 
+  Message(Kernel, "Initializing the 8259 PIC.");
 
   MaskPic(0xFF); // Full mask, don't enable anything
   InitPic(0x20, 0x28); // IRQ1 is at 0x20-0x27, IRQ2 is at 0x28-0x2F
+
+  Message(Kernel, "Initializing the IDT.");
+
   LoadIdt(IdtDescriptor); // load the idt lol
 
   __asm__("sti");
   MaskPic(0xFF); // I've already tested it and it works but let's not enable anything for now
+  Message(Ok, "Successfully initialized the IDT and PIC.");
 
 
   // (Set up A20)
@@ -235,12 +246,16 @@ void __attribute__((noreturn)) Bootloader(void) {
   bool A20EnabledByKbd = false;
   bool A20EnabledByFast = false;
 
+  Putchar('\n', 0);
+  Message(Kernel, "Preparing to enable the A20 line.");
+
   if (CheckA20() == true) {
 
     // If the output of the CheckA20 function is true, then that means that the A20 line has
     // already been enabled.
 
     A20EnabledByDefault = true;
+    Message(Ok, "A20 line has already been enabled.");
 
   } else {
 
@@ -250,12 +265,15 @@ void __attribute__((noreturn)) Bootloader(void) {
     // In this case, we want to try out two methods to enable the A20 line, the first of which
     // involves the 8042 keyboard controller.
 
+    Message(Kernel, "Attempting to enable the A20 line using the 8042 keyboard method.");
+
     EnableKbdA20();
     WaitA20();
 
     if (CheckA20() == true) {
 
       A20EnabledByKbd = true;
+      Message(Ok, "The A20 line has successfully been enabled.");
 
     } else {
 
@@ -263,12 +281,16 @@ void __attribute__((noreturn)) Bootloader(void) {
       // called 'fast A20'.
       // This may crash the system, but we'll have to reset if we can't enable A20 anyways.
 
+      Message(Fail, "The A20 line was not successfully enabled.");
+      Message(Kernel, "Attempting to enable the A20 line using the Fast A20 method.");
+
       EnableFastA20();
       WaitA20();
 
       if (CheckA20() == true) {
 
         A20EnabledByFast = true;
+        Message(Ok, "The A20 line has successfully been enabled.");
 
       } else {
 
@@ -279,14 +301,13 @@ void __attribute__((noreturn)) Bootloader(void) {
         // As it's necessary for us to enable the A20 line, we'll need to crash the system /
         // give out an error code if we get to this point.
 
-        Crash(0x01);
+        Panic("Failed to enable the A20 line.", 0);
 
       }
 
     }
 
   }
-
 
   // (Set up E820 / memory map)
 
@@ -303,6 +324,9 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   void* Mmap = (void*)0xE000;
   uint32 Continuation = 0;
+
+  Putchar('\n', 0);
+  Message(Kernel, "Preparing to obtain the system's memory map (using E820).");
 
   // Now that we've taken care of that, we can finally request our system's memory map. We have
   // to do this entry by entry, and we have a total limit of 128 entries.
@@ -335,21 +359,54 @@ void __attribute__((noreturn)) Bootloader(void) {
   // error code / crash the system, as it's necessary for us to have a memory map.
 
   if (MmapEntries == 0) {
-    Crash(0x02);
+
+    Panic("Unable to obtain any memory map entries (using E820)", 0);
+
+  } else {
+
+    Message(Ok, "Successfully obtained a memory map (using E820).\n");
+
+    char Buffer[64];
+
+    mmapEntry* Test = (mmapEntry*)0xE000;
+
+    Print("Number of E820 entries: ", 0x0F);
+    Print(Itoa(MmapEntries, Buffer, 10), 0x0B);
+
+    Print("\nBase (entry 0): ", 0x0F);
+    Print(Itoa((uint32)Test->Base, Buffer, 16), 0x0B);
+
+    Print("\nLimit (entry 0): ", 0x0F);
+    Print(Itoa((uint32)Test->Limit, Buffer, 16), 0x0B);
+
+    Print("\nFlags (entry 0): ", 0x0F);
+    Print(Itoa(Test->Type, Buffer, 16), 0x0B);
+
+    Print("\nAcpi (entry 0): ", 0x0F);
+    Print(Itoa(Test->Acpi, Buffer, 2), 0x0B);
+
+
   }
 
+  Print("\n\nHi, this is Serra! <3\n", 0x3F);
+  Print("December 24th 2023\n", 0x07);
+
+  for(;;);
 
   // (Test everything out)
 
+  /*
+
+  Putchar('\n', 0);
   mmapEntry* Test = (mmapEntry*)0xE000;
 
   for (;;) {
 
     for (int i = 0x01; i <= 0x0F; i++) {
 
-      InitializeTerminal(80, 25, 0xB8000);
+      //InitializeTerminal(80, 25, 0xB8000);
       Print("Hi, this is Serra!\n", i);
-      Print("December 22nd 2023\n\n", 0x0F);
+      Print("December 24th 2023\n\n", 0x0F);
 
       if (CheckA20() == true) {
         Print("A20 is enabled, hooray!\n\n", 0x0A);
@@ -384,10 +441,11 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   }
 
+  */
 
   // Things left to do:
 
-  // A - Revamp the thing above [WILL START AFTER THIS COMMIT]
+  // A - Revamp the thing above [KINDA DONE]
   // B - Finish working on E820, memory map, etc. [ALMOST DONE]
   // C - Uhh, CPUID? [NOTHING DONE YET]
 

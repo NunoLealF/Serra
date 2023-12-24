@@ -41,7 +41,7 @@ void Message(messageType Type, char* String) {
       break;
 
     case Kernel:
-      Print("Kernel", 0x09);
+      Print("Serra", 0x09);
       break;
 
     case Ok:
