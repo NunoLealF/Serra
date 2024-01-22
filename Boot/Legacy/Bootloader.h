@@ -1,4 +1,4 @@
-// Copyright (C) 2023 NunoLealF
+// Copyright (C) 2024 NunoLealF
 // This file is part of the Serra project, which is released under the MIT license.
 // For more information, please refer to the accompanying license agreement. <3
 
@@ -7,11 +7,12 @@
 
   // Import other headers
 
+  #include "Cpu/Cpu.h"
   #include "Graphics/Graphics.h"
   #include "Memory/Memory.h"
   #include "Int/Int.h"
   #include "Rm/Rm.h"
-  
+
   #include "Exceptions.h"
 
   // Declare functions in Bootloader.c

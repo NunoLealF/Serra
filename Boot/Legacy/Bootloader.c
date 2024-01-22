@@ -1,4 +1,4 @@
-// Copyright (C) 2023 NunoLealF
+// Copyright (C) 2024 NunoLealF
 // This file is part of the Serra project, which is released under the MIT license.
 // For more information, please refer to the accompanying license agreement. <3
 
@@ -388,66 +388,17 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   }
 
-  Print("\n\nHi, this is Serra! <3\n", 0x3F);
-  Print("December 24th 2023\n", 0x07);
+  Print("\n\nHi, this is Serra!\n", 0x3F);
+  Print("January 22nd 2024\n", 0x07);
 
   for(;;);
 
-  // (Test everything out)
-
-  /*
-
-  Putchar('\n', 0);
-  mmapEntry* Test = (mmapEntry*)0xE000;
-
-  for (;;) {
-
-    for (int i = 0x01; i <= 0x0F; i++) {
-
-      //InitializeTerminal(80, 25, 0xB8000);
-      Print("Hi, this is Serra!\n", i);
-      Print("December 24th 2023\n\n", 0x0F);
-
-      if (CheckA20() == true) {
-        Print("A20 is enabled, hooray!\n\n", 0x0A);
-      } else {
-        Print("A20 is disabled. :(\n\n", 0x0C);
-      }
-
-      char Buffer[64];
-
-      Print("Number of E820 entries: ", 0x0F);
-      Print(Itoa(MmapEntries, Buffer, 10), 0x0B);
-
-      Print("\nBase: ", 0x0F);
-      Print(Itoa((uint32)Test->Base, Buffer, 16), 0x0B);
-
-      Print("\nLimit: ", 0x0F);
-      Print(Itoa((uint32)Test->Limit, Buffer, 16), 0x0B);
-
-      Print("\nFlags: ", 0x0F);
-      Print(Itoa(Test->Type, Buffer, 16), 0x0B);
-
-      Print("\nAcpi: ", 0x0F);
-      Print(Itoa(Test->Acpi, Buffer, 2), 0x0B);
-
-      Print("\n\n", 0x0F);
-
-      for (int j = 0; j < 60000000; j++) {
-        __asm__("nop");
-      }
-
-    }
-
-  }
-
-  */
 
   // Things left to do:
 
-  // A - Revamp the thing above [KINDA DONE]
+  // A - Revamp the thing above [WILL START AFTER THIS COMMIT]
   // B - Finish working on E820, memory map, etc. [ALMOST DONE]
-  // C - Uhh, CPUID? [NOTHING DONE YET]
+  // C - Uhh, CPUID? [STARTING TO WORK ON THIS NOW]
 
   for(;;);
 
