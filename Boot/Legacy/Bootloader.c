@@ -364,8 +364,9 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   } else {
 
-    Message(Ok, "Successfully obtained a memory map (using E820)");
+    Message(Ok, "Successfully obtained a memory map (using E820)\n");
 
+    /*
     char Buffer[64];
 
     mmapEntry* Test = (mmapEntry*)0xE000;
@@ -385,7 +386,7 @@ void __attribute__((noreturn)) Bootloader(void) {
     Print("\nAcpi (entry 0): ", 0x0F);
     Print(Itoa(Test->Acpi, Buffer, 2), 0x0B);
     Print("\n\n", 0);
-
+    */
 
   }
 
@@ -395,7 +396,20 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   if (CheckCpuid() > 0) {
 
-    Message(Ok, "CPUID appears to be available");
+    Message(Ok, "CPUID appears to be available\n");
+
+    // (test)
+
+    char Test[16];
+
+    cpuidData Data = CallCpuid(0);
+
+    Print(TranslateAddress(Test, Data.Ebx), 0x0F);
+    Print(" + ", 0x0F);
+    Print(TranslateAddress(Test, Data.Ecx), 0x0F);
+    Print(" + ", 0x0F);
+    Print(TranslateAddress(Test, Data.Edx), 0x0F);
+    Print("\n", 0x0F);
 
   } else {
 

@@ -5,10 +5,21 @@
 #ifndef SERRA_CPU_H
 #define SERRA_CPU_H
 
-  // Functions in Cpu.c (...)
-  // To-do: everything, lol.
+  // Data structures in Cpu.c
 
-  // Functions in Cpuid.s (...)
+  typedef volatile struct {
+
+    uint32 Ebx;
+    uint32 Ecx;
+    uint32 Edx;
+
+  } cpuidData;
+
+  // Functions in Cpu.c
+
+  cpuidData CallCpuid(uint32 Eax);
+
+  // Functions in Cpuid.s
 
   uint32 CheckCpuid(void);
 
