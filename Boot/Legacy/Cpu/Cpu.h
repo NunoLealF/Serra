@@ -9,6 +9,7 @@
   // To-do: everything, lol.
 
   // Functions in Cpuid.s (...)
-  // To-do: believe or not, also everything lol.
+
+  uint32 CheckCpuid(void);
 
 #endif
