@@ -5,7 +5,10 @@
 #ifndef SERRA_CPU_H
 #define SERRA_CPU_H
 
-  // Data structures in Cpu.c (...)
+  // Functions in Cpu.c (...)
   // To-do: everything, lol.
+
+  // Functions in Cpuid.s (...)
+  // To-do: believe or not, also everything lol.
 
 #endif
