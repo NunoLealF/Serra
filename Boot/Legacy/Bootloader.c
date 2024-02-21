@@ -398,27 +398,23 @@ void __attribute__((noreturn)) Bootloader(void) {
 
     Message(Ok, "CPUID appears to be available");
 
-    // ...
-
-    char Test[12];
-    Message(Info, CpuidGetVendor(Test, CallCpuid(0)));
-
-    // Looks like it doesn't crash with a random CPUID value, which is good:
-    // Message(Info, CpuidGetVendor(Test, CallCpuid(0xCAFEBABE)));
-
   } else {
 
-    Panic("CPUID is not available", 0);
+    Message(Warning, "CPUID likely isn't available");
 
   }
 
-  // ...
+  Message(Info, "Output of CPUID: ");
+
+  char Test[12];
+  Printf("(eax=0) -> \'%s\'\n", 0x0F, CpuidGetVendor(Test, CallCpuid(0)));
+
+  // (Show message)
 
   Print("\nHi, this is Serra!\n", 0x3F);
-  Printf("Febru%cry %d%s %x\n", 0x07, 'a', 21, "st", 0x2024); // Test out printf (it works!!)
+  Printf("February %i %x\n", 0x07, 21, 0x2024);
 
   for(;;);
-
 
   // Things left to do:
 

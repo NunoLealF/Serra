@@ -214,19 +214,15 @@ void IsrFault(uint8 Vector, uint32 Eip) {
   // Tell the user that an exception has happened, and using the Exceptions[] list, show which
   // one did.
 
+  Putchar('\n', 0);
+
   Message(Warning, "An exception has occured.");
   Message(Info, Exceptions[Vector]);
 
-  // Use the TranslateAddress() function to show the user the instruction pointer of the faulty
-  // instruction.
+  // Show the user the address of the faulty instruction.
 
-  char Buffer[16];
-  Memset(Buffer, '\0', 16);
-
-  Print("Instruction pointer: ", 0x0F);
-  Print(TranslateAddress(Buffer, Eip), 0x07);
-
-  Putchar('\n', 0);
+  Print("EIP (Instruction pointer): ", 0x0F);
+  Printf("%xh\n", 0x07, Eip);
 
 }
 
@@ -259,22 +255,19 @@ void IsrFaultWithError(uint8 Vector, uint32 Eip, uint32 Error) {
   // Tell the user that an exception has occured, and using the Exceptions[] list, show which
   // one did.
 
+  Putchar('\n', 0);
+
   Message(Warning, "An exception has occured.");
   Message(Info, Exceptions[Vector]);
 
-  // Use the TranslateAddress() function to show the user the instruction pointer of the faulty
-  // instruction, and the error code pushed onto the stack by the exception.
-
-  char Buffer[16];
-  Memset(Buffer, '\0', 16);
+  // Show the instruction pointer of the faulty instruction *and* the error code that was
+  // pushed onto the stack by the exception to the user.
 
   Print("Error code: ", 0x0F);
-  Print(TranslateAddress(Buffer, Error), 0x07);
+  Printf("%xh\n", 0x07, Error);
 
-  Print("\nInstruction pointer: ", 0x0F);
-  Print(TranslateAddress(Buffer, Eip), 0x07);
-
-  Putchar('\n', 0);
+  Print("EIP (Instruction pointer): ", 0x0F);
+  Printf("%xh\n", 0x07, Eip);
 
 }
 
@@ -306,7 +299,9 @@ void IsrAbort(uint8 Vector, uint32 Eip) {
   // Tell the user that an exception has occured, and using the Exceptions[] list, show which
   // one did, before halting the system (this happens inside of Panic()).
 
+  Putchar('\n', 0);
   Message(Warning, "An exception has occured.");
+
   Panic(Exceptions[Vector], Eip);
 
 }
@@ -336,7 +331,9 @@ void IsrLog(uint8 Vector) {
   // Tell the user that an interrupt has occured, and using the Exceptions[] list, show which
   // one did.
 
+  Putchar('\n', 0);
   Message(Kernel, "An interrupt has occured.");
+  
   Message(Info, Exceptions[Vector]);
 
 }

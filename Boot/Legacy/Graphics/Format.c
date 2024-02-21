@@ -165,84 +165,51 @@ char* Itoa(uint32 Number, char* Buffer, uint8 Base) {
 }
 
 
-/* char* TranslateAddress()
-
-   Inputs: char* Buffer - The buffer to use when 'translating the address into a string.
-           uint32 Address - The actual address we want to translate.
-
-   Outputs: char* - The same buffer from before.
-
-   This function, like its name suggests, essentially translates a (32-bit) address into a
-   string (that can then be used in a function like Print()). In simpler terms, it's basically
-   just a wrapper for Itoa(), to be used in a few functions (like ISRs).
-
-   As with Itoa(), you need a buffer to use this function (at least 16 bytes, but it doesn't
-   have to be any bigger than that).
-
-   The resulting string is in hexadecimal, and has a 'h' appended to the end (for example,
-   0xCAFEBABE becomes CAFEBABEh). The only exception is if the address is 0, in which case it
-   is "(Unknown)".
-
-*/
-
-char* TranslateAddress(char* Buffer, uint32 Address) {
-
-  // Translate the address from an integer value into a string (in hexadecimal/base-16
-  // notation), unless the address is 0, in which case it gets translated as "(Unknown)".
-
-  if (Address > 0) {
-
-    // The given buffer must always be at least 16 bytes long.
-
-    Memset(Buffer, '\0', 10);
-    Itoa(Address, Buffer, 16);
-
-    int AddressLength = Strlen(Buffer);
-
-    Buffer[AddressLength + 0] = 'h';
-    Buffer[AddressLength + 1] = '\0';
-
-  } else {
-
-    Buffer = "(Unknown)";
-
-  }
-
-  // Return the resulting buffer/string.
-
-  return Buffer;
-
-}
-
-
 /* void Printf()
 
-   Inputs: (Something)
-           String, Color, (variadic arguments lol)
+   Inputs: const char* String - The string we want to display on the screen - there should be
+           one format specifier (%?) for each variadic argument given later on.
 
-   Outputs: (Something)
+           uint8 Color - The (VGA) color we want to display on the screen.
 
-   Something something something something.
+           (...) - Any additional (variadic) arguments that we want to display on the screen,
+           if necessary. Each argument should always correspond to a format specifier in String.
+
+   Outputs: (None)
+
+   This function is similar to Print() in that it displays a string on the screen, but it
+   accepts additional formatting / variadic arguments.
+
+   Because of this, it's much more powerful than Print(), since this function allows you to
+   effortlessly display other characters, strings, integers, etc. on the screen. Each additional
+   argument must correspond to one of the following format specifiers:
+
+   - %c (const char): Displays a character.
+   - %s (const char*): Displays a string.
+   - %d, %i (unsigned int): Displays an unsigned decimal integer.
+   - %x (unsigned int): Displays an unsigned hexadecimal integer.
+   - %% (none): Doesn't correspond to any additional argument, but just displays '%'.
+
+   For example, if you wanted to print the length of a given string named UwU, you could do:
+   - Printf("The length of the given string is %d.", 0x0F, Strlen(UwU));
 
 */
 
 void Printf(const char* String, uint8 Color, ...) {
 
-  // We have va_list, va_start, va_end, etc.
-  // Refer to this: https://wiki.osdev.org/Meaty_Skeleton#libc.2Fstdio.2Fprintf.c
-  // And this: https://blog.aaronballman.com/2012/06/how-variable-argument-lists-work-in-c/
-
   // Prepare va_list, va_start, etc.
+  // Refer to this: https://blog.aaronballman.com/2012/06/how-variable-argument-lists-work-in-c/
 
   va_list Arguments; // Create va_list
   va_start(Arguments, Color); // Color is the last non-variadic argument
 
-  // Prepare buffer in case %d, %i or %x are called.
+  // We might need to call Itoa (like if %d, %i or %x are called), so we should prepare
+  // a buffer.
 
   char Buffer[16];
   Memset(Buffer, '\0', 16);
 
-  // Actually go through the string
+  // Now, we can actually go through the string!
 
   int Position = 0;
 
@@ -256,33 +223,33 @@ void Printf(const char* String, uint8 Color, ...) {
 
     } else {
 
-      // Interpret the argument after our % (for example, if we have %c, interpret 'c')
+      // Interpret the format specifier after our %.
 
       switch (String[Position+1]) {
 
-        // Characters.
+        // Characters (%c).
 
         case 'c':
           Putchar((const char)va_arg(Arguments, int), Color); // (const) char is promoted to int.
           break;
 
-        // Strings.
+        // Strings (%s).
 
         case 's':
           Print(va_arg(Arguments, const char*), Color);
           break;
 
-        // Unsigned integers (decimal).
+        // Unsigned decimal integers (%d, %i).
 
         case 'd':
         case 'i':
-          Print(Itoa(va_arg(Arguments, int), Buffer, 10), Color);
+          Print(Itoa(va_arg(Arguments, unsigned int), Buffer, 10), Color);
           break;
 
-        // Unsigned integers (hexadecimal).
+        // Unsigned hexadecimal integers (%x).
 
         case 'x':
-          Print(Itoa(va_arg(Arguments, int), Buffer, 16), Color);
+          Print(Itoa(va_arg(Arguments, unsigned int), Buffer, 16), Color);
           break;
 
         // Special cases (end of string, percent sign, unknown, etc.).
@@ -298,18 +265,20 @@ void Printf(const char* String, uint8 Color, ...) {
 
       }
 
-      // Increment position, since %? is a two character affair
+      // Since each format specifier is two characters, we need to increment Position twice.
 
       Position++;
 
     }
 
+    // We can finally increment Position and pass onto the next part of the string.
+
     Position++;
 
   }
 
-  // ...
+  // Since we're done, call va_end().
 
-  va_end(Arguments); // Stop the va_list
+  va_end(Arguments);
 
 }

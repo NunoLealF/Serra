@@ -32,7 +32,7 @@ void Message(messageType Type, char* String) {
   // Show the message type / 'classification level' to the user, enclosed by square
   // brackets (for example, [Kernel], [Ok], etc).
 
-  Putchar('[', 0x0F);
+  Print("[", 0x0F);
 
   switch(Type) {
 
@@ -65,13 +65,11 @@ void Message(messageType Type, char* String) {
 
   }
 
-  Putchar(']', 0x0F);
-  Putchar(' ', 0x0F);
+  Print("] ", 0x0F);
 
   // Show the given message to the user.
 
-  Print(String, 0x0F);
-  Putchar('\n', 0x0F);
+  Printf("%s\n", 0x0F, String);
 
 }
 
@@ -102,18 +100,20 @@ void __attribute__((noreturn)) Panic(char* String, uint32 Eip) {
 
   // Show the error message to the user.
 
-  Print("", 0x0F);
+  Putchar('\n', 0);
   Message(Error, String);
 
   // Show the instruction pointer of the instruction/function that caused the issue, if
-  // applicable (we use the TranslateAddress() function from Graphics/Format.h, which just
-  // shows "(Unknown)" if Eip = 0).
+  // applicable.
 
-  char Buffer[16];
-  Memset(Buffer, '\0', 16);
+  Print("EIP (Instruction pointer): ", 0x0F);
 
-  Print("Instruction pointer: ", 0x0F);
-  Print(TranslateAddress(Buffer, Eip), 0x07);
+  if (Eip != 0) {
+    Printf("%xh", 0x07, Eip);
+  } else {
+    Print("(unknown)", 0x07);
+  }
+
   Print("\n\n", 0);
 
   // Finally, tell the user that the system will halt indefinitely (and that they should
