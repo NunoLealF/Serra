@@ -405,8 +405,10 @@ void __attribute__((noreturn)) Bootloader(void) {
   cpuidData Data;
 
   Data = CallCpuid(0);
+  uint32 MaximumSupportedLevel = Data.Eax;
   Printf("(eax=0) -> (eax: %xh, ebx: %xh, ecx: %xh, edx: %xh)\n", 0x07, Data.Eax, Data.Ebx, Data.Ecx, Data.Edx);
   Printf("(eax=0) -> \'%s\'\n", 0x07, CpuidGetVendor(Test, Data));
+
 
   Data = CallCpuid(1);
   Printf("(eax=1) -> (eax: %xh, ebx: %xh, ecx: %xh, edx: %xh)\n", 0x07, Data.Eax, Data.Ebx, Data.Ecx, Data.Edx);

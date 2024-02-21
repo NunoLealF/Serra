@@ -1,4 +1,4 @@
-// Copyright (C) 2023 NunoLealF
+// Copyright (C) 2024 NunoLealF
 // This file is part of the Serra project, which is released under the MIT license.
 // For more information, please refer to the accompanying license agreement. <3
 
@@ -333,7 +333,7 @@ void IsrLog(uint8 Vector) {
 
   Putchar('\n', 0);
   Message(Kernel, "An interrupt has occured.");
-  
+
   Message(Info, Exceptions[Vector]);
 
 }
