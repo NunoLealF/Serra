@@ -396,20 +396,15 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   if (CheckCpuid() > 0) {
 
-    Message(Ok, "CPUID appears to be available\n");
+    Message(Ok, "CPUID appears to be available");
 
-    // (test)
+    // ...
 
-    char Test[16];
+    char Test[12];
+    Message(Info, CpuidGetVendor(Test, CallCpuid(0)));
 
-    cpuidData Data = CallCpuid(0);
-
-    Print(TranslateAddress(Test, Data.Ebx), 0x0F);
-    Print(" + ", 0x0F);
-    Print(TranslateAddress(Test, Data.Ecx), 0x0F);
-    Print(" + ", 0x0F);
-    Print(TranslateAddress(Test, Data.Edx), 0x0F);
-    Print("\n", 0x0F);
+    // Looks like it doesn't crash with a random CPUID value, which is good:
+    // Message(Info, CpuidGetVendor(Test, CallCpuid(0xCAFEBABE)));
 
   } else {
 
@@ -420,16 +415,18 @@ void __attribute__((noreturn)) Bootloader(void) {
   // ...
 
   Print("\nHi, this is Serra!\n", 0x3F);
-  Print("January 22nd 2024\n", 0x07);
+  Print("February 21st 2024\n", 0x07);
 
   for(;;);
 
 
   // Things left to do:
 
-  // A - Revamp the thing above [WILL START AFTER THIS COMMIT]
-  // B - Finish working on E820, memory map, etc. [ALMOST DONE]
-  // C - Uhh, CPUID? [STARTING TO WORK ON THIS NOW]
+  // A - Finish working on E820, memory map, etc. [ALMOST DONE]
+  // B - Uhh, CPUID? [SORT OF DONE, WORK WITH EAX=1 / EXTENDED FEATURES / ETC.]
+  // C - A proper print function
+  // D - Work on disk related stuff
+  // E - Work on VESA/VBE related stuff
 
   for(;;);
 

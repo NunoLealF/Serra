@@ -7,7 +7,7 @@
 
   // Data structures in Cpu.c
 
-  typedef volatile struct {
+  typedef struct {
 
     uint32 Ebx;
     uint32 Ecx;
@@ -18,6 +18,7 @@
   // Functions in Cpu.c
 
   cpuidData CallCpuid(uint32 Eax);
+  char* CpuidGetVendor(char* Buffer, cpuidData Data);
 
   // Functions in Cpuid.s
 
