@@ -122,7 +122,7 @@ void __attribute__((noreturn)) Crash(uint16 Error) {
    0FD00-10000h: Empty, non-reserved. Stack smash protector(?)
 
    10000-20000h: Current stack. 64KiB in size.
-   20000-80000h: Data, probably.
+   20000-80000h: Data, probably (this should be the 3rd stage)
    80000-FFFFFh: Reserved!
    (QEMU reserves anything above 9FC00, probably because of the EBDA)
    (A0000-BFFFFh is always considered reserved as well, video mmeory.)
@@ -309,6 +309,24 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   }
 
+
+  // (Just in case, get amount of low memory)
+  // (Very simple BIOS function, int 0x12 (and nothing else), returns result in ax)
+  // (Memory from 0 up until the EBDA, below 1MiB)
+
+  realModeTable* Table = InitializeRealModeTable();
+  Table->Int = 0x12;
+
+  RealMode();
+
+  Message(Info, "This should be the amount of low memory (BIOS function, int 12h)");
+  Printf("%i KiB \n", 0x0F, Table->Eax);
+
+  // In QEMU's case, this (pretty accurately) reports 9FC00h
+  // Keep in mind that this reports it in KiB, so in 1024-byte blocks, NOT 1000-byte blocks
+  // (I mean I wouldn't be surprised to see some buggy BIOSes report it in 1000 ones, but still)
+
+
   // (Set up E820 / memory map)
 
   // In order to figure out which memory areas we can use, and which areas we can't, we'll
@@ -383,35 +401,41 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   // (Try to see if CPUID works)
 
+  bool CpuidAvailable = false;
   Message(Kernel, "Preparing to check whether CPUID is available");
 
   if (CheckCpuid() > 0) {
 
+    CpuidAvailable = true;
     Message(Ok, "CPUID appears to be available");
 
   } else {
 
+    CpuidAvailable = false;
     Message(Warning, "CPUID likely isn't available");
 
   }
 
   // (Test out CPUID)
-  // (CPUID eax=0: eax is maximum supported level (important!), ebx-edx is vendor string)
-  // (CPUID eax=1: eax-edx are CPU features)
 
-  Message(Info, "Output of CPUID: ");
+  if (CpuidAvailable == true) {
 
-  char Test[12];
-  cpuidData Data;
+    // (CPUID eax=0: eax is maximum supported level (important!), ebx-edx is vendor string)
+    // (CPUID eax=1: eax-edx are CPU features)
 
-  Data = CallCpuid(0);
-  uint32 MaximumSupportedLevel = Data.Eax;
-  Printf("(eax=0) -> (eax: %xh, ebx: %xh, ecx: %xh, edx: %xh)\n", 0x07, Data.Eax, Data.Ebx, Data.Ecx, Data.Edx);
-  Printf("(eax=0) -> \'%s\'\n", 0x07, CpuidGetVendor(Test, Data));
+    Message(Info, "Output of CPUID: ");
 
+    char Test[12];
+    cpuidData Data;
 
-  Data = CallCpuid(1);
-  Printf("(eax=1) -> (eax: %xh, ebx: %xh, ecx: %xh, edx: %xh)\n", 0x07, Data.Eax, Data.Ebx, Data.Ecx, Data.Edx);
+    Data = CallCpuid(0);
+    Printf("(eax=0) -> (eax: %xh, ebx: %xh, ecx: %xh, edx: %xh)\n", 0x07, Data.Eax, Data.Ebx, Data.Ecx, Data.Edx);
+    Printf("(eax=0) -> \'%s\'\n", 0x07, CpuidGetVendor(Test, Data));
+
+    Data = CallCpuid(1);
+    Printf("(eax=1) -> (eax: %xh, ebx: %xh, ecx: %xh, edx: %xh)\n", 0x07, Data.Eax, Data.Ebx, Data.Ecx, Data.Edx);
+
+  }
 
   // (Show message)
 
@@ -422,11 +446,44 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   // Things left to do:
 
+  // (for the 2nd stage)
   // A - Finish working on E820, memory map, etc. [SOMEWHAT DONE, HAVE TO INTERPRET IT STILL]
   // B - Uhh, CPUID? [SORT OF DONE, WORK WITH EAX=1 / EXTENDED FEATURES / ETC.]
   // C - A proper print function [DONE]
-  // D - Work on disk related stuff
-  // E - Work on VESA/VBE related stuff
+  // D - Work on VESA/VBE related stuff (actually I don't really know about this one)
+  // E - Work on *everything else* that needs to be done, the idea is that the 2.5th stage
+  // shouldn't need to contact the BIOS at all.
+
+  // (for the 2.5th stage)
+  // E - Work on interpreting all the data from the 2nd stage, especially the memory map.
+  // F - Work on implementing paging
+  // G - Work on PCI related stuff
+  // H - Work on disk related stuff (ATA/ATAPI/IDE, SATA/AHCI, NVMe, Floppy, USB, etc.)
+  // I - Work on filesystem related stuff (at the very least, FAT32)
+  // J - Work on APIC related stuff (you'll need to turn off the old PIC)
+  // K - Finally, integrate with the 64-bit/EFI/UEFI part of the bootloader (the 3rd stage)
+
+  // Keep in mind that the 2nd stage is basically just an intermediate stage to prepare for
+  // everything (with access to BIOS functions and such), but the 2.5th stage shouldn't rely
+  // on the BIOS at all, so stuff like VESA needs to be taken care of first.
+
+  // [THINGS TO PASS ONTO THE 2.5TH STAGE]
+
+  // -> Anything A20 related (A20EnabledBy...)
+  // -> Anything CPUID related (max supported level, some important ones to query)
+  // -> Anything VBE related (list of modes, current mode, whether it was enabled, whether
+  // video is even possible, what methods to try, etc.)
+  // -> The E820 memory map (up to 128 entries, 3.072 bytes!); probably a good idea to also
+  // query a few other memory functions (int12 =ax returns memory below 1MiB..)
+  // -> Important locations - where are the interrupt entries? Where's the GDT? Where's the IDT?
+  // Where's the real mode code? Etc.
+  // -> The stack (including the real mode stack because, I mean, why not-)
+
+  // This article contains a list of important BIOS functions, use them before it's too late:
+  // https://wiki.osdev.org/BIOS
+
+  // Also, you can use V8086 for graphics BIOS functions:
+  // https://wiki.osdev.org/Virtual_8086_Mode
 
   for(;;);
 
