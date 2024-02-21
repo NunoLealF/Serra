@@ -420,7 +420,7 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   // Things left to do:
 
-  // A - Finish working on E820, memory map, etc. [ALMOST DONE]
+  // A - Finish working on E820, memory map, etc. [SOMEWHAT DONE, HAVE TO INTERPRET IT STILL]
   // B - Uhh, CPUID? [SORT OF DONE, WORK WITH EAX=1 / EXTENDED FEATURES / ETC.]
   // C - A proper print function [DONE]
   // D - Work on disk related stuff

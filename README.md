@@ -10,12 +10,12 @@ An x86 bootloader under construction.
 
 &nbsp;
 
-- String/terminal functions **Done**
+- String/terminal functions **Done, and now with printf!**
 - Enabling the A20 line **Done**
 - Interrupts and exceptions **Done (but a little bare-bones)**
 - Some way of going to and from real mode **Done**
 - E820 / memory map *Partly done - need to interpret the memory map still.*
-- CPUID *Just starting out, still need to actually interpret the data.*
+- CPUID *Also partly done, still need to interpret the data.*
 - ACPI
 - VESA
 

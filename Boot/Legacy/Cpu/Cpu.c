@@ -12,7 +12,7 @@
 cpuidData CallCpuid(uint32 Eax) {
 
   cpuidData Data;
-  __asm__("cpuid" : "=b"(Data.Ebx), "=c"(Data.Ecx), "=d"(Data.Edx) : "a"(Eax));
+  __asm__("cpuid" : "=a"(Data.Eax), "=b"(Data.Ebx), "=c"(Data.Ecx), "=d"(Data.Edx) : "a"(Eax));
 
   return Data;
 
