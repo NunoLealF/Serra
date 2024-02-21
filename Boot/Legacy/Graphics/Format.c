@@ -4,6 +4,7 @@
 
 #include "../Stdint.h"
 #include "../Memory/Memory.h"
+#include "Graphics.h"
 
 /* int Strlen()
 
@@ -210,5 +211,105 @@ char* TranslateAddress(char* Buffer, uint32 Address) {
   // Return the resulting buffer/string.
 
   return Buffer;
+
+}
+
+
+/* void Printf()
+
+   Inputs: (Something)
+           String, Color, (variadic arguments lol)
+
+   Outputs: (Something)
+
+   Something something something something.
+
+*/
+
+void Printf(const char* String, uint8 Color, ...) {
+
+  // We have va_list, va_start, va_end, etc.
+  // Refer to this: https://wiki.osdev.org/Meaty_Skeleton#libc.2Fstdio.2Fprintf.c
+  // And this: https://blog.aaronballman.com/2012/06/how-variable-argument-lists-work-in-c/
+
+  // Prepare va_list, va_start, etc.
+
+  va_list Arguments; // Create va_list
+  va_start(Arguments, Color); // Color is the last non-variadic argument
+
+  // Prepare buffer in case %d, %i or %x are called.
+
+  char Buffer[16];
+  Memset(Buffer, '\0', 16);
+
+  // Actually go through the string
+
+  int Position = 0;
+
+  while (Position < Strlen(String)) {
+
+    if (String[Position] != '%') {
+
+      // Print the character as normal.
+
+      Putchar(String[Position], Color);
+
+    } else {
+
+      // Interpret the argument after our % (for example, if we have %c, interpret 'c')
+
+      switch (String[Position+1]) {
+
+        // Characters.
+
+        case 'c':
+          Putchar((const char)va_arg(Arguments, int), Color); // (const) char is promoted to int.
+          break;
+
+        // Strings.
+
+        case 's':
+          Print(va_arg(Arguments, const char*), Color);
+          break;
+
+        // Unsigned integers (decimal).
+
+        case 'd':
+        case 'i':
+          Print(Itoa(va_arg(Arguments, int), Buffer, 10), Color);
+          break;
+
+        // Unsigned integers (hexadecimal).
+
+        case 'x':
+          Print(Itoa(va_arg(Arguments, int), Buffer, 16), Color);
+          break;
+
+        // Special cases (end of string, percent sign, unknown, etc.).
+
+        case '\0':
+        case '%':
+          Putchar('%', Color); // Only circumstance where you don't use va_list
+          break;
+
+        default:
+          (void)va_arg(Arguments, int); // Just increment va_arg and then ignore it
+          break;
+
+      }
+
+      // Increment position, since %? is a two character affair
+
+      Position++;
+
+    }
+
+    Position++;
+
+  }
+
+  // ...
+
+  va_end(Arguments); // Stop the va_list
 
 }

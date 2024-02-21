@@ -5,7 +5,7 @@
 #ifndef SERRA_GRAPHICS_H
 #define SERRA_GRAPHICS_H
 
-  // String functions. (Format.c)
+  // Formatting and string-related functions. (Format.c)
 
   int Strlen(const char* String);
   char* Strrev(char* String);
@@ -40,5 +40,9 @@
 
   void Putchar(const char Character, uint8 Color);
   void Print(const char* String, uint8 Color);
+
+  // Functions that print data to the terminal. (Format.c)
+
+  void Printf(const char* String, uint8 Color, ...);
 
 #endif

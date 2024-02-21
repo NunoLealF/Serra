@@ -15,7 +15,6 @@
   // - int for 32-bit types
   // - long long for 64-bit types
 
-
   // Signed integer types (int8 to int64).
 
   #ifdef __INT8_TYPE__
@@ -41,7 +40,6 @@
   #else
     typedef signed long long int64;
   #endif
-
 
   // Unsigned integer types (uint8 to uint64).
 
@@ -69,12 +67,10 @@
     typedef unsigned long long uint64;
   #endif
 
-
   // Other integer types.
 
   #define intmax  0x0FFFFFFF
   #define uintmax 0xFFFFFFFF
-
 
   // Non-integer types.
 
@@ -82,5 +78,10 @@
   #define false 0
 
   typedef uint8 bool;
+
+  // Macros/definitions for variadic functions.
+  // (We just use <stdarg.h> because this is difficult to implement, and our compiler has it)
+
+  #include <stdarg.h>
 
 #endif

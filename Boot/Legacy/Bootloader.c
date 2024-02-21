@@ -415,7 +415,7 @@ void __attribute__((noreturn)) Bootloader(void) {
   // ...
 
   Print("\nHi, this is Serra!\n", 0x3F);
-  Print("February 21st 2024\n", 0x07);
+  Printf("Febru%cry %d%s %x\n", 0x07, 'a', 21, "st", 0x2024); // Test out printf (it works!!)
 
   for(;;);
 
@@ -424,7 +424,7 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   // A - Finish working on E820, memory map, etc. [ALMOST DONE]
   // B - Uhh, CPUID? [SORT OF DONE, WORK WITH EAX=1 / EXTENDED FEATURES / ETC.]
-  // C - A proper print function
+  // C - A proper print function [PRETTY MUCH DONE, THAT WAS EASY LOL]
   // D - Work on disk related stuff
   // E - Work on VESA/VBE related stuff
 
