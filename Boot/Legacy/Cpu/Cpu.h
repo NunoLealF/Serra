@@ -9,6 +9,7 @@
 
   typedef struct {
 
+    uint32 Eax;
     uint32 Ebx;
     uint32 Ecx;
     uint32 Edx;

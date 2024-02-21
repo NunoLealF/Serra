@@ -367,28 +367,19 @@ void __attribute__((noreturn)) Bootloader(void) {
     Message(Ok, "Successfully obtained a memory map (using E820)\n");
 
     /*
-    char Buffer[64];
 
     mmapEntry* Test = (mmapEntry*)0xE000;
 
-    Print("\nNumber of E820 entries: ", 0x0F);
-    Print(Itoa(MmapEntries, Buffer, 10), 0x0B);
+    Printf("Number of e820 entries: %i\n", 0x3F, MmapEntries);
+    Printf("Base (entry 0): %xh\n", 0x3F, (uint32)Test->Base);
+    Printf("Limit (entry 0): %xh\n", 0x3F, (uint32)Test->Limit);
+    Printf("Type/flags (entry 0): %xh\n", 0x3F, (uint32)Test->Type);
+    Printf("Acpi? (entry 0): %xh\n\n", 0x3F, (uint32)Test->Acpi);
 
-    Print("\nBase (entry 0): ", 0x0F);
-    Print(Itoa((uint32)Test->Base, Buffer, 16), 0x0B);
-
-    Print("\nLimit (entry 0): ", 0x0F);
-    Print(Itoa((uint32)Test->Limit, Buffer, 16), 0x0B);
-
-    Print("\nFlags (entry 0): ", 0x0F);
-    Print(Itoa(Test->Type, Buffer, 16), 0x0B);
-
-    Print("\nAcpi (entry 0): ", 0x0F);
-    Print(Itoa(Test->Acpi, Buffer, 2), 0x0B);
-    Print("\n\n", 0);
     */
 
   }
+
 
   // (Try to see if CPUID works)
 
@@ -404,14 +395,25 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   }
 
+  // (Test out CPUID)
+  // (CPUID eax=0: eax is maximum supported level (important!), ebx-edx is vendor string)
+  // (CPUID eax=1: eax-edx are CPU features)
+
   Message(Info, "Output of CPUID: ");
 
   char Test[12];
-  Printf("(eax=0) -> \'%s\'\n", 0x0F, CpuidGetVendor(Test, CallCpuid(0)));
+  cpuidData Data;
+
+  Data = CallCpuid(0);
+  Printf("(eax=0) -> (eax: %xh, ebx: %xh, ecx: %xh, edx: %xh)\n", 0x07, Data.Eax, Data.Ebx, Data.Ecx, Data.Edx);
+  Printf("(eax=0) -> \'%s\'\n", 0x07, CpuidGetVendor(Test, Data));
+
+  Data = CallCpuid(1);
+  Printf("(eax=1) -> (eax: %xh, ebx: %xh, ecx: %xh, edx: %xh)\n", 0x07, Data.Eax, Data.Ebx, Data.Ecx, Data.Edx);
 
   // (Show message)
 
-  Print("\nHi, this is Serra!\n", 0x3F);
+  Print("\nHi, this is Serra! <3\n", 0x3F);
   Printf("February %i %x\n", 0x07, 21, 0x2024);
 
   for(;;);
@@ -420,7 +422,7 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   // A - Finish working on E820, memory map, etc. [ALMOST DONE]
   // B - Uhh, CPUID? [SORT OF DONE, WORK WITH EAX=1 / EXTENDED FEATURES / ETC.]
-  // C - A proper print function [PRETTY MUCH DONE, THAT WAS EASY LOL]
+  // C - A proper print function [DONE]
   // D - Work on disk related stuff
   // E - Work on VESA/VBE related stuff
 
