@@ -399,38 +399,47 @@ void __attribute__((noreturn)) Bootloader(void) {
 
 
 
-  //-> [1] Try to figure out a way to like, indirectly represent them..?
+  //-> [1] Try to figure out a way to like, indirectly represent them..? (DONE, MmapList)
   //-> MmapList[4] is a pointer that points to the 4th list, so MmapList itself is mmapEntry**
 
 
   mmapEntry* MmapList[128];
   Memset((void*)&MmapList[0], '\0', 128 * sizeof(mmapEntry*));
 
-  for (int Entry = 0; Entry < MmapEntryCount; Entry++) {
+  for (unsigned int Entry = 0; Entry < MmapEntryCount; Entry++) {
 
     MmapList[Entry] = (mmapEntry*)(Mmap + (Entry * 24));
 
   }
 
 
+  // -> [1] Sort them by their base address (DONE, used bubble sort)
+  // -> Keep in mind that you only want to sort between MmapList[0] and MmapList[(count) - 1]
 
-  //-> [1] Sort them by their base address
-  //-> Keep in mind that you only want to sort between MmapList[0] and MmapList[(count) - 1]
+  // -> Also, bubble sort should be fine here. It's simple, and while O(n^2) is a little annoying,
+  // -> we also have a guaranteed max of 128 entries, so at most you'll have 16,384 checks.
 
-  //-> Also, bubble sort should be fine here. It's simple, and while O(n^2) is a little annoying,
-  //-> we also have a guaranteed max of 128 entries, so at most you'll have 16,384 checks.
+  for (unsigned int Step = 0; Step < (MmapEntryCount - 1); Step++) {
 
-  // Memswap((void*)&MmapList[0], (void*)&MmapList[1], sizeof(mmapEntry*));
+    for (unsigned int Entry = 0; Entry < (MmapEntryCount - Step - 1); Entry++) {
 
-        Printf("Number of e820 entries: %i\n", 0x3F, MmapEntryCount);
-        Printf("Base (entry 0): %xh\n", 0x3F, (uint32)MmapList[1]->Base);
-        Printf("Limit (entry 0): %xh\n", 0x3F, (uint32)MmapList[1]->Limit);
-        Printf("Type/flags (entry 0): %xh\n", 0x3F, (uint32)MmapList[1]->Type);
-        Printf("Acpi? (entry 0): %xh\n\n", 0x3F, (uint32)MmapList[1]->Acpi);
+      if ((MmapList[Entry]->Base) > (MmapList[Entry+1]->Base)) {
+        Memswap((void*)&MmapList[Entry], (void*)&MmapList[Entry+1], sizeof(mmapEntry*));
+      }
 
+    }
 
-  // ...
+  }
 
+  /*
+
+  Printf("Number of e820 entries: %i\n", 0x3F, MmapEntryCount);
+  Printf("Base (entry 0): %xh\n", 0x3F, (uint32)MmapList[0]->Base);
+  Printf("Limit (entry 0): %xh\n", 0x3F, (uint32)MmapList[0]->Limit);
+  Printf("Type/flags (entry 0): %xh\n", 0x3F, (uint32)MmapList[0]->Type);
+  Printf("Acpi? (entry 0): %xh\n\n", 0x3F, (uint32)MmapList[0]->Acpi);
+
+  */
 
 
 
