@@ -11,6 +11,7 @@
   void Memcpy(void* Destination, void* Source, uint32 Size);
   void Memmove(void* Destination, void* Source, uint32 Size);
   void Memset(void* Buffer, uint8 Character, uint32 Size);
+  void Memswap(void* BufferA, void* BufferB, uint32 Size);
 
   // A20 functions, from A20/A20_C.c and A20/A20_Asm.s.
 
@@ -38,9 +39,10 @@
   #define mmapEntryAcpiNvs 4
   #define mmapEntryBad 5
 
-  // Memory map (E820) functions, from Mmap.c.
+  // Memory map (int 12h, int 15h / eax E820h) functions, from Mmap.c.
 
   uint32 GetMmapEntry(void* Buffer, uint32 Size, uint32 Continuation);
+  uint16 GetLowMemory(void);
 
   // (Todo: other functions)
 

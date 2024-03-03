@@ -174,3 +174,28 @@ void Memset(void* Buffer, uint8 Character, uint32 Size) {
   }
 
 }
+
+
+/* void Memswap()
+
+   Inputs: (???)
+   Outputs: (???)
+
+   ...
+
+*/
+
+void Memswap(void* BufferA, void* BufferB, uint32 Size) {
+
+  // ...
+
+  char Aux[Size];
+  void* AuxBuffer = (void*)&Aux[0];
+
+  // ...
+
+  Memmove(AuxBuffer, BufferA, Size);
+  Memmove(BufferA, BufferB, Size);
+  Memmove(BufferB, AuxBuffer, Size);
+
+}

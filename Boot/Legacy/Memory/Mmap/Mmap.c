@@ -131,3 +131,33 @@ uint32 GetMmapEntry(void* Buffer, uint32 Size, uint32 Continuation) {
   return Table->Ebx;
 
 }
+
+
+/* uint16 GetLowMemory()
+
+   Inputs: (None)
+   Outputs: uint16 - The number of KiB of low memory, from 0h until the EBDA.
+
+   This function uses the BIOS function int 12h in order to calculate the number of KiB of
+   low memory (that is, memory under 1MiB), between 0h and the EBDA (Extended BIOS Data Area).
+
+   This is useful, as this function is pretty widely supported across most systems, and it
+   also allows us to figure out where the EBDA is (before interpreting the memory map from
+   the E820 functions above).
+
+*/
+
+uint16 GetLowMemory(void) {
+
+  // Prepare to go into real mode in order to call the BIOS function (int 12h).
+
+  realModeTable* Table = InitializeRealModeTable();
+  Table->Int = 0x12;
+
+  // Go into real mode, and return the value in (e)ax.
+  // This represents the number of KiB of low memory, from 0h until the EBDA.
+
+  RealMode();
+  return (uint16)Table->Eax;
+
+}

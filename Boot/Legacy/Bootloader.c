@@ -314,13 +314,10 @@ void __attribute__((noreturn)) Bootloader(void) {
   // (Very simple BIOS function, int 0x12 (and nothing else), returns result in ax)
   // (Memory from 0 up until the EBDA, below 1MiB)
 
-  realModeTable* Table = InitializeRealModeTable();
-  Table->Int = 0x12;
-
-  RealMode();
+  uint16 LowMemory = GetLowMemory();
 
   Message(Info, "This should be the amount of low memory (BIOS function, int 12h)");
-  Printf("%i KiB \n", 0x0F, Table->Eax);
+  Printf("%i KiB \n", 0x0F, LowMemory);
 
   // In QEMU's case, this (pretty accurately) reports 9FC00h
   // Keep in mind that this reports it in KiB, so in 1024-byte blocks, NOT 1000-byte blocks
@@ -349,14 +346,14 @@ void __attribute__((noreturn)) Bootloader(void) {
   // Now that we've taken care of that, we can finally request our system's memory map. We have
   // to do this entry by entry, and we have a total limit of 128 entries.
 
-  uint8 MmapEntries = 0;
+  uint8 MmapEntryCount = 0;
 
   do {
 
     // In order to request a memory map entry from our system, we first need to calculate the
     // necessary offset in memory, so that we don't overwrite any existing entries.
 
-    uint32 Offset = (MmapEntries * 24);
+    uint32 Offset = (MmapEntryCount * 24);
 
     // After that, we just need to call GetMmapEntry() with the right parameters.
 
@@ -365,9 +362,9 @@ void __attribute__((noreturn)) Bootloader(void) {
     // If the 'continuation number' reaches 0, or if we've already read more than 128 entries
     // from the system, stop the loop.
 
-    if (Continuation != 0) MmapEntries++;
+    if (Continuation != 0) MmapEntryCount++;
 
-    if (MmapEntries >= 128) {
+    if (MmapEntryCount >= 128) {
       break;
     }
 
@@ -376,7 +373,7 @@ void __attribute__((noreturn)) Bootloader(void) {
   // Finally, if we weren't able to get *any* memory map entries from the system, give out an
   // error code / crash the system, as it's necessary for us to have a memory map.
 
-  if (MmapEntries == 0) {
+  if (MmapEntryCount == 0) {
 
     Panic("Unable to obtain any memory map entries (using E820)", 0);
 
@@ -384,19 +381,58 @@ void __attribute__((noreturn)) Bootloader(void) {
 
     Message(Ok, "Successfully obtained a memory map (using E820)\n");
 
-    /*
+  }
 
-    mmapEntry* Test = (mmapEntry*)0xE000;
 
-    Printf("Number of e820 entries: %i\n", 0x3F, MmapEntries);
-    Printf("Base (entry 0): %xh\n", 0x3F, (uint32)Test->Base);
-    Printf("Limit (entry 0): %xh\n", 0x3F, (uint32)Test->Limit);
-    Printf("Type/flags (entry 0): %xh\n", 0x3F, (uint32)Test->Type);
-    Printf("Acpi? (entry 0): %xh\n\n", 0x3F, (uint32)Test->Acpi);
 
-    */
+
+
+  // (Interpret/sort E820 memory map)
+
+  //-> [1] Sort the memory map entries, by their base address;
+  //-> [2] Figure out if there are any unlisted areas/gaps, and mark those areas as unusable;
+  //-> [3] Figure out if there are any overlapping entries, and mark those areas as unusable;
+  //-> [4] Mark some sensitive areas (the EBDA, IVT, PCI memory hole, etc.) as being reserved.
+
+
+  //-> [1] Figure out how many memory map entries there are (DONE, =MmapEntries)
+
+
+
+  //-> [1] Try to figure out a way to like, indirectly represent them..?
+  //-> MmapList[4] is a pointer that points to the 4th list, so MmapList itself is mmapEntry**
+
+
+  mmapEntry* MmapList[128];
+  Memset((void*)&MmapList[0], '\0', 128 * sizeof(mmapEntry*));
+
+  for (int Entry = 0; Entry < MmapEntryCount; Entry++) {
+
+    MmapList[Entry] = (mmapEntry*)(Mmap + (Entry * 24));
 
   }
+
+
+
+  //-> [1] Sort them by their base address
+  //-> Keep in mind that you only want to sort between MmapList[0] and MmapList[(count) - 1]
+
+  //-> Also, bubble sort should be fine here. It's simple, and while O(n^2) is a little annoying,
+  //-> we also have a guaranteed max of 128 entries, so at most you'll have 16,384 checks.
+
+  // Memswap((void*)&MmapList[0], (void*)&MmapList[1], sizeof(mmapEntry*));
+
+        Printf("Number of e820 entries: %i\n", 0x3F, MmapEntryCount);
+        Printf("Base (entry 0): %xh\n", 0x3F, (uint32)MmapList[1]->Base);
+        Printf("Limit (entry 0): %xh\n", 0x3F, (uint32)MmapList[1]->Limit);
+        Printf("Type/flags (entry 0): %xh\n", 0x3F, (uint32)MmapList[1]->Type);
+        Printf("Acpi? (entry 0): %xh\n\n", 0x3F, (uint32)MmapList[1]->Acpi);
+
+
+  // ...
+
+
+
 
 
   // (Try to see if CPUID works)
@@ -440,7 +476,7 @@ void __attribute__((noreturn)) Bootloader(void) {
   // (Show message)
 
   Print("\nHi, this is Serra! <3\n", 0x3F);
-  Printf("February %i %x\n", 0x07, 21, 0x2024);
+  Printf("March %i %x\n", 0x07, 3, 0x2024);
 
   for(;;);
 
@@ -448,20 +484,22 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   // (for the 2nd stage)
   // A - Finish working on E820, memory map, etc. [SOMEWHAT DONE, HAVE TO INTERPRET IT STILL]
-  // B - Uhh, CPUID? [SORT OF DONE, WORK WITH EAX=1 / EXTENDED FEATURES / ETC.]
-  // C - A proper print function [DONE]
-  // D - Work on VESA/VBE related stuff (actually I don't really know about this one)
-  // E - Work on *everything else* that needs to be done, the idea is that the 2.5th stage
+  // B1 - Work on interpreting it, and also on other memory map methods - E801h and E881h, int 12h, etc.
+  // B2 - Also, you want to organize / sort it - return a clean E820-style memory map
+  // C - Uhh, CPUID? [SORT OF DONE, WORK WITH EAX=1 / EXTENDED FEATURES / ETC.]
+  // D - A proper print function [DONE]
+  // E - Work on VESA/VBE related stuff (actually I don't really know about this one)
+  // F - Work on *everything else* that needs to be done, the idea is that the 2.5th stage
   // shouldn't need to contact the BIOS at all.
 
   // (for the 2.5th stage)
-  // E - Work on interpreting all the data from the 2nd stage, especially the memory map.
-  // F - Work on implementing paging
-  // G - Work on PCI related stuff
-  // H - Work on disk related stuff (ATA/ATAPI/IDE, SATA/AHCI, NVMe, Floppy, USB, etc.)
-  // I - Work on filesystem related stuff (at the very least, FAT32)
-  // J - Work on APIC related stuff (you'll need to turn off the old PIC)
-  // K - Finally, integrate with the 64-bit/EFI/UEFI part of the bootloader (the 3rd stage)
+  // G - Work on interpreting all the data from the 2nd stage, especially the memory map.
+  // H - Work on implementing paging
+  // I - Work on PCI related stuff
+  // J - Work on disk related stuff (ATA/ATAPI/IDE, SATA/AHCI, NVMe, Floppy, USB, etc.)
+  // K - Work on filesystem related stuff (at the very least, FAT32)
+  // L - Work on APIC related stuff (you'll need to turn off the old PIC)
+  // M - Finally, integrate with the 64-bit/EFI/UEFI part of the bootloader (the 3rd stage)
 
   // Keep in mind that the 2nd stage is basically just an intermediate stage to prepare for
   // everything (with access to BIOS functions and such), but the 2.5th stage shouldn't rely
@@ -484,6 +522,9 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   // Also, you can use V8086 for graphics BIOS functions:
   // https://wiki.osdev.org/Virtual_8086_Mode
+
+  // Ralf Brown's interrupt list:
+  // https://www.ctyme.com/intr/int-15.htm
 
   for(;;);
 
