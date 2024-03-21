@@ -96,11 +96,11 @@ loadDisk:
 
   ; Use the BIOS interrupt call int 13h / ah 02h to load the second stage bootloader.
 
-  ; Specifically, we want to load the next 3Fh (sixty three) sectors at 7E00h, from the
-  ; first head / cylinder, and the current drive number (already stored in dl).
+  ; Specifically, we want to load the next 40 sectors at 7E00h, from the first head/cylinder,
+  ; and from the current drive number (which is already passed on by our firmware in dl).
 
   mov ah, 02h
-  mov al, 3Fh
+  mov al, 40
   mov bx, 7E00h
 
   mov ch, 0

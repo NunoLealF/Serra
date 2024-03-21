@@ -114,16 +114,17 @@ void __attribute__((noreturn)) Crash(uint16 Error) {
    07E00-0C000h: Second-stage bootloader. 32-bit protected mode.
    0C000-0CE00h: Assembly protected and real mode 'environment'.
    0CE00-0D000h: Data area for the above (real mode).
-   0D000-0D800h: Protected mode IDT. Accessible from within 16-bit real mode with ES=0.
-   0D800-0F000h: General data area. Accessible from within 16-bit real mode with ES=0.
-   (E000 is our E820 mmap)
-   0F000-0FC00h: Empty, but 'reserved'/'loaded'. No idea what to do with this, maybe use as data?
-   0FC00-0FD00h: Empty, reserved for A20 and generally just important data.
-   0FD00-10000h: Empty, non-reserved. Stack smash protector(?)
+   0D000-0D800h: Protected mode IDT. Accessible from within 16-bit real mode with ES=0
+   0D800-0E000h: Mostly empty data (A20 is at D800h) - accessible from within 16-bit real mode.
+   0E000-0F000h: Our E820 memory map - accessible from within 16-bit real mode with ES=0.
+
+   0F000-0FF00h: Empty data, not reserved/loaded, and accessible from within real mode with ES=0.
+   0FF00-10000h: Same as above, but maybe use as a stack smash protector? I'm not really sure.
 
    10000-20000h: Current stack. 64KiB in size.
    20000-80000h: Data, probably (this should be the 3rd stage)
    80000-FFFFFh: Reserved!
+
    (QEMU reserves anything above 9FC00, probably because of the EBDA)
    (A0000-BFFFFh is always considered reserved as well, video mmeory.)
    (E0000-EFFFFh as well.)
@@ -133,7 +134,7 @@ void __attribute__((noreturn)) Crash(uint16 Error) {
 void __attribute__((noreturn)) Bootloader(void) {
 
   // We've finally made it to our second-stage bootloader. We're in 32-bit x86 protected mode with
-  // the stack at 20000h in memory, and our bootloader between 7E00h and FC00h in memory.
+  // the stack at 20000h in memory, and our bootloader between 7E00h and CE00h in memory.
 
   // (Set up terminal)
 
@@ -395,13 +396,7 @@ void __attribute__((noreturn)) Bootloader(void) {
   //-> [4] Mark some sensitive areas (the EBDA, IVT, PCI memory hole, etc.) as being reserved.
 
 
-  //-> [1] Figure out how many memory map entries there are (DONE, =MmapEntries)
-
-
-
-  //-> [1] Try to figure out a way to like, indirectly represent them..? (DONE, MmapList)
-  //-> MmapList[4] is a pointer that points to the 4th list, so MmapList itself is mmapEntry**
-
+  // -> [1] Find a way to represent the entries
 
   mmapEntry* MmapList[128];
   Memset((void*)&MmapList[0], '\0', 128 * sizeof(mmapEntry*));
@@ -413,11 +408,8 @@ void __attribute__((noreturn)) Bootloader(void) {
   }
 
 
-  // -> [1] Sort them by their base address (DONE, used bubble sort)
-  // -> Keep in mind that you only want to sort between MmapList[0] and MmapList[(count) - 1]
-
-  // -> Also, bubble sort should be fine here. It's simple, and while O(n^2) is a little annoying,
-  // -> we also have a guaranteed max of 128 entries, so at most you'll have 16,384 checks.
+  // -> [1] Sort the entries
+  // -> We used bubble sort, which is O(n^2), but fucc it
 
   for (unsigned int Step = 0; Step < (MmapEntryCount - 1); Step++) {
 
@@ -431,16 +423,22 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   }
 
-  /*
 
-  Printf("Number of e820 entries: %i\n", 0x3F, MmapEntryCount);
-  Printf("Base (entry 0): %xh\n", 0x3F, (uint32)MmapList[0]->Base);
-  Printf("Limit (entry 0): %xh\n", 0x3F, (uint32)MmapList[0]->Limit);
-  Printf("Type/flags (entry 0): %xh\n", 0x3F, (uint32)MmapList[0]->Type);
-  Printf("Acpi? (entry 0): %xh\n\n", 0x3F, (uint32)MmapList[0]->Acpi);
+  // -> [2][3] I have no fucking idea how to do this
 
-  */
+  // I tried, but here's the thing - you already HAVE a memory map area which you aren't
+  // going to interface with
 
+  // The band-aid-y way would be to like, try to allocate your own memory map bs here, but
+  // that's not really practical either- fuck
+
+  // I think the best way to do this is to bring out a pen and paper, try to illustrate
+  // everything, and *then* to come up with something. Don't just wing it !!!
+
+  // The way some OSes do it is by using change points, which I think is honestly a good
+  // idea. That being said, I'd have to change the above implementation a bit, which...
+  // [TODO -> CHANGE THE ABOVE IMPLEMENTATION, YOU WANT TO CREATE CHANGE POINTS AND *THEN*
+  // [SORT AND SANITIZE THEM!!!*]
 
 
 

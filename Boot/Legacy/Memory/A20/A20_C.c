@@ -4,23 +4,25 @@
 
 #include "../../Stdint.h"
 
+#define a20TestAddress 0xD800
+
 /* bool CheckA20()
 
-   Inputs:    (None)
+   Inputs:    (None, but reserves value in a20TestAddress)
    Outputs:   bool - Whether the A20 line is enabled (true) or disabled (false)
 
    This function checks to see if the A20 line is enabled or disabled. It does this by writing a
-   certain value (a 'magic number') to FC00h (an empty memory location), and comparing it to the
-   same memory address + 1MiB (100000h).
+   certain value (a 'magic number') to a20TestAddress (an empty memory location), and comparing it
+   to the same memory address + 1MiB (100000h).
 
    On some systems, the A20 line (which lets us reliably access memory over 1MiB) isn't accessible
    by default as to maintain compatibility with programs built for the 8086 (which couldn't access
    more than 20 memory lines).
 
-   Because of this, any memory addresses using the A20 line (such as 10FC00h) would instead 'wrap
-   around' to a memory address where the A20 line (the 21st bit) would be cleared (like FC00h).
+   Because of this, any memory addresses using the A20 line (such as 10D800h) would instead 'wrap
+   around' to a memory address where the A20 line (the 21st bit) would be cleared (like D800h).
 
-   Therefore, by writing two different values to FC00h and 10FC00h (or just XXXXh and 10XXXXh in
+   Therefore, by writing two different values to D800h and 10D800h (or just XXXXh and 10XXXXh in
    general) and comparing them, we can determine whether the A20 line has been enabled or not.
 
 */
@@ -32,10 +34,11 @@ bool CheckA20(void) {
 
   uint32 magicNumber = 0x31323665;
 
-  // Write our 'magic number' to FC00h (an empty memory address), and to the same address + 1MiB.
+  // Write our 'magic number' to the address set in a20TestAddress, and to the same address +
+  // 1 MiB.
 
-  volatile uint32* lowTestAddress = (uint32*)(0xFC00);
-  volatile uint32* highTestAddress = (uint32*)(0xFC00 + 0x100000);
+  volatile uint32* lowTestAddress = (uint32*)(a20TestAddress);
+  volatile uint32* highTestAddress = (uint32*)(a20TestAddress + 0x100000);
 
   *lowTestAddress = magicNumber;
   *highTestAddress = ~magicNumber;
