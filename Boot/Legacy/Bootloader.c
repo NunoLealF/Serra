@@ -339,6 +339,7 @@ void __attribute__((noreturn)) Bootloader(void) {
   // also need what's known as a 'continuation number', which will be used later.
 
   void* Mmap = (void*)0xE000;
+  mmapEntry* MmapEntries = (mmapEntry*)(Mmap);
   uint32 Continuation = 0;
 
   Putchar('\n', 0);
@@ -387,58 +388,73 @@ void __attribute__((noreturn)) Bootloader(void) {
 
 
 
+  // (Interpret/sort E820 memory map) (NEW)
 
-  // (Interpret/sort E820 memory map)
-
-  //-> [1] Sort the memory map entries, by their base address;
-  //-> [2] Figure out if there are any unlisted areas/gaps, and mark those areas as unusable;
-  //-> [3] Figure out if there are any overlapping entries, and mark those areas as unusable;
-  //-> [4] Mark some sensitive areas (the EBDA, IVT, PCI memory hole, etc.) as being reserved.
-
-
-  // -> [1] Find a way to represent the entries
-
-  mmapEntry* MmapList[128];
-  Memset((void*)&MmapList[0], '\0', 128 * sizeof(mmapEntry*));
-
-  for (unsigned int Entry = 0; Entry < MmapEntryCount; Entry++) {
-
-    MmapList[Entry] = (mmapEntry*)(Mmap + (Entry * 24));
-
-  }
+  // -> [1] Filter the memory map - remove zero-size or otherwise useless entries.
+  // -> [2] Make two changepoints for each entry (one start, and one end).
+  // -> (optional: make changepoints for sensitive areas, like the BDA, IVT, PCI hole, etc.)
+  // -> [3] Sort the changepoints - this lets us deal with overlapping areas
+  // -> [4] Go through the changepoints, taking care of unlisted/overlapping areas, and create
+  // -> a new, 'clean' memory map that can actually be used.
 
 
-  // -> [1] Sort the entries
-  // -> We used bubble sort, which is O(n^2), but fucc it
 
-  for (unsigned int Step = 0; Step < (MmapEntryCount - 1); Step++) {
+  // [0] Prerequisites
 
-    for (unsigned int Entry = 0; Entry < (MmapEntryCount - Step - 1); Entry++) {
+  typedef struct {
 
-      if ((MmapList[Entry]->Base) > (MmapList[Entry+1]->Base)) {
-        Memswap((void*)&MmapList[Entry], (void*)&MmapList[Entry+1], sizeof(mmapEntry*));
-      }
+    uint64 Address;
+    uint32 Type;
+    mmapEntry* Entry;
+    bool Start; // True for 'this is the start of entry X', false for 'this is the END of entry X'
 
+  } mmapChangepoint;
+
+  mmapChangepoint MmapChangepoints[256];
+  uint16 MmapChangepointCount = 0;
+
+
+
+  // [1] and [2]
+
+  for (unsigned int EntryNum = 0; EntryNum < MmapEntryCount; EntryNum++) {
+
+    // ...
+
+    if (MmapChangepointCount >= 256) {
+      break;
     }
 
+    if (MmapEntries[EntryNum].Limit == 0) {
+      continue;
+    }
+
+    // ...
+
+    mmapEntry* Entry = &MmapEntries[EntryNum];
+
+    Printf("[mmapEntry(!) %i] %xh, %xh, %xh, %i\n", 0x0F, EntryNum, (uint32)Entry->Base, (uint32)Entry->Limit, (uint32)Entry->Type, (uint32)Entry->Acpi);
+
+    MmapChangepoints[MmapChangepointCount].Address = (Entry->Base);
+    MmapChangepoints[MmapChangepointCount].Entry = Entry;
+    MmapChangepoints[MmapChangepointCount].Type = (Entry->Type);
+    MmapChangepoints[MmapChangepointCount].Start = true;
+    Printf("[Entry %i] %xh, %xh, %xh, %i\n", 0x0D, MmapChangepointCount, (uint32)Entry->Base, (uint32)Entry, (uint32)(Entry->Type), (int)MmapChangepoints[MmapChangepointCount].Start);
+    MmapChangepointCount++;
+
+    MmapChangepoints[MmapChangepointCount].Address = (Entry->Base + Entry->Limit);
+    MmapChangepoints[MmapChangepointCount].Entry = Entry;
+    MmapChangepoints[MmapChangepointCount].Type = (Entry->Type);
+    MmapChangepoints[MmapChangepointCount].Start = false;
+    Printf("[Entry %i] %xh, %xh, %xh, %i\n", 0x0C, MmapChangepointCount, (uint32)(Entry->Base + Entry->Limit), (uint32)Entry, (uint32)(Entry->Type), (int)MmapChangepoints[MmapChangepointCount].Start);
+    MmapChangepointCount++;
+
   }
 
+  Printf("MmapChangepointCount: %i\n\n", 0x0B, MmapChangepointCount);
 
-  // -> [2][3] I have no fucking idea how to do this
 
-  // I tried, but here's the thing - you already HAVE a memory map area which you aren't
-  // going to interface with
 
-  // The band-aid-y way would be to like, try to allocate your own memory map bs here, but
-  // that's not really practical either- fuck
-
-  // I think the best way to do this is to bring out a pen and paper, try to illustrate
-  // everything, and *then* to come up with something. Don't just wing it !!!
-
-  // The way some OSes do it is by using change points, which I think is honestly a good
-  // idea. That being said, I'd have to change the above implementation a bit, which...
-  // [TODO -> CHANGE THE ABOVE IMPLEMENTATION, YOU WANT TO CREATE CHANGE POINTS AND *THEN*
-  // [SORT AND SANITIZE THEM!!!*]
 
 
 
@@ -483,7 +499,7 @@ void __attribute__((noreturn)) Bootloader(void) {
   // (Show message)
 
   Print("\nHi, this is Serra! <3\n", 0x3F);
-  Printf("March %i %x\n", 0x07, 3, 0x2024);
+  Printf("March %i %x\n", 0x07, 24, 0x2024);
 
   for(;;);
 
