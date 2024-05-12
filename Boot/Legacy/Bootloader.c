@@ -417,41 +417,100 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   // [1] and [2]
 
-  for (unsigned int EntryNum = 0; EntryNum < MmapEntryCount; EntryNum++) {
-
-    // ...
-
-    if (MmapChangepointCount >= 256) {
-      break;
-    }
-
-    if (MmapEntries[EntryNum].Limit == 0) {
-      continue;
-    }
+  for (uint16 EntryNum = 0; EntryNum < MmapEntryCount; EntryNum++) {
 
     // ...
 
     mmapEntry* Entry = &MmapEntries[EntryNum];
 
-    Printf("[mmapEntry(!) %i] %xh, %xh, %xh, %i\n", 0x0F, EntryNum, (uint32)Entry->Base, (uint32)Entry->Limit, (uint32)Entry->Type, (uint32)Entry->Acpi);
+    if (MmapChangepointCount >= 256) {
+      break;
+    }
+
+    if (Entry->Limit == 0) {
+      continue;
+    }
+
+    // ...
 
     MmapChangepoints[MmapChangepointCount].Address = (Entry->Base);
-    MmapChangepoints[MmapChangepointCount].Entry = Entry;
     MmapChangepoints[MmapChangepointCount].Type = (Entry->Type);
+    MmapChangepoints[MmapChangepointCount].Entry = Entry;
     MmapChangepoints[MmapChangepointCount].Start = true;
-    Printf("[Entry %i] %xh, %xh, %xh, %i\n", 0x0D, MmapChangepointCount, (uint32)Entry->Base, (uint32)Entry, (uint32)(Entry->Type), (int)MmapChangepoints[MmapChangepointCount].Start);
+
     MmapChangepointCount++;
 
+    // ...
+
     MmapChangepoints[MmapChangepointCount].Address = (Entry->Base + Entry->Limit);
-    MmapChangepoints[MmapChangepointCount].Entry = Entry;
     MmapChangepoints[MmapChangepointCount].Type = (Entry->Type);
+    MmapChangepoints[MmapChangepointCount].Entry = Entry;
     MmapChangepoints[MmapChangepointCount].Start = false;
-    Printf("[Entry %i] %xh, %xh, %xh, %i\n", 0x0C, MmapChangepointCount, (uint32)(Entry->Base + Entry->Limit), (uint32)Entry, (uint32)(Entry->Type), (int)MmapChangepoints[MmapChangepointCount].Start);
+
     MmapChangepointCount++;
 
   }
 
-  Printf("MmapChangepointCount: %i\n\n", 0x0B, MmapChangepointCount);
+
+
+
+  // [3] Sort the changepoints
+  // We have exactly MmapChangepointCount changepoints, so..
+
+  for (uint16 Step = 0; Step < (MmapChangepointCount - 1); Step++) {
+
+    for (uint16 Changepoint = 0; Changepoint < (MmapChangepointCount - Step - 1); Changepoint++) {
+
+      if ((MmapChangepoints[Changepoint].Address) > (MmapChangepoints[Changepoint + 1].Address)) {
+
+        Memswap((void*)&MmapChangepoints[Changepoint], (void*)&MmapChangepoints[Changepoint + 1], sizeof(mmapChangepoint));
+
+      }
+
+    }
+
+  }
+
+
+
+  // [!] Test!! Only to see how the changepoints look
+
+  for (int i = 0; i < MmapChangepointCount; i++) {
+    Printf("[Changepoint %i] %xh, %i, $%xh, %i\n", 0x0E, i, (uint32)MmapChangepoints[i].Address, (uint32)MmapChangepoints[i].Type, (uint32)MmapChangepoints[i].Entry, (uint32)MmapChangepoints[i].Start);
+  }
+
+  Printf("\n", 0);
+
+
+
+
+  // [4a] Go through the changepoints, taking care of unlisted/overlapping areas, and create
+  // a new, 'clean' memory map that can actually be used.
+
+  mmapChangepoint CleanMmapChangepoints[256];
+  uint16 CleanMmapChangepointCount = 0;
+
+
+  // [4b] Create a sort of priority queue for the entries being processed?
+
+  mmapChangepoint MmapChangepointQueue[256];
+  uint16 MmapChangepointQueueCount = 0;
+
+  Memset((void*)MmapChangepointQueue, 0, sizeof(mmapChangepoint) * 256);
+
+
+  // [4c] (Copy in the first changepoint)
+
+  Memcpy((void*)&CleanMmapChangepoints[0], (void*)&MmapChangepoints[0], sizeof(mmapChangepoint));
+  CleanMmapChangepointCount++;
+
+  Memcpy((void*)&MmapChangepointQueue[0], (void*)&MmapChangepoints[0], sizeof(mmapChangepoint));
+  MmapChangepointQueueCount++;
+
+
+  // [4d] (Necessary variables, and loop.)
+
+  //...
 
 
 
@@ -496,10 +555,14 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   }
 
+
+
+
+
   // (Show message)
 
   Print("\nHi, this is Serra! <3\n", 0x3F);
-  Printf("March %i %x\n", 0x07, 24, 0x2024);
+  Printf("May %i %x\n", 0x07, 12, 0x2024);
 
   for(;;);
 
