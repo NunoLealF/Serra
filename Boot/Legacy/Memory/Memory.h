@@ -38,6 +38,8 @@
   #define mmapEntryAcpiReclaimable 3
   #define mmapEntryAcpiNvs 4
   #define mmapEntryBad 5
+  #define mmapEntryDisabled 6
+  #define mmapEntryPersistent 7
 
   // Memory map (int 12h, int 15h / eax E820h) functions, from Mmap.c.
 

@@ -9,6 +9,31 @@
 #error "This code is supposed to be compiled with an i686-elf cross-compiler."
 #endif
 
+
+// ...
+
+typedef struct {
+
+  uint64 Address;
+  uint32 Type;
+  mmapEntry* Entry;
+  bool Start; // True for 'this is the start of entry X', false for 'this is the END of entry X'
+
+} mmapChangepoint;
+
+
+// ...
+
+void MakeMmapChangepoint(mmapChangepoint* Changepoint, uint64 Address, uint32 Type, mmapEntry* Entry, bool Start) {
+
+  Changepoint->Address = Address;
+  Changepoint->Type = Type;
+  Changepoint->Entry = Entry;
+  Changepoint->Start = Start;
+
+}
+
+
 /* void __attribute__((noreturn)) Init()
 
    Inputs:    (none)
@@ -401,15 +426,6 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   // [0] Prerequisites
 
-  typedef struct {
-
-    uint64 Address;
-    uint32 Type;
-    mmapEntry* Entry;
-    bool Start; // True for 'this is the start of entry X', false for 'this is the END of entry X'
-
-  } mmapChangepoint;
-
   mmapChangepoint MmapChangepoints[256];
   uint16 MmapChangepointCount = 0;
 
@@ -433,20 +449,12 @@ void __attribute__((noreturn)) Bootloader(void) {
 
     // ...
 
-    MmapChangepoints[MmapChangepointCount].Address = (Entry->Base);
-    MmapChangepoints[MmapChangepointCount].Type = (Entry->Type);
-    MmapChangepoints[MmapChangepointCount].Entry = Entry;
-    MmapChangepoints[MmapChangepointCount].Start = true;
-
+    MakeMmapChangepoint(&MmapChangepoints[MmapChangepointCount], Entry->Base, Entry->Type, Entry, true);
     MmapChangepointCount++;
 
     // ...
 
-    MmapChangepoints[MmapChangepointCount].Address = (Entry->Base + Entry->Limit);
-    MmapChangepoints[MmapChangepointCount].Type = (Entry->Type);
-    MmapChangepoints[MmapChangepointCount].Entry = Entry;
-    MmapChangepoints[MmapChangepointCount].Start = false;
-
+    MakeMmapChangepoint(&MmapChangepoints[MmapChangepointCount], (Entry->Base + Entry->Limit), Entry->Type, Entry, false);
     MmapChangepointCount++;
 
   }
@@ -472,16 +480,21 @@ void __attribute__((noreturn)) Bootloader(void) {
   }
 
 
+  // [!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!]
+  // [THIS IS BEING USED FOR DIFFERENT MMAP TEST SCENARIOS]
 
-  // [!] Test!! Only to see how the changepoints look
+  Memset((void*)&MmapChangepoints[0], 0, 256 * sizeof(mmapChangepoint));
 
-  for (int i = 0; i < MmapChangepointCount; i++) {
-    Printf("[Changepoint %i] %xh, %i, $%xh, %i\n", 0x0E, i, (uint32)MmapChangepoints[i].Address, (uint32)MmapChangepoints[i].Type, (uint32)MmapChangepoints[i].Entry, (uint32)MmapChangepoints[i].Start);
-  }
+  MakeMmapChangepoint(&MmapChangepoints[0], 0x1234, 1, 0x10, true);
+  MakeMmapChangepoint(&MmapChangepoints[1], 0x2345, 1, 0x10, false);
+  MakeMmapChangepoint(&MmapChangepoints[2], 0x3456, 3, 0x20, true);
+  MakeMmapChangepoint(&MmapChangepoints[3], 0x4567, 2, 0x30, true);
+  MakeMmapChangepoint(&MmapChangepoints[4], 0x5678, 3, 0x20, false);
+  MakeMmapChangepoint(&MmapChangepoints[5], 0x6789, 1, 0x40, true);
+  MakeMmapChangepoint(&MmapChangepoints[6], 0x789A, 2, 0x30, false);
+  MakeMmapChangepoint(&MmapChangepoints[7], 0x89AB, 1, 0x40, false);
 
-  Printf("\n", 0);
-
-
+  MmapChangepointCount = 8;
 
 
   // [4a] Go through the changepoints, taking care of unlisted/overlapping areas, and create
@@ -496,7 +509,7 @@ void __attribute__((noreturn)) Bootloader(void) {
   mmapChangepoint MmapChangepointQueue[256];
   uint16 MmapChangepointQueueCount = 0;
 
-  Memset((void*)MmapChangepointQueue, 0, sizeof(mmapChangepoint) * 256);
+  Memset((void*)&MmapChangepointQueue[0], 0, sizeof(mmapChangepoint) * 256);
 
 
   // [4c] (Copy in the first changepoint)
@@ -510,7 +523,178 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   // [4d] (Necessary variables, and loop.)
 
-  //...
+  mmapChangepoint MmapMaxChangepoint = MmapChangepointQueue[0];
+  uint16 MmapMaxChangepointPosition = 0;
+
+  for (uint16 ChangepointNum = 1; ChangepointNum < MmapChangepointCount; ChangepointNum++) {
+
+    // [4-0] Preparations
+
+    mmapChangepoint Changepoint = MmapChangepoints[ChangepointNum];
+    mmapChangepoint LastChangepoint = MmapChangepoints[ChangepointNum - 1];
+
+    // [4-1] Deal with empty areas between entries
+
+    if (MmapChangepointQueueCount == 0) {
+
+      if ((Changepoint.Address - LastChangepoint.Address) > 0) {
+
+        // TODO: I'm still not sure if this is the best type to use, all things considered
+        #define PlaceholderForEmptyArea mmapEntryDisabled
+
+        MakeMmapChangepoint(&CleanMmapChangepoints[CleanMmapChangepointCount], LastChangepoint.Address, PlaceholderForEmptyArea, (mmapEntry*)0, true);
+        CleanMmapChangepointCount++;
+
+        MakeMmapChangepoint(&CleanMmapChangepoints[CleanMmapChangepointCount], Changepoint.Address, PlaceholderForEmptyArea, (mmapEntry*)0, false);
+        CleanMmapChangepointCount++;
+
+      }
+
+    }
+
+    // [4-2] Are we dealing with the start or with the end of an entry?
+
+    if (Changepoint.Start == true) {
+
+      // [4-3a] So, we're at the start of a new entry; let's add it to the queue
+
+      MmapChangepointQueue[MmapChangepointQueueCount] = Changepoint;
+      MmapChangepointQueueCount++;
+
+      // [4-3b] Process everything (?)
+
+      if (MmapChangepointQueueCount == 1) {
+
+        // Create new clean changepoint (start)
+
+        MakeMmapChangepoint(&CleanMmapChangepoints[CleanMmapChangepointCount], Changepoint.Address, Changepoint.Type, Changepoint.Entry, true);
+        CleanMmapChangepointCount++;
+
+        // Update as necessary
+
+        MmapMaxChangepoint = Changepoint;
+        MmapMaxChangepointPosition = MmapChangepointQueueCount;
+
+      } else {
+
+        if (Changepoint.Type > MmapMaxChangepoint.Type) {
+
+          // End old clean changepoint (end)
+
+          MakeMmapChangepoint(&CleanMmapChangepoints[CleanMmapChangepointCount], Changepoint.Address, MmapMaxChangepoint.Type, MmapMaxChangepoint.Entry, false);
+          CleanMmapChangepointCount++;
+
+          // Create new clean changepoint (start)
+
+          MakeMmapChangepoint(&CleanMmapChangepoints[CleanMmapChangepointCount], Changepoint.Address, Changepoint.Type, Changepoint.Entry, true);
+          CleanMmapChangepointCount++;
+
+          // Update as necessary
+
+          MmapMaxChangepoint = Changepoint;
+          MmapMaxChangepointPosition = MmapChangepointQueueCount;
+
+        }
+
+      }
+
+    } else {
+
+      // [4-4a] So, we're at the end of an already existing entry; where is it in our queue?
+
+      uint16 QueuePosition = (MmapChangepointQueueCount - 1);
+
+      for (uint16 QueueNum = 0; QueueNum < MmapChangepointQueueCount; QueueNum++) {
+
+        if (MmapChangepointQueue[QueueNum].Entry == Changepoint.Entry) {
+
+          QueuePosition = QueueNum;
+          break;
+
+        }
+
+      }
+
+      // [4-4b] Process everything (?)
+
+      if (MmapChangepointQueueCount <= 1) {
+
+        // End old clean changepoint (end)
+
+        MakeMmapChangepoint(&CleanMmapChangepoints[CleanMmapChangepointCount], Changepoint.Address, Changepoint.Type, Changepoint.Entry, false);
+        CleanMmapChangepointCount++;
+
+        // Clear entry from queue
+
+        Memset(&MmapChangepointQueue[QueuePosition], 0, sizeof(mmapChangepoint));
+
+      } else {
+
+        // Remove the entry from our queue
+
+        uint16 NumMovedEntries = (MmapChangepointQueueCount - QueuePosition - 1);
+        Memmove((void*)&MmapChangepointQueue[QueuePosition], (void*)&MmapChangepointQueue[QueuePosition + 1], sizeof(mmapChangepoint) * NumMovedEntries);
+
+        Memset((void*)&MmapChangepointQueue[MmapChangepointQueueCount - 1], 0, sizeof(mmapChangepoint));
+
+        // Find the new maximum
+
+        MmapMaxChangepoint = MmapChangepointQueue[0];
+        MmapMaxChangepointPosition = 0;
+
+        for (uint16 MaxQueueNum = 0; MaxQueueNum < MmapChangepointQueueCount; MaxQueueNum++) {
+
+          // If the changepoint we found is bigger than the current one, then..
+
+          if (MmapChangepoints[MaxQueueNum].Type > MmapMaxChangepoint.Type) {
+
+            MmapMaxChangepoint = MmapChangepoints[MaxQueueNum];
+            MmapMaxChangepointPosition = MaxQueueNum;
+
+          }
+
+        }
+
+        // If applicable, end old clean changepoint (end), and start new clean changepoint (start)
+
+        if (Changepoint.Type > MmapMaxChangepoint.Type) {
+
+          MakeMmapChangepoint(&CleanMmapChangepoints[CleanMmapChangepointCount], Changepoint.Address, Changepoint.Type, Changepoint.Entry, false);
+          CleanMmapChangepointCount++;
+
+          MakeMmapChangepoint(&CleanMmapChangepoints[CleanMmapChangepointCount], Changepoint.Address, MmapMaxChangepoint.Type, MmapMaxChangepoint.Entry, true);
+          CleanMmapChangepointCount++;
+
+        }
+
+      }
+
+      // Update as necessary (decrement the thing)
+
+      MmapChangepointQueueCount--;
+
+    }
+
+  }
+
+  // [4?] Deal with changepoints that don't have an end (?)
+
+  // Also, todo - check to see if this ever malfunctions lol.
+
+
+
+
+
+
+  // [!] Test!! Only to see how the changepoints look
+
+  for (int i = 0; i < CleanMmapChangepointCount; i++) {
+    Printf("[Clean changepoint %i] %xh, %i, $%xh, %i\n", 0x0C, i, (uint32)CleanMmapChangepoints[i].Address, (uint32)CleanMmapChangepoints[i].Type, (uint32)CleanMmapChangepoints[i].Entry, (uint32)CleanMmapChangepoints[i].Start);
+  }
+
+  Printf("\n", 0);
+
+  for(;;);
 
 
 
