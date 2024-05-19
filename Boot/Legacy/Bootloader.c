@@ -10,30 +10,6 @@
 #endif
 
 
-// ...
-
-typedef struct {
-
-  uint64 Address;
-  uint32 Type;
-  mmapEntry* Entry;
-  bool Start; // True for 'this is the start of entry X', false for 'this is the END of entry X'
-
-} mmapChangepoint;
-
-
-// ...
-
-void MakeMmapChangepoint(mmapChangepoint* Changepoint, uint64 Address, uint32 Type, mmapEntry* Entry, bool Start) {
-
-  Changepoint->Address = Address;
-  Changepoint->Type = Type;
-  Changepoint->Entry = Entry;
-  Changepoint->Start = Start;
-
-}
-
-
 /* void __attribute__((noreturn)) Init()
 
    Inputs:    (none)
@@ -75,47 +51,6 @@ void __attribute__((noreturn)) Init(void) {
 
 }
 
-
-/* void __attribute__((noreturn)) Crash()
-
-   Inputs:    uint16 Error - The error code to crash with
-   Outputs:   (None)
-
-   This function simply just crashes the system if needed (for example, if something important
-   isn't present in the system, like the lack of a method to enable the A20 line).
-
-   TODO - This isn't even remotely complete, I don't have string functions or anything yet, so it
-   just resets the system without telling the user anything.
-
-   Also, error codes:
-   0:   (Invalid error code)
-   1:   (Couldn't enable A20)
-   2:   (E820 doesn't work, can't get memory map)
-   ...: (Undefined error code)
-
-*/
-
-// TODO - get rid of this, replaced by Panic().
-
-void __attribute__((noreturn)) Crash(uint16 Error) {
-
-  if (Error) {
-      __asm__("nop");
-  } // This is just here to stop GCC from going 'hey you didn't use this'
-
-  // Jump to the x86 reset vector using the null entry in the GDT (which should crash literally
-  // any system)
-
-  __asm__("ljmp $0x00, $0xFFFFFFF0");
-
-  // If doing that somehow *doesn't* reset the system, just halt indefinitely until the user
-  // manually resets the system themselves.
-
-  for(;;) {
-    __asm__("cli; hlt");
-  }
-
-}
 
 /* void __attribute__((noreturn)) Bootloader()
 

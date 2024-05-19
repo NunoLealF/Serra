@@ -54,6 +54,28 @@ typedef struct {
 #define mmapEntryBad 5
 
 
+/* (typedef) struct mmapChangepoint{}
+
+   Location: (User-defined)
+
+   Inputs: (none)
+   Outputs: uint64 Address - ........;
+            uint32 Type - .........;
+            mmapEntry* Entry - ...;
+            bool Start - .......;
+
+*/
+
+typedef struct {
+
+  uint64 Address;
+  uint32 Type;
+  mmapEntry* Entry;
+  bool Start; // True for 'this is the start of entry X', false for 'this is the END of entry X'
+
+} mmapChangepoint;
+
+
 /* uint32 GetMmapEntry()
 
    Inputs: void* Buffer - The memory area/buffer you want to store your entry in.
@@ -159,5 +181,26 @@ uint16 GetLowMemory(void) {
 
   RealMode();
   return (uint16)Table->Eax;
+
+}
+
+
+/* void MakeMmapChangepoint()
+
+   Inputs: (...)
+
+   Outputs: (None)
+
+   ...................................................
+   .............
+
+*/
+
+void MakeMmapChangepoint(mmapChangepoint* Changepoint, uint64 Address, uint32 Type, mmapEntry* Entry, bool Start) {
+
+  Changepoint->Address = Address;
+  Changepoint->Type = Type;
+  Changepoint->Entry = Entry;
+  Changepoint->Start = Start;
 
 }

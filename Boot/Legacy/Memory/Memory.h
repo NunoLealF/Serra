@@ -33,6 +33,15 @@
 
   } __attribute__((packed)) mmapEntry;
 
+  typedef struct {
+
+    uint64 Address;
+    uint32 Type;
+    mmapEntry* Entry;
+    bool Start; // True for 'this is the start of entry X', false for 'this is the END of entry X'
+
+  } mmapChangepoint;
+
   #define mmapEntryFree 1
   #define mmapEntryReserved 2
   #define mmapEntryAcpiReclaimable 3
@@ -45,6 +54,10 @@
 
   uint32 GetMmapEntry(void* Buffer, uint32 Size, uint32 Continuation);
   uint16 GetLowMemory(void);
+
+  // ...
+
+  void MakeMmapChangepoint(mmapChangepoint* Changepoint, uint64 Address, uint32 Type, mmapEntry* Entry, bool Start);
 
   // (Todo: other functions)
 
