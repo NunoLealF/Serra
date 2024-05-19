@@ -8,8 +8,8 @@
 /* (typedef) struct __attribute__((packed)) mmapEntry{}
 
    Location: (User-defined)
-
    Inputs: (none)
+
    Outputs: uint64 Base - The base address of our memory map entry;
             uint64 Limit - The size, or 'limit' of our memory map entry;
             uint32 Type - The type of our memory map entry;
@@ -57,12 +57,24 @@ typedef struct {
 /* (typedef) struct mmapChangepoint{}
 
    Location: (User-defined)
-
    Inputs: (none)
-   Outputs: uint64 Address - ........;
-            uint32 Type - .........;
-            mmapEntry* Entry - ...;
-            bool Start - .......;
+
+   Outputs: uint64 Address - The address of the memory map changepoint;
+            uint32 Type - The entry type of the changepoint (same as in mmapEntry);
+            mmapEntry* Entry - A pointer to the entry this changepoint refers to;
+            bool Start - Whether this changepoint refers to the start or the end of an entry.
+
+   This struct represents a memory map *changepoint*. We essentially break up each entry in
+   our system's memory map into a set of two changepoints: one that represents the start of
+   that entry (Start = true), and one that represents the end of it (Start = false).
+
+   Each changepoint is composed by four values - the address at which the area/entry starts
+   or ends, the type of the memory map area (which is the same as in mmapEntry), a pointer to
+   the entry this changepoint refers to, and a boolean value that indicates whether this is
+   the start or the end of a given entry.
+
+   An entry can be turned into two memory map changepoints using MakeMmapChangepoint() (which
+   is defined later in this file) - one for the start of that entry, and one for the end.
 
 */
 
@@ -187,12 +199,19 @@ uint16 GetLowMemory(void) {
 
 /* void MakeMmapChangepoint()
 
-   Inputs: (...)
+   Inputs: mmapChangepoint* Changepoint - A pointer to where the changepoint will be written to;
+           uint64 Address - The address to use in the changepoint;
+           uint32 Type - The type of the changepoint;
+           mmapEntry* Entry - A pointer to the entry being referred to by the changepoint;
+           bool Start - Whether the changepoint refers to the start or the end of an entry.
 
-   Outputs: (None)
+   Outputs: (none)
 
-   ...................................................
-   .............
+   This function creates a memory map changepoint (using the structure in mmapChangepoint{})
+   at the given location (*Changepoint), using the values given to the function.
+
+   The values that need to be specified are the same ones as in mmapChangepoint{}; for more
+   information, please check the documentation for that struct.
 
 */
 

@@ -104,6 +104,9 @@ void __attribute__((noreturn)) Bootloader(void) {
   Message(Kernel, "Entered second-stage bootloader");
   Message(Ok, "Successfully initialized the terminal (at B8000h)");
 
+
+
+
   // (Set up IDT)
 
   descriptorTable* IdtDescriptor;
@@ -155,7 +158,6 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   MakeIdtEntry(IdtDescriptor, 31, (uint32)&IsrReservedH, 0x08, 0x0F, 0x00);
 
-
   // (Set up PIC/IRQs)
 
   MakeIdtEntry(IdtDescriptor, 32+0, (uint32)&IrqTimer, 0x08, 0x0F, 0x00);
@@ -188,6 +190,8 @@ void __attribute__((noreturn)) Bootloader(void) {
   __asm__("sti");
   MaskPic(0xFF); // I've already tested it and it works but let's not enable anything for now
   Message(Ok, "Successfully initialized the IDT and PIC");
+
+
 
 
   // (Set up A20)
@@ -271,18 +275,24 @@ void __attribute__((noreturn)) Bootloader(void) {
   }
 
 
+
+
+
   // (Just in case, get amount of low memory)
   // (Very simple BIOS function, int 0x12 (and nothing else), returns result in ax)
   // (Memory from 0 up until the EBDA, below 1MiB)
+
+  // -> In QEMU's case, this (pretty accurately) reports 9FC00h
+  // -> Keep in mind that this reports it in KiB, so in 1024-byte blocks, NOT 1000-byte blocks
+  // -> (I mean I wouldn't be surprised to see some buggy BIOSes report it in 1000 ones, but still)
 
   uint16 LowMemory = GetLowMemory();
 
   Message(Info, "This should be the amount of low memory (BIOS function, int 12h)");
   Printf("%i KiB \n", 0x0F, LowMemory);
 
-  // In QEMU's case, this (pretty accurately) reports 9FC00h
-  // Keep in mind that this reports it in KiB, so in 1024-byte blocks, NOT 1000-byte blocks
-  // (I mean I wouldn't be surprised to see some buggy BIOSes report it in 1000 ones, but still)
+
+
 
 
   // (Set up E820 / memory map)
@@ -348,6 +358,7 @@ void __attribute__((noreturn)) Bootloader(void) {
 
 
 
+
   // (Interpret/sort E820 memory map) (NEW)
 
   // -> [1] Filter the memory map - remove zero-size or otherwise useless entries.
@@ -358,16 +369,12 @@ void __attribute__((noreturn)) Bootloader(void) {
   // -> a new, 'clean' memory map that can actually be used.
 
 
-
   // [0] Prerequisites
 
   mmapChangepoint MmapChangepoints[256];
   uint16 MmapChangepointCount = 0;
 
   bool MmapChangepointExceeded = false;
-
-
-
 
   // [1] and [2]
 
@@ -413,11 +420,6 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   }
 
-
-
-
-
-
   // [3] Sort the changepoints
   // We have exactly MmapChangepointCount changepoints, so..
 
@@ -459,6 +461,8 @@ void __attribute__((noreturn)) Bootloader(void) {
   */
 
 
+
+
   // [4a] Go through the changepoints, taking care of unlisted/overlapping areas, and create
   // a new, 'clean' memory map that can actually be used.
 
@@ -469,15 +473,12 @@ void __attribute__((noreturn)) Bootloader(void) {
 
 
 
-
   // [4b] Create a sort of priority queue for the entries being processed?
 
   mmapChangepoint MmapChangepointQueue[256];
   uint16 MmapChangepointQueueCount = 0;
 
   Memset((void*)&MmapChangepointQueue[0], 0, sizeof(mmapChangepoint) * 256);
-
-
 
 
   // [4c] (Copy in the first changepoint)
@@ -681,15 +682,6 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   }
 
-  // [4?] Deal with changepoints that don't have an end (?)
-
-  // Also, todo - check to see if this ever malfunctions lol.
-
-
-
-
-
-
   // [!] Test!! Only to see how the changepoints look
 
   Printf("\n", 0);
@@ -699,8 +691,6 @@ void __attribute__((noreturn)) Bootloader(void) {
   }
 
   Printf("\n", 0);
-
-  // for(;;);
 
 
 
@@ -730,7 +720,7 @@ void __attribute__((noreturn)) Bootloader(void) {
 
     // (CPUID eax=0: eax is maximum supported level (important!), ebx-edx is vendor string)
     // (CPUID eax=1: eax-edx are CPU features)
-/*
+
     Message(Info, "Output of CPUID: ");
 
     char Test[12];
@@ -742,7 +732,6 @@ void __attribute__((noreturn)) Bootloader(void) {
 
     Data = CallCpuid(1);
     Printf("(eax=1) -> (eax: %xh, ebx: %xh, ecx: %xh, edx: %xh)\n", 0x07, Data.Eax, Data.Ebx, Data.Ecx, Data.Edx);
-*/
 
   }
 
