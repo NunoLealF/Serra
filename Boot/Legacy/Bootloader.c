@@ -406,7 +406,7 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   } else {
 
-    Message(Ok, "Successfully obtained a memory map (using E820)\n");
+    Message(Ok, "Successfully obtained a memory map (using E820)");
 
   }
 
@@ -429,9 +429,15 @@ void __attribute__((noreturn)) Bootloader(void) {
   mmapChangepoint MmapChangepoints[256];
   uint16 MmapChangepointCount = 0;
 
+  bool MmapChangepointExceeded = false;
+
+
 
 
   // [1] and [2]
+
+  Putchar('\n', 0);
+  Message(Kernel, "Processing the system (E820) memory map");
 
   for (uint16 EntryNum = 0; EntryNum < MmapEntryCount; EntryNum++) {
 
@@ -439,12 +445,19 @@ void __attribute__((noreturn)) Bootloader(void) {
 
     mmapEntry* Entry = &MmapEntries[EntryNum];
 
-    if (MmapChangepointCount >= 256) {
+    if (MmapChangepointCount >= (256 - 1)) {
+
+      Message(Warning, "Memory map changepoint count exceeded; final map may be incomplete");
+      MmapChangepointExceeded = true;
+
       break;
+
     }
 
     if (Entry->Limit == 0) {
+
       continue;
+
     }
 
     // ...
@@ -458,6 +471,14 @@ void __attribute__((noreturn)) Bootloader(void) {
     MmapChangepointCount++;
 
   }
+
+  if (MmapChangepointExceeded == false) {
+
+    Message(Ok, "Created initial memory map changepoints");
+
+  }
+
+
 
 
 
@@ -480,8 +501,12 @@ void __attribute__((noreturn)) Bootloader(void) {
   }
 
 
+
+
   // [!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!]
   // [THIS IS BEING USED FOR DIFFERENT MMAP TEST SCENARIOS]
+
+  /*
 
   Memset((void*)&MmapChangepoints[0], 0, 256 * sizeof(mmapChangepoint));
 
@@ -496,12 +521,18 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   MmapChangepointCount = 8;
 
+  */
+
 
   // [4a] Go through the changepoints, taking care of unlisted/overlapping areas, and create
   // a new, 'clean' memory map that can actually be used.
 
   mmapChangepoint CleanMmapChangepoints[256];
   uint16 CleanMmapChangepointCount = 0;
+
+  bool MmapCleanChangepointExceeded = false;
+
+
 
 
   // [4b] Create a sort of priority queue for the entries being processed?
@@ -512,6 +543,8 @@ void __attribute__((noreturn)) Bootloader(void) {
   Memset((void*)&MmapChangepointQueue[0], 0, sizeof(mmapChangepoint) * 256);
 
 
+
+
   // [4c] (Copy in the first changepoint)
 
   Memcpy((void*)&CleanMmapChangepoints[0], (void*)&MmapChangepoints[0], sizeof(mmapChangepoint));
@@ -519,6 +552,7 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   Memcpy((void*)&MmapChangepointQueue[0], (void*)&MmapChangepoints[0], sizeof(mmapChangepoint));
   MmapChangepointQueueCount++;
+
 
 
   // [4d] (Necessary variables, and loop.)
@@ -538,6 +572,19 @@ void __attribute__((noreturn)) Bootloader(void) {
     if (MmapChangepointQueueCount == 0) {
 
       if ((Changepoint.Address - LastChangepoint.Address) > 0) {
+
+        // ...
+
+        if (CleanMmapChangepointCount >= (256 - 1)) {
+
+          Message(Warning, "Clean memory map changepoint count exceeded; map may be incomplete");
+          MmapCleanChangepointExceeded = true;
+
+          break;
+
+        }
+
+        // ...
 
         // TODO: I'm still not sure if this is the best type to use, all things considered
         #define PlaceholderForEmptyArea mmapEntryDisabled
@@ -560,6 +607,17 @@ void __attribute__((noreturn)) Bootloader(void) {
 
       MmapChangepointQueue[MmapChangepointQueueCount] = Changepoint;
       MmapChangepointQueueCount++;
+
+      // [4-3b-pre] Safety check
+
+      if (CleanMmapChangepointCount >= (256 - 1)) {
+
+        Message(Warning, "Clean memory map changepoint count exceeded; map may be incomplete");
+        MmapCleanChangepointExceeded = true;
+
+        break;
+
+      }
 
       // [4-3b] Process everything (?)
 
@@ -612,6 +670,17 @@ void __attribute__((noreturn)) Bootloader(void) {
           break;
 
         }
+
+      }
+
+      // [4-4b-pre] Safety check
+
+      if (CleanMmapChangepointCount >= (256 - 1)) {
+
+        Message(Warning, "Clean memory map changepoint count exceeded; map may be incomplete");
+        MmapCleanChangepointExceeded = true;
+
+        break;
 
       }
 
@@ -688,13 +757,15 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   // [!] Test!! Only to see how the changepoints look
 
+  Printf("\n", 0);
+
   for (int i = 0; i < CleanMmapChangepointCount; i++) {
     Printf("[Clean changepoint %i] %xh, %i, $%xh, %i\n", 0x0C, i, (uint32)CleanMmapChangepoints[i].Address, (uint32)CleanMmapChangepoints[i].Type, (uint32)CleanMmapChangepoints[i].Entry, (uint32)CleanMmapChangepoints[i].Start);
   }
 
   Printf("\n", 0);
 
-  for(;;);
+  // for(;;);
 
 
 
@@ -724,7 +795,7 @@ void __attribute__((noreturn)) Bootloader(void) {
 
     // (CPUID eax=0: eax is maximum supported level (important!), ebx-edx is vendor string)
     // (CPUID eax=1: eax-edx are CPU features)
-
+/*
     Message(Info, "Output of CPUID: ");
 
     char Test[12];
@@ -736,9 +807,9 @@ void __attribute__((noreturn)) Bootloader(void) {
 
     Data = CallCpuid(1);
     Printf("(eax=1) -> (eax: %xh, ebx: %xh, ecx: %xh, edx: %xh)\n", 0x07, Data.Eax, Data.Ebx, Data.Ecx, Data.Edx);
+*/
 
   }
-
 
 
 
@@ -746,7 +817,7 @@ void __attribute__((noreturn)) Bootloader(void) {
   // (Show message)
 
   Print("\nHi, this is Serra! <3\n", 0x3F);
-  Printf("May %i %x\n", 0x07, 12, 0x2024);
+  Printf("May %i %x\n", 0x07, 19, 0x2024);
 
   for(;;);
 

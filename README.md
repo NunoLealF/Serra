@@ -17,7 +17,7 @@ An x86 bootloader under construction <3
 - Enabling the A20 line **Done**
 - Interrupts and exceptions **Done (but a little bare-bones)**
 - Some way of going to and from real mode **Done**
-- E820 / memory map *Partly done - need to interpret the memory map still.*
+- E820 / memory map **Done (bug-testing might need to be done)**
 - CPUID *Also partly done, still need to interpret the data.*
 - VESA/VBE
 - Transferring all the info from the above to the next stage
