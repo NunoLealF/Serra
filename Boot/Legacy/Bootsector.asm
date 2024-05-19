@@ -5,7 +5,6 @@
 [ORG 07C00h] ; We are at 7C00h.
 [BITS 16] ; This is 16-bit code.
 
-
 ; The start of our bootsector. These two instructions correspond to three bytes, which jump
 ; to a set position (+120 bytes) after the BIOS Parameter Block - 'EB 76 90'.
 
@@ -77,6 +76,12 @@ Start:
 
   mov si, 0
 
+  ; We also want to save the value of dl for later, as it represents the current drive number
+  ; (given to us by our BIOS) - specifically, we'll be saving it at the [saveDl] area, which
+  ; is at the end of this bootsector (immediately preceding the signature, AA55h).
+
+  mov [saveDl], dl
+
   ; We can now finally jump to loadDisk!
 
   jmp loadDisk
@@ -106,6 +111,7 @@ loadDisk:
   mov ch, 0
   mov cl, 2
 
+  mov dl, [saveDl]
   mov dh, 0
 
   int 13h
@@ -220,14 +226,19 @@ gdtTable:
 ; -----------------------------------
 
 ; This tells our assembler that we want the rest of our bootsector (essentially any areas that
-; haven't been used) to be filled with zeroes, up to the 510th byte.
+; haven't been used) to be filled with zeroes, up to the 512th byte (minus saveDl and the
+; bootsector signature, which take up 3 bytes in total).
 
-times 510-($-$$) db 0
+times (512 - 3) - ($-$$) db 0
+
+; This is where we'll reserve the drive number given to us by our BIOS, which is in the DL
+; register - this will be important later on. By hardcoding the position (as being immediately
+; before the bootsector signature, AA55h), we know exactly where to find it in the future.
+
+saveDl: db 0
 
 ; Every x86 bootsector has a signature at the end that the system *always* checks for, which are the
-; two bytes 55h and AAh.
+; two bytes 55h and AAh (AA55h). This is required if we want to tell our BIOS that this is a
+; bootsector, and not just random noise or data.
 
-; This is required to tell our BIOS that this is a bootsector and not just random noise or data.
-
-db 055h
-db 0AAh
+bootsectorSignature: dw 0AA55h

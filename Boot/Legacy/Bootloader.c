@@ -438,31 +438,6 @@ void __attribute__((noreturn)) Bootloader(void) {
   }
 
 
-
-
-  // [!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!]
-  // [THIS IS BEING USED FOR DIFFERENT MMAP TEST SCENARIOS]
-
-  /*
-
-  Memset((void*)&MmapChangepoints[0], 0, 256 * sizeof(mmapChangepoint));
-
-  MakeMmapChangepoint(&MmapChangepoints[0], 0x1234, 1, 0x10, true);
-  MakeMmapChangepoint(&MmapChangepoints[1], 0x2345, 1, 0x10, false);
-  MakeMmapChangepoint(&MmapChangepoints[2], 0x3456, 3, 0x20, true);
-  MakeMmapChangepoint(&MmapChangepoints[3], 0x4567, 2, 0x30, true);
-  MakeMmapChangepoint(&MmapChangepoints[4], 0x5678, 3, 0x20, false);
-  MakeMmapChangepoint(&MmapChangepoints[5], 0x6789, 1, 0x40, true);
-  MakeMmapChangepoint(&MmapChangepoints[6], 0x789A, 2, 0x30, false);
-  MakeMmapChangepoint(&MmapChangepoints[7], 0x89AB, 1, 0x40, false);
-
-  MmapChangepointCount = 8;
-
-  */
-
-
-
-
   // [4a] Go through the changepoints, taking care of unlisted/overlapping areas, and create
   // a new, 'clean' memory map that can actually be used.
 
@@ -682,9 +657,15 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   }
 
+
+  // ...
+
+  Message(Ok, "Successfully finished processing system (E820) memory map");
+  Printf("\n", 0);
+
   // [!] Test!! Only to see how the changepoints look
 
-  Printf("\n", 0);
+  /*
 
   for (int i = 0; i < CleanMmapChangepointCount; i++) {
     Printf("[Clean changepoint %i] %xh, %i, $%xh, %i\n", 0x0C, i, (uint32)CleanMmapChangepoints[i].Address, (uint32)CleanMmapChangepoints[i].Type, (uint32)CleanMmapChangepoints[i].Entry, (uint32)CleanMmapChangepoints[i].Start);
@@ -692,7 +673,7 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   Printf("\n", 0);
 
-
+  */
 
 
 
@@ -713,6 +694,10 @@ void __attribute__((noreturn)) Bootloader(void) {
     Message(Warning, "CPUID likely isn't available");
 
   }
+
+  Printf("\n", 0);
+
+  /*
 
   // (Test out CPUID)
 
@@ -735,6 +720,21 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   }
 
+  */
+
+
+
+
+  // (We need to get dl; this is just a test though.)
+
+  #define BootsectorSignaturePtr (0x7E00 - 2)
+  #define SaveDlPtr (BootsectorSignaturePtr - 1)
+
+  uint16 BootsectorSignature = *(uint16*)BootsectorSignaturePtr;
+  uint8 SaveDl = *(uint8*)SaveDlPtr;
+
+  Printf("BootsectorSignature: %xh, SaveDl: %xh\n", 0x0B, (uint32)BootsectorSignature, (uint32)SaveDl);
+
 
 
 
@@ -745,13 +745,16 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   for(;;);
 
+
+
+
   // Things left to do:
 
   // (for the 2nd stage)
-  // A - Finish working on E820, memory map, etc. [SOMEWHAT DONE, HAVE TO INTERPRET IT STILL]
-  // B1 - Work on interpreting it, and also on other memory map methods - E801h and E881h, int 12h, etc.
-  // B2 - Also, you want to organize / sort it - return a clean E820-style memory map
-  // C - Uhh, CPUID? [SORT OF DONE, WORK WITH EAX=1 / EXTENDED FEATURES / ETC.]
+  // A - Finish working on E820, memory map, etc. [DONE]
+  // B1 - Work on interpreting it, and also on other memory map methods - E801h and E881h, int 12h, etc. [DONE]
+  // B2 - Also, you want to organize / sort it - return a clean E820-style memory map [DONE]
+  // C - Uhh, CPUID? [HALFWAY DONE, ACTUALLY INTERPRET THE DATA]
   // D - A proper print function [DONE]
   // E - Work on VESA/VBE related stuff (actually I don't really know about this one)
   // F - Work on *everything else* that needs to be done, the idea is that the 2.5th stage
