@@ -741,7 +741,7 @@ void __attribute__((noreturn)) Bootloader(void) {
   // (Show message)
 
   Print("\nHi, this is Serra! <3\n", 0x3F);
-  Printf("May %i %x\n", 0x07, 19, 0x2024);
+  Printf("May %i %x\n", 0x07, 26, 0x2024);
 
   for(;;);
 

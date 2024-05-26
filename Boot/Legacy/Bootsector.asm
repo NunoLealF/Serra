@@ -90,8 +90,9 @@ Start:
 ; Now that we've set up a basic environment for our bootloader (segment registers and stack
 ; have been set up, interrupts are on), we can attempt to load the second stage bootloader.
 
-; We'll be doing this using the BIOS interrupt call int 13h / ah 02h, which is available on
-; most systems, and which allows us to load up to 3Fh (63) sectors at a time.
+; We'll be doing this using the BIOS interrupt call int 13h / ah 42h, which is available on
+; most systems, and which allows us to load data into memory (sometimes limited to 127 sectors
+; at a time) using LBAs.
 
 ; Additionally, we'll also try to do this eight times before 'giving up'. This is because some
 ; older systems may actually require multiple tries in order to successfully load all of the
@@ -99,20 +100,35 @@ Start:
 
 loadDisk:
 
-  ; Use the BIOS interrupt call int 13h / ah 02h to load the second stage bootloader.
+  ; Before we actually try to read anything from disk, we'll need to check to see if the
+  ; BIOS function to do so is even available in the first place. We can check this by calling
+  ; the function (int 13h / ah 41h).
 
-  ; Specifically, we want to load the next 40 sectors at 7E00h, from the first head/cylinder,
-  ; and from the current drive number (which is already passed on by our firmware in dl).
-
-  mov ah, 02h
-  mov al, 40
-  mov bx, 7E00h
-
-  mov ch, 0
-  mov cl, 2
-
+  mov ah, 41h
+  mov bx, 55AAh
   mov dl, [saveDl]
-  mov dh, 0
+
+  int 13h
+
+  ; If the carry flag is set, ah is set to 80h (invalid command) or 86h (unsupported function),
+  ; then jump to the showError label, as that indicates the disk read function isn't supported.
+
+  jc showError
+
+  cmp ah, 80h
+  je showError
+
+  cmp ah, 86h
+  je showError
+
+  ; Now, we can finally use the BIOS interrupt call (int 13h / ah 42h) to load the second-stage
+  ; bootloader, using the data in [DS:SI] (which in this case, points to the data in the
+  ; diskAddressPacket label). As always, we use the drive number in SaveDl.
+
+  mov ah, 42h
+  mov dl, [saveDl]
+
+  mov si, diskAddressPacket
 
   int 13h
 
@@ -121,21 +137,11 @@ loadDisk:
   ; indicated by the carry flag.
 
   ; If the data was loaded successfully, we'll proceed to the protectedMode label, which
-  ; should initialize 32-bit protected mode and then jump to 7E00h.
+  ; should initialize 32-bit protected mode and then jump to 7E00h - otherwise, we'll jump
+  ; to the showError label, which should show an error and halt the system.
 
-  jnc protectedMode ; If it's loaded, initialize protected mode and then jump to 7E00h
-
-  ; If it wasn't, we'll increment si (our 'counter' from before), and check to see if
-  ; it's over eight tries yet.
-
-  ; If it isn't, we'll try to load the next stage again, but if it *is*, we'll jump to the
-  ; x86 reset vector, which is usually located at 0FFFFh:0.
-
-  inc si
-  cmp si, 8
-
-  jg loadDisk
-  jmp 0FFFFh:0
+  jnc protectedMode
+  jmp showError
 
 
 ; By now, we've loaded the next stage of our bootloader into memory. However, there's still
@@ -186,6 +192,73 @@ protectedMode:
   jmp 08h:7E00h
 
 
+; If for some reason we fail to load the rest of the bootloader, then we should call this
+; function, to halt the system, but also to show an error message to the user.
+
+showError:
+
+  ; Show an error message using the printMessage function. [DS:SI] is our string, [ES:BX] is
+  ; the buffer to display the text in (in this case, B800:0000h), and CL is our color code.
+
+  mov ax, 0B800h
+  mov bx, 0h
+  mov cl, 0Fh
+
+  mov es, ax
+  mov si, errorMsg
+
+  call printMessage
+
+  ; Finally, now that we've shown the message, disable all interrupts, and halt the system.
+
+  cli
+  hlt
+
+
+; This function prints a string (in DS:SI) to the screen (whose buffer should be in ES:BX),
+; using a certain color code (CL).
+
+printMessage:
+
+  ; Load the value at [DS:SI] into the AL register.
+
+  lodsb
+
+  ; If AL (the character we just loaded from the string) is 0, then that means we've
+  ; reached the end, so let's return from this function.
+
+  cmp al, 0
+  je printMessageRet
+
+  ; Copy AL (the character) and CL (the color code) respectively to the location in [ES:BX],
+  ; and then increment bx (to continue writing to the next character on the screen).
+
+  mov [es:bx], al
+  inc bx
+  mov [es:bx], cl
+  inc bx
+
+  ; ...
+
+  jmp printMessage
+  printMessageRet: ret
+
+
+; -----------------------------------
+
+errorMsg db "[Serra] Failed to load the rest of the bootloader.", 0
+
+
+; -----------------------------------
+
+diskAddressPacket:
+
+  db 16 ; The size of this (disk address) packet is 16 bytes.
+  db 0 ; (This area is reserved)
+  dw 40 ; We want to load 40 sectors into memory.
+  dd 7E00h ; And we also want to load those at 7E00h.
+  dq 64 ; Additionally, we want to start loading from LBA 64.
+
 ; -----------------------------------
 
 gdtDescriptor:
@@ -225,9 +298,9 @@ gdtTable:
 
 ; -----------------------------------
 
-; This tells our assembler that we want the rest of our bootsector (essentially any areas that
-; haven't been used) to be filled with zeroes, up to the 512th byte (minus saveDl and the
-; bootsector signature, which take up 3 bytes in total).
+; Tell our assembler that we want to fill the rest of our bootsector (essentially, any areas
+; that haven't been used) with zero up to the (512 - 3)th byte, to account for SaveDl and the
+; bootsector signature (which are 1 and 2 bytes respectively).
 
 times (512 - 3) - ($-$$) db 0
 

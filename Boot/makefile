@@ -13,7 +13,7 @@ AS = nasm
 CC = i686-elf-gcc
 LD = i686-elf-ld
 OBJC = i686-elf-objcopy
-OBJD = i686-elf-objdump
+OBJD = l
 
 
 
@@ -200,6 +200,6 @@ Legacy/Bootloader.bin: Legacy/Bootloader.o Legacy/Exceptions.o Legacy/Cpu/Cpu.o 
 Boot.bin: Legacy/Bootsector.bin Legacy/Bootloader.bin Legacy/Rm/Rm.bin
 	@echo "Building $@"
 	@dd if=/dev/zero of=Boot.bin bs=512 count=64 status=none
-	@dd if=Legacy/Bootsector.bin of=Boot.bin conv=notrunc bs=512 count=1 status=none
-	@dd if=Legacy/Bootloader.bin of=Boot.bin conv=notrunc bs=512 count=32 seek=1 status=none
-	@dd if=Legacy/Rm/Rm.bin of=Boot.bin conv=notrunc bs=512 count=8 seek=34 status=none
+	@dd if=Legacy/Bootsector.bin of=Boot.bin conv=notrunc bs=512 count=1 seek=0 status=none
+	@dd if=Legacy/Bootloader.bin of=Boot.bin conv=notrunc bs=512 count=32 seek=64 status=none
+	@dd if=Legacy/Rm/Rm.bin of=Boot.bin conv=notrunc bs=512 count=8 seek=97 status=none
