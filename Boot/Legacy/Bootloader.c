@@ -91,6 +91,13 @@ void __attribute__((noreturn)) Init(void) {
 
 */
 
+// Okay, so, something to keep in mind:
+
+// LBA 0: The bootsector (VBR; doesn't really work as a MBR). [Mapped to 7C00-7E00h]
+// LBA 1-63: Empty space, as to avoid interfering with FAT/GPT/etc. [Not mapped]
+// LBA 64-96: The 2nd stage bootloader. [Mapped to 7E00-C000h]
+// LBA 97-105: Real mode functions. [Mapped to C000-D000h]
+
 void __attribute__((noreturn)) Bootloader(void) {
 
   // We've finally made it to our second-stage bootloader. We're in 32-bit x86 protected mode with

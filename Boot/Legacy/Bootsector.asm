@@ -21,9 +21,16 @@ nop
 ; BPB. However, as of now, only the bootable flag (40h bytes in) is set.
 
 BPB:
-  times 63 db 0
-  db 40
-  times 53 db 0
+
+  times 19h db 0
+  BPB.HiddenSectors: dd 0
+  times 22h db 0
+  BPB.Signature: db 28h
+  times 4h db 0
+  BPB.VolumeLabel: db "Serra      "
+  BPB.Identifier: db "FAT32   "
+
+  times 120 - ($-$$) db 0
 
 
 ; Now that we've passed over the BPB, we're back to actually executing code. Hooray!
@@ -84,7 +91,7 @@ Start:
 
   ; We can now finally jump to loadDisk!
 
-  jmp loadDisk
+  jmp LoadDisk
 
 
 ; Now that we've set up a basic environment for our bootloader (segment registers and stack
@@ -98,7 +105,7 @@ Start:
 ; older systems may actually require multiple tries in order to successfully load all of the
 ; sectors.
 
-loadDisk:
+LoadDisk:
 
   ; Before we actually try to read anything from disk, we'll need to check to see if the
   ; BIOS function to do so is even available in the first place. We can check this by calling
@@ -113,13 +120,21 @@ loadDisk:
   ; If the carry flag is set, ah is set to 80h (invalid command) or 86h (unsupported function),
   ; then jump to the showError label, as that indicates the disk read function isn't supported.
 
-  jc showError
+  jc ShowError
 
   cmp ah, 80h
-  je showError
+  je ShowError
 
   cmp ah, 86h
-  je showError
+  je ShowError
+
+  ; Since this isn't the MBR, but rather the bootsector of a FAT partition, that means that we
+  ; can't assume that our bootloader starts at LBA 0; because of that, we need to add the
+  ; number of hidden sectors before the bootsector to the offset in the disk address packet.
+
+  mov eax, [diskAddressPacket.Offset]
+  add eax, [BPB.HiddenSectors]
+  mov [diskAddressPacket.Offset], eax
 
   ; Now, we can finally use the BIOS interrupt call (int 13h / ah 42h) to load the second-stage
   ; bootloader, using the data in [DS:SI] (which in this case, points to the data in the
@@ -140,8 +155,8 @@ loadDisk:
   ; should initialize 32-bit protected mode and then jump to 7E00h - otherwise, we'll jump
   ; to the showError label, which should show an error and halt the system.
 
-  jnc protectedMode
-  jmp showError
+  jnc ProtectedMode
+  jmp ShowError
 
 
 ; By now, we've loaded the next stage of our bootloader into memory. However, there's still
@@ -159,7 +174,7 @@ loadDisk:
 ; Update/edit: (We'll also try to enable A20 here, before doing anything; not guaranteed to
 ; work, but hey, /shrug)
 
-protectedMode:
+ProtectedMode:
 
   ; Try to enable A20 via the int 15h, ax 2401h BIOS interrupt. Not guaranteed to work, but
   ; it might, so..
@@ -195,7 +210,7 @@ protectedMode:
 ; If for some reason we fail to load the rest of the bootloader, then we should call this
 ; function, to halt the system, but also to show an error message to the user.
 
-showError:
+ShowError:
 
   ; Show an error message using the printMessage function. [DS:SI] is our string, [ES:BX] is
   ; the buffer to display the text in (in this case, B800:0000h), and CL is our color code.
@@ -207,7 +222,7 @@ showError:
   mov es, ax
   mov si, errorMsg
 
-  call printMessage
+  call PrintMessage
 
   ; Finally, now that we've shown the message, disable all interrupts, and halt the system.
 
@@ -218,7 +233,7 @@ showError:
 ; This function prints a string (in DS:SI) to the screen (whose buffer should be in ES:BX),
 ; using a certain color code (CL).
 
-printMessage:
+PrintMessage:
 
   ; Load the value at [DS:SI] into the AL register.
 
@@ -228,7 +243,7 @@ printMessage:
   ; reached the end, so let's return from this function.
 
   cmp al, 0
-  je printMessageRet
+  je PrintMessageRet
 
   ; Copy AL (the character) and CL (the color code) respectively to the location in [ES:BX],
   ; and then increment bx (to continue writing to the next character on the screen).
@@ -240,24 +255,23 @@ printMessage:
 
   ; ...
 
-  jmp printMessage
-  printMessageRet: ret
+  jmp PrintMessage
+  PrintMessageRet: ret
 
 
 ; -----------------------------------
 
 errorMsg db "[Serra] Failed to load the rest of the bootloader.", 0
 
-
 ; -----------------------------------
 
 diskAddressPacket:
 
-  db 16 ; The size of this (disk address) packet is 16 bytes.
-  db 0 ; (This area is reserved)
-  dw 40 ; We want to load 40 sectors into memory.
-  dd 7E00h ; And we also want to load those at 7E00h.
-  dq 64 ; Additionally, we want to start loading from LBA 64.
+  diskAddressPacket.Size: db 16 ; The size of this (disk address) packet is 16 bytes.
+  diskAddressPacket.Reserved: db 0 ; (This area is reserved)
+  diskAddressPacket.NumSectors: dw 40 ; We want to load 40 sectors into memory.
+  diskAddressPacket.Location: dd 7E00h ; And we also want to load those at 7E00h.
+  diskAddressPacket.Offset: dq 64 ; Additionally, we want to start loading from LBA 64 (this value may be changed).
 
 ; -----------------------------------
 
