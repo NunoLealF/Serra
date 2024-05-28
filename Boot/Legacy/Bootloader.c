@@ -9,6 +9,7 @@
 #error "This code is supposed to be compiled with an i686-elf cross-compiler."
 #endif
 
+// Test
 
 /* void __attribute__((noreturn)) Init()
 
