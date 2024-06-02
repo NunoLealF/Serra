@@ -17,6 +17,11 @@
     volatile uint32 Ecx;
     volatile uint32 Edx;
 
+    // Segment registers.
+
+    volatile uint16 Ds;
+    volatile uint16 Es;
+
     // Increment/decrement registers.
 
     volatile uint16 Si;

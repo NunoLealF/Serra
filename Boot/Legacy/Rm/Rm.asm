@@ -158,38 +158,43 @@ initRealMode:
 ;
 ; We essentially do three things in this stage:
 ;
-; - First, we import data from the realModeTable struct at CE00h (the value of the data at
-; realModeTable->Eax is saved in eax, etc.)
+; - First, we import data from the realModeTable struct at (start + E00h) (the value of the
+; data at realModeTable->Eax is saved in eax, etc.)
 ;
 ; - Second, we disable the carry flag, enable interrupts, and execute the interrupt given in
 ; realModeTable->Int (which is at bp+26)
 ;
-; - Third, we export data back to the realModeTable struct at CE00h (including eflags), and
-; then jump to the next stage (prepareProtectedMode16), which restores protected mode.
+; - Third, we export data back to the realModeTable struct at (start + E00h) (including eflags),
+; and then jump to the next stage (prepareProtectedMode16), which restores protected mode.
 ;
 
 realModePayload:
 
-  ; Import data from the realModeTable struct at CE00h.
+  ; Import data from the realModeTable struct at (start + E00h).
 
   ; It's defined using __attribute__((packed)), so there's no padding between different values,
-  ; and we know exactly where each field/attribute is located.
+  ; and we know exactly where each field/attribute is located. Not only that, but its structure
+  ; is also defined at the end of this file.
 
-  mov bp, 0CE00h
+  mov eax, [realModeTable.Eax]
+  mov ebx, [realModeTable.Ebx]
+  mov ecx, [realModeTable.Ecx]
+  mov edx, [realModeTable.Edx]
 
-  mov eax, [bp]
-  mov ebx, [bp+4]
-  mov ecx, [bp+8]
-  mov edx, [bp+12]
-  mov si, [bp+16]
-  mov di, [bp+18]
+  mov si, [realModeTable.Si]
+  mov di, [realModeTable.Di]
+
+  mov bp, [realModeTable.Bp]
 
   push ax
-  mov al, [bp+26]
+  mov al, [realModeTable.Int]
   mov [saveInt], al
   pop ax
 
-  mov bp, [bp+20]
+  mov bp, [realModeTable.Bp]
+
+  mov ds, [realModeTable.Ds]
+  mov es, [realModeTable.Es]
 
   ; Disable the carry flag, and enable interrupts. We've loaded the real mode IVT (located
   ; between 0 and 400h), so we can safely do this.
@@ -215,32 +220,41 @@ realModePayload:
   db 0CDh
   saveInt: db 0h
 
-  ; Export data back to the realModeTable struct at CE00h, including eflags.
+  ; Export data back to the realModeTable struct at (start + E00h), including eflags.
 
   ; It's defined using __attribute__((packed)), so there's no padding between different values,
   ; and we know exactly where each field/attribute is located.
 
-  push bp
+  pusha
 
-  mov bp, 0CE00h
-  mov [bp], eax
-  mov [bp+4], ebx
-  mov [bp+8], ecx
-  mov [bp+12], edx
-  mov [bp+16], si
-  mov [bp+18], di
+  mov ax, ds
+  mov bx, es
 
-  pop bp
+  mov cx, 0
+  mov ds, ax
+  mov es, ax
 
-  mov si, 0CE00h
-  mov [si+20], bp
+  mov [realModeTable.Ds], ax
+  mov [realModeTable.Es], bx
+
+  popa
+
+  mov [realModeTable.Eax], eax
+  mov [realModeTable.Ebx], ebx
+  mov [realModeTable.Ecx], ecx
+  mov [realModeTable.Edx], edx
+
+  mov [realModeTable.Si], si
+  mov [realModeTable.Di], di
+
+  mov [realModeTable.Bp], bp
 
   ; Use pushfd to also write the value of eflags to the struct. This is important, since it lets
   ; us check whether certain flags (like the carry flag / CF) are set later on.
 
   pushfd
   pop eax
-  mov [si+22], eax
+  mov [realModeTable.Eflags], eax
 
   ; Jump to the stage that prepares us to go back to protected mode.
 
@@ -272,6 +286,13 @@ prepareProtectedMode16:
   cli
 
   ; Load our 32-bit protected mode GDT and IDT.
+
+  ; We also reset the value of ds and es to prevent the system from crashing (since we're
+  ; still in 16-bit mode, we're still using data segments to load things).
+
+  mov ax, 0
+  mov ds, ax
+  mov es, ax
 
   lgdt [protectedModeGdtDescriptor]
   lidt [protectedModeIdtDescriptor]
@@ -456,3 +477,26 @@ protectedModeIdtDescriptor:
 ; been used) to be filled with zeroes, up to the E00h (3584th) byte.
 
 times 0E00h-($-$$) db 0
+
+; The position of this table is guaranteed to always be E00h after the start of this file. It
+; contains the information that we want to exchange with our protected-mode code; for example,
+; the value we want to set the registers to, the interrupt being executed, etc.
+
+realModeTable:
+
+  realModeTable.Eax: dd 0
+  realModeTable.Ebx: dd 0
+  realModeTable.Ecx: dd 0
+  realModeTable.Edx: dd 0
+
+  realModeTable.Ds: dw 0
+  realModeTable.Es: dw 0
+
+  realModeTable.Si: dw 0
+  realModeTable.Di: dw 0
+
+  realModeTable.Bp: dw 0
+
+  realModeTable.Eflags: dd 0
+
+  realModeTable.Int: db 0

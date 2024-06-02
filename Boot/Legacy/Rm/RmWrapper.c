@@ -9,13 +9,15 @@
    Location: CE00h
 
    Inputs:    volatile uint32 Eax-Edx - General purpose registers.
-              volatile uint32 Si-Di - Increment/decrement registers.
-              volatile uint32 Bp - Base pointer register.
+              volatile uint16 Ds-Es - Segment registers.
+              volatile uint16 Si-Di - Increment/decrement registers.
+              volatile uint16 Bp - Base pointer register.
               uint8 Int - The (BIOS) interrupt we want to call.
 
    Outputs:   volatile uint32 Eax-Edx - General purpose registers.
-              volatile uint32 Si-Di - Increment/decrement registers.
-              volatile uint32 Bp - Base pointer register.
+              volatile uint16 Ds-Es - Segment registers.
+              volatile uint16 Si-Di - Increment/decrement registers.
+              volatile uint16 Bp - Base pointer register.
               const volatile uint32 Eflags - The (e)flags register.
 
    This is a template for the structure containing the registers that will be later loaded (and
@@ -49,6 +51,11 @@ typedef struct {
   volatile uint32 Ecx;
   volatile uint32 Edx;
 
+  // Segment registers.
+
+  volatile uint16 Ds;
+  volatile uint16 Es;
+
   // Increment/decrement registers.
 
   volatile uint16 Si;
@@ -80,17 +87,12 @@ typedef struct {
 
    This is essentially just a wrapper for the code in Rm.asm, which does the following:
 
-    - Prepares a 16-bit real mode environment
-
-    - Loads the data from the realModeTable instance at CE00h
-
-    - Calls the interrupt given in realModeTable->Int
-
-    - Loads data back into the realModeTable instance at CE00h
-
-    - Prepares a 32-bit protected mode environment
-
-    - Returns from the call instruction in this function
+    -> Prepares a 16-bit real mode environment
+    -> Loads the data from the realModeTable instance at CE00h
+    -> Calls the interrupt given in realModeTable->Int
+    -> Loads data back into the realModeTable instance at CE00h
+    -> Prepares a 32-bit protected mode environment
+    -> Returns from the call instruction in this function
 
 */
 
@@ -119,6 +121,9 @@ realModeTable* InitializeRealModeTable(void) {
   Table->Ebx = 0;
   Table->Ecx = 0;
   Table->Edx = 0;
+
+  Table->Ds = 0;
+  Table->Es = 0;
 
   Table->Si = 0;
   Table->Di = 0;
