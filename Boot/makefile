@@ -13,8 +13,7 @@ AS = nasm
 CC = i686-elf-gcc
 LD = i686-elf-ld
 OBJC = i686-elf-objcopy
-OBJD = l
-
+OBJD = i686-elf-objdump
 
 
 # Compiler flags:
@@ -86,7 +85,7 @@ Dump:
 	$(OBJD) -S Legacy/Bootloader.elf
 
 Dumpbin:
-	$(OBJD) -Mintel,i386 -b binary -m i386 --adjust-vma=0x7C00 -D Boot.bin
+	$(OBJD) -Mintel,i686 -b binary -m i386 --adjust-vma=0x7E00 -D Legacy/Bootloader.bin
 
 Run:
 	@echo "Launching Qemu.."
