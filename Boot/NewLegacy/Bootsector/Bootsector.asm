@@ -12,6 +12,7 @@ jmp short 120
 nop
 
 
+
 ; The first 120 bytes of our bootsector isn't dedicated to storing actual code, but rather the
 ; BIOS Parameter Block (also known as the BPB), which is a table that contains important
 ; information about the (FAT) filesystem on the device.
@@ -33,6 +34,7 @@ BPB:
   times 120 - ($-$$) db 0
 
 
+
 ; Now that we've passed over the BPB, we're back to actually executing code. Hooray!
 
 ; At the moment, we're in 16-bit real mode, which means that we're currently using the real mode
@@ -45,6 +47,7 @@ BPB:
 SetCS:
 
   jmp 00h:Start
+
 
 
 ; After all this, we've finally gotten to the actual start of our bootsector!
@@ -92,6 +95,7 @@ Start:
   ; We can now finally jump to loadDisk!
 
   jmp LoadDisk
+
 
 
 ; Now that we've set up a basic environment for our bootloader (segment registers and stack
@@ -159,6 +163,7 @@ LoadDisk:
   jmp ShowError
 
 
+
 ; By now, we've loaded the next stage of our bootloader into memory. However, there's still
 ; one more thing we need to sort out - we're currently in 16-bit real mode, while our second
 ; stage bootloader is made for 32-bit protected mode!
@@ -207,6 +212,7 @@ ProtectedMode:
   jmp 08h:7E00h
 
 
+
 ; If for some reason we fail to load the rest of the bootloader, then we should call this
 ; function, to halt the system, but also to show an error message to the user.
 
@@ -228,6 +234,7 @@ ShowError:
 
   cli
   hlt
+
 
 
 ; This function prints a string (in DS:SI) to the screen (whose buffer should be in ES:BX),
