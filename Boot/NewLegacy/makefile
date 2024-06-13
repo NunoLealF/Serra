@@ -28,9 +28,7 @@ OBJD = i686-elf-objdump
 
 # -funsigned-char: Use unsigned chars for characters.
 
-# -Os: Optimize for size (and hope the code doesn't break).
-
-LDFLAGS = -T Legacy/Linker.ld -Wl,--no-warn-rwx-segments
+LDFLAGS = -Wl,--no-warn-rwx-segments
 CFLAGS = -std=c11 -ffunction-sections -funsigned-char -ffreestanding -Wall -Wextra -Wpedantic
 
 
@@ -122,12 +120,12 @@ Shared/Rm/RmWrapper.o:
 
 Init/Init.bin: Init/Bootloader.o
 	@echo "Building $@"
-	@$(CC) $(LDFLAGS) -o Init/Init.elf -ffreestanding -nolibc -nostdlib -lgcc $^
+	@$(CC) -T Init/Linker.ld $(LDFLAGS) -o Init/Init.elf -ffreestanding -nolibc -nostdlib -lgcc $^
 	@$(OBJC) -O binary Init/Init.elf Init/Init.bin
 
 Core/Core.bin:
 	@echo "Building $@"
-	@$(CC) $(LDFLAGS) -o Core/Core.elf -ffreestanding -nolibc -nostdlib -lgcc $^
+	@$(CC) -T Core/Linker.ld $(LDFLAGS) -o Core/Core.elf -ffreestanding -nolibc -nostdlib -lgcc $^
 	@$(OBJC) -O binary Core/Core.elf Core/Core.bin
 
 # Mix all of the different stages together (128 sectors, so 64KiB img)
@@ -138,6 +136,8 @@ Legacy.bin: Bootsector/Bootsector.bin Init/Init.bin Shared/Rm/Rm.bin Core/Core.b
 	@dd if=/dev/zero of=Boot.bin bs=512 count=128 status=none
 
 	@dd if=Bootsector/Bootsector.bin of=Boot.bin conv=notrunc bs=512 count=1 seek=0 status=none
-	@dd if=Init/Init.bin of=Boot.bin conv=notrunc bs=512 count=16 seek=7 status=none
-	@dd if=Shared/Rm/Rm.bin of=Boot.bin conv=notrunc bs=512 count=8 seek=23 status=none
-	@dd if=Core/Core.bin of=Boot.bin conv=notrunc bs=512 count=64 seek=63 status=none
+	@dd if=Init/Init.bin of=Boot.bin conv=notrunc bs=512 count=16 seek=8 status=none
+	@dd if=Shared/Rm/Rm.bin of=Boot.bin conv=notrunc bs=512 count=8 seek=24 status=none
+	@dd if=Core/Core.bin of=Boot.bin conv=notrunc bs=512 count=64 seek=64 status=none
+
+# (Add something to do with the filesystem?)

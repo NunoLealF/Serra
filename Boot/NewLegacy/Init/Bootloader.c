@@ -3,6 +3,7 @@
 // For more information, please refer to the accompanying license agreement. <3
 
 #include "../Shared/Stdint.h"
+#include "Bootloader.h"
 
 #ifndef __i686__
 #error "This code is supposed to be compiled with an i686-elf cross-compiler."
@@ -65,6 +66,12 @@ void __attribute__((noreturn)) Init(void) {
 void __attribute__((noreturn)) Bootloader(void) {
 
   // TODO - a lot of things
+  // For now, let's test something out
+
+  uint8* Test = (uint8*)0xB8000;
+
+  Test[0] = 'H'; Test[1] = 0x0F;
+  Test[2] = 'i'; Test[3] = 0x0F;
 
   for(;;);
 
