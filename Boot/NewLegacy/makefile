@@ -44,7 +44,7 @@ CFLAGS = -std=c11 -ffunction-sections -funsigned-char -ffreestanding -Wall -Wext
 # Names ->>
 # (By the way, it's assumed that you're on Linux, or at least some sort of Unix-like system)
 
-All: Clean Legacy/Bootsector.bin Legacy/Bootloader.o Legacy/Bootloader.bin Boot.bin
+All: Clean Bootsector/Bootsector.bin Init/Init.bin Shared/Rm/Rm.bin Core/Core.bin Legacy.bin
 
 Clean:
 	@echo "Cleaning leftover files (*.o, *.elf, *.bin).."
@@ -106,6 +106,10 @@ Init/Bootloader.o:
 
 # (Third-stage bootloader, Legacy/Core)
 
+Core/Bootloader.o:
+	@echo "Building $@"
+	@$(CC) $(CFLAGS) -c Core/Bootloader.c -o Core/Bootloader.o
+
 # (Shared code, Legacy/Shared)
 
 Shared/Rm/Rm.bin:
@@ -123,7 +127,7 @@ Init/Init.bin: Init/Bootloader.o
 	@$(CC) -T Init/Linker.ld $(LDFLAGS) -o Init/Init.elf -ffreestanding -nolibc -nostdlib -lgcc $^
 	@$(OBJC) -O binary Init/Init.elf Init/Init.bin
 
-Core/Core.bin:
+Core/Core.bin: Core/Bootloader.o
 	@echo "Building $@"
 	@$(CC) -T Core/Linker.ld $(LDFLAGS) -o Core/Core.elf -ffreestanding -nolibc -nostdlib -lgcc $^
 	@$(OBJC) -O binary Core/Core.elf Core/Core.bin

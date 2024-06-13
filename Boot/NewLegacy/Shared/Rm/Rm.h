@@ -2,8 +2,8 @@
 // This file is part of the Serra project, which is released under the MIT license.
 // For more information, please refer to the accompanying license agreement. <3
 
-#ifndef SERRA_RM_H_
-#define SERRA_RM_H
+#ifndef SERRA_REALMODE_H
+#define SERRA_REALMODE_H
 
   // Real mode register table - initialize at CE00.
   // See more info in RmWrapper.c
