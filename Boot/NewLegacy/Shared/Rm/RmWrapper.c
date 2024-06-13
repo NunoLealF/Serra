@@ -6,7 +6,7 @@
 
 /* (typedef) struct __attribute__((packed)) realModeTable{}
 
-   Location: CE00h
+   Location: (9E00h + E00h) = AC00h
 
    Inputs:    volatile uint32 Eax-Edx - General purpose registers.
               volatile uint16 Ds-Es - Segment registers.
@@ -23,7 +23,7 @@
    This is a template for the structure containing the registers that will be later loaded (and
    changed) by our real mode functions, in Rm.asm.
 
-   Whenever we go into real mode, this table (which should always be initialized at CE00h) is
+   Whenever we go into real mode, this table (which should always be initialized at AC00h) is
    read by our code, and all registers are overwritten with the data in the corresponding fields;
    for example, if you set the Si field to ABCDh and then called realMode(), it would run the
    real mode code with that register set to ABCDh.
@@ -37,7 +37,7 @@
     - The Int field, which is only read before executing the program, not written to afterwards;
     it indicates which (BIOS) interrupt you'd like to call in real mode
 
-   Our real mode payload assumes that this struct exists at a specific memory location (CE00h),
+   Our real mode payload assumes that this struct exists at a specific memory location (AC00h),
    so, before calling realMode(), make sure to initialize this table at that location.
 
 */
@@ -78,19 +78,19 @@ typedef struct {
 
 /* void realMode()
 
-   Inputs: (None, except realModeTable at CE00h)
-   Outputs: (None, except realModeTable at CE00h)
+   Inputs: (None, except realModeTable at AC00h)
+   Outputs: (None, except realModeTable at AC00h)
 
-   This function calls our real mode code, which should be stored at C000h. It assumes there's
-   an instance of the realModeTable at CE00h, but if there isn't, it'll just do nothing (assuming
+   This function calls our real mode code, which should be stored at 9E00h. It assumes there's
+   an instance of the realModeTable at 9E00h, but if there isn't, it'll just do nothing (assuming
    that memory area is empty).
 
    This is essentially just a wrapper for the code in Rm.asm, which does the following:
 
     -> Prepares a 16-bit real mode environment
-    -> Loads the data from the realModeTable instance at CE00h
+    -> Loads the data from the realModeTable instance at 9E00h
     -> Calls the interrupt given in realModeTable->Int
-    -> Loads data back into the realModeTable instance at CE00h
+    -> Loads data back into the realModeTable instance at 9E00h
     -> Prepares a 32-bit protected mode environment
     -> Returns from the call instruction in this function
 
@@ -98,7 +98,7 @@ typedef struct {
 
 void RealMode(void) {
 
-  __asm__("movl $0xC000, %%eax; call *%%eax" : : : "eax");
+  __asm__("movl $0x9E00, %%eax; call *%%eax" : : : "eax");
 
 }
 
@@ -108,14 +108,14 @@ void RealMode(void) {
    Inputs: (None)
    Outputs: realModeTable* Table - A pointer to an initialized realModeTable struct
 
-   Initializes/clears the realModeTable struct at CE00h, which can then be modified to pass
+   Initializes/clears the realModeTable struct at AC00h, which can then be modified to pass
    parameters/registers to our real mode code (which can be executed using realMode()).
 
 */
 
 realModeTable* InitializeRealModeTable(void) {
 
-  realModeTable* Table = (void*)0xCE00;
+  realModeTable* Table = (void*)0xAC00;
 
   Table->Eax = 0;
   Table->Ebx = 0;

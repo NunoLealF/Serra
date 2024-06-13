@@ -11,8 +11,8 @@ SECTIONS
 
   .text :
   {
-    *(.text.Bootloader) /* The start of our second stage bootloader should be the Bootloader() function. */
-    *(.text*) /* The rest of our second stage bootloader (excluding non-text/code segments). */
+    *(.text.Bootloader) /* The start of our third stage bootloader should be the Bootloader() function. */
+    *(.text*) /* The rest of our third stage bootloader (excluding non-text/code segments). */
   }
 
   .data :

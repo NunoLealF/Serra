@@ -5,7 +5,7 @@
 #ifndef SERRA_REALMODE_H
 #define SERRA_REALMODE_H
 
-  // Real mode register table - initialize at CE00.
+  // Real mode register table - initialize at (9E00h + E00h) = AC00h.
   // See more info in RmWrapper.c
 
   typedef struct {

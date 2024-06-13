@@ -63,6 +63,14 @@ void __attribute__((noreturn)) Init(void) {
 
 */
 
+// 7C00h -> 7E00h: 1st stage bootloader
+// 7E00h -> 9E00h: 2nd stage bootloader
+// 9E00h -> AC00h: Shared real-mode code
+// AC00h -> AE00h: Shared real-mode data
+// AE00h -> 10000h: [Empty]
+// 10000h -> 20000h: Stack
+// 20000h -> ?????h: 3rd stage bootloader
+
 void __attribute__((noreturn)) Bootloader(void) {
 
   // TODO - a lot of things

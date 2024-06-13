@@ -2,7 +2,7 @@
 ; This file is part of the Serra project, which is released under the MIT license.
 ; For more information, please refer to the accompanying license agreement. <3
 
-[ORG 0C000h] ; We are at C000h.
+[ORG 09E00h] ; We are at 9E00h.
 [BITS 32] ; This is 32-bit code.. for now.
 
 ; void prepareRealMode32()
@@ -10,7 +10,7 @@
 ; Inputs: (None)
 ; Outputs: (None)
 ;
-; This is the beginning of our 'program' that's called by realMode() - it's right at C000h, and
+; This is the beginning of our 'program' that's called by realMode() - it's right at 9E00h, and
 ; it's the code that's called by the realMode() function in RmWrapper.c.
 ;
 ; Right now, we're in 32-bit protected mode, like the rest of our 2nd stage bootloader. The
