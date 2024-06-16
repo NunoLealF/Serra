@@ -56,6 +56,10 @@ Clean:
 	@-rm -f Init/*.elf
 	@-rm -f Init/*.bin
 
+	@-rm -f Init/Memory/*.o
+	@-rm -f Init/Memory/A20/*.o
+	@-rm -f Init/Graphics/*.o
+
 	@-rm -f Core/*.o
 	@-rm -f Core/*.elf
 	@-rm -f Core/*.bin
@@ -90,7 +94,7 @@ run: Run
 runint: RunInt
 
 
-# Files themselves
+# [The files themselves]
 
 # (First-stage bootloader, Legacy/Bootsector)
 
@@ -98,17 +102,40 @@ Bootsector/Bootsector.bin:
 	@echo "Building $@"
 	@$(AS) Bootsector/Bootsector.asm -f bin -o Bootsector/Bootsector.bin
 
+
 # (Second-stage bootloader, Legacy/Init)
 
 Init/Bootloader.o:
 	@echo "Building $@"
 	@$(CC) $(CFLAGS) -c Init/Bootloader.c -o Init/Bootloader.o
 
+Init/Memory/A20/A20.o:
+	@echo "Building $@"
+	@$(CC) $(CFLAGS) -c Init/Memory/A20/A20.s -o Init/Memory/A20/A20.o
+
+Init/Memory/A20/A20_Wrapper.o:
+	@echo "Building $@"
+	@$(CC) $(CFLAGS) -c Init/Memory/A20/A20_Wrapper.c -o Init/Memory/A20/A20_Wrapper.o
+
+Init/Memory/Memory.o:
+	@echo "Building $@"
+	@$(CC) $(CFLAGS) -c Init/Memory/Memory.c -o Init/Memory/Memory.o
+
+Init/Graphics/Format.o:
+	@echo "Building $@"
+	@$(CC) $(CFLAGS) -c Init/Graphics/Format.c -o Init/Graphics/Format.o
+
+Init/Graphics/Graphics.o:
+	@echo "Building $@"
+	@$(CC) $(CFLAGS) -c Init/Graphics/Graphics.c -o Init/Graphics/Graphics.o
+
+
 # (Third-stage bootloader, Legacy/Core)
 
 Core/Bootloader.o:
 	@echo "Building $@"
 	@$(CC) $(CFLAGS) -c Core/Bootloader.c -o Core/Bootloader.o
+
 
 # (Shared code, Legacy/Shared)
 
@@ -120,9 +147,10 @@ Shared/Rm/RmWrapper.o:
 	@echo "Building $@"
 	@$(CC) $(CFLAGS) -c Shared/Rm/RmWrapper.c -o Shared/Rm/RmWrapper.o
 
+
 # Link the stages into .bin
 
-Init/Init.bin: Init/Bootloader.o
+Init/Init.bin: Init/Bootloader.o Init/Memory/A20/A20.o Init/Memory/A20/A20_Wrapper.o Init/Memory/Memory.o Init/Graphics/Format.o Init/Graphics/Graphics.o
 	@echo "Building $@"
 	@$(CC) -T Init/Linker.ld $(LDFLAGS) -o Init/Init.elf -ffreestanding -nolibc -nostdlib -lgcc $^
 	@$(OBJC) -O binary Init/Init.elf Init/Init.bin

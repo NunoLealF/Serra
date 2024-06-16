@@ -76,10 +76,11 @@ void __attribute__((noreturn)) Bootloader(void) {
   // TODO - a lot of things
   // For now, let's test something out
 
-  uint8* Test = (uint8*)0xB8000;
+  InitializeTerminal(80, 25, 0xB8000);
+  ClearTerminal();
 
-  Test[0] = 'H'; Test[1] = 0x0F;
-  Test[2] = 'i'; Test[3] = 0x0F;
+  Print("\nHi, this is Serra! <3\n", 0x3F);
+  Printf("June %i %x\n", 0x07, 16, 0x2024);
 
   for(;;);
 

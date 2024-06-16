@@ -7,6 +7,9 @@
 
   // Import other headers (...)
 
+  #include "../Shared/Stdint.h"
+  #include "Graphics/Graphics.h"
+
   // Declare functions in Bootloader.c
 
   void __attribute__((noreturn)) Init(void);
