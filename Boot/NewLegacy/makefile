@@ -121,6 +121,10 @@ Init/Memory/Memory.o:
 	@echo "Building $@"
 	@$(CC) $(CFLAGS) -c Init/Memory/Memory.c -o Init/Memory/Memory.o
 
+Init/Graphics/Exceptions.o:
+	@echo "Building $@"
+	@$(CC) $(CFLAGS) -c Init/Graphics/Exceptions.c -o Init/Graphics/Exceptions.o
+
 Init/Graphics/Format.o:
 	@echo "Building $@"
 	@$(CC) $(CFLAGS) -c Init/Graphics/Format.c -o Init/Graphics/Format.o
@@ -150,7 +154,7 @@ Shared/Rm/RmWrapper.o:
 
 # Link the stages into .bin
 
-Init/Init.bin: Init/Bootloader.o Init/Memory/A20/A20.o Init/Memory/A20/A20_Wrapper.o Init/Memory/Memory.o Init/Graphics/Format.o Init/Graphics/Graphics.o
+Init/Init.bin: Init/Bootloader.o Init/Memory/A20/A20.o Init/Memory/A20/A20_Wrapper.o Init/Memory/Memory.o Init/Graphics/Exceptions.o Init/Graphics/Format.o Init/Graphics/Graphics.o
 	@echo "Building $@"
 	@$(CC) -T Init/Linker.ld $(LDFLAGS) -o Init/Init.elf -ffreestanding -nolibc -nostdlib -lgcc $^
 	@$(OBJC) -O binary Init/Init.elf Init/Init.bin

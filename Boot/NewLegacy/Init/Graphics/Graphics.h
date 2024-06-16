@@ -5,6 +5,24 @@
 #ifndef SERRA_GRAPHICS_H
 #define SERRA_GRAPHICS_H
 
+  // Exception/info message functions and data structures. (Exceptions.c)
+
+  typedef enum {
+
+    Info = 0,
+
+    Kernel = 1,
+    Ok = 2,
+    Fail = 3,
+    Warning = 4,
+
+    Error = 5
+
+  } messageType;
+
+  void Message(messageType Type, char* String);
+  void __attribute__((noreturn)) Panic(char* String);
+
   // Formatting and string-related functions. (Format.c)
 
   int Strlen(const char* String);
