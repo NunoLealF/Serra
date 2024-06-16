@@ -67,15 +67,11 @@ void __attribute__((noreturn)) Init(void) {
 // 7E00h -> 9E00h: 2nd stage bootloader
 // 9E00h -> AC00h: Shared real-mode code
 // AC00h -> AE00h: Shared real-mode data
-// AE00h -> D000h: [Empty]
-// D000h -> D800h: Completely empty IDT that shouldn't be used but that's still loaded by the rm functions
-// D800h -> 10000h: [Empty again]
+// AE00h -> 10000h: [Empty]
 // 10000h -> 20000h: Stack
 // 20000h -> ?????h: 3rd stage bootloader
 
-// B000h ->
-// F000h (4 bytes): A20 test location
-//
+// F000h (4 bytes): A20 test location, should probably change that.
 
 void __attribute__((noreturn)) Bootloader(void) {
 
@@ -173,39 +169,48 @@ void __attribute__((noreturn)) Bootloader(void) {
   }
 
   // (Try to see if the real mode functions work)
-  // (EDIT: They very much do! Enjoy the pretty lights show lol)
+  // (EDIT: They do; here's the drive parameters test)
+
+  /*
+  eddDriveParameters Nya;
+  uint8 SaveDl = *(uint8*)(0x7E00 - 3);
+
+  Nya.Size = 0x42;
+
+  uint32 Location = &Nya;
 
   realModeTable* Table = InitializeRealModeTable();
 
-  Table->Eax = 0x13;
-  Table->Int = 0x10;
+  Table->Eax = 0x4800;
+  Table->Edx = SaveDl;
+  Table->Ds = (uint16)((Location) / 16);
+  Table->Si = (uint16)(Location - (Table->Ds * 16));
+
+  Printf("Location: %xh\n", 0x0B, Location);
+  Printf("Ds/Si: %x:%xh\n", 0x0B, (uint32)Table->Ds, (uint32)Table->Si);
+
+  Table->Int = 0x13;
 
   RealMode();
 
-  for (uint16 i = 0; i < 320; i++) {
-
-    for (uint16 j = 0; j < 200; j++) {
-
-      Table->Eax = 0x0C00 + ((i+j) % 10) + j;
-      Table->Ebx = 0;
-      Table->Ecx = i;
-      Table->Edx = j;
-
-      Table->Int = 0x10;
-
-      RealMode();
-
-    }
-
+  if (hasFlag(Table->Eflags, CarryFlag)) {
+      Printf("Dummy 1\n", 0x0C);
   }
 
+  Printf("Eax (get error with Ah): %xh\n", 0x0C, (uint32)Table->Eax);
 
+  Printf("Call size of the buffer: %xh\n", 0x0F, (uint32)Nya.Size);
+  Printf("Flags of the buffer: %xh\n", 0x0F, (uint32)Nya.Flags);
+  */
 
-  // Right now, according to objdump, all of this code occupies about 3 KiB, so, about the
-  // size of 6 sectors. We're limited to 16 sectors, and we still need to:
+  // Right now, according to objdump, all of this code occupies about 4 KiB, so, about the
+  // size of 8 sectors. We're limited to 16 sectors, and we still need to:
 
   // -> Read data from the disk, with (basic) FAT16/FAT32 support
   // -> Load the third stage bootloader into memory, and jump there.
+
+  // All in 8 sectors, so we're actually pretty limited; thankfully, it shouldn't be *too* hard,
+  // seeing as how some bootsectors even work with FAT16/FAT32 in one or two sectors only.
 
   // For now, let's end things here.
 

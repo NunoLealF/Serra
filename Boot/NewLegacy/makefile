@@ -56,6 +56,7 @@ Clean:
 	@-rm -f Init/*.elf
 	@-rm -f Init/*.bin
 
+	@-rm -f Init/Disk/*.o
 	@-rm -f Init/Memory/*.o
 	@-rm -f Init/Memory/A20/*.o
 	@-rm -f Init/Graphics/*.o
@@ -109,6 +110,10 @@ Init/Bootloader.o:
 	@echo "Building $@"
 	@$(CC) $(CFLAGS) -c Init/Bootloader.c -o Init/Bootloader.o
 
+Init/Disk/Disk.o:
+	@echo "Building $@"
+	@$(CC) $(CFLAGS) -c Init/Disk/Disk.c -o Init/Disk/Disk.o
+
 Init/Memory/A20/A20.o:
 	@echo "Building $@"
 	@$(CC) $(CFLAGS) -c Init/Memory/A20/A20.s -o Init/Memory/A20/A20.o
@@ -154,7 +159,7 @@ Shared/Rm/RmWrapper.o:
 
 # Link the stages into .bin
 
-Init/Init.bin: Init/Bootloader.o Init/Memory/A20/A20.o Init/Memory/A20/A20_Wrapper.o Init/Memory/Memory.o Init/Graphics/Exceptions.o Init/Graphics/Format.o Init/Graphics/Graphics.o Shared/Rm/RmWrapper.o
+Init/Init.bin: Init/Bootloader.o Init/Disk/Disk.o Init/Memory/A20/A20.o Init/Memory/A20/A20_Wrapper.o Init/Memory/Memory.o Init/Graphics/Exceptions.o Init/Graphics/Format.o Init/Graphics/Graphics.o Shared/Rm/RmWrapper.o
 	@echo "Building $@"
 	@$(CC) -T Init/Linker.ld $(LDFLAGS) -o Init/Init.elf -ffreestanding -nolibc -nostdlib -lgcc $^
 	@$(OBJC) -O binary Init/Init.elf Init/Init.bin
