@@ -7,7 +7,7 @@
 
   // A20 functions, from A20/A20_Wrapper.c and A20/A20.s.
 
-  #define A20_TestAddress 0xE000
+  #define A20_TestAddress 0xF000
 
   extern void EnableKbd_A20(void);
   extern void EnableFast_A20(void);

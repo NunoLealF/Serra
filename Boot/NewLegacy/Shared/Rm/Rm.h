@@ -47,26 +47,26 @@
 
   // Regular CPU flags - most of these are present on the 8086/286.
 
-  #define carryFlag (1 << 0)
-  #define parityFlag (1 << 2)
-  #define auxCarryFlag (1 << 4)
-  #define zeroFlag (1 << 6)
-  #define signFlag (1 << 7)
-  #define trapFlag (1 << 8)
-  #define interruptFlag (1 << 9)
-  #define directionFlag (1 << 10)
-  #define overflowFlag (1 << 11)
-  #define ioPrivilegeFlag (1 << 12)
-  #define nestedFlag (1 << 14)
+  #define CarryFlag (1 << 0)
+  #define ParityFlag (1 << 2)
+  #define AuxCarryFlag (1 << 4)
+  #define ZeroFlag (1 << 6)
+  #define SignFlag (1 << 7)
+  #define TrapFlag (1 << 8)
+  #define InterruptFlag (1 << 9)
+  #define DirectionFlag (1 << 10)
+  #define OverflowFlag (1 << 11)
+  #define IoPrivilegeFlag (1 << 12)
+  #define NestedFlag (1 << 14)
 
   // Extended CPU flags (eflags) - most of these are present on the 386/486.
 
-  #define resumeFlag (1 << 16)
-  #define virtual86Flag (1 << 17)
-  #define alignFlag (1 << 18)
-  #define virtualInterruptFlag (1 << 19)
-  #define virtualInterruptPendingFlag (1 << 20)
-  #define cpuidFlag (1 << 21)
+  #define ResumeFlag (1 << 16)
+  #define Virtual86Flag (1 << 17)
+  #define AlignFlag (1 << 18)
+  #define VirtualInterruptFlag (1 << 19)
+  #define VirtualInterruptPendingFlag (1 << 20)
+  #define CpuidFlag (1 << 21)
 
   // Real mode functions.
 

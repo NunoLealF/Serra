@@ -67,9 +67,15 @@ void __attribute__((noreturn)) Init(void) {
 // 7E00h -> 9E00h: 2nd stage bootloader
 // 9E00h -> AC00h: Shared real-mode code
 // AC00h -> AE00h: Shared real-mode data
-// AE00h -> 10000h: [Empty]
+// AE00h -> D000h: [Empty]
+// D000h -> D800h: Completely empty IDT that shouldn't be used but that's still loaded by the rm functions
+// D800h -> 10000h: [Empty again]
 // 10000h -> 20000h: Stack
 // 20000h -> ?????h: 3rd stage bootloader
+
+// B000h ->
+// F000h (4 bytes): A20 test location
+//
 
 void __attribute__((noreturn)) Bootloader(void) {
 
@@ -166,12 +172,38 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   }
 
+  // (Try to see if the real mode functions work)
+  // (EDIT: They very much do! Enjoy the pretty lights show lol)
+
+  realModeTable* Table = InitializeRealModeTable();
+
+  Table->Eax = 0x13;
+  Table->Int = 0x10;
+
+  RealMode();
+
+  for (uint16 i = 0; i < 320; i++) {
+
+    for (uint16 j = 0; j < 200; j++) {
+
+      Table->Eax = 0x0C00 + ((i+j) % 10) + j;
+      Table->Ebx = 0;
+      Table->Ecx = i;
+      Table->Edx = j;
+
+      Table->Int = 0x10;
+
+      RealMode();
+
+    }
+
+  }
 
 
-  // Right now, according to objdump, all of this code occupies about 2.8 KiB, so, about the
-  // size of 5-6 sectors. We're limited to 16 sectors, and we still need to:
 
-  // -> Implement the real mode code (shouldn't be too hard)
+  // Right now, according to objdump, all of this code occupies about 3 KiB, so, about the
+  // size of 6 sectors. We're limited to 16 sectors, and we still need to:
+
   // -> Read data from the disk, with (basic) FAT16/FAT32 support
   // -> Load the third stage bootloader into memory, and jump there.
 

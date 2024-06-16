@@ -154,7 +154,7 @@ Shared/Rm/RmWrapper.o:
 
 # Link the stages into .bin
 
-Init/Init.bin: Init/Bootloader.o Init/Memory/A20/A20.o Init/Memory/A20/A20_Wrapper.o Init/Memory/Memory.o Init/Graphics/Exceptions.o Init/Graphics/Format.o Init/Graphics/Graphics.o
+Init/Init.bin: Init/Bootloader.o Init/Memory/A20/A20.o Init/Memory/A20/A20_Wrapper.o Init/Memory/Memory.o Init/Graphics/Exceptions.o Init/Graphics/Format.o Init/Graphics/Graphics.o Shared/Rm/RmWrapper.o
 	@echo "Building $@"
 	@$(CC) -T Init/Linker.ld $(LDFLAGS) -o Init/Init.elf -ffreestanding -nolibc -nostdlib -lgcc $^
 	@$(OBJC) -O binary Init/Init.elf Init/Init.bin

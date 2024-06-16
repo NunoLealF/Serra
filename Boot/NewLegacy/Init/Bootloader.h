@@ -8,6 +8,7 @@
   // Import other headers (...)
 
   #include "../Shared/Stdint.h"
+  #include "../Shared/Rm/Rm.h"
   #include "Graphics/Graphics.h"
 
   // Declare functions in Bootloader.c

@@ -91,7 +91,7 @@ typedef struct {
     -> Loads the data from the realModeTable instance at 9E00h
     -> Calls the interrupt given in realModeTable->Int
     -> Loads data back into the realModeTable instance at 9E00h
-    -> Prepares a 32-bit protected mode environment
+    -> Prepares a 32-bit protected mode environment (IDT needs to be reloaded!)
     -> Returns from the call instruction in this function
 
 */

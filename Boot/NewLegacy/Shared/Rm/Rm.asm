@@ -285,7 +285,7 @@ prepareProtectedMode16:
 
   cli
 
-  ; Load our 32-bit protected mode GDT and IDT.
+  ; Load our 32-bit protected mode GDT.
 
   ; We also reset the value of ds and es to prevent the system from crashing (since we're
   ; still in 16-bit mode, we're still using data segments to load things).
@@ -295,7 +295,6 @@ prepareProtectedMode16:
   mov es, ax
 
   lgdt [protectedModeGdtDescriptor]
-  lidt [protectedModeIdtDescriptor]
 
   ; Enable protected mode by setting the first bit of the CR0 register.
 
@@ -358,9 +357,9 @@ prepareProtectedMode32:
   popad
   popfd
 
-  ; Turn on interrupts again.
+  ; Just in case, turn off interrupts again, since we don't have an IDT loaded.
 
-  sti
+  cli
 
   ; Return with the ret instruction. Because of the C calling convention, this shouldn't be
   ; an issue.
@@ -463,13 +462,6 @@ protectedModeGdt:
   db 10010010b ; Access byte (bits 0-7)
   db 11001111b ; Limit (bits 16-19) and flags (bits 0-7)
   db 00h ; Base (bits 24-31)
-
-; 32-bit protected mode IDT descriptor.
-
-protectedModeIdtDescriptor:
-
-  dw 2048 - 1 ; 256 eight-byte segments, minus one byte.
-  dd 0D000h ; The location of our IDT is at D000h.
 
 ; -----------------------------------
 
