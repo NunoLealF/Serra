@@ -97,7 +97,7 @@
 
   typedef volatile struct {
 
-    uint32 NumSectors; // The number of sectors on this partition (replaces the entry in the BPB)
+    uint32 SectorsPerFat; // The number of sectors per FAT (replaces the FAT16 entry in the BPB)
     uint16 Flags; // Just.. flags (I need a proper copy of the FAT32 spec)
     uint16 Version; // The FAT32 version of this partition
 

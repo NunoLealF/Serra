@@ -295,64 +295,104 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   biosParameterBlock Bpb = *(biosParameterBlock*)(0x7C00 + 3);
 
+  biosParameterBlock_Fat16 Extended_Bpb16 = *(biosParameterBlock_Fat16*)(0x7C00 + 36);
+  biosParameterBlock_Fat32 Extended_Bpb32 = *(biosParameterBlock_Fat32*)(0x7C00 + 36);
+
   Putchar('\n', 0);
 
   if (Bpb.BytesPerSector == 0) {
-    Panic("Failed to detect a FAT16 or FAT32 partition.");
+    Panic("Failed to detect a FAT partition.");
   } else {
-    Message(Kernel, "Successfully detected a FAT16 or FAT32 partition.");
+    Message(Kernel, "Successfully detected a FAT partition.");
   }
 
-  // (show data)
 
-  Printf("\nIdentifier: \"", 0x07);
 
-  for (int i = 7; i >= 0; i--) {
+  // (Get some variables from the BPB)
 
-    if (Bpb.Identifier[i] < 0x10) {
-      Putchar('0', 0x07);
-    }
+  // Now that we know that the BPB exists, and that it almost certainly represents a valid FAT
+  // partition, we want to actually start reading the data off of it. Specifically, we're going to
+  // focus on these specific variables:
 
-    Printf("%x", 0x07, Bpb.Identifier[i]);
+  // -> The total number of sectors within the partition, including reserved sectors;
 
-    if (i > 0) {
-      Putchar(' ', 0x07);
-    }
+  uint32 TotalNumSectors = Bpb.NumSectors;
 
+  if (TotalNumSectors == 0) {
+    TotalNumSectors = Bpb.NumSectors_Large;
   }
 
-  Printf("\"\n", 0x07);
+  // -> The size of each FAT (file allocation table)
 
-  Printf("Bytes per sector (!): %d\n", 0x07, Bpb.BytesPerSector);
-  Printf("Sectors per cluster: %d\n", 0x07, Bpb.SectorsPerCluster);
-  Printf("Reserved sectors: %d\n\n", 0x07, Bpb.ReservedSectors);
+  uint32 FatSize = Bpb.SectorsPerFat;
 
-  Printf("Number of FATs: %d\n", 0x07, Bpb.NumFileAllocationTables);
-  Printf("Number of root directory entries: %d\n\n", 0x07, Bpb.NumRootEntries);
+  if (FatSize == 0) {
+    FatSize = Extended_Bpb32.SectorsPerFat;
+  }
 
-  Printf("Number of sectors (FAT16): %d\n", 0x07, Bpb.NumSectors);
-  Printf("Media descriptor type: %x\n", 0x07, Bpb.MediaDescriptorType);
-  Printf("Sectors per FAT: %d\n", 0x07, Bpb.SectorsPerFat);
-  Printf("Sectors per track (!): %d\n", 0x07, Bpb.SectorsPerTrack);
-  Printf("Number of physical heads (!): %d\n\n", 0x07, Bpb.NumPhysicalHeads);
+  // -> The number of root sectors (if the filesystem is FAT32, then this is always zero);
 
-  Printf("Hidden sectors: %d\n", 0x07, Bpb.HiddenSectors);
-  Printf("Number of sectors (FAT32): %d\n", 0x07, Bpb.NumSectors_Large);
+  uint32 NumRootSectors = ((Bpb.NumRootEntries * 32) + (Bpb.BytesPerSector - 1)) / Bpb.BytesPerSector;
+
+  // -> The position of the first data sector (relative to the start of the partition), along
+  // with the number of data (non-reserved + non-FAT) sectors in the partition.
+
+  uint32 DataSectorOffset = ((Bpb.NumFileAllocationTables * FatSize) + NumRootSectors) + Bpb.ReservedSectors;
+  uint32 NumDataSectors = (TotalNumSectors - DataSectorOffset);
+
+  // -> And, finally, the number of clusters within the partition.
+
+  uint32 NumClusters = (NumDataSectors / Bpb.SectorsPerCluster);
 
 
 
 
+  // Now that we've gone through this whole process, we can actually finally move on to
+  // determining the filesystem type. It's actually relatively simple - we just need to look at
+  // the number of clusters in the partition:
 
-  // Right now, according to objdump, all of this code occupies about 4 KiB, so, about the
-  // size of 8 sectors. We're limited to 16 sectors, and we still need to:
+  // -> Any partition with less than 4085 clusters is guaranteed to be FAT12.
+  // -> Any partition with between 4085 and 65524 clusters is guaranteed to be FAT16.
+  // -> Any partition with more than 65524 clusters is guaranteed to be FAT32.
 
-  // -> Read data from the disk, with (basic) FAT16/FAT32 support
-  // -> Load the third stage bootloader into memory, and jump there.
+  bool PartitionIsFat32 = false;
 
-  // All in 8 sectors, so we're actually pretty limited; thankfully, it shouldn't be *too* hard,
-  // seeing as how some bootsectors even work with FAT16/FAT32 in one or two sectors only.
+  if (NumClusters < 4085) {
+    Panic("FAT partitions with less than 4085 clusters are not supported.");
+  }
 
-  // For now, let's end things here.
+  if (NumClusters > 65524) {
+    PartitionIsFat32 = true;
+  }
+
+  Message(Info, "The current FAT partition has %d clusters (each %d bytes long).", NumClusters, (Bpb.SectorsPerCluster * Bpb.BytesPerSector));
+
+
+
+  // I checked the ELF file this was giving me with objdump; basically, there's about 5.4
+  // sectors worth of space left (specifically, exactly 2756 bytes).
+
+  // A pretty significant portion of that space (about 1316 bytes!) is occupied by the .rodata
+  // section, so it's probably a good idea to cut down on error/string sizes (along with some
+  // function sizes)
+
+  // That being said, the most important thing we can do right now is to just focus on actually
+  // *loading* the next stage of the bootloader, nothing more. (At the very least, from what
+  // I've seen, it seems like there isn't much left to do)
+
+
+  // [A few things to keep in mind]
+
+  // -> The next stage will be a bin/elf file in a FAT16 or FAT32 filesystem, in the root
+  // directory (this isn't EFI, no need to look through /BOOT/EFI..)
+
+  // -> You don't really want a full-fledged FAT implementation, just enough to traverse the
+  // root directory, find the next stage, load it, and then jump from there.
+
+
+
+
+  // [For now, let's end things here]
 
   Putchar('\n', 0);
 

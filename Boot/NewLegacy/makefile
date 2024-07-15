@@ -72,10 +72,10 @@ Clean:
 	@-rm -f *.bin
 
 Dump:
-	$(OBJD) -S Legacy/Bootloader.elf
+	$(OBJD) -S Init/Init.elf
 
 Dumpbin:
-	$(OBJD) -Mintel,i686 -b binary -m i386 --adjust-vma=0x7E00 -D Legacy/Bootloader.bin
+	$(OBJD) -Mintel,i686 -b binary -m i386 --adjust-vma=0x7E00 -D Legacy.bin
 
 Run:
 	@echo "Launching Qemu.."
@@ -169,20 +169,27 @@ Core/Core.bin: Core/Bootloader.o
 	@$(CC) -T Core/Linker.ld $(LDFLAGS) -o Core/Core.elf -ffreestanding -nolibc -nostdlib -lgcc $^
 	@$(OBJC) -O binary Core/Core.elf Core/Core.bin
 
-# Mix all of the different stages together (4096 sectors, so, a 2MiB img)
+
+# Mix all of the different stages together (8192 sectors, so, a 4MiB img)
 
 Legacy.bin: Bootsector/Bootsector.bin Init/Init.bin Shared/Rm/Rm.bin Core/Core.bin
 
 	@echo "Building $@"
-	@dd if=/dev/zero of=Legacy.bin bs=512 count=4096 status=none
+	@dd if=/dev/zero of=Legacy.bin bs=512 count=8192 status=none
 
 	@dd if=Bootsector/Bootsector.bin of=Legacy.bin conv=notrunc bs=512 count=1 seek=0 status=none
 	@dd if=Init/Init.bin of=Legacy.bin conv=notrunc bs=512 count=16 seek=8 status=none
 	@dd if=Shared/Rm/Rm.bin of=Legacy.bin conv=notrunc bs=512 count=8 seek=24 status=none
-	@dd if=Core/Core.bin of=Legacy.bin conv=notrunc bs=512 count=64 seek=64 status=none
 
 # (This formats it as a valid FAT16 filesystem while keeping the non-BPB part of the bootsector;
 # that being said, *it's a temporary solution*, since we'll eventually need to merge the
-# legacy and EFI code)
+# legacy and EFI code).
 
-	@mformat -i Legacy.bin -k -R 32 ::
+# Specifically, this sets a cluster size of 1 sector, keeps the current bootsector except for
+# the BPB, and sets the number of reserved sectors to 32.
+
+	@mformat -i Legacy.bin -c 1 -k -R 32 ::
+
+# (Add the 3rd stage bootloader)
+
+	@mcopy -i Legacy.bin Core/Core.bin ::
