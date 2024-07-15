@@ -27,9 +27,6 @@ BPB:
   BPB.HiddenSectors: dd 0
   times 22h db 0
   BPB.Signature: db 28h
-  times 4h db 0
-  BPB.VolumeLabel: db "Serra      "
-  BPB.Identifier: db "FAT32   "
 
   times 120 - ($-$$) db 0
 
