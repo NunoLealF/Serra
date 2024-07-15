@@ -7,4 +7,4 @@
 #include "../Memory/Memory.h"
 #include "Disk.h"
 
-// ...
+// (Todo: write functions.)

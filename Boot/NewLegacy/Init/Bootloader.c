@@ -78,7 +78,6 @@ void __attribute__((noreturn)) Bootloader(void) {
   // We've finally made it to our second-stage bootloader. We're in 32-bit x86 protected mode with
   // the stack at 20000h in memory, and our bootloader between 7E00h and CE00h in memory.
 
-
   // (Set up terminal)
 
   InitializeTerminal(80, 25, 0xB8000);
@@ -86,6 +85,8 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   Message(Kernel, "Entered second-stage bootloader");
   Message(Ok, "Successfully initialized the terminal (at B8000h)");
+
+  Putchar('\n', 0);
 
 
   // (Set up A20)
@@ -105,7 +106,6 @@ void __attribute__((noreturn)) Bootloader(void) {
   bool A20_EnabledByKbd = false;
   bool A20_EnabledByFast = false;
 
-  Putchar('\n', 0);
   Message(Kernel, "Preparing to enable the A20 line");
 
   if (Check_A20() == true) {
@@ -168,40 +168,132 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   }
 
-  // (Try to see if the real mode functions work)
-  // (EDIT: They do; here's the drive parameters test)
+  Putchar('\n', 0);
 
-  /*
-  eddDriveParameters Nya;
-  uint8 SaveDl = *(uint8*)(0x7E00 - 3);
 
-  Nya.Size = 0x42;
+  // In order to be able to load things from disk, we need to know the current drive number,
+  // which should (hopefully) be saved in the bootsector.
 
-  uint32 Location = &Nya;
+  // By default, the BIOS passes the current drive number as dl, but it doesn't actually store it
+  // anywhere else; instead, our bootsector manually saves the value of dl right before the
+  // bootsector signature (AA55h).
+
+  // For now, we're just going to check if the bootsector is still in memory (by verifying the
+  // signature), and check to see if the drive number is in a valid range - otherwise, we'll just
+  // use the 'default' drive number (usually 80h).
+
+  uint8 DriveNumber = *(uint8*)(0x7E00 - 3);
+  bool DriveNumberIsValid = true;
+
+  uint16 Signature = *(uint16*)(0x7E00 - 2);
+
+  if (Signature != 0xAA55) {
+    DriveNumberIsValid = false;
+  } else if (DriveNumber < 0x80) {
+    DriveNumberIsValid = false;
+  }
+
+  // If the drive number saved in our bootsector is somehow invalid, then we're going to want
+  // to just set it to the default 80h, and to also show a warning.
+
+  if (DriveNumberIsValid == true) {
+
+    Message(Ok, "Successfully got the current drive number.");
+
+    Putchar('[', 0x0F); Print("Info", 0x07); Putchar(']', 0x0F);
+    Printf(" Current drive number is %xh.\n", 0x0F, DriveNumber);
+
+  } else {
+
+    Message(Warning, "Failed to get the current drive number; setting to 80h.");
+    DriveNumber = 0x80;
+
+  }
+
+  Putchar('\n', 0);
+
+
+  // Alright; now, we want to focus on getting information from our current drive - how large
+  // is it, how many bytes are in a sector, how should we load our data?
+
+  // We can get this information using the BIOS interrupt (int 13h, ah 48h), which should
+  // theoretically return a table in [ds:si] for the drive in the dl register:
+
+  // [TODO: WRITE A BETTER COMMENT, C'MON C'MON]
+
+
+
+
+
+
+  // (prepare)
+
+  eddDriveParameters EDD_Parameters;
+
+  Memset((void*)&EDD_Parameters, sizeof(eddDriveParameters), 0);
+  EDD_Parameters.Size = sizeof(eddDriveParameters);
+
+
+  // (actually do it!)
 
   realModeTable* Table = InitializeRealModeTable();
 
-  Table->Eax = 0x4800;
-  Table->Edx = SaveDl;
-  Table->Ds = (uint16)((Location) / 16);
-  Table->Si = (uint16)(Location - (Table->Ds * 16));
+  Table->Eax = (0x48 << 8);
+  Table->Edx = DriveNumber;
 
-  Printf("Location: %xh\n", 0x0B, Location);
-  Printf("Ds/Si: %x:%xh\n", 0x0B, (uint32)Table->Ds, (uint32)Table->Si);
+  Table->Ds = ((unsigned int)(&EDD_Parameters) >> 4);
+  Table->Si = ((unsigned int)(&EDD_Parameters) & 0x0F);
 
   Table->Int = 0x13;
 
+  Message(Kernel, "Preparing to get EDD/drive information.");
   RealMode();
 
+
+  // (Any errors? If not, then carry on; otherwise, keep moving on with 'standard' values that
+  // just hopelessly assume you have a big enough drive (and a valid BPB))
+
+  bool EDD_Enabled = true;
+
   if (hasFlag(Table->Eflags, CarryFlag)) {
-      Printf("Dummy 1\n", 0x0C);
+    EDD_Enabled = false;
+  } else if (Table->Eax != (0x48 << 8)) {
+    EDD_Enabled = false;
   }
 
-  Printf("Eax (get error with Ah): %xh\n", 0x0C, (uint32)Table->Eax);
+  if (EDD_Enabled == true) {
 
-  Printf("Call size of the buffer: %xh\n", 0x0F, (uint32)Nya.Size);
-  Printf("Flags of the buffer: %xh\n", 0x0F, (uint32)Nya.Flags);
+    Message(Ok, "Successfully got EDD data.");
+
+  } else {
+
+    Message(Warning, "Unable to get EDD data - relying on defaults from now on.");
+
+    EDD_Parameters.Size = 0x1A;
+    EDD_Parameters.Flags = 0xFFFF;
+    EDD_Parameters.BytesPerSector = 512;
+
+  }
+
+  // (Show info.. (debug))
+
+  /*
+
+  Putchar('\n', 0);
+
+  Printf("Size -> %d\n", 0x07, EDD_Parameters.Size);
+  Printf("Flags -> %x\n", 0x07, EDD_Parameters.Flags);
+  Printf("Physical cylinders -> %d\n", 0x07, EDD_Parameters.NumPhysicalCylinders);
+  Printf("Physical heads -> %d\n", 0x07, EDD_Parameters.NumPhysicalHeads);
+  Printf("Physical sectors -> %d\n", 0x07, EDD_Parameters.NumPhysicalSectors);
+  Printf("Number of sectors (truncated to 32-bit) -> %d\n", 0x07, (uint64)EDD_Parameters.NumSectors);
+  Printf("Bytes per sector -> %d\n", 0x07, EDD_Parameters.BytesPerSector);
+
   */
+
+
+
+
 
   // Right now, according to objdump, all of this code occupies about 4 KiB, so, about the
   // size of 8 sectors. We're limited to 16 sectors, and we still need to:
@@ -217,7 +309,7 @@ void __attribute__((noreturn)) Bootloader(void) {
   Putchar('\n', 0);
 
   Printf("Hi, this is Serra! <3\n", 0x0F);
-  Printf("June %i %x\n", 0x3F, 16, 0x2024);
+  Printf("July %i %x\n", 0x3F, 15, 0x2024);
 
   for(;;);
 

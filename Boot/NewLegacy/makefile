@@ -79,11 +79,11 @@ Dumpbin:
 
 Run:
 	@echo "Launching Qemu.."
-	@qemu-system-i386 -cpu pentium3 -m 128 -drive file=Boot.bin,format=raw
+	@qemu-system-i386 -cpu pentium3 -m 128 -drive file=Legacy.bin,format=raw
 
 RunInt:
 	@echo "Launching Qemu with -d int.."
-	@qemu-system-i386 -cpu pentium3 -m 128 -drive file=Boot.bin,format=raw -d int
+	@qemu-system-i386 -cpu pentium3 -m 128 -drive file=Legacy.bin,format=raw -d int
 
 # Lowercase names
 
@@ -174,11 +174,11 @@ Core/Core.bin: Core/Bootloader.o
 Legacy.bin: Bootsector/Bootsector.bin Init/Init.bin Shared/Rm/Rm.bin Core/Core.bin
 
 	@echo "Building $@"
-	@dd if=/dev/zero of=Boot.bin bs=512 count=128 status=none
+	@dd if=/dev/zero of=Legacy.bin bs=512 count=128 status=none
 
-	@dd if=Bootsector/Bootsector.bin of=Boot.bin conv=notrunc bs=512 count=1 seek=0 status=none
-	@dd if=Init/Init.bin of=Boot.bin conv=notrunc bs=512 count=16 seek=8 status=none
-	@dd if=Shared/Rm/Rm.bin of=Boot.bin conv=notrunc bs=512 count=8 seek=24 status=none
-	@dd if=Core/Core.bin of=Boot.bin conv=notrunc bs=512 count=64 seek=64 status=none
+	@dd if=Bootsector/Bootsector.bin of=Legacy.bin conv=notrunc bs=512 count=1 seek=0 status=none
+	@dd if=Init/Init.bin of=Legacy.bin conv=notrunc bs=512 count=16 seek=8 status=none
+	@dd if=Shared/Rm/Rm.bin of=Legacy.bin conv=notrunc bs=512 count=8 seek=24 status=none
+	@dd if=Core/Core.bin of=Legacy.bin conv=notrunc bs=512 count=64 seek=64 status=none
 
 # (Add something to do with the filesystem?)

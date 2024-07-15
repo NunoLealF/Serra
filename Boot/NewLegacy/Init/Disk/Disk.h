@@ -8,6 +8,9 @@
   // (int 13h, ah=48h)
   // https://www.ctyme.com/intr/rb-0715.htm#Table274
 
+  // (We'll only actually work with / implement EDD 1.x, but just in case, we'll also reserve
+  // space for EDD 2.x / EDD 3.x)
+
   typedef volatile struct {
 
     // [EDD 1.x, safe to use in any version]
@@ -24,23 +27,11 @@
 
     // [EDD 2.x, not safe for versions below]
 
-    uint32 ConfigurationParameters; // Table #00278, or just FFFFFFFF if not available (?)
+    uint8 Edd2_Data[4]; // Table #00278, or just FFFFFFFF if not available (?)
 
     // [EDD 3.x, not safe for versions below]
 
-    uint16 DevicePathSignature; // Signature for device path info
-    uint8 DevicePathLength; // Length of this part of the struct (24h usually, but could be different)
-
-    uint8 Reserved_A[3]; // Empty
-
-    char HostBusName[4]; // Host bus name (ISA/PCI, and in ASCIZ(?))
-    char InterfaceName[8]; // Interface name (also in ASCIZ, can be ATA/USB/etc.)
-
-    uint64 InterfacePath; // See #0275
-    uint64 DevicePath; // See #0276
-
-    uint8 Reserved_B[1]; // Empty
-    uint8 Checksum; // Not sure how this is calculated
+    uint8 Edd3_Data[36]; // ...
 
   } __attribute__((packed)) eddDriveParameters;
 
