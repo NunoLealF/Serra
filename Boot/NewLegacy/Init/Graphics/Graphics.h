@@ -20,7 +20,7 @@
 
   } messageType;
 
-  void Message(messageType Type, char* String);
+  void Message(messageType Type, char* String, ...);
   void __attribute__((noreturn)) Panic(char* String);
 
   // Formatting and string-related functions. (Format.c)
@@ -61,5 +61,6 @@
   // Functions that print data to the terminal. (Format.c)
 
   void Printf(const char* String, uint8 Color, ...);
+  void vPrintf(const char* String, uint8 Color, va_list Arguments);
 
 #endif

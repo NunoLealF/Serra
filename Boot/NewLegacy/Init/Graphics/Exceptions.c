@@ -10,6 +10,7 @@
 
    Inputs: messageType{} Type - The message type/classification (Kernel, Ok, Warning, etc.);
            char* String - The content of the message, as a single string.
+           (...) - Any additional (variadic) arguments that we want to display on the screen.
 
    Outputs: (None)
 
@@ -24,7 +25,12 @@
 
 */
 
-void Message(messageType Type, char* String) {
+void Message(messageType Type, char* String, ...) {
+
+  // Prepare a va_list (the last non-variadic argument is String)
+
+  va_list Arguments;
+  va_start(Arguments, String);
 
   // Show the message type / 'classification level' to the user, enclosed by square
   // brackets (for example, [Kernel], [Ok], etc).
@@ -64,9 +70,12 @@ void Message(messageType Type, char* String) {
 
   Print("] ", 0x0F);
 
-  // Show the given message to the user.
+  // Show the given message to the user, and call va_end().
 
-  Printf("%s\n", 0x0F, String);
+  vPrintf(String, 0x0F, Arguments);
+  Print("\n", 0x0F);
+
+  va_end(Arguments);
 
 }
 

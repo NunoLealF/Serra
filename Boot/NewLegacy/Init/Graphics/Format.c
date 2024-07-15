@@ -165,43 +165,24 @@ char* Itoa(uint32 Number, char* Buffer, uint8 Base) {
 }
 
 
-/* void Printf()
+/* void vPrintf()
 
    Inputs: const char* String - The string we want to display on the screen - there should be
            one format specifier (%?) for each variadic argument given later on.
 
            uint8 Color - The (VGA) color we want to display on the screen.
 
-           (...) - Any additional (variadic) arguments that we want to display on the screen,
-           if necessary. Each argument should always correspond to a format specifier in String.
+           va_list Arguments - Any additional (variadic) arguments that we want to display on the
+           screen, if necessary, but specified as a va_list.
 
    Outputs: (None)
 
-   This function is similar to Print() in that it displays a string on the screen, but it
-   accepts additional formatting / variadic arguments.
-
-   Because of this, it's much more powerful than Print(), since this function allows you to
-   effortlessly display other characters, strings, integers, etc. on the screen. Each additional
-   argument must correspond to one of the following format specifiers:
-
-   - %c (const char): Displays a character.
-   - %s (const char*): Displays a string.
-   - %d, %i (unsigned int): Displays an unsigned decimal integer.
-   - %x (unsigned int): Displays an unsigned hexadecimal integer.
-   - %% (none): Doesn't correspond to any additional argument, but just displays '%'.
-
-   For example, if you wanted to print the length of a given string named UwU, you could do:
-   - Printf("The length of the given string is %d.", 0x0F, Strlen(UwU));
+   This function is just the version of Printf() that uses a regular va_list; for more
+   information, please check the documentation on Printf().
 
 */
 
-void Printf(const char* String, uint8 Color, ...) {
-
-  // Prepare va_list, va_start, etc.
-  // Refer to this: https://blog.aaronballman.com/2012/06/how-variable-argument-lists-work-in-c/
-
-  va_list Arguments; // Create va_list
-  va_start(Arguments, Color); // Color is the last non-variadic argument
+void vPrintf(const char* String, uint8 Color, va_list Arguments) {
 
   // We might need to call Itoa (like if %d, %i or %x are called), so we should prepare
   // a buffer.
@@ -209,7 +190,7 @@ void Printf(const char* String, uint8 Color, ...) {
   char Buffer[16];
   Memset(Buffer, '\0', 16);
 
-  // Now, we can actually go through the string!
+  // Now, let's actually go through the string:
 
   int Position = 0;
 
@@ -276,6 +257,51 @@ void Printf(const char* String, uint8 Color, ...) {
     Position++;
 
   }
+
+}
+
+
+/* void Printf()
+
+   Inputs: const char* String - The string we want to display on the screen - there should be
+           one format specifier (%?) for each variadic argument given later on.
+
+           uint8 Color - The (VGA) color we want to display on the screen.
+
+           (...) - Any additional (variadic) arguments that we want to display on the screen,
+           if necessary. Each argument should always correspond to a format specifier in String.
+
+   Outputs: (None)
+
+   This function is similar to Print() in that it displays a string on the screen, but it
+   accepts additional formatting / variadic arguments.
+
+   Because of this, it's much more powerful than Print(), since this function allows you to
+   effortlessly display other characters, strings, integers, etc. on the screen. Each additional
+   argument must correspond to one of the following format specifiers:
+
+   - %c (const char): Displays a character.
+   - %s (const char*): Displays a string.
+   - %d, %i (unsigned int): Displays an unsigned decimal integer.
+   - %x (unsigned int): Displays an unsigned hexadecimal integer.
+   - %% (none): Doesn't correspond to any additional argument, but just displays '%'.
+
+   For example, if you wanted to print the length of a given string named UwU, you could do:
+   - Printf("The length of the given string is %d.", 0x0F, Strlen(UwU));
+
+*/
+
+void Printf(const char* String, uint8 Color, ...) {
+
+  // Prepare va_list, va_start, etc.
+  // Refer to this: https://blog.aaronballman.com/2012/06/how-variable-argument-lists-work-in-c/
+
+  va_list Arguments; // Create va_list
+  va_start(Arguments, Color); // Color is the last non-variadic argument
+
+  // Call vPrintf() - this function essentially just serves as a wrapper for that.
+
+  vPrintf(String, Color, Arguments);
 
   // Since we're done, call va_end().
 
