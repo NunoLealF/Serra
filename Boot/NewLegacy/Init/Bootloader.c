@@ -83,8 +83,7 @@ void __attribute__((noreturn)) Bootloader(void) {
   InitializeTerminal(80, 25, 0xB8000);
   ClearTerminal();
 
-  Message(Kernel, "Entered second-stage bootloader");
-  Message(Ok, "Successfully initialized the terminal (at B8000h)");
+  Message(Kernel, "Successfully entered the second-stage bootloader.");
 
   Putchar('\n', 0);
 
@@ -114,7 +113,7 @@ void __attribute__((noreturn)) Bootloader(void) {
     // already been enabled.
 
     A20_EnabledByDefault = true;
-    Message(Ok, "A20 line has already been enabled");
+    Message(Ok, "The A20 line has already been enabled.");
 
   } else {
 
@@ -124,7 +123,7 @@ void __attribute__((noreturn)) Bootloader(void) {
     // In this case, we want to try out two methods to enable the A20 line, the first of which
     // involves the 8042 keyboard controller.
 
-    Message(Kernel, "Attempting to enable the A20 line using the 8042 keyboard method");
+    Message(Kernel, "Attempting to enable the A20 line using the 8042 keyboard method.");
 
     EnableKbd_A20();
     Wait_A20();
@@ -132,7 +131,7 @@ void __attribute__((noreturn)) Bootloader(void) {
     if (Check_A20() == true) {
 
       A20_EnabledByKbd = true;
-      Message(Ok, "The A20 line has successfully been enabled");
+      Message(Ok, "The A20 line has successfully been enabled.");
 
     } else {
 
@@ -140,8 +139,8 @@ void __attribute__((noreturn)) Bootloader(void) {
       // called 'fast A20'.
       // This may crash the system, but we'll have to reset if we can't enable A20 anyways.
 
-      Message(Fail, "The A20 line was not successfully enabled");
-      Message(Kernel, "Attempting to enable the A20 line using the Fast A20 method");
+      Message(Fail, "The A20 line was not successfully enabled.");
+      Message(Kernel, "Attempting to enable the A20 line using the fast A20 method");
 
       EnableFast_A20();
       Wait_A20();
@@ -149,7 +148,7 @@ void __attribute__((noreturn)) Bootloader(void) {
       if (Check_A20() == true) {
 
         A20_EnabledByFast = true;
-        Message(Ok, "The A20 line has successfully been enabled");
+        Message(Ok, "The A20 line has successfully been enabled.");
 
       } else {
 
@@ -199,18 +198,14 @@ void __attribute__((noreturn)) Bootloader(void) {
   if (DriveNumberIsValid == true) {
 
     Message(Ok, "Successfully got the current drive number.");
-
-    Putchar('[', 0x0F); Print("Info", 0x07); Putchar(']', 0x0F);
-    Printf(" Current drive number is %xh.\n", 0x0F, DriveNumber);
+    Message(Info, "The current drive number is %xh.\n", DriveNumber);
 
   } else {
 
-    Message(Warning, "Failed to get the current drive number; setting to 80h.");
+    Message(Warning, "Failed to get the current drive number; setting it to 80h.");
     DriveNumber = 0x80;
 
   }
-
-  Putchar('\n', 0);
 
 
   // Alright; now, we want to focus on getting information from our current drive - how large
