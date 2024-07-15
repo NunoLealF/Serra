@@ -67,7 +67,7 @@ void __attribute__((noreturn)) Init(void) {
 // 7E00h -> 9E00h: 2nd stage bootloader
 // 9E00h -> AC00h: Shared real-mode code
 // AC00h -> AE00h: Shared real-mode data
-// AE00h -> 10000h: [Empty]
+// AE00h -> 10000h: [This is basically just used to test things out; treat as empty, but volatile]
 // 10000h -> 20000h: Stack
 // 20000h -> ?????h: 3rd stage bootloader
 
@@ -170,6 +170,8 @@ void __attribute__((noreturn)) Bootloader(void) {
   Putchar('\n', 0);
 
 
+
+
   // In order to be able to load things from disk, we need to know the current drive number,
   // which should (hopefully) be saved in the bootsector.
 
@@ -208,6 +210,8 @@ void __attribute__((noreturn)) Bootloader(void) {
   }
 
 
+
+
   // Alright; now, we want to focus on getting information from our current drive - how large
   // is it, how many bytes are in a sector, how should we load our data?
 
@@ -216,16 +220,12 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   // [TODO: WRITE A BETTER COMMENT, C'MON C'MON]
 
-
-
-
   // (prepare)
 
   eddDriveParameters EDD_Parameters;
 
   Memset((void*)&EDD_Parameters, sizeof(eddDriveParameters), 0);
   EDD_Parameters.Size = sizeof(eddDriveParameters);
-
 
   // (actually do it!)
 
@@ -242,7 +242,6 @@ void __attribute__((noreturn)) Bootloader(void) {
   Message(Kernel, "Preparing to get EDD/drive information.");
   RealMode();
 
-
   // (Any errors? If not, then carry on; otherwise, keep moving on with 'standard' values that
   // just hopelessly assume you have a big enough drive (and a valid BPB))
 
@@ -256,7 +255,7 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   if (EDD_Enabled == true) {
 
-    Message(Ok, "Successfully got EDD data.");
+    Message(Ok, "Successfully obtained EDD/drive data.");
 
   } else {
 
@@ -268,8 +267,25 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   }
 
-  // [TODO TODO TODO - Once you have disk stuff figured out, do a sanity check on this drive;
-  // is this drive number even valid / is there a problem with the BIOS function?]
+  // (Finally, if EDD_Enabled is false, then let's just do a quick sanity check to see if the
+  // disk read function is even working)
+
+  if (EDD_Enabled == false) {
+
+    uint16* SanityCheck = (uint16*)(0xAE00);
+    *SanityCheck = 0xE621;
+
+    Table = ReadDisk(Table, DriveNumber, 1, 0xAE00, 0);
+
+    if (hasFlag(Table->Eflags, CarryFlag) == true) {
+      Panic("Unable to successfully load data from the drive.");
+    } else if (*SanityCheck == 0xE621) {
+      Panic("Unable to successfully load data from the drive.");
+    }
+
+  }
+
+
 
 
 
@@ -277,10 +293,8 @@ void __attribute__((noreturn)) Bootloader(void) {
   // (First though, let's do a pretty quick sanity check)
 
   if (Signature != 0xAA55) {
-    Panic("Bootsector/VBR has not been loaded into memory.");
+    Panic("Bootsector/VBR hasn't been loaded into memory.");
   }
-
-
 
   // Next, let's load in the regular BPB, and see if it's even a proper FAT partition (if not,
   // then panic, since the next stage of the bootloader is a FAT file lol)
@@ -300,6 +314,7 @@ void __attribute__((noreturn)) Bootloader(void) {
   } else {
     Message(Kernel, "Successfully detected a FAT partition.");
   }
+
 
 
 
@@ -342,6 +357,7 @@ void __attribute__((noreturn)) Bootloader(void) {
 
 
 
+
   // Now that we've gone through this whole process, we can actually finally move on to
   // determining the filesystem type. It's actually relatively simple - we just need to look at
   // the number of clusters in the partition:
@@ -361,6 +377,8 @@ void __attribute__((noreturn)) Bootloader(void) {
   }
 
   Message(Info, "The current FAT partition has %d clusters (each %d bytes long).", NumClusters, (Bpb.SectorsPerCluster * Bpb.BytesPerSector));
+
+
 
 
 

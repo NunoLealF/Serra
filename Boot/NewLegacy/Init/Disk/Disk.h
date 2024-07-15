@@ -5,6 +5,10 @@
 #ifndef SERRA_DISK_H
 #define SERRA_DISK_H
 
+  // (A function to actually load data from disk)
+
+  realModeTable* ReadDisk(realModeTable* Table, uint8 DriveNumber, uint16 NumBlocks, uint64 Address, uint64 Offset);
+
   // (int 13h, ah=48h)
   // https://www.ctyme.com/intr/rb-0715.htm#Table274
 
@@ -45,6 +49,8 @@
     uint16 NumBlocks;
     uint32 Address;
     uint64 Lba;
+
+    uint64 FlatAddress;
 
   } __attribute__((packed)) eddDiskAddressPacket;
 
