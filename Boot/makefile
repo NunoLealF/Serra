@@ -194,11 +194,12 @@ Legacy/Bootloader.bin: Legacy/Bootloader.o Legacy/Exceptions.o Legacy/Cpu/Cpu.o 
 	@$(CC) $(LDFLAGS) -o Legacy/Bootloader.elf -ffreestanding -nolibc -nostdlib -lgcc $^
 	@$(OBJC) -O binary Legacy/Bootloader.elf Legacy/Bootloader.bin
 
-# Mix all of the different stages together (128 sectors, so 64KiB img)
+# Mix all of the different stages together (Minimum of 4096 sectors, for a FAT16 partition)
 
 Boot.bin: Legacy/Bootsector.bin Legacy/Bootloader.bin Legacy/Rm/Rm.bin
 	@echo "Building $@"
-	@dd if=/dev/zero of=Boot.bin bs=512 count=64 status=none
+	@dd if=/dev/zero of=Boot.bin bs=512 count=4096 status=none
 	@dd if=Legacy/Bootsector.bin of=Boot.bin conv=notrunc bs=512 count=1 seek=0 status=none
 	@dd if=Legacy/Bootloader.bin of=Boot.bin conv=notrunc bs=512 count=32 seek=64 status=none
 	@dd if=Legacy/Rm/Rm.bin of=Boot.bin conv=notrunc bs=512 count=8 seek=97 status=none
+	@mformat -i Boot.bin -k -R 32 ::

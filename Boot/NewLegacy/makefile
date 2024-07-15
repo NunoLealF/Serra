@@ -169,16 +169,20 @@ Core/Core.bin: Core/Bootloader.o
 	@$(CC) -T Core/Linker.ld $(LDFLAGS) -o Core/Core.elf -ffreestanding -nolibc -nostdlib -lgcc $^
 	@$(OBJC) -O binary Core/Core.elf Core/Core.bin
 
-# Mix all of the different stages together (128 sectors, so 64KiB img)
+# Mix all of the different stages together (4096 sectors, so, a 2MiB img)
 
 Legacy.bin: Bootsector/Bootsector.bin Init/Init.bin Shared/Rm/Rm.bin Core/Core.bin
 
 	@echo "Building $@"
-	@dd if=/dev/zero of=Legacy.bin bs=512 count=128 status=none
+	@dd if=/dev/zero of=Legacy.bin bs=512 count=4096 status=none
 
 	@dd if=Bootsector/Bootsector.bin of=Legacy.bin conv=notrunc bs=512 count=1 seek=0 status=none
 	@dd if=Init/Init.bin of=Legacy.bin conv=notrunc bs=512 count=16 seek=8 status=none
 	@dd if=Shared/Rm/Rm.bin of=Legacy.bin conv=notrunc bs=512 count=8 seek=24 status=none
 	@dd if=Core/Core.bin of=Legacy.bin conv=notrunc bs=512 count=64 seek=64 status=none
 
-# (Add something to do with the filesystem?)
+# (This formats it as a valid FAT16 filesystem while keeping the non-BPB part of the bootsector;
+# that being said, *it's a temporary solution*, since we'll eventually need to merge the
+# legacy and EFI code)
+
+	@mformat -i Legacy.bin -k -R 32 ::

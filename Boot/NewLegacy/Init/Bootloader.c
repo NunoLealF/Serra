@@ -293,14 +293,51 @@ void __attribute__((noreturn)) Bootloader(void) {
   // We don't need to load anything with the disk functions (yet!) since it's all in the
   // bootsector, which is *guaranteed* to be at 7C00h.
 
-  // [TODO - This is also guaranteed to fail miserably because *there isn't an actual FAT
-  // partition yet*, let me modify the makefile lmao.]
-
   biosParameterBlock Bpb = *(biosParameterBlock*)(0x7C00 + 3);
+
+  Putchar('\n', 0);
 
   if (Bpb.BytesPerSector == 0) {
     Panic("Failed to detect a FAT16 or FAT32 partition.");
+  } else {
+    Message(Kernel, "Successfully detected a FAT16 or FAT32 partition.");
   }
+
+  // (show data)
+
+  Printf("\nIdentifier: \"", 0x07);
+
+  for (int i = 7; i >= 0; i--) {
+
+    if (Bpb.Identifier[i] < 0x10) {
+      Putchar('0', 0x07);
+    }
+
+    Printf("%x", 0x07, Bpb.Identifier[i]);
+
+    if (i > 0) {
+      Putchar(' ', 0x07);
+    }
+
+  }
+
+  Printf("\"\n", 0x07);
+
+  Printf("Bytes per sector (!): %d\n", 0x07, Bpb.BytesPerSector);
+  Printf("Sectors per cluster: %d\n", 0x07, Bpb.SectorsPerCluster);
+  Printf("Reserved sectors: %d\n\n", 0x07, Bpb.ReservedSectors);
+
+  Printf("Number of FATs: %d\n", 0x07, Bpb.NumFileAllocationTables);
+  Printf("Number of root directory entries: %d\n\n", 0x07, Bpb.NumRootEntries);
+
+  Printf("Number of sectors (FAT16): %d\n", 0x07, Bpb.NumSectors);
+  Printf("Media descriptor type: %x\n", 0x07, Bpb.MediaDescriptorType);
+  Printf("Sectors per FAT: %d\n", 0x07, Bpb.SectorsPerFat);
+  Printf("Sectors per track (!): %d\n", 0x07, Bpb.SectorsPerTrack);
+  Printf("Number of physical heads (!): %d\n\n", 0x07, Bpb.NumPhysicalHeads);
+
+  Printf("Hidden sectors: %d\n", 0x07, Bpb.HiddenSectors);
+  Printf("Number of sectors (FAT32): %d\n", 0x07, Bpb.NumSectors_Large);
 
 
 
