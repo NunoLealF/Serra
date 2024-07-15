@@ -46,6 +46,8 @@ realModeTable* ReadDisk(uint8 DriveNumber, uint16 NumBlocks, uint32 Address, uin
   // Now, we want to prepare to actually read from disk - specifically, we'll be using the
   // BIOS function (int 13h, ah 42h).
 
+  realModeTable* Table = InitializeRealModeTable();
+
   Table->Eax = (0x42 << 8);
   Table->Edx = DriveNumber;
 
