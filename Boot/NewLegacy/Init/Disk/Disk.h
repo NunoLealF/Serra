@@ -35,44 +35,88 @@
 
   } __attribute__((packed)) eddDriveParameters;
 
-  /*
+  // An EDD disk address packet
 
-    Format of IBM/MS INT 13 Extensions drive parameters:
+  typedef volatile struct {
 
-  Offset  Size    Description     (Table 00273)
-  00h    WORD    (call) size of buffer
-  (001Ah for v1.x, 001Eh for v2.x, 42h for v3.0)
-  (ret) size of returned data
-  02h    WORD    information flags (see #00274)
-  04h    DWORD   number of physical cylinders on drive
-  08h    DWORD   number of physical heads on drive
-  0Ch    DWORD   number of physical sectors per track
-  10h    QWORD   total number of sectors on drive
-  18h    WORD    bytes per sector
-  ---v2.0+ ---
-  1Ah    DWORD   -> EDD configuration parameters (see #00278)
-  FFFFh:FFFFh if not available
-  ---v3.0 ---
-  1Eh    WORD    signature BEDDh to indicate presence of Device Path info
-  20h    BYTE    length of Device Path information, including signature and this
-  byte (24h for v3.0)
-  21h  3 BYTEs   reserved (0)
-  24h  4 BYTEs   ASCIZ name of host bus ("ISA" or "PCI")
-  28h  8 BYTEs   ASCIZ name of interface type
-  "ATA"
-  "ATAPI"
-  "SCSI"
-  "USB"
-  "1394" IEEE 1394 (FireWire)
-  "FIBRE" Fibre Channel
-  30h  8 BYTEs   Interface Path (see #00275)
-  38h  8 BYTEs   Device Path (see #00276)
-  40h    BYTE    reserved (0)
-  41h    BYTE    checksum of bytes 1Eh-40h (two's complement of sum, which makes
-  the 8-bit sum of bytes 1Eh-41h equal 00h)
+    uint8 Size;
+    uint8 Reserved;
 
-  */
+    uint16 NumBlocks;
+    uint32 Address;
+    uint64 Lba;
 
-  // (Todo: other functions)
+  } __attribute__((packed)) eddDiskAddressPacket;
+
+
+
+  // The BIOS parameter block; the first part is universal for FAT16/FAT32, then there's
+  // different structures depending on whether it's FAT16 or FAT32.
+
+  typedef volatile struct {
+
+    uint8 Identifier[8]; // OEM identifier
+
+    uint16 BytesPerSector; // How many bytes per sector? (MAY BE UNRELIABLE, DON'T TRUST UNLESS NECESSARY)
+    uint8 SectorsPerCluster; // How many sectors are in a FAT cluster?
+    uint16 ReservedSectors; // How many sectors are reserved *from the start of this partition*?
+
+    uint8 NumFileAllocationTables; // How many FATs are on this partition?
+    uint16 NumRootEntries; // How many root directory entries are on this partition?
+
+    uint16 NumSectors; // The number of sectors on this partition (FAT16 ONLY)
+    uint8 MediaDescriptorType; // The media descriptor type of the drive with this partition.
+    uint16 SectorsPerFat; // The number of sectors per FAT (FAT16 ONLY)
+    uint16 SectorsPerTrack; // The number of sectors per track (MAY BE UNRELIABLE, DON'T TRUST UNLESS NECESSARY)
+    uint16 NumPhysicalHeads; // The number of heads on the drive with this partition (MAY BE UNRELIABLE, DON'T TRUST UNLESS NECESSARY)
+
+    uint32 HiddenSectors; // The number of hidden sectors - *in practice, this is the starting LBA of this partition*
+    uint32 NumSectors_Large; // The number of sectors on this partition, but for sector counts above 2^16 (FAT32 ONLY)
+
+  } __attribute__((packed)) biosParameterBlock;
+
+
+
+  // (extended BPB / extended boot record, for FAT16)
+
+  typedef volatile struct {
+
+    uint8 DriveNumber; // The drive number of the current media/drive (VERY UNRELIABLE, DON'T TRUST UNLESS NECESSARY)
+    uint8 NtFlags; // Flags, reserved for use by some operating systems
+    uint8 Signature; // The signature; this has to be either 28h or 29h for some systems to boot.
+
+    uint8 VolumeSerial[4]; // The 'serial number' of this volume ID, this can basically be ignored.
+    uint8 VolumeID[11]; // The actual ID of the volume in question (padded with spaces, NOT nulls)
+    uint8 Identifier[8]; // The system identifier string, also padded with spaces (TODO: is it the same as the first entry in the regular bpb (identifier[8])??)
+
+  } __attribute__((packed)) biosParameterBlock_Fat16;
+
+
+
+  // (extended BPB / extended boot record, for FAT32)
+
+  typedef volatile struct {
+
+    uint32 NumSectors; // The number of sectors on this partition (replaces the entry in the BPB)
+    uint16 Flags; // Just.. flags (I need a proper copy of the FAT32 spec)
+    uint16 Version; // The FAT32 version of this partition
+
+    uint32 RootCluster; // The cluster of the root directory
+    uint16 FsInfoSector; // The sector number of the FSInfo structure
+    uint16 BackupSector; // The sector number of the backup bootsector/VBR
+
+    uint8 Reserved[12]; // Reserved for later..
+
+    uint8 DriveNumber; // The drive number of the current media/drive (VERY UNRELIABLE, DON'T TRUST UNLESS NECESSARY)
+    uint8 NtFlags; // Flags, reserved for use by some operating systems
+    uint8 Signature; // The signature; this has to be either 28h or 29h for some systems to boot.
+
+    uint8 VolumeSerial[4]; // The 'serial number' of this volume ID, this can basically be ignored.
+    uint8 VolumeID[11]; // The actual ID of the volume in question (padded with spaces, NOT nulls)
+    uint8 Identifier[8]; // The identifier string; in this case, it's actually "FAT32   " (again, padded with spaces).
+
+  } __attribute__((packed)) biosParameterBlock_Fat32;
+
+
 
 #endif

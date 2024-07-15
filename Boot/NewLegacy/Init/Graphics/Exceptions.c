@@ -101,10 +101,8 @@ void __attribute__((noreturn)) Panic(char* String) {
   // Finally, tell the user that the system will halt indefinitely (and that they should
   // probably restart their computer), and then do exactly that.
 
-  Putchar('\n', 0);
-
-  Print("An error has occured, and this system will now halt indefinitely.\n", 0x0F);
-  Print("Please restart your computer.\n", 0x0F);
+  Print("An error has occured, and this system will now halt indefinitely.\n", 0x07);
+  Print("Please restart your computer.\n", 0x07);
 
   for(;;) {
     __asm__("cli; hlt");

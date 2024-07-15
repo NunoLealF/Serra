@@ -216,12 +216,10 @@ void __attribute__((noreturn)) Bootloader(void) {
   // Alright; now, we want to focus on getting information from our current drive - how large
   // is it, how many bytes are in a sector, how should we load our data?
 
-  // We can get this information using the BIOS interrupt (int 13h, ah 48h), which should
-  // theoretically return a table in [ds:si] for the drive in the dl register:
+  // We can get this information using the BIOS function (int 13h, ah 48h), which should
+  // (theoretically) return a table in [ds:si] for the drive in the dl register:
 
   // [TODO: WRITE A BETTER COMMENT, C'MON C'MON]
-
-
 
 
 
@@ -275,21 +273,34 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   }
 
-  // (Show info.. (debug))
+  // [TODO TODO TODO - Once you have disk stuff figured out, do a sanity check on this drive;
+  // is this drive number even valid / is there a problem with the BIOS function?]
 
-  /*
 
-  Putchar('\n', 0);
 
-  Printf("Size -> %d\n", 0x07, EDD_Parameters.Size);
-  Printf("Flags -> %x\n", 0x07, EDD_Parameters.Flags);
-  Printf("Physical cylinders -> %d\n", 0x07, EDD_Parameters.NumPhysicalCylinders);
-  Printf("Physical heads -> %d\n", 0x07, EDD_Parameters.NumPhysicalHeads);
-  Printf("Physical sectors -> %d\n", 0x07, EDD_Parameters.NumPhysicalSectors);
-  Printf("Number of sectors (truncated to 32-bit) -> %d\n", 0x07, (uint64)EDD_Parameters.NumSectors);
-  Printf("Bytes per sector -> %d\n", 0x07, EDD_Parameters.BytesPerSector);
+  // Okay; now, let's load data from the BPB.
+  // (First though, let's do a pretty quick sanity check)
 
-  */
+  if (Signature != 0xAA55) {
+    Panic("Bootsector/VBR has not been loaded into memory.");
+  }
+
+
+
+  // Next, let's load in the regular BPB, and see if it's even a proper FAT partition (if not,
+  // then panic, since the next stage of the bootloader is a FAT file lol)
+
+  // We don't need to load anything with the disk functions (yet!) since it's all in the
+  // bootsector, which is *guaranteed* to be at 7C00h.
+
+  // [TODO - This is also guaranteed to fail miserably because *there isn't an actual FAT
+  // partition yet*, let me modify the makefile lmao.]
+
+  biosParameterBlock Bpb = *(biosParameterBlock*)(0x7C00 + 3);
+
+  if (Bpb.BytesPerSector == 0) {
+    Panic("Failed to detect a FAT16 or FAT32 partition.");
+  }
 
 
 
@@ -308,7 +319,7 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   Putchar('\n', 0);
 
-  Printf("Hi, this is Serra! <3\n", 0x0F);
+  Printf("Hiya, this is Serra! <3\n", 0x0F);
   Printf("July %i %x\n", 0x3F, 15, 0x2024);
 
   for(;;);
