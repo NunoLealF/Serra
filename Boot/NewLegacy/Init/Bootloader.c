@@ -275,7 +275,7 @@ void __attribute__((noreturn)) Bootloader(void) {
     uint16* SanityCheck = (uint16*)(0xAE00);
     *SanityCheck = 0xE621;
 
-    Table = ReadDisk(Table, DriveNumber, 1, 0xAE00, 0);
+    Table = ReadDisk(DriveNumber, 1, 0xAE00, 0);
 
     if (hasFlag(Table->Eflags, CarryFlag) == true) {
       Panic("Unable to successfully load data from the drive.");
@@ -284,8 +284,6 @@ void __attribute__((noreturn)) Bootloader(void) {
     }
 
   }
-
-
 
 
 

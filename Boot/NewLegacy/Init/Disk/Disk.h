@@ -5,41 +5,36 @@
 #ifndef SERRA_DISK_H
 #define SERRA_DISK_H
 
-  // (A function to actually load data from disk)
+  // Disk-related functions. (Disk.c)
 
-  realModeTable* ReadDisk(realModeTable* Table, uint8 DriveNumber, uint16 NumBlocks, uint64 Address, uint64 Offset);
+  realModeTable* ReadDisk(uint8 DriveNumber, uint16 NumBlocks, uint32 Address, uint64 Offset);
 
-  // (int 13h, ah=48h)
-  // https://www.ctyme.com/intr/rb-0715.htm#Table274
 
-  // (We'll only actually work with / implement EDD 1.x, but just in case, we'll also reserve
-  // space for EDD 2.x / EDD 3.x)
+  // EDD (Enhanced Disk Drive)-related data structures. (Used in multiple files, defined here)
 
   typedef volatile struct {
 
-    // [EDD 1.x, safe to use in any version]
+    // [EDD 1.x]
 
-    uint16 Size; // Call size of the buffer. (ALSO, SET THIS TO AT LEAST 42H FIRST!!)
-    uint16 Flags; // Flags, see #0274
+    uint16 Size; // (The call size of the buffer; *always set this first*)
+    uint16 Flags; // (Information flags)
 
-    uint32 NumPhysicalCylinders; // Number of physical cylinders
-    uint32 NumPhysicalHeads; // Number of physical heads
-    uint32 NumPhysicalSectors; // Number of physical sectors *per track*
+    uint32 NumPhysicalCylinders; // (The number of physical cylinders on the drive)
+    uint32 NumPhysicalHeads; // (The number of physical heads on the drive)
+    uint32 NumPhysicalSectors; // (The number of physical sectors on the drive)
 
-    uint64 NumSectors; // Total number of sectors on the drive
-    uint16 BytesPerSector; // Number of bytes per sector (can be 512, 2048, etc.!)
+    uint64 NumSectors; // (The total number of sectors on the entire drive)
+    uint16 BytesPerSector; // (The number of bytes per sector; usually 512, but not always!)
 
-    // [EDD 2.x, not safe for versions below]
+    // [EDD 2.x]
 
-    uint8 Edd2_Data[4]; // Table #00278, or just FFFFFFFF if not available (?)
+    uint8 Edd2_Data[4]; // (Unused)
 
-    // [EDD 3.x, not safe for versions below]
+    // [EDD 3.x]
 
-    uint8 Edd3_Data[36]; // ...
+    uint8 Edd3_Data[36]; // (Unused)
 
   } __attribute__((packed)) eddDriveParameters;
-
-  // An EDD disk address packet
 
   typedef volatile struct {
 
@@ -55,9 +50,7 @@
   } __attribute__((packed)) eddDiskAddressPacket;
 
 
-
-  // The BIOS parameter block; the first part is universal for FAT16/FAT32, then there's
-  // different structures depending on whether it's FAT16 or FAT32.
+  // BPB (BIOS Parameter Block)-related data structures. (Used in multiple files, defined here)
 
   typedef volatile struct {
 
@@ -81,10 +74,6 @@
 
   } __attribute__((packed)) biosParameterBlock;
 
-
-
-  // (extended BPB / extended boot record, for FAT16)
-
   typedef volatile struct {
 
     uint8 DriveNumber; // The drive number of the current media/drive (VERY UNRELIABLE, DON'T TRUST UNLESS NECESSARY)
@@ -96,10 +85,6 @@
     uint8 Identifier[8]; // The system identifier string, also padded with spaces (TODO: is it the same as the first entry in the regular bpb (identifier[8])??)
 
   } __attribute__((packed)) biosParameterBlock_Fat16;
-
-
-
-  // (extended BPB / extended boot record, for FAT32)
 
   typedef volatile struct {
 
@@ -122,7 +107,5 @@
     uint8 Identifier[8]; // The identifier string; in this case, it's actually "FAT32   " (again, padded with spaces).
 
   } __attribute__((packed)) biosParameterBlock_Fat32;
-
-
 
 #endif
