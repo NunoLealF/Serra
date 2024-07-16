@@ -11,6 +11,7 @@
 
   // Filesystem-related functions. (Disk.c)
 
+  #define GetClusterOffset(ClusterNum, SectorsPerCluster, FirstDataSector) (((ClusterNum - 2) * SectorsPerCluster) + FirstDataSector)
   uint16 GetFat16_Entry(uint8 DriveNumber, uint16 ClusterNum, uint16 Edd_BytesPerSector, uint16 Fat_BytesPerSector, uint32 PartitionOffset, uint32 FatOffset);
   uint32 GetFat32_Entry(uint8 DriveNumber, uint32 ClusterNum, uint16 Edd_BytesPerSector, uint16 Fat_BytesPerSector, uint32 PartitionOffset, uint32 FatOffset);
 

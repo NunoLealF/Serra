@@ -67,8 +67,6 @@ realModeTable* ReadDisk(uint8 DriveNumber, uint16 NumBlocks, uint64 Address, uin
 }
 
 
-
-
 // A function that loads the corresponding FAT entry of a cluster, and returns the specific
 // cluster value.
 

@@ -189,8 +189,8 @@ void __attribute__((noreturn)) Bootloader(void) {
   uint16 Signature = *(uint16*)(0x7E00 - 2);
 
   if (Signature != 0xAA55) {
-    DriveNumberIsValid = false;
-  } else if (DriveNumber < 0x80) {
+    Panic("Bootsector/VBR hasn't been loaded into memory.");
+  } else if (DriveNumber == 0x00) {
     DriveNumberIsValid = false;
   }
 
@@ -287,15 +287,8 @@ void __attribute__((noreturn)) Bootloader(void) {
 
 
 
-  // Okay; now, let's load data from the BPB.
-  // (First though, let's do a pretty quick sanity check)
-
-  if (Signature != 0xAA55) {
-    Panic("Bootsector/VBR hasn't been loaded into memory.");
-  }
-
-  // Next, let's load in the regular BPB, and see if it's even a proper FAT partition (if not,
-  // then panic, since the next stage of the bootloader is a FAT file lol)
+  // Finally, let's load in the regular BPB, and see if it's even a proper FAT partition (if
+  // not, then panic, since the next stage of the bootloader is a FAT file lol)
 
   // We don't need to load anything with the disk functions (yet!) since it's all in the
   // bootsector, which is *guaranteed* to be at 7C00h.
@@ -355,7 +348,6 @@ void __attribute__((noreturn)) Bootloader(void) {
 
 
 
-
   // Now that we've gone through this whole process, we can actually finally move on to
   // determining the filesystem type. It's actually relatively simple - we just need to look at
   // the number of clusters in the partition:
@@ -380,17 +372,30 @@ void __attribute__((noreturn)) Bootloader(void) {
 
 
 
-  // I checked the ELF file this was giving me with objdump; basically, there's about 5.4
-  // sectors worth of space left (specifically, exactly 2756 bytes).
+  // Now that we know the partition type, we can get the cluster (and the first sector of) the
+  // root directory, like this:
 
-  // A pretty significant portion of that space (about 1316 bytes!) is occupied by the .rodata
-  // section, so it's probably a good idea to cut down on error/string sizes (along with some
-  // function sizes)
+  uint32 RootClusterOffset;
+  uint32 RootSectorOffset;
 
-  // That being said, the most important thing we can do right now is to just focus on actually
-  // *loading* the next stage of the bootloader, nothing more. (At the very least, from what
-  // I've seen, it seems like there isn't much left to do)
+  if (PartitionIsFat32 == false) {
+    RootClusterOffset = 2;
+  } else {
+    RootClusterOffset = Extended_Bpb32.RootCluster;
+  }
 
+  RootSectorOffset = GetClusterOffset(RootClusterOffset, Bpb.SectorsPerCluster, DataSectorOffset);
+
+
+  // Now that we've found the cluster number, we can try to read something using GetFat16_Entry()
+
+  uint16 Test = GetFat16_Entry(DriveNumber, RootClusterOffset, EDD_Parameters.BytesPerSector, Bpb.BytesPerSector, Bpb.HiddenSectors, Bpb.ReservedSectors);
+
+  Printf("\nTesting out GetFat16_Entry(); cluster number \'%d\' -> FAT entry \'%x\'\n", 0x03, RootClusterOffset, Test);
+
+
+  // There's only like 1.5KiB of code space left, jesus, I better get this over with quickly
+  // haha
 
   // [A few things to keep in mind]
 
@@ -408,7 +413,7 @@ void __attribute__((noreturn)) Bootloader(void) {
   Putchar('\n', 0);
 
   Printf("Hiya, this is Serra! <3\n", 0x0F);
-  Printf("July %i %x\n", 0x3F, 15, 0x2024);
+  Printf("July %i %x\n", 0x3F, 16, 0x2024);
 
   for(;;);
 
