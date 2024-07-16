@@ -393,17 +393,6 @@ void __attribute__((noreturn)) Bootloader(void) {
     RootCluster = Extended_Bpb32.RootCluster;
   }
 
-
-  // (test)
-
-
-
-  Putchar('\n', 0);
-  Message(Info, "Test: cluster number %d becomes %xh", 0, GetFatEntry(0, Bpb.HiddenSectors, Bpb.ReservedSectors, PartitionIsFat32));
-  Message(Info, "Test: cluster number %d becomes %xh", 1, GetFatEntry(1, Bpb.HiddenSectors, Bpb.ReservedSectors, PartitionIsFat32));
-  Message(Info, "Test: cluster number %d becomes %xh", RootCluster, GetFatEntry(RootCluster, Bpb.HiddenSectors, Bpb.ReservedSectors, PartitionIsFat32));
-  Message(Info, "Test: cluster number %d becomes %xh", 3, GetFatEntry(3, Bpb.HiddenSectors, Bpb.ReservedSectors, PartitionIsFat32));
-
   // Okay, we have RootSectorOffset, all that's really left to do now is to just follow the
   // cluster chain(s), and find Boot/Serra.bin.
 
@@ -413,7 +402,16 @@ void __attribute__((noreturn)) Bootloader(void) {
   // (Test: Try to use FindDirectory() to find Core.bin, which should be in the root folder,
   // hopefully)
 
-  uint32 Core = FindDirectory(RootCluster, Bpb.SectorsPerCluster, Bpb.HiddenSectors, Bpb.ReservedSectors, DataSectorOffset, "CORE    ", "BIN", false, PartitionIsFat32);
+  // This *does* work actually, but there's a bit of a problem - it's.. not really reading from
+  // the right place? It's starting right off at the data itself, but..
+
+  uint32 RootSectorOffset = DataSectorOffset;
+
+  if (PartitionIsFat32 == false) {
+    RootSectorOffset -= NumRootSectors;
+  }
+
+  uint32 Core = FindDirectory(RootCluster, Bpb.SectorsPerCluster, Bpb.HiddenSectors, Bpb.ReservedSectors, RootSectorOffset, "CORE    ", "BIN", false, PartitionIsFat32);
 
   Printf("Core.bin (cluster number): %x\n", 0x03, Core);
 

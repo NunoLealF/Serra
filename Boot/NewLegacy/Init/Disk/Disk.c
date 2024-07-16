@@ -164,10 +164,45 @@ uint32 GetFatEntry(uint32 ClusterNum, uint32 PartitionOffset, uint32 FatOffset, 
 }
 
 
+// This function just compares a name in a
+
+static bool FatNameIsEqual(int8 EntryName[8], int8 EntryExtension[3], char Name[8], char Extension[3], bool IsFolder) {
+
+  // Compare the filename..
+
+  for (int i = 0; i < 8; i++) {
+
+    if (EntryName[i] != Name[i]) {
+      return false;
+    }
+
+  }
+
+  if (IsFolder == true) {
+    return true;
+  }
+
+  // Compare the extension..
+
+  for (int j = 0; j < 3; j++) {
+
+    if (EntryExtension[j] != Extension[j]) {
+      return false;
+    }
+
+  }
+
+  // If all of these passed without a problem, return true.
+
+  return true;
+
+}
+
+
 // A function that searches through a given cluster (chain) to find a specific file or
 // directory.
 
-#define ExceedsLimit(Cluster, Limit) ((Cluster & 0x0FFFFFFF) >= Limit)
+#define ExceedsLimit(Cluster, Limit) ((Cluster & 0x0FFFFFFF) < Limit)
 
 uint32 FindDirectory(uint32 ClusterNum, uint8 SectorsPerCluster, uint32 PartitionOffset, uint32 FatOffset, uint32 DataOffset, char Name[8], char Extension[3], bool IsFolder, bool IsFat32) {
 
@@ -207,17 +242,37 @@ uint32 FindDirectory(uint32 ClusterNum, uint8 SectorsPerCluster, uint32 Partitio
         // if it is, then that means we've already reached the last entry in the entire
         // cluster, so we can safely jump out of the loop.
 
-        fatDirectory* Entry = (fatDirectory*)(&ClusterCache[EntryNum * 32]);
+        fatDirectory Entry = *(fatDirectory*)(&ClusterCache[EntryNum * 32]);
 
-        if (Entry->Name[0] == 0x00) {
+        if (Entry.Name[0] == 0x00) {
           goto Cleanup;
         }
+
+        // Also, if this is a long filename entry, we can just skip forward:
+
+        if ((Entry.Attributes & 0x0F) == 0x0F) {
+          continue;
+        }
+
+        // (show data..)
+
+        Printf("[Debug] Found a file \"", 0x03);
+
+        for (int i = 0; i < 8; i++) {
+          Putchar(Entry.Name[i], 0x07);
+        }
+        Putchar('.', 0x07);
+        for (int j = 0; j < 3; j++) {
+          Putchar(Entry.Extension[j], 0x07);
+        }
+
+        Printf("\" with attributes %xh and on address %xh\n", 0x03, Entry.Attributes, (((PartitionOffset + DataOffset + SectorNum) * LogicalSectorSize) + (EntryNum * 32)));
 
         // Next, we want to see if the type matches - essentially, if we're looking for a
         // file, skip through all folders, and if we're looking for a folder, skip through
         // all files.
 
-        bool EntryIsFolder = ((Entry->Attributes & 0x10) != 0);
+        bool EntryIsFolder = ((Entry.Attributes & 0x10) != 0);
 
         if (EntryIsFolder != IsFolder) {
           continue;
@@ -227,13 +282,10 @@ uint32 FindDirectory(uint32 ClusterNum, uint8 SectorsPerCluster, uint32 Partitio
         // looking at, and the 'target' entry that we're looking for. If it matches, then
         // we can exit out of this whole process, and return the cluster in that entry!
 
-        int NameMatches = Memcmp((void*)&Entry->Name, &Name, 8);
-        int ExtensionMatches = Memcmp((void*)&Entry->Extension, &Extension, 8);
-
-        if ((NameMatches == 0) && (ExtensionMatches == 0)) {
+        if (FatNameIsEqual(Entry.Name, Entry.Extension, Name, Extension, IsFolder) == true) {
 
           FoundDirectory = true;
-          CurrentCluster = ((Entry->ClusterNum_High << 16) + Entry->ClusterNum_Low);
+          CurrentCluster = ((Entry.ClusterNum_High << 16) + Entry.ClusterNum_Low);
 
           goto Cleanup;
 
@@ -260,7 +312,7 @@ uint32 FindDirectory(uint32 ClusterNum, uint8 SectorsPerCluster, uint32 Partitio
 
     }
 
-  } while ((FoundDirectory == false) && (ExceedsLimit(CurrentCluster, Limit) == false));
+  } while ((FoundDirectory == false) && ExceedsLimit(CurrentCluster, Limit));
 
   // Now, all we need to do is to return the current cluster. If no file or directory
   // matches the one we're looking for, then we'll return something above the limit; otherwise,
@@ -269,7 +321,7 @@ uint32 FindDirectory(uint32 ClusterNum, uint8 SectorsPerCluster, uint32 Partitio
   if (FoundDirectory == true) {
     return CurrentCluster;
   } else {
-    return ++Limit;
+    return Limit;
   }
 
 }
