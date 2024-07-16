@@ -70,13 +70,17 @@ realModeTable* ReadDisk(uint8 DriveNumber, uint16 NumBlocks, uint64 Address, uin
 // A function that loads the corresponding FAT entry of a cluster, and returns the specific
 // cluster value.
 
-uint16 GetFat16_Entry(uint8 DriveNumber, uint16 ClusterNum, uint16 Edd_BytesPerSector, uint16 Fat_BytesPerSector, uint32 PartitionOffset, uint32 FatOffset) {
+uint32 GetFatEntry(uint8 DriveNumber, uint16 ClusterNum, uint16 Edd_BytesPerSector, uint16 Fat_BytesPerSector, uint32 PartitionOffset, uint32 FatOffset, bool IsFat32) {
 
   // First, we want to figure out the sector/LBA of the FAT entry that we're looking for,
   // along with the offset.
 
   // That being said, because sector sizes often vary between what the BPB uses and what our
   // system (or, at least, the EDD functions) use, we'll be converting between sector sizes.
+
+  if (IsFat32 == true) {
+    ClusterNum *= 2;
+  }
 
   uint32 SectorOffset = (PartitionOffset + FatOffset + ((ClusterNum * 2) / Fat_BytesPerSector));
   uint16 EntryOffset = (ClusterNum * 2);
@@ -109,54 +113,14 @@ uint16 GetFat16_Entry(uint8 DriveNumber, uint16 ClusterNum, uint16 Edd_BytesPerS
     return 0;
   }
 
-  uint16 ClusterEntry = *(uint16*)(&FatBuffer[EntryOffset]);
-  return ClusterEntry;
+  uint32 ClusterEntry;
 
-}
-
-
-// This is essentially the same, but for FAT32
-
-uint32 GetFat32_Entry(uint8 DriveNumber, uint32 ClusterNum, uint16 Edd_BytesPerSector, uint16 Fat_BytesPerSector, uint32 PartitionOffset, uint32 FatOffset) {
-
-  // First, we want to figure out the sector/LBA of the FAT entry that we're looking for,
-  // along with the offset.
-
-  // That being said, because sector sizes often vary between what the BPB uses and what our
-  // system (or, at least, the EDD functions) use, we'll be converting between sector sizes.
-
-  uint32 SectorOffset = (PartitionOffset + FatOffset + ((ClusterNum * 4) / Fat_BytesPerSector));
-  uint16 EntryOffset = (ClusterNum * 4);
-
-  if (Edd_BytesPerSector < Fat_BytesPerSector) {
-
-    SectorOffset *= (Fat_BytesPerSector / Edd_BytesPerSector);
-    SectorOffset += ((EntryOffset % Fat_BytesPerSector) / Edd_BytesPerSector);
-
-  } else if (Edd_BytesPerSector > Fat_BytesPerSector) {
-
-    SectorOffset /= (Edd_BytesPerSector / Fat_BytesPerSector);
-
+  if (IsFat32 == false) {
+    ClusterEntry = *(uint16*)(&FatBuffer[EntryOffset]);
+  } else {
+    ClusterEntry = *(uint32*)(&FatBuffer[EntryOffset]);
   }
 
-  EntryOffset %= Edd_BytesPerSector;
-
-  // Next, we want to create a temporary buffer (with the same size as one sector), and then
-  // load that part of the FAT onto it:
-
-  uint8 FatBuffer[Edd_BytesPerSector];
-  Memset(&FatBuffer[0], '\0', Edd_BytesPerSector);
-
-  realModeTable* Table = ReadDisk(DriveNumber, 1, (uint32)FatBuffer, SectorOffset);
-
-  // Finally, we want to see if it succeeded, and if it did, return the corresponding entry
-  // from the FAT; otherwise, return zero.
-
-  if (hasFlag(Table->Eflags, CarryFlag)) {
-    return 0;
-  }
-
-  uint32 ClusterEntry = *(uint32*)(&FatBuffer[EntryOffset]);
   return ClusterEntry;
 
 }

@@ -389,9 +389,7 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   // Now that we've found the cluster number, we can try to read something using GetFat16_Entry()
 
-  uint16 Test = GetFat16_Entry(DriveNumber, RootClusterOffset, EDD_Parameters.BytesPerSector, Bpb.BytesPerSector, Bpb.HiddenSectors, Bpb.ReservedSectors);
-
-  Printf("\nTesting out GetFat16_Entry(); cluster number \'%d\' -> FAT entry \'%x\'\n", 0x03, RootClusterOffset, Test);
+  Printf("\nTesting out GetFatEntry(); cluster number \'%d\' -> FAT entry \'%x\'\n", 0x03, RootClusterOffset, GetFatEntry(DriveNumber, RootClusterOffset, EDD_Parameters.BytesPerSector, Bpb.BytesPerSector, Bpb.HiddenSectors, Bpb.ReservedSectors, PartitionIsFat32));
 
 
   // There's only like 1.5KiB of code space left, jesus, I better get this over with quickly
