@@ -275,7 +275,7 @@ void __attribute__((noreturn)) Bootloader(void) {
     uint16* SanityCheck = (uint16*)(0xAE00);
     *SanityCheck = 0xE621;
 
-    Table = ReadDisk(1, 0xAE00, 0);
+    Table = ReadSector(1, 0xAE00, 0);
 
     if (hasFlag(Table->Eflags, CarryFlag) == true) {
       Panic("Unable to successfully load data from the drive.");
@@ -340,7 +340,7 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   // -> The number of root sectors (if the filesystem is FAT32, then this is always zero);
 
-  uint32 NumRootSectors = ((Bpb.NumRootEntries * 32) + (Bpb.BytesPerSector - 1)) / Bpb.BytesPerSector;
+  uint32 NumRootSectors = ((Bpb.NumRootEntries * 32) + (LogicalSectorSize - 1)) / LogicalSectorSize;
 
   // -> The position of the first data sector (relative to the start of the partition), along
   // with the number of data (non-reserved + non-FAT) sectors in the partition.
@@ -377,7 +377,7 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   }
 
-  Message(Info, "The current FAT partition has %d clusters (each %d bytes long).", NumClusters, (Bpb.SectorsPerCluster * Bpb.BytesPerSector));
+  Message(Info, "The current FAT partition has %d clusters (each %d bytes long).", NumClusters, (Bpb.SectorsPerCluster * LogicalSectorSize));
 
 
 

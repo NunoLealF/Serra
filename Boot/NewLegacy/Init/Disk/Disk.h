@@ -12,7 +12,8 @@
   extern uint16 LogicalSectorSize;
   extern uint16 PhysicalSectorSize;
 
-  realModeTable* ReadDisk(uint16 NumBlocks, uint64 Address, uint64 Offset);
+  realModeTable* ReadSector(uint16 NumBlocks, uint64 Address, uint64 Offset);
+  realModeTable* ReadLogicalSector(uint16 NumBlocks, uint64 Address, uint32 Lba);
 
   // Filesystem-related functions. (Disk.c)
 
