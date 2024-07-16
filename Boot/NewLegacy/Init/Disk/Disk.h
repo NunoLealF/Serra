@@ -5,14 +5,20 @@
 #ifndef SERRA_DISK_H
 #define SERRA_DISK_H
 
-  // Disk-related functions. (Disk.c)
+  // Disk-related functions and variables. (Disk.c)
 
-  realModeTable* ReadDisk(uint8 DriveNumber, uint16 NumBlocks, uint64 Address, uint64 Offset);
+  extern uint8 DriveNumber;
+
+  extern uint16 LogicalSectorSize;
+  extern uint16 PhysicalSectorSize;
+
+  realModeTable* ReadDisk(uint16 NumBlocks, uint64 Address, uint64 Offset);
 
   // Filesystem-related functions. (Disk.c)
 
   #define GetClusterOffset(ClusterNum, SectorsPerCluster, FirstDataSector) (((ClusterNum - 2) * SectorsPerCluster) + FirstDataSector)
-  uint32 GetFatEntry(uint8 DriveNumber, uint16 ClusterNum, uint16 Edd_BytesPerSector, uint16 Fat_BytesPerSector, uint32 PartitionOffset, uint32 FatOffset, bool IsFat32);
+  uint32 GetFatEntry(uint16 ClusterNum, uint32 PartitionOffset, uint32 FatOffset, bool IsFat32);
+
 
   // EDD (Enhanced Disk Drive)-related data structures. (Used in multiple files, defined here)
 

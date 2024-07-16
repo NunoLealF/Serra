@@ -183,7 +183,7 @@ void __attribute__((noreturn)) Bootloader(void) {
   // signature), and check to see if the drive number is in a valid range - otherwise, we'll just
   // use the 'default' drive number (usually 80h).
 
-  uint8 DriveNumber = *(uint8*)(0x7E00 - 3);
+  DriveNumber = *(uint8*)(0x7E00 - 3);
   bool DriveNumberIsValid = true;
 
   uint16 Signature = *(uint16*)(0x7E00 - 2);
@@ -275,7 +275,7 @@ void __attribute__((noreturn)) Bootloader(void) {
     uint16* SanityCheck = (uint16*)(0xAE00);
     *SanityCheck = 0xE621;
 
-    Table = ReadDisk(DriveNumber, 1, 0xAE00, 0);
+    Table = ReadDisk(1, 0xAE00, 0);
 
     if (hasFlag(Table->Eflags, CarryFlag) == true) {
       Panic("Unable to successfully load data from the drive.");
@@ -306,6 +306,13 @@ void __attribute__((noreturn)) Bootloader(void) {
     Message(Kernel, "Successfully detected a FAT partition.");
   }
 
+
+
+  // Save the logical and physical sector size (the bytes per sector given by the BPB and by
+  // the EDD/int13h functions respectively)
+
+  LogicalSectorSize = Bpb.BytesPerSector;
+  PhysicalSectorSize = EDD_Parameters.BytesPerSector;
 
 
 
@@ -365,7 +372,7 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   } else if (NumClusters > 65524) {
 
-    ClusterLimit = 0xFFFFFFF6;
+    ClusterLimit = 0x0FFFFFF6; // (Caution, only the bottom 28 bits actually matter, 9FFFFFF5 should pass but 0FFFFFF6 shouldn't)
     PartitionIsFat32 = true;
 
   }
