@@ -382,7 +382,6 @@ void __attribute__((noreturn)) Bootloader(void) {
 
 
 
-
   // Now that we know the partition type, we can get the cluster (and the first sector of) the
   // root directory, like this:
 
@@ -394,6 +393,16 @@ void __attribute__((noreturn)) Bootloader(void) {
     RootCluster = Extended_Bpb32.RootCluster;
   }
 
+
+  // (test)
+
+
+
+  Putchar('\n', 0);
+  Message(Info, "Test: cluster number %d becomes %xh", 0, GetFatEntry(0, Bpb.HiddenSectors, Bpb.ReservedSectors, PartitionIsFat32));
+  Message(Info, "Test: cluster number %d becomes %xh", 1, GetFatEntry(1, Bpb.HiddenSectors, Bpb.ReservedSectors, PartitionIsFat32));
+  Message(Info, "Test: cluster number %d becomes %xh", 2, GetFatEntry(2, Bpb.HiddenSectors, Bpb.ReservedSectors, PartitionIsFat32));
+  Message(Info, "Test: cluster number %d becomes %xh", 3, GetFatEntry(3, Bpb.HiddenSectors, Bpb.ReservedSectors, PartitionIsFat32));
 
   // Okay, we have RootSectorOffset, all that's really left to do now is to just follow the
   // cluster chain(s), and find Boot/Serra.bin.

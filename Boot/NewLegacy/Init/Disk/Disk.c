@@ -139,8 +139,8 @@ uint32 GetFatEntry(uint16 ClusterNum, uint32 PartitionOffset, uint32 FatOffset, 
   // Next, we want to create a temporary buffer (with the same size as one sector), and then
   // load that part of the FAT onto it:
 
-  uint8 Buffer[PhysicalSectorSize];
-  Memset(&Buffer[0], '\0', PhysicalSectorSize);
+  uint8 Buffer[LogicalSectorSize];
+  Memset(&Buffer[0], '\0', LogicalSectorSize);
 
   realModeTable* Table = ReadLogicalSector(1, (uint32)Buffer, SectorOffset);
 
