@@ -113,4 +113,29 @@
 
   } __attribute__((packed)) biosParameterBlock_Fat32;
 
+
+  // FAT-related data structures. (Used in multiple files, defined here)
+
+  typedef volatile struct {
+
+    int8 Name[8]; // This should be in uppercase, and padded with spaces;
+    int8 Extension[3]; // Same restrictions as above.
+
+    uint8 Attributes;
+    uint8 Reserved; // Reserved for use by other operating systems.
+
+    uint8 CreationTime[3]; // The time at which this file/directory was created;
+    uint8 CreationDate[2]; // The date at which this file/directory was created;
+    uint8 AccessDate[2]; // The date at which this file/directory was last accessed.
+
+    uint16 ClusterNum_High; // The high 16 bits of the cluster number of this file/directory.
+
+    uint8 ModifiedTime[2]; // The time at which this file/directory was last modified.
+    uint8 ModifiedDate[2]; // The date at which this file/directory was last modified.
+
+    uint16 ClusterNum_Low; // The low 16 bits of the cluster number of this file/directory.
+    uint32 Size; // The size of this file (this doesn't apply to directories, does it..?)
+
+  } __attribute__((packed)) fatDirectory;
+
 #endif

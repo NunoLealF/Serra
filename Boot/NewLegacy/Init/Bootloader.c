@@ -357,13 +357,17 @@ void __attribute__((noreturn)) Bootloader(void) {
   // -> Any partition with more than 65524 clusters is guaranteed to be FAT32.
 
   bool PartitionIsFat32 = false;
+  uint32 ClusterLimit = 0xFFF6;
 
   if (NumClusters < 4085) {
-    Panic("FAT partitions with less than 4085 clusters are not supported.");
-  }
 
-  if (NumClusters > 65524) {
+    Panic("FAT partitions with less than 4085 clusters are not supported.");
+
+  } else if (NumClusters > 65524) {
+
+    ClusterLimit = 0xFFFFFFF6;
     PartitionIsFat32 = true;
+
   }
 
   Message(Info, "The current FAT partition has %d clusters (each %d bytes long).", NumClusters, (Bpb.SectorsPerCluster * Bpb.BytesPerSector));
@@ -375,21 +379,36 @@ void __attribute__((noreturn)) Bootloader(void) {
   // Now that we know the partition type, we can get the cluster (and the first sector of) the
   // root directory, like this:
 
-  uint32 RootClusterOffset;
-  uint32 RootSectorOffset;
+  uint32 RootCluster;
 
   if (PartitionIsFat32 == false) {
-    RootClusterOffset = 2;
+    RootCluster = 2;
   } else {
-    RootClusterOffset = Extended_Bpb32.RootCluster;
+    RootCluster = Extended_Bpb32.RootCluster;
   }
 
-  RootSectorOffset = GetClusterOffset(RootClusterOffset, Bpb.SectorsPerCluster, DataSectorOffset);
+
+  // Okay, we have RootSectorOffset, all that's really left to do now is to just follow the
+  // cluster chain(s), and find Boot/Serra.bin.
+
+  Putchar('\n', 0);
+  Message(Kernel, "Preparing to locate the next stage of the bootloader.");
+
+  // (TODO: Do this; I actually tried to come up with a basic implementation, but it occupied
+  // way too much space, and at the end of the day it.. honestly didn't really work)
 
 
-  // Now that we've found the cluster number, we can try to read something using GetFat16_Entry()
 
-  Printf("\nTesting out GetFatEntry(); cluster number \'%d\' -> FAT entry \'%x\'\n", 0x03, RootClusterOffset, GetFatEntry(DriveNumber, RootClusterOffset, EDD_Parameters.BytesPerSector, Bpb.BytesPerSector, Bpb.HiddenSectors, Bpb.ReservedSectors, PartitionIsFat32));
+
+
+
+  // Each entry is 32 bytes long: https://wiki.osdev.org/FAT
+  // LFN support almost certainly isn't needed
+
+  // It seems like each directory has its own cluster chain; in this case, for the root
+  // directory, you start directly at the first (probably at some random) file or directory,
+  // and then you just have to iterate through that until you find a folder named Boot, and
+  // then, until you find a file named Serra.bin.
 
 
   // There's only like 1.5KiB of code space left, jesus, I better get this over with quickly
