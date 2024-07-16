@@ -7,8 +7,8 @@
 
 /* int Memcmp()
 
-   Inputs:  const void* PtrA - The first memory area to compare with.
-            const void* PtrB - The second memory area to compare with.
+   Inputs:  void* PtrA - The first memory area to compare with.
+            void* PtrB - The second memory area to compare with.
             uint32 Size - The size of both memory areas, in bytes.
 
    Outputs: int - A return value that indicates the relationship between the two memory areas.
@@ -25,7 +25,7 @@
 
 */
 
-int Memcmp(const void* PtrA, const void* PtrB, uint32 Size) {
+int Memcmp(void* PtrA, void* PtrB, uint32 Size) {
 
   // Translate each const void* pointer into a const uint8* pointer.
 

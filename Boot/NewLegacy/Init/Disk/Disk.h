@@ -18,7 +18,10 @@
   // Filesystem-related functions. (Disk.c)
 
   #define GetClusterOffset(ClusterNum, SectorsPerCluster, FirstDataSector) (((ClusterNum - 2) * SectorsPerCluster) + FirstDataSector)
-  uint32 GetFatEntry(uint16 ClusterNum, uint32 PartitionOffset, uint32 FatOffset, bool IsFat32);
+  uint32 GetFatEntry(uint32 ClusterNum, uint32 PartitionOffset, uint32 FatOffset, bool IsFat32);
+
+  #define ExceedsLimit(Cluster, Limit) ((Cluster & 0x0FFFFFFF) >= Limit)
+  uint32 FindDirectory(uint32 ClusterNum, uint8 SectorsPerCluster, uint32 PartitionOffset, uint32 FatOffset, uint32 DataOffset, char Name[8], char Extension[3], bool IsFolder, bool IsFat32);
 
 
   // EDD (Enhanced Disk Drive)-related data structures. (Used in multiple files, defined here)

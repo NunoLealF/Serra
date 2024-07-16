@@ -17,7 +17,7 @@
 
   // Standard memory functions; memset, memcpy, memmove.., from Memory.c
 
-  int Memcmp(const void* PtrA, const void* PtrB, uint32 Size);
+  int Memcmp(void* PtrA, void* PtrB, uint32 Size);
   void Memcpy(void* Destination, void* Source, uint32 Size);
   void Memmove(void* Destination, const void* Source, uint32 Size);
   void Memset(void* Buffer, uint8 Character, uint32 Size);

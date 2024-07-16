@@ -401,7 +401,7 @@ void __attribute__((noreturn)) Bootloader(void) {
   Putchar('\n', 0);
   Message(Info, "Test: cluster number %d becomes %xh", 0, GetFatEntry(0, Bpb.HiddenSectors, Bpb.ReservedSectors, PartitionIsFat32));
   Message(Info, "Test: cluster number %d becomes %xh", 1, GetFatEntry(1, Bpb.HiddenSectors, Bpb.ReservedSectors, PartitionIsFat32));
-  Message(Info, "Test: cluster number %d becomes %xh", 2, GetFatEntry(2, Bpb.HiddenSectors, Bpb.ReservedSectors, PartitionIsFat32));
+  Message(Info, "Test: cluster number %d becomes %xh", RootCluster, GetFatEntry(RootCluster, Bpb.HiddenSectors, Bpb.ReservedSectors, PartitionIsFat32));
   Message(Info, "Test: cluster number %d becomes %xh", 3, GetFatEntry(3, Bpb.HiddenSectors, Bpb.ReservedSectors, PartitionIsFat32));
 
   // Okay, we have RootSectorOffset, all that's really left to do now is to just follow the
@@ -410,11 +410,12 @@ void __attribute__((noreturn)) Bootloader(void) {
   Putchar('\n', 0);
   Message(Kernel, "Preparing to locate the next stage of the bootloader.");
 
-  // (TODO: Do this; I actually tried to come up with a basic implementation, but it occupied
-  // way too much space, and at the end of the day it.. honestly didn't really work)
+  // (Test: Try to use FindDirectory() to find Core.bin, which should be in the root folder,
+  // hopefully)
 
+  uint32 Core = FindDirectory(RootCluster, Bpb.SectorsPerCluster, Bpb.HiddenSectors, Bpb.ReservedSectors, DataSectorOffset, "CORE    ", "BIN", false, PartitionIsFat32);
 
-
+  Printf("Core.bin (cluster number): %x\n", 0x03, Core);
 
 
 

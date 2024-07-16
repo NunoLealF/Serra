@@ -113,7 +113,7 @@ realModeTable* ReadLogicalSector(uint16 NumBlocks, uint64 Address, uint32 Lba) {
   // Finally, we can go ahead and copy the logical block/sector to the given address, and
   // return the real mode table
 
-  Memcpy((void*)Address, (void*)&Cache[Offset], LogicalSectorSize);
+  Memcpy((void*)Address, &Cache[Offset], LogicalSectorSize);
   return Table;
 
 }
@@ -122,7 +122,7 @@ realModeTable* ReadLogicalSector(uint16 NumBlocks, uint64 Address, uint32 Lba) {
 // A function that loads the corresponding FAT entry of a cluster, and returns the specific
 // cluster value.
 
-uint32 GetFatEntry(uint16 ClusterNum, uint32 PartitionOffset, uint32 FatOffset, bool IsFat32) {
+uint32 GetFatEntry(uint32 ClusterNum, uint32 PartitionOffset, uint32 FatOffset, bool IsFat32) {
 
   // If this is FAT32, then since each cluster entry is 4 bytes long (instead of 2),
   // multiply the cluster number by 2.
@@ -160,5 +160,116 @@ uint32 GetFatEntry(uint16 ClusterNum, uint32 PartitionOffset, uint32 FatOffset, 
   }
 
   return ClusterEntry;
+
+}
+
+
+// A function that searches through a given cluster (chain) to find a specific file or
+// directory.
+
+#define ExceedsLimit(Cluster, Limit) ((Cluster & 0x0FFFFFFF) >= Limit)
+
+uint32 FindDirectory(uint32 ClusterNum, uint8 SectorsPerCluster, uint32 PartitionOffset, uint32 FatOffset, uint32 DataOffset, char Name[8], char Extension[3], bool IsFolder, bool IsFat32) {
+
+  // (Define limits for FAT16 and FAT32)
+
+  uint32 Limit = 0xFFF6;
+
+  if (IsFat32 == true) {
+    Limit = 0x0FFFFFF6;
+  }
+
+  // The size of an individual FAT cluster can be pretty huge, and we don't have enough
+  // memory that we can (safely) load in an entire cluster at once, so instead, we'll be loading
+  // only individual (logical) sectors.
+
+  uint32 CurrentCluster = ClusterNum;
+  bool FoundDirectory = false;
+
+  do {
+
+    // Since we're going to be dividing these clusters into sectors, we're going to need
+    // to load as many logical sectors as there are in a cluster.
+
+    // In order to do this, we'll keep a buffer/cache the size of one logical sector, and
+    // keep reloading it until we either reach the last cluster, or until we find what we're
+    // looking for.
+
+    uint8 ClusterCache[LogicalSectorSize];
+
+    for (unsigned int SectorNum = 0; SectorNum < SectorsPerCluster; SectorNum++) {
+
+      ReadLogicalSector(1, (uint32)ClusterCache, (PartitionOffset + DataOffset + SectorNum));
+
+      for (unsigned int EntryNum = 0; EntryNum < (LogicalSectorSize / 32); EntryNum++) {
+
+        // First, we need to check to see if the first byte of the entry is null (00h);
+        // if it is, then that means we've already reached the last entry in the entire
+        // cluster, so we can safely jump out of the loop.
+
+        fatDirectory* Entry = (fatDirectory*)(&ClusterCache[EntryNum * 32]);
+
+        if (Entry->Name[0] == 0x00) {
+          goto Cleanup;
+        }
+
+        // Next, we want to see if the type matches - essentially, if we're looking for a
+        // file, skip through all folders, and if we're looking for a folder, skip through
+        // all files.
+
+        bool EntryIsFolder = ((Entry->Attributes & 0x10) != 0);
+
+        if (EntryIsFolder != IsFolder) {
+          continue;
+        }
+
+        // Finally, we want to compare the name and directory between the entry we're
+        // looking at, and the 'target' entry that we're looking for. If it matches, then
+        // we can exit out of this whole process, and return the cluster in that entry!
+
+        int NameMatches = Memcmp((void*)&Entry->Name, &Name, 8);
+        int ExtensionMatches = Memcmp((void*)&Entry->Extension, &Extension, 8);
+
+        if ((NameMatches == 0) && (ExtensionMatches == 0)) {
+
+          FoundDirectory = true;
+          CurrentCluster = ((Entry->ClusterNum_High << 16) + Entry->ClusterNum_Low);
+
+          goto Cleanup;
+
+        }
+
+      }
+
+      // Now that we've successfully checked the whole cluster, it's time to move onto
+      // the next one (if applicable). The next cluster is stored in the FAT, but thankfully,
+      // we already have a function that does that job for us: GetFatEntry().
+
+      // Finally, after we've successfully checked the whole cluster, we want to move onto
+      // the next cluster (if applicable). The next cluster is stored in the FAT, but
+      // thankfully, we already have a function that does that job for us: GetFatEntry().
+
+      Cleanup:
+
+      if (FoundDirectory == false) {
+
+        CurrentCluster = GetFatEntry(CurrentCluster, PartitionOffset, FatOffset, IsFat32);
+        continue;
+
+      }
+
+    }
+
+  } while ((FoundDirectory == false) && (ExceedsLimit(CurrentCluster, Limit) == false));
+
+  // Now, all we need to do is to return the current cluster. If no file or directory
+  // matches the one we're looking for, then we'll return something above the limit; otherwise,
+  // we'll just return the current cluster.
+
+  if (FoundDirectory == true) {
+    return CurrentCluster;
+  } else {
+    return ++Limit;
+  }
 
 }
