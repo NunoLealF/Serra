@@ -7,8 +7,12 @@
 
   // Disk-related functions. (Disk.c)
 
-  realModeTable* ReadDisk(uint8 DriveNumber, uint16 NumBlocks, uint32 Address, uint64 Offset);
+  realModeTable* ReadDisk(uint8 DriveNumber, uint16 NumBlocks, uint64 Address, uint64 Offset);
 
+  // Filesystem-related functions. (Disk.c)
+
+  uint16 GetFat16_Entry(uint8 DriveNumber, uint16 ClusterNum, uint16 Edd_BytesPerSector, uint16 Fat_BytesPerSector, uint32 PartitionOffset, uint32 FatOffset);
+  uint32 GetFat32_Entry(uint8 DriveNumber, uint32 ClusterNum, uint16 Edd_BytesPerSector, uint16 Fat_BytesPerSector, uint32 PartitionOffset, uint32 FatOffset);
 
   // EDD (Enhanced Disk Drive)-related data structures. (Used in multiple files, defined here)
 
@@ -42,10 +46,11 @@
     uint8 Reserved;
 
     uint16 NumBlocks;
-    uint32 Address;
-    uint64 Lba;
+    uint16 Address_Offset;
+    uint16 Address_Segment;
 
-    uint64 FlatAddress;
+    uint32 Lba_Low;
+    uint32 Lba_High;
 
   } __attribute__((packed)) eddDiskAddressPacket;
 
