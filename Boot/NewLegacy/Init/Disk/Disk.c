@@ -122,6 +122,8 @@ realModeTable* ReadLogicalSector(uint16 NumBlocks, uint64 Address, uint32 Lba) {
 // A function that loads the corresponding FAT entry of a cluster, and returns the specific
 // cluster value.
 
+#define GetClusterOffset(ClusterNum, SectorsPerCluster, FirstDataSector) (((ClusterNum - 2) * SectorsPerCluster) + FirstDataSector)
+
 uint32 GetFatEntry(uint32 ClusterNum, uint32 PartitionOffset, uint32 FatOffset, bool IsFat32) {
 
   // If this is FAT32, then since each cluster entry is 4 bytes long (instead of 2),
@@ -231,10 +233,11 @@ uint32 FindDirectory(uint32 ClusterNum, uint8 SectorsPerCluster, uint32 Partitio
     // looking for.
 
     uint8 ClusterCache[LogicalSectorSize];
+    uint32 ClusterOffset = ((CurrentCluster - 2) * SectorsPerCluster);
 
     for (unsigned int SectorNum = 0; SectorNum < SectorsPerCluster; SectorNum++) {
 
-      ReadLogicalSector(1, (uint32)ClusterCache, (PartitionOffset + DataOffset + SectorNum));
+      ReadLogicalSector(1, (uint32)ClusterCache, (PartitionOffset + DataOffset + ClusterOffset + SectorNum));
 
       for (unsigned int EntryNum = 0; EntryNum < (LogicalSectorSize / 32); EntryNum++) {
 
