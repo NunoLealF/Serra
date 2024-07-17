@@ -399,11 +399,9 @@ void __attribute__((noreturn)) Bootloader(void) {
   Putchar('\n', 0);
   Message(Kernel, "Preparing to locate the next stage of the bootloader.");
 
-  // (Test: Try to use FindDirectory() to find Core.bin, which should be in the root folder,
-  // hopefully)
-
-  // This *does* work actually, but there's a bit of a problem - it's.. not really reading from
-  // the right place? It's starting right off at the data itself, but..
+  // We need to calculate the sector offset of the (first) root cluster to search from; for
+  // FAT16 partitions, we need to start searching from an earlier offset (there's a specific
+  // cluster area for root directories in FAT16).
 
   uint32 RootSectorOffset = DataSectorOffset;
 
@@ -411,9 +409,16 @@ void __attribute__((noreturn)) Bootloader(void) {
     RootSectorOffset -= NumRootSectors;
   }
 
-  uint32 Core = FindDirectory(RootCluster, Bpb.SectorsPerCluster, Bpb.HiddenSectors, Bpb.ReservedSectors, RootSectorOffset, "CORE    ", "BIN", false, PartitionIsFat32);
+  // Now, we can finally start searching for the next stage of the bootloader. We first
+  // need to find the /Boot directory, like this:
 
-  Printf("Core.bin (cluster number): %x\n", 0x03, Core);
+  uint32 BootCluster = FindDirectory(RootCluster, Bpb.SectorsPerCluster, Bpb.HiddenSectors, Bpb.ReservedSectors, RootSectorOffset, "BOOT    ", "   ", true, PartitionIsFat32);
+  Printf("Boot/ (cluster number): %x\n", 0x07, BootCluster);
+
+  // (WARNING, this finds core.bin, NOT serra.bin)
+
+  uint32 CoreCluster = FindDirectory(BootCluster, Bpb.SectorsPerCluster, Bpb.HiddenSectors, Bpb.ReservedSectors, DataSectorOffset, "CORE    ", "BIN", false, PartitionIsFat32);
+  Printf("Boot/Core.bin (cluster number): %x\n", 0x07, CoreCluster);
 
 
 
@@ -445,7 +450,7 @@ void __attribute__((noreturn)) Bootloader(void) {
   Putchar('\n', 0);
 
   Printf("Hiya, this is Serra! <3\n", 0x0F);
-  Printf("July %i %x\n", 0x3F, 16, 0x2024);
+  Printf("July %i %x\n", 0x3F, 17, 0x2024);
 
   for(;;);
 
