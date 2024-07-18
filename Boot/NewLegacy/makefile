@@ -20,6 +20,8 @@ OBJD = i686-elf-objdump
 
 # -std=c11: Use the regular C11 standard
 
+# -Os: Optimize the resulting file/binary for space. [Warning, do *not* use O3]
+
 # -Wall: Enable all warnings.
 
 # -Wextra: Enable even more warnings. (Not sure why wall doesn't take care of this)
@@ -38,7 +40,7 @@ CFLAGS = -std=c11 -ffunction-sections -funsigned-char -ffreestanding -Os -Wall -
 # it skips it (for example, for the target 'example.o', if it sees example.o is already there, it skips compiling it),
 # and this can cause problems for targets that don't output anything. These are called 'phony targets'.
 
-.PHONY: All Clean Dump Run RunInt all dump clean run runint
+.PHONY: All Clean Dump Run RunGdb RunInt all dump clean run rungdb runint
 
 
 # Names ->>
@@ -81,6 +83,10 @@ Run:
 	@echo "Launching Qemu.."
 	@qemu-system-i386 -cpu pentium3 -m 128 -drive file=Legacy.bin,format=raw
 
+RunGdb:
+	@echo "Launching Qemu.."
+	@qemu-system-i386 -s -S -cpu pentium3 -m 128 -drive file=Legacy.bin,format=raw
+
 RunInt:
 	@echo "Launching Qemu with -d int.."
 	@qemu-system-i386 -cpu pentium3 -m 128 -drive file=Legacy.bin,format=raw -d int
@@ -92,6 +98,7 @@ clean: Clean
 dump: Dump
 dumpbin: Dumpbin
 run: Run
+rungdb: RunGdb
 runint: RunInt
 
 
