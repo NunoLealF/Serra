@@ -17,7 +17,7 @@ uint16 PhysicalSectorSize;
 /* realModeTable* ReadSector())
 
    Inputs: uint16 NumBlocks - The number of sectors (blocks) that we want to load.
-           uint64 Address - The 48-bit memory address we want to load *to*.
+           uint32 Address - The 48-bit memory address we want to load *to*.
            uint64 Offset - The LBA (sector number) we want to start loading *from*.
 
    Outputs: realModeTable* - This function uses a real mode BIOS interrupt (int 13h, ah 42h) in
@@ -34,7 +34,7 @@ uint16 PhysicalSectorSize;
 
 */
 
-realModeTable* ReadSector(uint16 NumBlocks, uint64 Address, uint64 Offset) {
+realModeTable* ReadSector(uint16 NumBlocks, uint32 Address, uint64 Offset) {
 
   // Create a eddDiskAddressPacket structure with the data we got.
 
@@ -58,8 +58,8 @@ realModeTable* ReadSector(uint16 NumBlocks, uint64 Address, uint64 Offset) {
   Table->Eax = (0x42 << 8);
   Table->Edx = DriveNumber;
 
-  Table->Ds = ((unsigned int)(&DiskAddressPacket) >> 4);
-  Table->Si = ((unsigned int)(&DiskAddressPacket) & 0x0F);
+  Table->Ds = (uint16)((int)(&DiskAddressPacket) >> 4);
+  Table->Si = (uint16)((int)(&DiskAddressPacket) & 0x0F);
 
   Table->Int = 0x13;
   RealMode();
@@ -75,7 +75,7 @@ realModeTable* ReadSector(uint16 NumBlocks, uint64 Address, uint64 Offset) {
 // This is basically the same as ReadSector(), except it reads 'logical' sectors
 // (in practice, this just means the ones set by the filesystem)
 
-realModeTable* ReadLogicalSector(uint16 NumBlocks, uint64 Address, uint32 Lba) {
+realModeTable* ReadLogicalSector(uint16 NumBlocks, uint32 Address, uint32 Lba) {
 
   // First, we need to figure out the corresponding physical sector, like this:
 
@@ -108,7 +108,7 @@ realModeTable* ReadLogicalSector(uint16 NumBlocks, uint64 Address, uint32 Lba) {
 
   // Now, we can finally use ReadSector(), and load the necessary sectors.
 
-  realModeTable* Table = ReadSector(NumBlocks, (uint64)(int)&Cache[0], PhysicalLba);
+  realModeTable* Table = ReadSector(NumBlocks, (uint32)(int)&Cache[0], PhysicalLba);
 
   // Finally, we can go ahead and copy the logical block/sector to the given address, and
   // return the real mode table
@@ -134,7 +134,7 @@ uint32 GetFatEntry(uint32 ClusterNum, uint32 PartitionOffset, uint32 FatOffset, 
   // (Get the sector/entry offsets..)
 
   uint32 SectorOffset = (PartitionOffset + FatOffset + ((ClusterNum * 2) / LogicalSectorSize));
-  uint16 EntryOffset = ((ClusterNum * 2) % LogicalSectorSize);
+  uint16 EntryOffset = (uint16)((ClusterNum * 2) % LogicalSectorSize);
 
   // Next, we want to create a temporary buffer (with the same size as one sector), and then
   // load that part of the FAT onto it:
@@ -142,7 +142,7 @@ uint32 GetFatEntry(uint32 ClusterNum, uint32 PartitionOffset, uint32 FatOffset, 
   uint8 Buffer[LogicalSectorSize];
   Memset(&Buffer[0], '\0', LogicalSectorSize);
 
-  realModeTable* Table = ReadLogicalSector(1, (uint64)(int)&Buffer[0], SectorOffset);
+  realModeTable* Table = ReadLogicalSector(1, (uint32)(int)&Buffer[0], SectorOffset);
 
   // Finally, we want to see if it succeeded, and if it did, return the corresponding entry
   // from the FAT; otherwise, return zero.

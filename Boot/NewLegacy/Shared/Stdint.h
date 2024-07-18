@@ -74,8 +74,8 @@
 
   // Non-integer types.
 
-  #define true 1
   #define false 0
+  #define true !(false)
 
   typedef uint8 bool;
 

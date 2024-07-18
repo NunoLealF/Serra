@@ -59,8 +59,8 @@ char* Strrev(char* String) {
   // In order to reverse our string, we'll be using two indexes/pointers; one of them at the
   // very start of our string, and one of them at the very end (before the null byte).
 
-  uint32 Start = 0;
-  uint32 End = Strlen(String) - 1;
+  int Start = 0;
+  int End = Strlen(String) - 1;
 
   // Now, all we need to do is to swap String[Start] with String[End], and to increment or
   // decrement those two variables until they both meet the middle.

@@ -43,7 +43,7 @@
 
   // Check for a specific flag in realModeTable->Eflags.
 
-  #define hasFlag(cpuFlags, checkFlag) (cpuFlags & checkFlag)
+  #define hasFlag(cpuFlags, checkFlag) ((cpuFlags & checkFlag) != 0)
 
   // Regular CPU flags - most of these are present on the 8086/286.
 

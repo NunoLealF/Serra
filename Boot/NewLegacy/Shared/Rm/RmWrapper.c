@@ -96,9 +96,10 @@ typedef struct {
 
 */
 
+
 void RealMode(void) {
 
-  __asm__("movl $0x9E00, %%eax; call *%%eax" : : : "eax");
+  __asm__ __volatile__ ("movl $0x9E00, %%eax; call *%%eax" : : : "eax");
 
 }
 

@@ -33,7 +33,7 @@ void __attribute__((noreturn)) Init(void) {
   // Set up registers (DS, ES, FS, GS, and SS)
   // We'll be setting these up with the data segment (10h in our GDT).
 
-  __asm__("mov $0x10, %eax;"
+  __asm__ __volatile__ ("mov $0x10, %eax;"
           "mov %eax, %ds;"
           "mov %eax, %es;"
           "mov %eax, %fs;"
@@ -42,7 +42,7 @@ void __attribute__((noreturn)) Init(void) {
 
   // Set up the stack at 20000h (by setting SP).
 
-  __asm__("mov $0x20000, %esp");
+  __asm__ __volatile__ ("mov $0x20000, %esp");
 
   // Jump to our Bootloader() function.
 
@@ -233,8 +233,8 @@ void __attribute__((noreturn)) Bootloader(void) {
   Table->Eax = (0x48 << 8);
   Table->Edx = DriveNumber;
 
-  Table->Ds = ((unsigned int)(&EDD_Parameters) >> 4);
-  Table->Si = ((unsigned int)(&EDD_Parameters) & 0x0F);
+  Table->Ds = (uint16)((int)(&EDD_Parameters) >> 4);
+  Table->Si = (uint16)((int)(&EDD_Parameters) & 0x0F);
 
   Table->Int = 0x13;
 
@@ -304,7 +304,6 @@ void __attribute__((noreturn)) Bootloader(void) {
   } else {
     Message(Kernel, "Successfully detected a FAT partition.");
   }
-
 
 
   // Save the logical and physical sector size (the bytes per sector given by the BPB and by
