@@ -122,8 +122,6 @@ realModeTable* ReadLogicalSector(uint16 NumBlocks, uint64 Address, uint32 Lba) {
 // A function that loads the corresponding FAT entry of a cluster, and returns the specific
 // cluster value.
 
-#define GetClusterOffset(ClusterNum, SectorsPerCluster, FirstDataSector) (((ClusterNum - 2) * SectorsPerCluster) + FirstDataSector)
-
 uint32 GetFatEntry(uint32 ClusterNum, uint32 PartitionOffset, uint32 FatOffset, bool IsFat32) {
 
   // If this is FAT32, then since each cluster entry is 4 bytes long (instead of 2),
@@ -203,8 +201,6 @@ static bool FatNameIsEqual(int8 EntryName[8], int8 EntryExtension[3], char Name[
 
 // A function that searches through a given cluster (chain) to find a specific file or
 // directory.
-
-#define ExceedsLimit(Cluster, Limit) ((Cluster & 0x0FFFFFFF) < Limit)
 
 uint32 FindDirectory(uint32 ClusterNum, uint8 SectorsPerCluster, uint32 PartitionOffset, uint32 FatOffset, uint32 DataOffset, char Name[8], char Extension[3], bool IsFolder, bool IsFat32) {
 

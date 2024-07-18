@@ -159,7 +159,7 @@ void __attribute__((noreturn)) Bootloader(void) {
         // As it's necessary for us to enable the A20 line, we'll need to crash the system /
         // give out an error code if we get to this point.
 
-        Panic("Failed to enable the A20 line");
+        Panic("Failed to enable the A20 line.");
 
       }
 
@@ -199,12 +199,11 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   if (DriveNumberIsValid == true) {
 
-    Message(Ok, "Successfully got the current drive number.");
-    Message(Info, "The current drive number is %xh.\n", DriveNumber);
+    Message(Ok, "Successfully got the current drive number (%xh).", DriveNumber);
 
   } else {
 
-    Message(Warning, "Failed to get the current drive number; setting it to 80h.");
+    Message(Fail, "Failed to get the current drive number; assuming it to be 80h.");
     DriveNumber = 0x80;
 
   }
@@ -239,7 +238,7 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   Table->Int = 0x13;
 
-  Message(Kernel, "Preparing to get EDD/drive information.");
+  Message(Kernel, "Preparing to get EDD/drive data.");
   RealMode();
 
   // (Any errors? If not, then carry on; otherwise, keep moving on with 'standard' values that
@@ -450,7 +449,7 @@ void __attribute__((noreturn)) Bootloader(void) {
   Putchar('\n', 0);
 
   Printf("Hiya, this is Serra! <3\n", 0x0F);
-  Printf("July %i %x\n", 0x3F, 17, 0x2024);
+  Printf("July %i %x\n", 0x3F, 18, 0x2024);
 
   for(;;);
 

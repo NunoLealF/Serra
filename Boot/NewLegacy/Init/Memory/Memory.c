@@ -5,55 +5,6 @@
 #include "../../Shared/Stdint.h"
 #include "Memory.h"
 
-/* int Memcmp()
-
-   Inputs:  void* PtrA - The first memory area to compare with.
-            void* PtrB - The second memory area to compare with.
-            uint32 Size - The size of both memory areas, in bytes.
-
-   Outputs: int - A return value that indicates the relationship between the two memory areas.
-
-   This function compares two memory areas/blocks of a given size with each other, and returns
-   one of three values: 1 if PtrA > PtrB, 0 if both memory areas are the same, and -1 if PtrB >
-   PtrA.
-
-   It's intended to compare data; for example, if you have two memory blocks that you want to
-   compare (to see if they're equal to each other), you could use this function to do so.
-
-   Keep in mind that the return value only takes into account the first different known byte,
-   not the overall value of the data.
-
-*/
-
-int Memcmp(void* PtrA, void* PtrB, uint32 Size) {
-
-  // Translate each const void* pointer into a const uint8* pointer.
-
-  const uint8* ByteA = (const uint8*)PtrA;
-  const uint8* ByteB = (const uint8*)PtrB;
-
-  // Scan through each byte in the given memory areas.
-
-  for (uint32 i = 0; i < Size; i++) {
-
-    // If we find a discrepancy (meaning the two memory areas aren't equal), return -1 or
-    // 1 respectively (depending on whether PtrA+i is bigger or smaller than PtrB+i).
-
-    if (ByteA[i] < ByteB[i]) {
-      return -1;
-    } else if (ByteB[i] < ByteA[i]) {
-      return 1;
-    }
-
-  }
-
-  // If we don't find any discrepancy between the two memory areas, return 0.
-
-  return 0;
-
-}
-
-
 /* void Memcpy()
 
    Inputs:  void* Destination - The memory area you want to copy data to.
@@ -173,37 +124,5 @@ void Memset(void* Buffer, uint8 Character, uint32 Size) {
     BufferByte[i] = Character;
 
   }
-
-}
-
-
-/* void Memswap()
-
-   Inputs: void* BufferA - The first memory area/buffer that you want to swap.
-           void* BufferB - The second memory area/buffer that you want to swap.
-           uint32 Size - The size of the memory area/buffer that you want to swap.
-
-   Outputs: (None)
-
-   This function swaps two memory areas - specifically, it swaps the data in BufferA with the
-   data in BufferB. It's assumed that both buffers are the same length (Size).
-
-   For example, if you want to swap two elements in an array, you could do:
-   - Memswap((void*)&Array[A], (void*)&Array[B], sizeof(Array[0]));
-
-*/
-
-void Memswap(void* BufferA, void* BufferB, uint32 Size) {
-
-  // In order to properly swap these two memory areas, we need to create an auxiliary buffer.
-
-  char Aux[Size];
-  void* AuxBuffer = (void*)&Aux[0];
-
-  // Now, we can just swap the two memory areas, using our auxiliary buffer from earlier.
-
-  Memmove(AuxBuffer, BufferA, Size);
-  Memmove(BufferA, BufferB, Size);
-  Memmove(BufferB, AuxBuffer, Size);
 
 }
