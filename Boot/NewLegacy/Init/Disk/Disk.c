@@ -108,12 +108,12 @@ realModeTable* ReadLogicalSector(uint16 NumBlocks, uint64 Address, uint32 Lba) {
 
   // Now, we can finally use ReadSector(), and load the necessary sectors.
 
-  realModeTable* Table = ReadSector(NumBlocks, (uint64)Cache, PhysicalLba);
+  realModeTable* Table = ReadSector(NumBlocks, (uint64)(int)&Cache[0], PhysicalLba);
 
   // Finally, we can go ahead and copy the logical block/sector to the given address, and
   // return the real mode table
 
-  Memcpy((void*)Address, &Cache[Offset], LogicalSectorSize);
+  Memcpy((void*)(int)Address, &Cache[Offset], LogicalSectorSize);
   return Table;
 
 }
@@ -142,7 +142,7 @@ uint32 GetFatEntry(uint32 ClusterNum, uint32 PartitionOffset, uint32 FatOffset, 
   uint8 Buffer[LogicalSectorSize];
   Memset(&Buffer[0], '\0', LogicalSectorSize);
 
-  realModeTable* Table = ReadLogicalSector(1, (uint32)Buffer, SectorOffset);
+  realModeTable* Table = ReadLogicalSector(1, (uint64)(int)&Buffer[0], SectorOffset);
 
   // Finally, we want to see if it succeeded, and if it did, return the corresponding entry
   // from the FAT; otherwise, return zero.

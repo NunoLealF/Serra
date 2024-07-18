@@ -238,7 +238,7 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   Table->Int = 0x13;
 
-  Message(Kernel, "Preparing to get EDD/drive data.");
+  Message(Kernel, "Preparing to get EDD/drive information.");
   RealMode();
 
   // (Any errors? If not, then carry on; otherwise, keep moving on with 'standard' values that
