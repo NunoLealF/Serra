@@ -75,6 +75,9 @@ realModeTable* ReadSector(uint16 NumBlocks, uint32 Address, uint64 Offset) {
 // This is basically the same as ReadSector(), except it reads 'logical' sectors
 // (in practice, this just means the ones set by the filesystem)
 
+// (By the way, might be a good idea to avoid reading *too much* at once, since this uses
+// a lot of stack space)
+
 realModeTable* ReadLogicalSector(uint16 NumBlocks, uint32 Address, uint32 Lba) {
 
   // First, we need to figure out the corresponding physical sector, like this:
@@ -104,7 +107,7 @@ realModeTable* ReadLogicalSector(uint16 NumBlocks, uint32 Address, uint32 Lba) {
     Size = PhysicalSectorSize;
   }
 
-  uint8 Cache[Size];
+  uint8 Cache[Size * NumBlocks];
 
   // Now, we can finally use ReadSector(), and load the necessary sectors.
 
@@ -113,7 +116,7 @@ realModeTable* ReadLogicalSector(uint16 NumBlocks, uint32 Address, uint32 Lba) {
   // Finally, we can go ahead and copy the logical block/sector to the given address, and
   // return the real mode table
 
-  Memcpy((void*)(int)Address, &Cache[Offset], LogicalSectorSize);
+  Memcpy((void*)(int)Address, &Cache[Offset], (LogicalSectorSize * NumBlocks));
   return Table;
 
 }
