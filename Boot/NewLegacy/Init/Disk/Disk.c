@@ -7,17 +7,18 @@
 #include "../Memory/Memory.h"
 #include "Disk.h"
 
-// Global variables
+// Global variables. (These are also defined in Disk.h, but just in case..)
 
 uint8 DriveNumber;
 
 uint16 LogicalSectorSize;
 uint16 PhysicalSectorSize;
 
-/* realModeTable* ReadSector())
 
-   Inputs: uint16 NumBlocks - The number of sectors (blocks) that we want to load.
-           uint32 Address - The 48-bit memory address we want to load *to*.
+/* realModeTable* ReadSector()
+
+   Inputs: uint16 NumBlocks - The number of physical sectors (blocks) that we want to load.
+           uint32 Address - The 32-bit memory address we want to load *to*.
            uint64 Offset - The LBA (sector number) we want to start loading *from*.
 
    Outputs: realModeTable* - This function uses a real mode BIOS interrupt (int 13h, ah 42h) in
@@ -72,11 +73,28 @@ realModeTable* ReadSector(uint16 NumBlocks, uint32 Address, uint64 Offset) {
 }
 
 
-// This is basically the same as ReadSector(), except it reads 'logical' sectors
-// (in practice, this just means the ones set by the filesystem)
+/* realModeTable* ReadLogicalSector()
 
-// (By the way, might be a good idea to avoid reading *too much* at once, since this uses
-// a lot of stack space)
+   Inputs: uint16 NumBlocks - The number of logical sectors (blocks) that we want to load.
+           uint32 Address - The 32-bit memory address we want to load *to*.
+           uint64 Offset - The LBA (sector number) we want to start loading *from*.
+
+   Outputs: realModeTable* - This function uses a real mode BIOS interrupt (int 13h, ah 42h)
+   in order to actually load anything, so this is just the output of that; make sure to check
+   it for the carry flag (and for error codes in the ah register)
+
+   This function serves essentially the same role as ReadSector(), but it reads a *logical*
+   sector, which can be useful for some filesystem operations (for example, reading 4096-byte
+   logical sectors on a system with 512-byte physical sectors).
+
+   It uses the global variables LogicalSectorSize (the logical sector size of the volume,
+   usually expressed in the BPB) and PhysicalSectorSize (the actual sector size being used
+   by the system), so those two variables must be set.
+
+   Otherwise, it runs in the same way as ReadSector(); *just be careful to avoid exceeding
+   the stack size, since this function allocates a buffer/cache.*
+
+*/
 
 realModeTable* ReadLogicalSector(uint16 NumBlocks, uint32 Address, uint32 Lba) {
 
@@ -123,8 +141,32 @@ realModeTable* ReadLogicalSector(uint16 NumBlocks, uint32 Address, uint32 Lba) {
 }
 
 
-// A function that loads the corresponding FAT entry of a cluster, and returns the specific
-// cluster value.
+/* uint32 GetFatEntry()
+
+   Inputs: uint32 ClusterNum - The cluster number that we want to check the FAT for.
+
+           uint32 PartitionOffset - The first LBA of the current partition (relative to the
+           start of the disk itself; this is the same as the number of hidden sectors).
+
+           uint32 FatOffset - The first LBA of this partition's FAT (relative to the start of
+           the partition itself; this is the same as the number of reserved sectors).
+
+           bool IsFat32 - Whether this partition is FAT16 (false) or FAT32 (true).
+
+   Outputs: uint32 - The cluster number indicated in the FAT (file allocation table).
+
+   This function reads a given partition's FAT (file allocation table) in order to find the
+   next cluster indicated by the FAT, which is useful for following cluster chains.
+
+   Every cluster is part of a cluster chain, which is basically a singly-linked list of
+   clusters, and the data structure that contains the information about these cluster chains
+   is called the File Allocation Table (FAT).
+
+   The role of this function is to read the FAT to find the next cluster for a given cluster;
+   for example, if there's a cluster chain like 1234h -> 5678h, then that means the FAT entry
+   for the cluster 1234h is 5678h, and this function helps find that.
+
+*/
 
 uint32 GetFatEntry(uint32 ClusterNum, uint32 PartitionOffset, uint32 FatOffset, bool IsFat32) {
 
@@ -168,11 +210,25 @@ uint32 GetFatEntry(uint32 ClusterNum, uint32 PartitionOffset, uint32 FatOffset, 
 }
 
 
-// This function just compares a name in a
+/* static bool FatNameIsEqual()
+
+   Inputs: int8 EntryName[8] - The name specified in the entry we want to compare.
+           int8 EntryExtension[3] - The extension specified in the entry we want to compare.
+           char Name[8] - The name we want to compare the entry to.
+           char Extension[3] - The extension we want to compare the entry to.
+           bool IsFolder - Whether the entry we're trying to find is a folder or not.
+
+   Outputs: bool - Whether the entry matches the name and extension we're looking for.
+
+   This function has one relatively simple role - it compares the data within a given entry
+   with a target name and extension, and returns true if the entry matches the target (and
+   false otherwise).
+
+*/
 
 static bool FatNameIsEqual(int8 EntryName[8], int8 EntryExtension[3], char Name[8], char Extension[3], bool IsFolder) {
 
-  // Compare the filename..
+  // Compare the name..
 
   for (int i = 0; i < 8; i++) {
 
@@ -186,7 +242,7 @@ static bool FatNameIsEqual(int8 EntryName[8], int8 EntryExtension[3], char Name[
     return true;
   }
 
-  // Compare the extension..
+  // Compare the extension.. (this is only necessary if IsFolder is false)
 
   for (int j = 0; j < 3; j++) {
 
@@ -203,8 +259,47 @@ static bool FatNameIsEqual(int8 EntryName[8], int8 EntryExtension[3], char Name[
 }
 
 
-// A function that searches through a given cluster (chain) to find a specific file or
-// directory.
+/* fatDirectory FindDirectory()
+
+   Inputs: uint32 ClusterNum - The first cluster number of the folder we want to search in.
+
+           uint8 SectorsPerCluster - The amount of sectors per cluster (specified by the BPB).
+
+           uint32 PartitionOffset - The first LBA of the current partition (relative to the
+           start of the disk itself; this is the same as the number of hidden sectors).
+
+           uint32 FatOffset - The first LBA of this partition's FAT (relative to the start of
+           the partition itself; this is the same as the number of reserved sectors).
+
+           uint32 DataOffset - The first LBA of this partition's data section (relative to
+           the start of the partition itself).
+
+           char Name[8] - The name of the directory that we're trying to find.
+
+           char Extension[3] - The extension of the directory that we're trying to find, if
+           applicable (in the case of folders, leave this blank).
+
+           bool IsFolder - Whether our target directory is a folder or not.
+
+           bool IsFat32 - Whether this partition is FAT16 (false) or FAT32 (true).
+
+   Outputs: fatDirectory - If we did find the directory, then this corresponds to a copy of
+   its entry; otherwise, it corresponds to an empty entry with the limit set to FFFFFFFFh, and
+   the size set to 0 (indicating that the search failed).
+
+   This function has one relatively simple (yet complicated) role - it tries to find a
+   directory (which can be a file or a folder) within a given folder, within a FAT16 or a
+   FAT32 file system.
+
+   The process to do so is well documented within the function itself, but essentially, it
+   passes through the cluster chain (starting at ClusterNum), scanning all the entries within
+   each cluster for the target directory, returning it if it's found.
+
+   Keep in mind that this doesn't support long file names, and that all names and extensions
+   must be uppercase and padded with spaces (for example, "Serra.bin" should turn into the
+   name "SERRA   " and extension "BIN" respectively).
+
+*/
 
 fatDirectory FindDirectory(uint32 ClusterNum, uint8 SectorsPerCluster, uint32 PartitionOffset, uint32 FatOffset, uint32 DataOffset, char Name[8], char Extension[3], bool IsFolder, bool IsFat32) {
 
@@ -318,7 +413,36 @@ fatDirectory FindDirectory(uint32 ClusterNum, uint8 SectorsPerCluster, uint32 Pa
 }
 
 
-// A function to actually read a file from disk
+/* void ReadFile()
+
+   Inputs: void* Address - The address we want to read the file *to*.
+
+           fatDirectory Entry - The (directory) entry of the file we want to read *from*.
+
+           uint8 SectorsPerCluster - The amount of sectors per cluster (specified by the BPB).
+
+           uint32 PartitionOffset - The first LBA of the current partition (relative to the
+           start of the disk itself; this is the same as the number of hidden sectors).
+
+           uint32 FatOffset - The first LBA of this partition's FAT (relative to the start of
+           the partition itself; this is the same as the number of reserved sectors).
+
+           uint32 DataOffset - The first LBA of this partition's data section (relative to
+           the start of the partition itself).
+
+           bool IsFat32 - Whether this partition is FAT16 (false) or FAT32 (true).
+
+   Outputs: (none)
+
+   This function reads the contents of a file from disk to memory, given an address to load
+   it to, and the directory entry of the file we want to read from (as returned by
+   FindDirectory()).
+
+   Despite being more inefficient, this function saves on memory space by only loading one
+   logical sector at a time, since the individual cluster size may exceed the remaining space
+   on the stack.
+
+*/
 
 void ReadFile(void* Address, fatDirectory Entry, uint8 SectorsPerCluster, uint32 PartitionOffset, uint32 FatOffset, uint32 DataOffset, bool IsFat32) {
 
@@ -330,24 +454,35 @@ void ReadFile(void* Address, fatDirectory Entry, uint8 SectorsPerCluster, uint32
     Limit = 0x0FFFFFF6;
   }
 
-  // (Get data from the entry)
+  // Before we do anything, we want to get two variables from the entry we were given - the
+  // initial starting cluster, and the size of the file we're reading.
 
   uint32 ClusterNum = GetDirectoryCluster(Entry);
   uint32 Size = Entry.Size;
 
-  uint32 Offset = 0;
+  // Next, we want to actually start reading from the file, until we hit either the end of
+  // the cluster chain, or the end of the file. We'll be keeping track of the offset and the
+  // number of bytes read using the Offset variable.
 
-  // ...
+  uint32 Offset = 0;
 
   while (!ExceedsLimit(ClusterNum, Limit)) {
 
+    // We'll only be reading one (logical) sector at a time, in order to conserve memory
+    // space, as the cluster size can sometimes be bigger than the stack size
+
     uint8 Cache[LogicalSectorSize];
     uint32 ClusterOffset = ((ClusterNum - 2) * SectorsPerCluster);
+
+    // For every sector in the current cluster..
 
     for (unsigned int SectorNum = 0; SectorNum < SectorsPerCluster; SectorNum++) {
 
       ReadLogicalSector(1, (uint32)(Address + Offset), (PartitionOffset + DataOffset + ClusterOffset + SectorNum));
       Offset += LogicalSectorSize;
+
+      // If we've already reached the end of the file, no need to continue, just end the
+      // function immediately.
 
       if (Offset >= Size) {
         return;
@@ -355,13 +490,15 @@ void ReadFile(void* Address, fatDirectory Entry, uint8 SectorsPerCluster, uint32
 
     }
 
-    // Load the next cluster
+    // Finally, if we've already finished this cluster, then continue to the next cluster
+    // in the chain (if it exceeds the limit, the condition of the while loop will end things
+    // here).
 
     ClusterNum = GetFatEntry(ClusterNum, PartitionOffset, FatOffset, IsFat32);
 
   }
 
-  // ...
+  // After everything, we can just return
 
   return;
 
