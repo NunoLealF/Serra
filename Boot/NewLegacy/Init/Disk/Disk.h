@@ -5,25 +5,6 @@
 #ifndef SERRA_DISK_H
 #define SERRA_DISK_H
 
-  // Disk-related functions and variables. (Disk.c)
-
-  extern uint8 DriveNumber;
-
-  extern uint16 LogicalSectorSize;
-  extern uint16 PhysicalSectorSize;
-
-  realModeTable* ReadSector(uint16 NumBlocks, uint32 Address, uint64 Offset);
-  realModeTable* ReadLogicalSector(uint16 NumBlocks, uint32 Address, uint32 Lba);
-
-  // Filesystem-related functions. (Disk.c)
-
-  #define GetClusterOffset(ClusterNum, SectorsPerCluster, FirstDataSector) (((ClusterNum - 2) * SectorsPerCluster) + FirstDataSector)
-  uint32 GetFatEntry(uint32 ClusterNum, uint32 PartitionOffset, uint32 FatOffset, bool IsFat32);
-
-  #define ExceedsLimit(Cluster, Limit) ((Cluster & 0x0FFFFFFF) >= Limit)
-  uint32 FindDirectory(uint32 ClusterNum, uint8 SectorsPerCluster, uint32 PartitionOffset, uint32 FatOffset, uint32 DataOffset, char Name[8], char Extension[3], bool IsFolder, bool IsFat32);
-
-
   // EDD (Enhanced Disk Drive)-related data structures. (Used in multiple files, defined here)
 
   typedef struct {
@@ -147,5 +128,26 @@
     uint32 Size; // The size of this file (this doesn't apply to directories, does it..?)
 
   } __attribute__((packed)) fatDirectory;
+
+
+  // Disk-related functions and variables. (Disk.c)
+
+  extern uint8 DriveNumber;
+
+  extern uint16 LogicalSectorSize;
+  extern uint16 PhysicalSectorSize;
+
+  realModeTable* ReadSector(uint16 NumBlocks, uint32 Address, uint64 Offset);
+  realModeTable* ReadLogicalSector(uint16 NumBlocks, uint32 Address, uint32 Lba);
+
+
+  // Filesystem-related functions. (Disk.c)
+
+  #define GetClusterOffset(ClusterNum, SectorsPerCluster, FirstDataSector) (((ClusterNum - 2) * SectorsPerCluster) + FirstDataSector)
+  uint32 GetFatEntry(uint32 ClusterNum, uint32 PartitionOffset, uint32 FatOffset, bool IsFat32);
+
+  #define ExceedsLimit(Cluster, Limit) ((Cluster & 0x0FFFFFFF) >= Limit)
+  #define GetDirectoryCluster(Directory) ((Directory.ClusterNum_High << 16) + Directory.ClusterNum_Low)
+  fatDirectory FindDirectory(uint32 ClusterNum, uint8 SectorsPerCluster, uint32 PartitionOffset, uint32 FatOffset, uint32 DataOffset, char Name[8], char Extension[3], bool IsFolder, bool IsFat32);
 
 #endif

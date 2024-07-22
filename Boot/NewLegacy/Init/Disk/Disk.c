@@ -82,18 +82,25 @@ realModeTable* ReadLogicalSector(uint16 NumBlocks, uint32 Address, uint32 Lba) {
 
   // First, we need to figure out the corresponding physical sector, like this:
 
+  // (NumSectors is the number of physical sectors to read, whereas NumBlocks is the number
+  // of logical sectors to read)
+
   uint32 PhysicalLba = Lba;
   uint16 Offset = 0;
+
+  uint16 NumSectors = NumBlocks;
 
   if (PhysicalSectorSize < LogicalSectorSize) {
 
     PhysicalLba *= (LogicalSectorSize / PhysicalSectorSize);
-    NumBlocks *= (LogicalSectorSize / PhysicalSectorSize);
+    NumSectors *= (LogicalSectorSize / PhysicalSectorSize);
 
   } else if (PhysicalSectorSize > LogicalSectorSize) {
 
     PhysicalLba /= (PhysicalSectorSize / LogicalSectorSize);
-    Offset += ((Lba % PhysicalSectorSize) * LogicalSectorSize);
+    NumSectors = ((NumSectors - 1) / (PhysicalSectorSize / LogicalSectorSize)) + 1;
+
+    Offset += ((Lba % (PhysicalSectorSize / LogicalSectorSize)) * LogicalSectorSize);
 
   }
 
@@ -101,17 +108,11 @@ realModeTable* ReadLogicalSector(uint16 NumBlocks, uint32 Address, uint32 Lba) {
   // disk. We can't just directly use ReadSector() on Address, since the size of a physical
   // sector might exceed the size of a logical sector, so instead, we do this:
 
-  uint16 Size = LogicalSectorSize;
-
-  if (PhysicalSectorSize > LogicalSectorSize) {
-    Size = PhysicalSectorSize;
-  }
-
-  uint8 Cache[Size * NumBlocks];
+  uint8 Cache[PhysicalSectorSize * NumSectors];
 
   // Now, we can finally use ReadSector(), and load the necessary sectors.
 
-  realModeTable* Table = ReadSector(NumBlocks, (uint32)(int)&Cache[0], PhysicalLba);
+  realModeTable* Table = ReadSector(NumSectors, (uint32)(int)&Cache[0], PhysicalLba);
 
   // Finally, we can go ahead and copy the logical block/sector to the given address, and
   // return the real mode table
@@ -205,9 +206,9 @@ static bool FatNameIsEqual(int8 EntryName[8], int8 EntryExtension[3], char Name[
 // A function that searches through a given cluster (chain) to find a specific file or
 // directory.
 
-uint32 FindDirectory(uint32 ClusterNum, uint8 SectorsPerCluster, uint32 PartitionOffset, uint32 FatOffset, uint32 DataOffset, char Name[8], char Extension[3], bool IsFolder, bool IsFat32) {
+fatDirectory FindDirectory(uint32 ClusterNum, uint8 SectorsPerCluster, uint32 PartitionOffset, uint32 FatOffset, uint32 DataOffset, char Name[8], char Extension[3], bool IsFolder, bool IsFat32) {
 
-  // (Define limits for FAT16 and FAT32)
+  // (Define limits for FAT16 and FAT32, and return if bad)
 
   uint32 Limit = 0xFFF6;
 
@@ -215,12 +216,15 @@ uint32 FindDirectory(uint32 ClusterNum, uint8 SectorsPerCluster, uint32 Partitio
     Limit = 0x0FFFFFF6;
   }
 
+  if (ClusterNum >= Limit) {
+    goto ReturnNullEntry;
+  }
+
   // The size of an individual FAT cluster can be pretty huge, and we don't have enough
   // memory that we can (safely) load in an entire cluster at once, so instead, we'll be loading
   // only individual (logical) sectors.
 
   uint32 CurrentCluster = ClusterNum;
-  bool FoundDirectory = false;
 
   do {
 
@@ -247,7 +251,7 @@ uint32 FindDirectory(uint32 ClusterNum, uint8 SectorsPerCluster, uint32 Partitio
         fatDirectory Entry = *(fatDirectory*)(&ClusterCache[EntryNum * 32]);
 
         if (Entry.Name[0] == 0x00) {
-          goto Cleanup;
+          break;
         }
 
         // Also, if this is a long filename entry, we can just skip forward:
@@ -285,12 +289,7 @@ uint32 FindDirectory(uint32 ClusterNum, uint8 SectorsPerCluster, uint32 Partitio
         // we can exit out of this whole process, and return the cluster in that entry!
 
         if (FatNameIsEqual(Entry.Name, Entry.Extension, Name, Extension, IsFolder) == true) {
-
-          FoundDirectory = true;
-          CurrentCluster = ((Entry.ClusterNum_High << 16) + Entry.ClusterNum_Low);
-
-          goto Cleanup;
-
+          return Entry;
         }
 
       }
@@ -299,31 +298,27 @@ uint32 FindDirectory(uint32 ClusterNum, uint8 SectorsPerCluster, uint32 Partitio
       // the next one (if applicable). The next cluster is stored in the FAT, but thankfully,
       // we already have a function that does that job for us: GetFatEntry().
 
-      // Finally, after we've successfully checked the whole cluster, we want to move onto
-      // the next cluster (if applicable). The next cluster is stored in the FAT, but
-      // thankfully, we already have a function that does that job for us: GetFatEntry().
-
-      Cleanup:
-
-      if (FoundDirectory == false) {
-
-        CurrentCluster = GetFatEntry(CurrentCluster, PartitionOffset, FatOffset, IsFat32);
-        continue;
-
-      }
+      CurrentCluster = GetFatEntry(CurrentCluster, PartitionOffset, FatOffset, IsFat32);
+      continue;
 
     }
 
-  } while ((FoundDirectory == false) && ExceedsLimit(CurrentCluster, Limit));
+  } while (ExceedsLimit(CurrentCluster, Limit));
 
-  // Now, all we need to do is to return the current cluster. If no file or directory
-  // matches the one we're looking for, then we'll return something above the limit; otherwise,
-  // we'll just return the current cluster.
+  // Now, if we've gotten here, then that means we haven't found a matching entry; in that case,
+  // all we need to do is to return an empty directory entry, with the highest possible limit,
+  // to indicate that we didn't really find anything.
 
-  if (FoundDirectory == true) {
-    return CurrentCluster;
-  } else {
-    return Limit;
-  }
+  ReturnNullEntry:
+
+  fatDirectory NullEntry;
+
+  NullEntry.ClusterNum_Low = 0xFFFF;
+  NullEntry.ClusterNum_High = 0xFFFF;
+  NullEntry.Size = 0;
+
+  Printf("Returning null entry... initial cluster num = %x\n", 0x03, ClusterNum);
+
+  return NullEntry;
 
 }
