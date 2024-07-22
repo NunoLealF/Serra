@@ -351,20 +351,6 @@ fatDirectory FindDirectory(uint32 ClusterNum, uint8 SectorsPerCluster, uint32 Pa
           continue;
         }
 
-        // (show data..)
-
-        Printf("[Debug] Found a file \"", 0x03);
-
-        for (int i = 0; i < 8; i++) {
-          Putchar(Entry.Name[i], 0x07);
-        }
-        Putchar('.', 0x07);
-        for (int j = 0; j < 3; j++) {
-          Putchar(Entry.Extension[j], 0x07);
-        }
-
-        Printf("\" with attributes %xh and on address %xh\n", 0x03, Entry.Attributes, (((PartitionOffset + DataOffset + SectorNum) * LogicalSectorSize) + (EntryNum * 32)));
-
         // Next, we want to see if the type matches - essentially, if we're looking for a
         // file, skip through all folders, and if we're looking for a folder, skip through
         // all files.
@@ -405,8 +391,6 @@ fatDirectory FindDirectory(uint32 ClusterNum, uint8 SectorsPerCluster, uint32 Pa
   NullEntry.ClusterNum_Low = 0xFFFF;
   NullEntry.ClusterNum_High = 0xFFFF;
   NullEntry.Size = 0;
-
-  Printf("Returning null entry... initial cluster num = %x\n", 0x03, ClusterNum);
 
   return NullEntry;
 

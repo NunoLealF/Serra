@@ -410,17 +410,17 @@ void __attribute__((noreturn)) Bootloader(void) {
   // Now, we can finally start searching for the next stage of the bootloader. We first
   // need to find the /Boot directory, like this:
 
-  Printf("RootCluster test: %x and %x\n", 0x07, RootCluster, GetFatEntry(RootCluster, Bpb.HiddenSectors, Bpb.ReservedSectors, PartitionIsFat32));
+  Printf("RootCluster test: %x and %x\n", 0x03, RootCluster, GetFatEntry(RootCluster, Bpb.HiddenSectors, Bpb.ReservedSectors, PartitionIsFat32));
 
   fatDirectory BootDirectory = FindDirectory(RootCluster, Bpb.SectorsPerCluster, Bpb.HiddenSectors, Bpb.ReservedSectors, RootSectorOffset, "BOOT    ", "   ", true, PartitionIsFat32);
   uint32 BootCluster = GetDirectoryCluster(BootDirectory);
-  Printf("Boot/ (cluster number): %x\n", 0x07, BootCluster);
+  Printf("Boot/ (cluster number): %x\n", 0x03, BootCluster);
 
   // (WARNING, this finds core.bin, NOT serra.bin)
 
   fatDirectory CoreDirectory = FindDirectory(BootCluster, Bpb.SectorsPerCluster, Bpb.HiddenSectors, Bpb.ReservedSectors, DataSectorOffset, "CORE    ", "BIN", false, PartitionIsFat32);
   uint32 CoreCluster = GetDirectoryCluster(CoreDirectory);
-  Printf("Boot/Core.bin (cluster number): %x\n", 0x07, CoreCluster);
+  Printf("Boot/Core.bin (cluster number): %x\n", 0x03, CoreCluster);
 
 
 
