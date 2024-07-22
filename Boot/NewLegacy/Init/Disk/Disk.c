@@ -216,10 +216,6 @@ fatDirectory FindDirectory(uint32 ClusterNum, uint8 SectorsPerCluster, uint32 Pa
     Limit = 0x0FFFFFF6;
   }
 
-  if (ClusterNum >= Limit) {
-    goto ReturnNullEntry;
-  }
-
   // The size of an individual FAT cluster can be pretty huge, and we don't have enough
   // memory that we can (safely) load in an entire cluster at once, so instead, we'll be loading
   // only individual (logical) sectors.
@@ -299,7 +295,12 @@ fatDirectory FindDirectory(uint32 ClusterNum, uint8 SectorsPerCluster, uint32 Pa
       // we already have a function that does that job for us: GetFatEntry().
 
       CurrentCluster = GetFatEntry(CurrentCluster, PartitionOffset, FatOffset, IsFat32);
-      continue;
+
+      if (CurrentCluster < Limit) {
+        continue;
+      } else {
+        goto ReturnNullEntry;
+      }
 
     }
 
