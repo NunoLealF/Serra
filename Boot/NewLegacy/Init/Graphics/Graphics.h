@@ -29,7 +29,8 @@
   char* Strrev(char* String);
   char* Itoa(uint32 Number, char* Buffer, uint8 Base);
 
-  // The terminalDataStruct type, and TerminalTable{}. (Graphics.c)
+  // The terminalDataStruct type, TerminalTable{}, and the debug (show non-important
+  // messages) flag. (Graphics.c)
 
   typedef volatile struct {
 
@@ -47,6 +48,7 @@
   } terminalDataStruct;
 
   extern terminalDataStruct TerminalTable;
+  extern volatile bool Debug;
 
   // Functions that directly interact with the TerminalTable{} structure. (Graphics.c)
 

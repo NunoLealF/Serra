@@ -6,10 +6,10 @@
 #include "../Memory/Memory.h"
 #include "Graphics.h"
 
-// (I haven't really figured out a good way to comment this without clogging up my header file,
-// but this was already defined in Graphics.h basically)
+// Global variables. (The Debug flag inhibits all messages if set to false)
 
 terminalDataStruct TerminalTable;
+volatile bool Debug;
 
 /* void InitializeTerminal()
 
@@ -219,11 +219,19 @@ static void PutcharAt(const char Character, uint8 Color, uint16 PosX, uint16 Pos
    the positions in that table and/or scrolls the terminal if necessary.
 
    It can be called by any function, even outside of this file (as it's not a static function),
-   but its main purpose is to be called by Print().
+   but its main purpose is to be called by Print(). However, if the Debug flag isn't set
+   (so, if (Debug == false)), this function doesn't print anything
 
 */
 
 void Putchar(const char Character, uint8 Color) {
+
+  // If Debug is false, then don't print anything (it's automatically set to true for any
+  // important system messages)
+
+  if (Debug == false) {
+    return;
+  }
 
   // Depending on the character, we want to handle each of these differently:
 
@@ -288,6 +296,15 @@ void Putchar(const char Character, uint8 Color) {
 */
 
 void Print(const char* String, uint8 Color) {
+
+  // If Debug is false, then don't print anything (it's automatically set to true for any
+  // important system messages)
+
+  if (Debug == false) {
+    return;
+  }
+
+  // Print each character in the string
 
   for (int i = 0; i < Strlen(String); i++) {
     Putchar(String[i], Color);

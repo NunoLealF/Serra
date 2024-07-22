@@ -32,12 +32,25 @@ void Message(messageType Type, char* String, ...) {
   va_list Arguments;
   va_start(Arguments, String);
 
+  // Depending on the 'severity level', turn on Debug
+
+  bool SaveDebug = Debug;
+
+  switch (Type) {
+
+    case Fail:
+    case Warning:
+    case Error:
+      Debug = true;
+
+  }
+
   // Show the message type / 'classification level' to the user, enclosed by square
   // brackets (for example, [Kernel], [Ok], etc).
 
   Print("[", 0x0F);
 
-  switch(Type) {
+  switch (Type) {
 
     case Info:
       Print("Info", 0x07);
@@ -70,11 +83,12 @@ void Message(messageType Type, char* String, ...) {
 
   Print("] ", 0x0F);
 
-  // Show the given message to the user, and call va_end().
+  // Show the given message to the user, restore the value of Debug, and call va_end().
 
   vPrintf(String, 0x0F, Arguments);
   Print("\n", 0x0F);
 
+  Debug = SaveDebug;
   va_end(Arguments);
 
 }
@@ -102,9 +116,12 @@ void __attribute__((noreturn)) Panic(char* String) {
 
   __asm__("cli");
 
-  // Show the error message to the user.
+  // Enable the Debug flag (since this is an important system message), and show the error
+  // message to the user.
 
   Putchar('\n', 0);
+  
+  Debug = true;
   Message(Error, String);
 
   // Finally, tell the user that the system will halt indefinitely (and that they should

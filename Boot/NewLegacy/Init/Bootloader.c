@@ -67,7 +67,7 @@ void __attribute__((noreturn)) Init(void) {
 // 7E00h -> 9E00h: 2nd stage bootloader
 // 9E00h -> AC00h: Shared real-mode code
 // AC00h -> AE00h: Shared real-mode data
-// AE00h -> 10000h: [This is basically just used to test things out; treat as empty, but volatile]
+// AE00h -> 10000h: (This is empty; maybe use it to pass info to the 3rd stage..?)
 // 10000h -> 20000h: Stack
 // 20000h -> ?????h: 3rd stage bootloader
 
@@ -77,6 +77,17 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   // We've finally made it to our second-stage bootloader. We're in 32-bit x86 protected mode with
   // the stack at 20000h in memory, and our bootloader between 7E00h and CE00h in memory.
+
+  // (Set up the debug flag; this dictates whether non-important messages are shown or not)
+
+  uint8 UseDebugFlag = *(uint8*)(0x7E00 - 4);
+
+  if (UseDebugFlag == 0x00) {
+    Debug = false;
+  } else {
+    Debug = true;
+  }
+
 
   // (Set up terminal)
 
@@ -422,6 +433,13 @@ void __attribute__((noreturn)) Bootloader(void) {
   uint32 CoreCluster = GetDirectoryCluster(CoreDirectory);
   Printf("Boot/Core.bin (cluster number): %x\n", 0x03, CoreCluster);
 
+  // Pretty much everything is done here, the only thing left to do is to actually load the
+  // next stage, and to also keep some important data for later
+
+  // Could also be a good idea to implement a debug mode, if that makes sense (basically,
+  // don't display anything unless some debug flag is set during compile-time (or even run
+  // time - I feel like some flag in the bootsector might be the best way to implement that,
+  // so you can change it later on)
 
 
   // Each entry is 32 bytes long: https://wiki.osdev.org/FAT
@@ -448,6 +466,8 @@ void __attribute__((noreturn)) Bootloader(void) {
 
 
   // [For now, let's end things here]
+
+  Debug = true;
 
   Putchar('\n', 0);
 

@@ -184,6 +184,13 @@ char* Itoa(uint32 Number, char* Buffer, uint8 Base) {
 
 void vPrintf(const char* String, uint8 Color, va_list Arguments) {
 
+  // If Debug is false, then don't print anything (it's automatically set to true for any
+  // important system messages)
+
+  if (Debug == false) {
+    return;
+  }
+
   // We might need to call Itoa (like if %d, %i or %x are called), so we should prepare
   // a buffer.
 
@@ -292,6 +299,13 @@ void vPrintf(const char* String, uint8 Color, va_list Arguments) {
 */
 
 void Printf(const char* String, uint8 Color, ...) {
+
+  // If Debug is false, then don't print anything (it's automatically set to true for any
+  // important system messages)
+
+  if (Debug == false) {
+    return;
+  }
 
   // Prepare va_list, va_start, etc.
   // Refer to this: https://blog.aaronballman.com/2012/06/how-variable-argument-lists-work-in-c/

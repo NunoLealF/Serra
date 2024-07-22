@@ -87,7 +87,7 @@ Start:
   ; (given to us by our BIOS) - specifically, we'll be saving it at the [saveDl] area, which
   ; is at the end of this bootsector (immediately preceding the signature, AA55h).
 
-  mov [saveDl], dl
+  mov [SaveDl], dl
 
   ; We can now finally jump to loadDisk!
 
@@ -114,7 +114,7 @@ LoadDisk:
 
   mov ah, 41h
   mov bx, 55AAh
-  mov dl, [saveDl]
+  mov dl, [SaveDl]
 
   int 13h
 
@@ -133,18 +133,18 @@ LoadDisk:
   ; can't assume that our bootloader starts at LBA 0; because of that, we need to add the
   ; number of hidden sectors before the bootsector to the offset in the disk address packet.
 
-  mov eax, [diskAddressPacket.Offset]
+  mov eax, [DiskAddressPacket.Offset]
   add eax, [BPB.HiddenSectors]
-  mov [diskAddressPacket.Offset], eax
+  mov [DiskAddressPacket.Offset], eax
 
   ; Now, we can finally use the BIOS interrupt call (int 13h / ah 42h) to load the second-stage
   ; bootloader, using the data in [DS:SI] (which in this case, points to the data in the
   ; diskAddressPacket label). As always, we use the drive number in SaveDl.
 
   mov ah, 42h
-  mov dl, [saveDl]
+  mov dl, [SaveDl]
 
-  mov si, diskAddressPacket
+  mov si, DiskAddressPacket
 
   int 13h
 
@@ -189,10 +189,10 @@ ProtectedMode:
 
   cli
 
-  ; Load [gdtDescriptor], which should contain a suitable 32-bit protected mode GDT. You can
-  ; check the gdtDescriptor and gdtTable labels for more information regarding our GDT.
+  ; Load [GdtDescriptor], which should contain a suitable 32-bit protected mode GDT. You can
+  ; check the GdtDescriptor and gdtTable labels for more information regarding our GDT.
 
-  lgdt [gdtDescriptor]
+  lgdt [GdtDescriptor]
 
   ; Actually switch into 32-bit protected mode, by setting the PE (Protected Mode Enable) bit
   ; of the CR0 register.
@@ -269,22 +269,22 @@ errorMsg db "[Serra] Failed to load the rest of the bootloader.", 0
 
 ; -----------------------------------
 
-diskAddressPacket:
+DiskAddressPacket:
 
-  diskAddressPacket.Size: db 16 ; The size of this (disk address) packet is 16 bytes.
-  diskAddressPacket.Reserved: db 0 ; (This area is reserved)
-  diskAddressPacket.NumSectors: dw 24 ; We want to load 24 sectors into memory.
-  diskAddressPacket.Location: dd 7E00h ; And we also want to load those at 7E00h.
-  diskAddressPacket.Offset: dq 8 ; Additionally, we want to start loading from LBA 8 (this value may be changed).
+  DiskAddressPacket.Size: db 16 ; The size of this (disk address) packet is 16 bytes.
+  DiskAddressPacket.Reserved: db 0 ; (This area is reserved)
+  DiskAddressPacket.NumSectors: dw 24 ; We want to load 24 sectors into memory.
+  DiskAddressPacket.Location: dd 7E00h ; And we also want to load those at 7E00h.
+  DiskAddressPacket.Offset: dq 8 ; Additionally, we want to start loading from LBA 8 (this value may be changed).
 
 ; -----------------------------------
 
-gdtDescriptor:
+GdtDescriptor:
 
   dw 24 - 1 ; Three eight-byte segments, minus one byte.
-  dd gdtTable ; The location of our GDT is the gdtTable label.
+  dd GdtTable ; The location of our GDT is the gdtTable label.
 
-gdtTable:
+GdtTable:
 
   ; Segment 0 (Null segment)
 
@@ -317,19 +317,25 @@ gdtTable:
 ; -----------------------------------
 
 ; Tell our assembler that we want to fill the rest of our bootsector (essentially, any areas
-; that haven't been used) with zero up to the (512 - 3)th byte, to account for SaveDl and the
-; bootsector signature (which are 1 and 2 bytes respectively).
+; that haven't been used) with zero up to the (512 - 4)th byte, to account for the Debug
+; byte, SaveDl and the bootsector signature (which are 1, 1 and 2 bytes respectively).
 
-times (512 - 3) - ($-$$) db 0
+times (512 - 4) - ($-$$) db 0
+
+; We want to have an easy way to toggle non-debug messages off and on, so we'll reserve a
+; byte here in the bootsector for exactly that - in order to toggle *on* messages, set this
+; to anything but 00h.
+
+Debug: db 01h
 
 ; This is where we'll reserve the drive number given to us by our BIOS, which is in the DL
 ; register - this will be important later on. By hardcoding the position (as being immediately
 ; before the bootsector signature, AA55h), we know exactly where to find it in the future.
 
-saveDl: db 0
+SaveDl: db 0
 
 ; Every x86 bootsector has a signature at the end that the system *always* checks for, which are the
 ; two bytes 55h and AAh (AA55h). This is required if we want to tell our BIOS that this is a
 ; bootsector, and not just random noise or data.
 
-bootsectorSignature: dw 0AA55h
+BootsectorSignature: dw 0AA55h
