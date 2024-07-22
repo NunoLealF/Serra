@@ -455,14 +455,13 @@ void ReadFile(void* Address, fatDirectory Entry, uint8 SectorsPerCluster, uint32
     // We'll only be reading one (logical) sector at a time, in order to conserve memory
     // space, as the cluster size can sometimes be bigger than the stack size
 
-    uint8 Cache[LogicalSectorSize];
     uint32 ClusterOffset = ((ClusterNum - 2) * SectorsPerCluster);
 
     // For every sector in the current cluster..
 
     for (unsigned int SectorNum = 0; SectorNum < SectorsPerCluster; SectorNum++) {
 
-      ReadLogicalSector(1, (uint32)(Address + Offset), (PartitionOffset + DataOffset + ClusterOffset + SectorNum));
+      ReadLogicalSector(1, (uint32)((int)Address + Offset), (PartitionOffset + DataOffset + ClusterOffset + SectorNum));
       Offset += LogicalSectorSize;
 
       // If we've already reached the end of the file, no need to continue, just end the

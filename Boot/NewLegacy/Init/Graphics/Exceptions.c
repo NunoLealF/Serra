@@ -43,6 +43,9 @@ void Message(messageType Type, char* String, ...) {
     case Error:
       Debug = true;
 
+    default:
+      break;
+
   }
 
   // Show the message type / 'classification level' to the user, enclosed by square
@@ -120,7 +123,7 @@ void __attribute__((noreturn)) Panic(char* String) {
   // message to the user.
 
   Putchar('\n', 0);
-  
+
   Debug = true;
   Message(Error, String);
 
