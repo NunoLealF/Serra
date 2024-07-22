@@ -208,7 +208,7 @@ static bool FatNameIsEqual(int8 EntryName[8], int8 EntryExtension[3], char Name[
 
 fatDirectory FindDirectory(uint32 ClusterNum, uint8 SectorsPerCluster, uint32 PartitionOffset, uint32 FatOffset, uint32 DataOffset, char Name[8], char Extension[3], bool IsFolder, bool IsFat32) {
 
-  // (Define limits for FAT16 and FAT32, and return if bad)
+  // (Define limits for FAT16 and FAT32)
 
   uint32 Limit = 0xFFF6;
 
@@ -295,22 +295,15 @@ fatDirectory FindDirectory(uint32 ClusterNum, uint8 SectorsPerCluster, uint32 Pa
       // we already have a function that does that job for us: GetFatEntry().
 
       CurrentCluster = GetFatEntry(CurrentCluster, PartitionOffset, FatOffset, IsFat32);
-
-      if (CurrentCluster < Limit) {
-        continue;
-      } else {
-        goto ReturnNullEntry;
-      }
+      continue;
 
     }
 
-  } while (ExceedsLimit(CurrentCluster, Limit));
+  } while (!ExceedsLimit(CurrentCluster, Limit));
 
   // Now, if we've gotten here, then that means we haven't found a matching entry; in that case,
   // all we need to do is to return an empty directory entry, with the highest possible limit,
   // to indicate that we didn't really find anything.
-
-  ReturnNullEntry:
 
   fatDirectory NullEntry;
 
@@ -321,5 +314,55 @@ fatDirectory FindDirectory(uint32 ClusterNum, uint8 SectorsPerCluster, uint32 Pa
   Printf("Returning null entry... initial cluster num = %x\n", 0x03, ClusterNum);
 
   return NullEntry;
+
+}
+
+
+// A function to actually read a file from disk
+
+void ReadFile(void* Address, fatDirectory Entry, uint8 SectorsPerCluster, uint32 PartitionOffset, uint32 FatOffset, uint32 DataOffset, bool IsFat32) {
+
+  // (Define limits for FAT16 and FAT32)
+
+  uint32 Limit = 0xFFF6;
+
+  if (IsFat32 == true) {
+    Limit = 0x0FFFFFF6;
+  }
+
+  // (Get data from the entry)
+
+  uint32 ClusterNum = GetDirectoryCluster(Entry);
+  uint32 Size = Entry.Size;
+
+  uint32 Offset = 0;
+
+  // ...
+
+  while (!ExceedsLimit(ClusterNum, Limit)) {
+
+    uint8 Cache[LogicalSectorSize];
+    uint32 ClusterOffset = ((ClusterNum - 2) * SectorsPerCluster);
+
+    for (unsigned int SectorNum = 0; SectorNum < SectorsPerCluster; SectorNum++) {
+
+      ReadLogicalSector(1, (uint32)(Address + Offset), (PartitionOffset + DataOffset + ClusterOffset + SectorNum));
+      Offset += LogicalSectorSize;
+
+      if (Offset >= Size) {
+        return;
+      }
+
+    }
+
+    // Load the next cluster
+
+    ClusterNum = GetFatEntry(ClusterNum, PartitionOffset, FatOffset, IsFat32);
+
+  }
+
+  // ...
+
+  return;
 
 }

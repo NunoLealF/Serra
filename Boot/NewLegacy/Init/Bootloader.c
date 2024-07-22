@@ -422,6 +422,17 @@ void __attribute__((noreturn)) Bootloader(void) {
   uint32 CoreCluster = GetDirectoryCluster(CoreDirectory);
   Printf("Boot/Core.bin (cluster number): %x\n", 0x07, CoreCluster);
 
+  // Find a test file, and output it as a string
+
+  fatDirectory Test = FindDirectory(BootCluster, Bpb.SectorsPerCluster, Bpb.HiddenSectors, Bpb.ReservedSectors, DataSectorOffset, "TEST    ", "TXT", false, PartitionIsFat32);
+
+  char TestBuffer[Test.Size];
+  Memset(TestBuffer, 0, Test.Size);
+
+  ReadFile(TestBuffer, Test, Bpb.SectorsPerCluster, Bpb.HiddenSectors, Bpb.ReservedSectors, DataSectorOffset, PartitionIsFat32);
+  Printf("This should show Boot/test.txt: %s\n", 0x3F, TestBuffer);
+
+
 
 
   // Each entry is 32 bytes long: https://wiki.osdev.org/FAT
@@ -452,7 +463,7 @@ void __attribute__((noreturn)) Bootloader(void) {
   Putchar('\n', 0);
 
   Printf("Hiya, this is Serra! <3\n", 0x0F);
-  Printf("July %i %x\n", 0x3F, 18, 0x2024);
+  Printf("July %i %x\n", 0x3F, 22, 0x2024);
 
   for(;;);
 

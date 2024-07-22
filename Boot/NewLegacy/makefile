@@ -201,3 +201,7 @@ Legacy.bin: Bootsector/Bootsector.bin Init/Init.bin Shared/Rm/Rm.bin Core/Core.b
 
 	@mmd -i Legacy.bin ::/Boot
 	@mcopy -i Legacy.bin Core/Core.bin ::/Boot
+
+# (TEST !!!)
+
+	@mcopy -i Legacy.bin test.txt ::/Boot
