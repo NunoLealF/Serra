@@ -9,69 +9,79 @@
   // bootloader; it's supposed to be placed at AE00h, and because of that, it has a maximum size
   // of 512 bytes.
 
-  // (right now, this has about 82 bytes, so it's not that huge)
+  // [VERSION 1; SIZE = 74 BYTES]
 
   typedef struct {
 
-    // [Start of table]
+    // [Table-related info]
 
     uint32 Signature; // This is basically a magic number; set it to 65363231h
-    uint16 Version; // For now, 0001h
+    uint16 Version; // For now, 1
 
-    uint16 TableSize; // Maximum 512 bytes
+    uint16 Size; // Maximum 512 bytes
 
-    // [System-related; A20 info]
-
-    bool A20_EnabledByDefault;
-    bool A20_EnabledByKbd;
-    bool A20_EnabledByFast;
-
-    // [System-related; other info]
+    // [System-related]
 
     bool Debug;
 
-    // [Disk-related; sector size]
+    struct __System_Info {
+
+      bool A20_EnabledByDefault;
+      bool A20_EnabledByKbd;
+      bool A20_EnabledByFast;
+
+    } __attribute__((packed)) System_Info;
+
+    // [Disk/EDD]
+
+    uint8 DriveNumber; // Same as SaveDL, or if Edd_Valid is false, 0x80
+    bool Edd_Valid; // Whether EDD functions work or not
 
     uint16 LogicalSectorSize; // FAT/BPB
     uint16 PhysicalSectorSize; // EDD/int13h
 
-    // [Disk-related; drive number and EDD]
+    struct __Edd_Info {
 
-    uint8 Edd_DriveNumber; // Same as SaveDL, or if Edd_Valid is false, 0x80
-    bool Edd_Valid; // Whether EDD functions work or not
+      uint16 Flags; // (Information flags)
 
-    uint64 Edd_NumSectors; // (Only valid if EDD_Valid == true)
+      uint32 NumPhysicalCylinders; // (The number of physical cylinders on the drive)
+      uint32 NumPhysicalHeads; // (The number of physical heads on the drive)
+      uint32 NumPhysicalSectors; // (The number of physical sectors on the drive)
 
-    uint32 Edd_NumPhysicalCylinders; // (Only valid if EDD_Valid == true)
-    uint32 Edd_NumPhysicalHeads; // (Only valid if EDD_Valid == true)
-    uint32 Edd_NumPhysicalSectors; // (Only valid if EDD_Valid == true)
+      uint64 NumSectors; // (The total number of sectors on the entire drive)
 
-    uint64 Edd_NumSectors; // (Only valid if EDD_Valid == true)
+    } __attribute__((packed)) Edd_Info;
 
-    // [Filesystem-related; basic info about the FAT partition]
+    // [Filesystem and BPB]
 
-    uint32 Fat_BpbLocation; // The flat address of the BPB (usually 7C00h + 3)
+    uint32 Bpb_Location; // The flat address of the BPB (usually 7C00h + 3)
     bool PartitionIsFat32; // Calculated manually
 
-    uint32 Fat_NumSectors; // Regular BPB or FAT32 extended BPB
-    uint32 Fat_NumRootSectors; // Calculated manually
-    uint32 Fat_NumDataSectors; // Calculated manually
+    struct __Fat_Info {
 
-    uint32 Fat_HiddenSectors; // Regular BPB
-    uint16 Fat_ReservedSectors; // Regular BPB
+      uint32 NumSectors; // Regular BPB or FAT32 extended BPB
+      uint32 NumRootSectors; // Calculated manually
+      uint32 NumDataSectors; // Calculated manually
 
-    // [Terminal-related; other]
+      uint32 HiddenSectors; // Regular BPB
+      uint16 ReservedSectors; // Regular BPB
 
-    bool Terminal_Usable; // Is the terminal usable or not?
+    } __attribute__((packed)) Fat_Info;
 
-    // [Terminal-related; position, framebuffer, and mode info]
+    // [Terminal]
 
-    uint16 Terminal_PosX; // (Only valid if Terminal_Usable == true)
-    uint16 Terminal_PosY; // (Only valid if Terminal_Usable == true)
-    uint32 Terminal_Framebuffer; // (Only valid if Terminal_Usable == true)
+    bool TerminalIsUsable; // Is the terminal usable or not?
 
-    uint16 Terminal_LimitX; // (Only valid if Terminal_Usable == true)
-    uint16 Terminal_LimitY; // (Only valid if Terminal_Usable == true)
+    struct __Terminal_Info {
+
+      uint16 PosX;
+      uint16 PosY;
+      uint32 Framebuffer;
+
+      uint16 LimitX;
+      uint16 LimitY;
+
+    } __attribute__((packed)) Terminal_Info;
 
   } __attribute__((packed)) bootloaderInfoTable;
 
