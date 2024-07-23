@@ -409,46 +409,7 @@ void __attribute__((noreturn)) Bootloader(void) {
   Putchar('\n', 0);
   Message(Kernel, "Preparing to jump to the next stage of the bootloader.");
 
-  // First, we need to create and fill out the bootloader info table, which passes on some
-  // of the information we've gathered off to the next stage of the bootloader, like this.
-
-  #define InfoTable_Location 0xAE00
-  bootloaderInfoTable InfoTable = *(bootloaderInfoTable*)(InfoTable_Location);
-
-  // (Fill out table info)
-
-  InfoTable.Signature = 0x65363231;
-  InfoTable.Version = 1;
-
-  InfoTable.Size = sizeof(bootloaderInfoTable);
-
-  // (Fill out system info)
-
-  InfoTable.Debug = Debug;
-
-  InfoTable.System_Info.A20_EnabledByDefault = A20_EnabledByDefault;
-  InfoTable.System_Info.A20_EnabledByKbd = A20_EnabledByKbd;
-  InfoTable.System_Info.A20_EnabledByFast = A20_EnabledByFast;
-
-  // (Fill out disk/EDD info)
-
-  InfoTable.DriveNumber = DriveNumber;
-  InfoTable.Edd_Valid = DriveNumberIsValid;
-
-  InfoTable.LogicalSectorSize = LogicalSectorSize;
-  InfoTable.PhysicalSectorSize = PhysicalSectorSize;
-
-  Memcpy(&InfoTable.Edd_Info, &EDD_Parameters, sizeof(InfoTable.Edd_Info));
-
-  // (Fill out filesystem/BPB info)
-
-  InfoTable.Bpb_IsFat32 = PartitionIsFat32;
-  Memcpy(&InfoTable.Bpb, (void*)(Bpb_Address + 3), sizeof(InfoTable.Bpb));
-
-  // (Fill out terminal info)
-
-  Memcpy(&InfoTable.Terminal_Info, &TerminalTable, sizeof(InfoTable.Terminal_Info));
-
+  // [TODO - UPDATE COMMENTS]
 
   // After that, we need to load the Serra.bin file from the Boot/ directory, which contains
   // the next stage of our bootloader.
@@ -482,7 +443,7 @@ void __attribute__((noreturn)) Bootloader(void) {
   if (ExceedsLimit(SerraCluster, ClusterLimit)) {
     Panic("Failed to locate Boot/Serra.bin.");
   } else {
-    Message(Info, "Located Boot/Serra.bin.");
+    Message(Ok, "Located Boot/Serra.bin.");
   }
 
   // Finally, we can actually go ahead and load the file from disk.
@@ -495,11 +456,61 @@ void __attribute__((noreturn)) Bootloader(void) {
   bool ReadFileSuccessful = ReadFile((void*)Bootloader_Address, SerraDirectory, Bpb.SectorsPerCluster, Bpb.HiddenSectors, Bpb.ReservedSectors, DataSectorOffset, PartitionIsFat32);
 
   if (ReadFileSuccessful == true) {
-    Message(Info, "Successfully read Boot/Serra.bin to %xh.", Bootloader_Address);
+    Message(Ok, "Successfully read Boot/Serra.bin to %xh.", Bootloader_Address);
   } else {
     Panic("Failed to read Boot/Serra.bin from disk.");
   }
 
+
+
+
+  // (Update terminal info in the info table, since a few messages are displayed before
+  // this)
+
+  // First, we need to create and fill out the bootloader info table, which passes on some
+  // of the information we've gathered off to the next stage of the bootloader, like this.
+
+  #define InfoTable_Location 0xAE00
+  bootloaderInfoTable* InfoTable = (bootloaderInfoTable*)(InfoTable_Location);
+
+  // (Fill out table info)
+
+  InfoTable->Signature = 0x65363231;
+  InfoTable->Version = 1;
+
+  InfoTable->Size = sizeof(bootloaderInfoTable);
+
+  // (Fill out system info)
+
+  InfoTable->Debug = Debug;
+
+  InfoTable->System_Info.A20_EnabledByDefault = A20_EnabledByDefault;
+  InfoTable->System_Info.A20_EnabledByKbd = A20_EnabledByKbd;
+  InfoTable->System_Info.A20_EnabledByFast = A20_EnabledByFast;
+
+  // (Fill out disk/EDD info)
+
+  InfoTable->DriveNumber = DriveNumber;
+  InfoTable->Edd_Valid = DriveNumberIsValid;
+
+  InfoTable->LogicalSectorSize = LogicalSectorSize;
+  InfoTable->PhysicalSectorSize = PhysicalSectorSize;
+
+  Memcpy(&InfoTable->Edd_Info, &EDD_Parameters, sizeof(InfoTable->Edd_Info));
+
+  // (Fill out filesystem/BPB info)
+
+  InfoTable->Bpb_IsFat32 = PartitionIsFat32;
+  Memcpy(&InfoTable->Bpb, (void*)(Bpb_Address + 3), sizeof(InfoTable->Bpb));
+
+  // (Fill out terminal info)
+
+  Memcpy(&InfoTable->Terminal_Info, &TerminalTable, sizeof(InfoTable->Terminal_Info));
+
+
+
+
+  // [TODO] Finish writing comments, organize everything, etc.
   // (TEST, THIS JUMPS TO THE NEXT STAGE)
 
   __asm__ __volatile__ ("jmp *%0" : : "r"(Bootloader_Address));

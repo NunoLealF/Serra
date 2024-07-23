@@ -10,6 +10,9 @@
   #include "../Shared/InfoTables.h"
   #include "../Shared/Rm/Rm.h"
 
+  #include "Memory/Memory.h"
+  #include "Graphics/Graphics.h"
+
   // Declare functions in Bootloader.c
 
   void __attribute__((noreturn)) Bootloader(void);

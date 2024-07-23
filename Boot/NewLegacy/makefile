@@ -67,6 +67,9 @@ Clean:
 	@-rm -f Core/*.elf
 	@-rm -f Core/*.bin
 
+	@-rm -f Core/Memory/*.o
+	@-rm -f Core/Graphics/*.o
+
 	@-rm -f Shared/Rm/*.o
 	@-rm -f Shared/Rm/*.elf
 	@-rm -f Shared/Rm/*.bin
@@ -152,6 +155,21 @@ Core/Bootloader.o:
 	@echo "Building $@"
 	@$(CC) $(CFLAGS) -c Core/Bootloader.c -o Core/Bootloader.o
 
+Core/Memory/Memory.o:
+	@echo "Building $@"
+	@$(CC) $(CFLAGS) -c Core/Memory/Memory.c -o Core/Memory/Memory.o
+
+Core/Graphics/Exceptions.o:
+	@echo "Building $@"
+	@$(CC) $(CFLAGS) -c Core/Graphics/Exceptions.c -o Core/Graphics/Exceptions.o
+
+Core/Graphics/Format.o:
+	@echo "Building $@"
+	@$(CC) $(CFLAGS) -c Core/Graphics/Format.c -o Core/Graphics/Format.o
+
+Core/Graphics/Graphics.o:
+	@echo "Building $@"
+	@$(CC) $(CFLAGS) -c Core/Graphics/Graphics.c -o Core/Graphics/Graphics.o
 
 # (Shared code, Legacy/Shared)
 
@@ -171,7 +189,7 @@ Init/Init.bin: Init/Bootloader.o Init/Disk/Disk.o Init/Memory/A20/A20.o Init/Mem
 	@$(CC) -T Init/Linker.ld $(LDFLAGS) -o Init/Init.elf -ffreestanding -nolibc -nostdlib -lgcc $^
 	@$(OBJC) -O binary Init/Init.elf Init/Init.bin
 
-Core/Serra.bin: Core/Bootloader.o
+Core/Serra.bin: Core/Bootloader.o Core/Memory/Memory.o Core/Graphics/Exceptions.o Core/Graphics/Format.o Core/Graphics/Graphics.o Shared/Rm/RmWrapper.o
 	@echo "Building $@"
 	@$(CC) -T Core/Linker.ld $(LDFLAGS) -o Core/Serra.elf -ffreestanding -nolibc -nostdlib -lgcc $^
 	@$(OBJC) -O binary Core/Serra.elf Core/Serra.bin
