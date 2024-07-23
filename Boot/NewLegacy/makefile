@@ -31,7 +31,7 @@ OBJD = i686-elf-objdump
 # -funsigned-char: Use unsigned chars for characters.
 
 LDFLAGS = -Wl,--no-warn-rwx-segments
-CFLAGS = -std=c11 -ffunction-sections -funsigned-char -ffreestanding -Os -Wall -Wextra -Wpedantic
+CFLAGS = -std=c11 -ffunction-sections -funsigned-char -ffreestanding -Os -Wall -Wextra -Wpedantic -Wno-discarded-qualifiers
 
 
 # The .PHONY directive is used on targets that don't output anything. For example, running 'make all' builds our
