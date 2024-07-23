@@ -420,6 +420,8 @@ void __attribute__((noreturn)) Bootloader(void) {
     RootSectorOffset -= NumRootSectors;
   }
 
+
+
   // Now, we can finally start searching for the next stage of the bootloader. We first
   // need to find the /Boot directory, like this:
 
@@ -466,41 +468,23 @@ void __attribute__((noreturn)) Bootloader(void) {
   InfoTable.LogicalSectorSize = LogicalSectorSize;
   InfoTable.PhysicalSectorSize = PhysicalSectorSize;
 
-  InfoTable.Edd_Info.Flags = EDD_Parameters.Flags;
-
-  InfoTable.Edd_Info.NumPhysicalCylinders = EDD_Parameters.NumPhysicalCylinders;
-  InfoTable.Edd_Info.NumPhysicalHeads = EDD_Parameters.NumPhysicalHeads;
-  InfoTable.Edd_Info.NumPhysicalSectors = EDD_Parameters.NumPhysicalSectors;
-
-  InfoTable.Edd_Info.NumSectors = EDD_Parameters.NumSectors;
+  Memcpy(&InfoTable.Edd_Info, &EDD_Parameters, sizeof(InfoTable.Edd_Info));
 
   // <Filesystem and BPB info>
 
-  InfoTable.Bpb_Location = (Bpb_Address + 3);
-  InfoTable.PartitionIsFat32 = PartitionIsFat32;
-
-  InfoTable.Fat_Info.NumSectors = TotalNumSectors;
-  InfoTable.Fat_Info.NumRootSectors = NumRootSectors;
-  InfoTable.Fat_Info.NumDataSectors = NumDataSectors;
-
-  InfoTable.Fat_Info.HiddenSectors = Bpb.HiddenSectors;
-  InfoTable.Fat_Info.ReservedSectors = Bpb.ReservedSectors;
+  InfoTable.Bpb_IsFat32 = PartitionIsFat32;
+  Memcpy(&InfoTable.Bpb, (void*)(Bpb_Address + 3), sizeof(InfoTable.Bpb));
 
   // <Terminal info>
 
-  InfoTable.TerminalIsUsable = true;
-
-  InfoTable.Terminal_Info.PosX = TerminalTable.PosX;
-  InfoTable.Terminal_Info.PosY = TerminalTable.PosY;
-  InfoTable.Terminal_Info.Framebuffer = TerminalTable.Framebuffer;
-
-  InfoTable.Terminal_Info.LimitX = TerminalTable.LimitX;
-  InfoTable.Terminal_Info.LimitY = TerminalTable.LimitY;
+  Memcpy(&InfoTable.Terminal_Info, &TerminalTable, sizeof(InfoTable.Terminal_Info));
 
 
+  // TODO, this *works*.. but better to clean it up a bit, and also just read the file ig
+  // My mind is blanking on this
 
 
-
+  
   // [For now, let's end things here]
 
   Debug = true;

@@ -45,7 +45,7 @@
     uint16 LimitX;
     uint16 LimitY;
 
-  } terminalDataStruct;
+  } __attribute__((packed)) terminalDataStruct;
 
   extern terminalDataStruct TerminalTable;
   extern volatile bool Debug;

@@ -42,35 +42,30 @@
 
     struct __Edd_Info {
 
-      uint16 Flags; // (Information flags)
+      // [EDD 1.x]
 
-      uint32 NumPhysicalCylinders; // (The number of physical cylinders on the drive)
-      uint32 NumPhysicalHeads; // (The number of physical heads on the drive)
-      uint32 NumPhysicalSectors; // (The number of physical sectors on the drive)
+      uint16 Size;
+      uint16 Flags;
 
-      uint64 NumSectors; // (The total number of sectors on the entire drive)
+      uint32 NumPhysicalCylinders;
+      uint32 NumPhysicalHeads;
+      uint32 NumPhysicalSectors;
+
+      uint64 NumSectors;
+      uint16 BytesPerSector;
+
+      // [EDD 2.x and 3.x]
+
+      uint8 Edd_ExtraData[40];
 
     } __attribute__((packed)) Edd_Info;
 
     // [Filesystem and BPB]
 
-    uint32 Bpb_Location; // The flat address of the BPB (usually 7C00h + 3)
-    bool PartitionIsFat32; // Calculated manually
-
-    struct __Fat_Info {
-
-      uint32 NumSectors; // Regular BPB or FAT32 extended BPB
-      uint32 NumRootSectors; // Calculated manually
-      uint32 NumDataSectors; // Calculated manually
-
-      uint32 HiddenSectors; // Regular BPB
-      uint16 ReservedSectors; // Regular BPB
-
-    } __attribute__((packed)) Fat_Info;
+    bool Bpb_IsFat32;
+    uint8 Bpb[120]; // Regular+extended BPB (usually starts at 7C00h + 3!)
 
     // [Terminal]
-
-    bool TerminalIsUsable; // Is the terminal usable or not?
 
     struct __Terminal_Info {
 
