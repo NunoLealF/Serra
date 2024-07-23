@@ -390,9 +390,6 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   Message(Info, "The current FAT partition has %d clusters (each %d bytes long).", NumClusters, (Bpb.SectorsPerCluster * LogicalSectorSize));
 
-
-
-
   // Now that we know the partition type, we can get the cluster (and the first sector of) the
   // root directory, like this:
 
@@ -404,55 +401,28 @@ void __attribute__((noreturn)) Bootloader(void) {
     RootCluster = Extended_Bpb32.RootCluster;
   }
 
-  // Okay, we have RootSectorOffset, all that's really left to do now is to just follow the
-  // cluster chain(s), and find Boot/Serra.bin.
+
+
+
+  // ...
 
   Putchar('\n', 0);
-  Message(Kernel, "Preparing to locate the next stage of the bootloader.");
+  Message(Kernel, "Preparing to jump to the next stage of the bootloader.");
 
-  // We need to calculate the sector offset of the (first) root cluster to search from; for
-  // FAT16 partitions, we need to start searching from an earlier offset (there's a specific
-  // cluster area for root directories in FAT16).
-
-  uint32 RootSectorOffset = DataSectorOffset;
-
-  if (PartitionIsFat32 == false) {
-    RootSectorOffset -= NumRootSectors;
-  }
-
-
-
-  // Now, we can finally start searching for the next stage of the bootloader. We first
-  // need to find the /Boot directory, like this:
-
-  Printf("RootCluster test: %x and %x\n", 0x03, RootCluster, GetFatEntry(RootCluster, Bpb.HiddenSectors, Bpb.ReservedSectors, PartitionIsFat32));
-
-  fatDirectory BootDirectory = FindDirectory(RootCluster, Bpb.SectorsPerCluster, Bpb.HiddenSectors, Bpb.ReservedSectors, RootSectorOffset, "BOOT    ", "   ", true, PartitionIsFat32);
-  uint32 BootCluster = GetDirectoryCluster(BootDirectory);
-  Printf("Boot/ (cluster number): %x\n", 0x03, BootCluster);
-
-  // (WARNING, this finds core.bin, NOT serra.bin)
-
-  fatDirectory CoreDirectory = FindDirectory(BootCluster, Bpb.SectorsPerCluster, Bpb.HiddenSectors, Bpb.ReservedSectors, DataSectorOffset, "CORE    ", "BIN", false, PartitionIsFat32);
-  uint32 CoreCluster = GetDirectoryCluster(CoreDirectory);
-  Printf("Boot/Core.bin (cluster number): %x\n", 0x03, CoreCluster);
-
-
-
-
-  // Create the bootloader info table, and fill it out.
+  // First, we need to create and fill out the bootloader info table, which passes on some
+  // of the information we've gathered off to the next stage of the bootloader, like this.
 
   #define InfoTable_Location 0xAE00
   bootloaderInfoTable InfoTable = *(bootloaderInfoTable*)(InfoTable_Location);
 
-  // <Table info>
+  // (Fill out table info)
 
   InfoTable.Signature = 0x65363231;
   InfoTable.Version = 1;
 
   InfoTable.Size = sizeof(bootloaderInfoTable);
 
-  // <System info>
+  // (Fill out system info)
 
   InfoTable.Debug = Debug;
 
@@ -460,7 +430,7 @@ void __attribute__((noreturn)) Bootloader(void) {
   InfoTable.System_Info.A20_EnabledByKbd = A20_EnabledByKbd;
   InfoTable.System_Info.A20_EnabledByFast = A20_EnabledByFast;
 
-  // <Disk/EDD info>
+  // (Fill out disk/EDD info)
 
   InfoTable.DriveNumber = DriveNumber;
   InfoTable.Edd_Valid = DriveNumberIsValid;
@@ -470,30 +440,69 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   Memcpy(&InfoTable.Edd_Info, &EDD_Parameters, sizeof(InfoTable.Edd_Info));
 
-  // <Filesystem and BPB info>
+  // (Fill out filesystem/BPB info)
 
   InfoTable.Bpb_IsFat32 = PartitionIsFat32;
   Memcpy(&InfoTable.Bpb, (void*)(Bpb_Address + 3), sizeof(InfoTable.Bpb));
 
-  // <Terminal info>
+  // (Fill out terminal info)
 
   Memcpy(&InfoTable.Terminal_Info, &TerminalTable, sizeof(InfoTable.Terminal_Info));
 
 
-  // TODO, this *works*.. but better to clean it up a bit, and also just read the file ig
-  // My mind is blanking on this
+  // After that, we need to load the Serra.bin file from the Boot/ directory, which contains
+  // the next stage of our bootloader.
 
+  // First though, we need to calculate the sector offset of the (first) root cluster to search
+  // from; for FAT16 partitions, we need to start searching from an earlier offset, as there's a
+  // specific cluster area for root directories in FAT16.
 
-  
-  // [For now, let's end things here]
+  uint32 RootSectorOffset = DataSectorOffset;
 
-  Debug = true;
+  if (PartitionIsFat32 == false) {
+    RootSectorOffset -= NumRootSectors;
+  }
 
-  Putchar('\n', 0);
+  // Next, we need to search for the Boot/ directory (starting from the root directory), like
+  // this:
 
-  Printf("Hiya, this is Serra! <3\n", 0x0F);
-  Printf("July %i %x\n", 0x3F, 23, 0x2024);
+  fatDirectory BootDirectory = FindDirectory(RootCluster, Bpb.SectorsPerCluster, Bpb.HiddenSectors, Bpb.ReservedSectors, RootSectorOffset, "BOOT    ", "   ", true, PartitionIsFat32);
+  uint32 BootCluster = GetDirectoryCluster(BootDirectory);
 
+  if (ExceedsLimit(BootCluster, ClusterLimit)) {
+    Panic("Failed to locate Boot/.");
+  }
+
+  // Following that, we need to search for a file called 'Serra.bin' within the Boot/ directory,
+  // like this:
+
+  fatDirectory SerraDirectory = FindDirectory(BootCluster, Bpb.SectorsPerCluster, Bpb.HiddenSectors, Bpb.ReservedSectors, DataSectorOffset, "SERRA   ", "BIN", false, PartitionIsFat32);
+  uint32 SerraCluster = GetDirectoryCluster(SerraDirectory);
+
+  if (ExceedsLimit(SerraCluster, ClusterLimit)) {
+    Panic("Failed to locate Boot/Serra.bin.");
+  } else {
+    Message(Info, "Located Boot/Serra.bin.");
+  }
+
+  // Finally, we can actually go ahead and load the file from disk.
+
+  // With the way our bootloader is set up, the third stage should reside at 20000h in memory,
+  // being able to occupy everything up to 7FFFFh (as the EBDA starts at 80000h).
+
+  #define Bootloader_Address 0x20000
+
+  bool ReadFileSuccessful = ReadFile((void*)Bootloader_Address, SerraDirectory, Bpb.SectorsPerCluster, Bpb.HiddenSectors, Bpb.ReservedSectors, DataSectorOffset, PartitionIsFat32);
+
+  if (ReadFileSuccessful == true) {
+    Message(Info, "Successfully read Boot/Serra.bin to %xh.", Bootloader_Address);
+  } else {
+    Panic("Failed to read Boot/Serra.bin from disk.");
+  }
+
+  // (TEST, THIS JUMPS TO THE NEXT STAGE)
+
+  __asm__ __volatile__ ("jmp *%0" : : "r"(Bootloader_Address));
   for(;;);
 
 }

@@ -7,6 +7,9 @@
 
   // Import other headers (...)
 
+  #include "../Shared/InfoTables.h"
+  #include "../Shared/Rm/Rm.h"
+
   // Declare functions in Bootloader.c
 
   void __attribute__((noreturn)) Bootloader(void);

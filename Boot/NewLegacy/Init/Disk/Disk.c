@@ -416,7 +416,7 @@ fatDirectory FindDirectory(uint32 ClusterNum, uint8 SectorsPerCluster, uint32 Pa
 
            bool IsFat32 - Whether this partition is FAT16 (false) or FAT32 (true).
 
-   Outputs: (none)
+   Outputs: bool - Whether the operation was successful (true) or not (false).
 
    This function reads the contents of a file from disk to memory, given an address to load
    it to, and the directory entry of the file we want to read from (as returned by
@@ -428,7 +428,7 @@ fatDirectory FindDirectory(uint32 ClusterNum, uint8 SectorsPerCluster, uint32 Pa
 
 */
 
-void ReadFile(void* Address, fatDirectory Entry, uint8 SectorsPerCluster, uint32 PartitionOffset, uint32 FatOffset, uint32 DataOffset, bool IsFat32) {
+bool ReadFile(void* Address, fatDirectory Entry, uint8 SectorsPerCluster, uint32 PartitionOffset, uint32 FatOffset, uint32 DataOffset, bool IsFat32) {
 
   // (Define limits for FAT16 and FAT32)
 
@@ -461,14 +461,20 @@ void ReadFile(void* Address, fatDirectory Entry, uint8 SectorsPerCluster, uint32
 
     for (unsigned int SectorNum = 0; SectorNum < SectorsPerCluster; SectorNum++) {
 
-      ReadLogicalSector(1, (uint32)((int)Address + Offset), (PartitionOffset + DataOffset + ClusterOffset + SectorNum));
+      // Read from the disk, and see if it failed
+
+      realModeTable* Table = ReadLogicalSector(1, (uint32)((int)Address + Offset), (PartitionOffset + DataOffset + ClusterOffset + SectorNum));
       Offset += LogicalSectorSize;
+
+      if (hasFlag(Table->Eflags, CarryFlag)) {
+        return false;
+      }
 
       // If we've already reached the end of the file, no need to continue, just end the
       // function immediately.
 
       if (Offset >= Size) {
-        return;
+        return true;
       }
 
     }
@@ -479,10 +485,14 @@ void ReadFile(void* Address, fatDirectory Entry, uint8 SectorsPerCluster, uint32
 
     ClusterNum = GetFatEntry(ClusterNum, PartitionOffset, FatOffset, IsFat32);
 
+    if (ClusterNum == 0) {
+      return false;
+    }
+
   }
 
-  // After everything, we can just return
+  // After everything, we can just return true (to indicate that everything went okay)
 
-  return;
+  return true;
 
 }

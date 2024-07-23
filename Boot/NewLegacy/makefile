@@ -46,7 +46,7 @@ CFLAGS = -std=c11 -ffunction-sections -funsigned-char -ffreestanding -Os -Wall -
 # Names ->>
 # (By the way, it's assumed that you're on Linux, or at least some sort of Unix-like system)
 
-All: Clean Bootsector/Bootsector.bin Init/Init.bin Shared/Rm/Rm.bin Core/Core.bin Legacy.bin
+All: Clean Bootsector/Bootsector.bin Init/Init.bin Shared/Rm/Rm.bin Core/Serra.bin Legacy.bin
 
 Clean:
 	@echo "Cleaning leftover files (*.o, *.elf, *.bin).."
@@ -171,15 +171,15 @@ Init/Init.bin: Init/Bootloader.o Init/Disk/Disk.o Init/Memory/A20/A20.o Init/Mem
 	@$(CC) -T Init/Linker.ld $(LDFLAGS) -o Init/Init.elf -ffreestanding -nolibc -nostdlib -lgcc $^
 	@$(OBJC) -O binary Init/Init.elf Init/Init.bin
 
-Core/Core.bin: Core/Bootloader.o
+Core/Serra.bin: Core/Bootloader.o
 	@echo "Building $@"
-	@$(CC) -T Core/Linker.ld $(LDFLAGS) -o Core/Core.elf -ffreestanding -nolibc -nostdlib -lgcc $^
-	@$(OBJC) -O binary Core/Core.elf Core/Core.bin
+	@$(CC) -T Core/Linker.ld $(LDFLAGS) -o Core/Serra.elf -ffreestanding -nolibc -nostdlib -lgcc $^
+	@$(OBJC) -O binary Core/Serra.elf Core/Serra.bin
 
 
 # Mix all of the different stages together (8192 sectors, so, a 4MiB img)
 
-Legacy.bin: Bootsector/Bootsector.bin Init/Init.bin Shared/Rm/Rm.bin Core/Core.bin
+Legacy.bin: Bootsector/Bootsector.bin Init/Init.bin Shared/Rm/Rm.bin Core/Serra.bin
 
 	@echo "Building $@"
 	@dd if=/dev/zero of=Legacy.bin bs=512 count=8192 status=none
@@ -200,4 +200,4 @@ Legacy.bin: Bootsector/Bootsector.bin Init/Init.bin Shared/Rm/Rm.bin Core/Core.b
 # (Add the 3rd stage bootloader)
 
 	@mmd -i Legacy.bin ::/Boot
-	@mcopy -i Legacy.bin Core/Core.bin ::/Boot
+	@mcopy -i Legacy.bin Core/Serra.bin ::/Boot

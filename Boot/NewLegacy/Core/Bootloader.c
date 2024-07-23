@@ -25,6 +25,25 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   // TODO - a lot of things, but welcome to the third-stage bootloader!
 
+  *(uint16*)0xB8000 = 'H' + (0x3F << 8);
+  *(uint16*)0xB8002 = 'i' + (0x3F << 8);
+  *(uint16*)0xB8004 = '!' + (0x3F << 8);
+
+  // [For now, let's end things here]
+
+  /*
+
+  Debug = true;
+
+  Putchar('\n', 0);
+
+  Printf("Hiya, this is Serra! <3\n", 0x0F);
+  Printf("July %i %x\n", 0x3F, 23, 0x2024);
+
+  for(;;);
+
+  */
+
   for(;;);
 
 }
