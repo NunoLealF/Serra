@@ -303,10 +303,12 @@ void __attribute__((noreturn)) Bootloader(void) {
   // We don't need to load anything with the disk functions (yet!) since it's all in the
   // bootsector, which is *guaranteed* to be at 7C00h.
 
-  biosParameterBlock Bpb = *(biosParameterBlock*)(0x7C00 + 3);
+  #define Bpb_Address 0x7C00
 
-  biosParameterBlock_Fat16 Extended_Bpb16 = *(biosParameterBlock_Fat16*)(0x7C00 + 36);
-  biosParameterBlock_Fat32 Extended_Bpb32 = *(biosParameterBlock_Fat32*)(0x7C00 + 36);
+  biosParameterBlock Bpb = *(biosParameterBlock*)(Bpb_Address + 3);
+
+  biosParameterBlock_Fat16 Extended_Bpb16 = *(biosParameterBlock_Fat16*)(Bpb_Address + 36);
+  biosParameterBlock_Fat32 Extended_Bpb32 = *(biosParameterBlock_Fat32*)(Bpb_Address + 36);
 
   Putchar('\n', 0);
 
@@ -433,34 +435,68 @@ void __attribute__((noreturn)) Bootloader(void) {
   uint32 CoreCluster = GetDirectoryCluster(CoreDirectory);
   Printf("Boot/Core.bin (cluster number): %x\n", 0x03, CoreCluster);
 
-  // Pretty much everything is done here, the only thing left to do is to actually load the
-  // next stage, and to also keep some important data for later
-
-  // Could also be a good idea to implement a debug mode, if that makes sense (basically,
-  // don't display anything unless some debug flag is set during compile-time (or even run
-  // time - I feel like some flag in the bootsector might be the best way to implement that,
-  // so you can change it later on)
 
 
-  // Each entry is 32 bytes long: https://wiki.osdev.org/FAT
-  // LFN support almost certainly isn't needed
 
-  // It seems like each directory has its own cluster chain; in this case, for the root
-  // directory, you start directly at the first (probably at some random) file or directory,
-  // and then you just have to iterate through that until you find a folder named Boot, and
-  // then, until you find a file named Serra.bin.
+  // Create the bootloader info table, and fill it out.
 
+  #define InfoTable_Location 0xAE00
+  bootloaderInfoTable InfoTable = *(bootloaderInfoTable*)(InfoTable_Location);
 
-  // There's only like 1.5KiB of code space left, jesus, I better get this over with quickly
-  // haha
+  // <Table info>
 
-  // [A few things to keep in mind]
+  InfoTable.Signature = 0x65363231;
+  InfoTable.Version = 1;
 
-  // -> The next stage will be a bin/elf file in a FAT16 or FAT32 filesystem, in the root
-  // directory (this isn't EFI, no need to look through /BOOT/EFI..)
+  InfoTable.Size = sizeof(bootloaderInfoTable);
 
-  // -> You don't really want a full-fledged FAT implementation, just enough to traverse the
-  // root directory, find the next stage, load it, and then jump from there.
+  // <System info>
+
+  InfoTable.Debug = Debug;
+
+  InfoTable.System_Info.A20_EnabledByDefault = A20_EnabledByDefault;
+  InfoTable.System_Info.A20_EnabledByKbd = A20_EnabledByKbd;
+  InfoTable.System_Info.A20_EnabledByFast = A20_EnabledByFast;
+
+  // <Disk/EDD info>
+
+  InfoTable.DriveNumber = DriveNumber;
+  InfoTable.Edd_Valid = DriveNumberIsValid;
+
+  InfoTable.LogicalSectorSize = LogicalSectorSize;
+  InfoTable.PhysicalSectorSize = PhysicalSectorSize;
+
+  InfoTable.Edd_Info.Flags = EDD_Parameters.Flags;
+
+  InfoTable.Edd_Info.NumPhysicalCylinders = EDD_Parameters.NumPhysicalCylinders;
+  InfoTable.Edd_Info.NumPhysicalHeads = EDD_Parameters.NumPhysicalHeads;
+  InfoTable.Edd_Info.NumPhysicalSectors = EDD_Parameters.NumPhysicalSectors;
+
+  InfoTable.Edd_Info.NumSectors = EDD_Parameters.NumSectors;
+
+  // <Filesystem and BPB info>
+
+  InfoTable.Bpb_Location = (Bpb_Address + 3);
+  InfoTable.PartitionIsFat32 = PartitionIsFat32;
+
+  InfoTable.Fat_Info.NumSectors = TotalNumSectors;
+  InfoTable.Fat_Info.NumRootSectors = NumRootSectors;
+  InfoTable.Fat_Info.NumDataSectors = NumDataSectors;
+
+  InfoTable.Fat_Info.HiddenSectors = Bpb.HiddenSectors;
+  InfoTable.Fat_Info.ReservedSectors = Bpb.ReservedSectors;
+
+  // <Terminal info>
+
+  InfoTable.TerminalIsUsable = true;
+
+  InfoTable.Terminal_Info.PosX = TerminalTable.PosX;
+  InfoTable.Terminal_Info.PosY = TerminalTable.PosY;
+  InfoTable.Terminal_Info.Framebuffer = TerminalTable.Framebuffer;
+
+  InfoTable.Terminal_Info.LimitX = TerminalTable.LimitX;
+  InfoTable.Terminal_Info.LimitY = TerminalTable.LimitY;
+
 
 
 
@@ -472,7 +508,7 @@ void __attribute__((noreturn)) Bootloader(void) {
   Putchar('\n', 0);
 
   Printf("Hiya, this is Serra! <3\n", 0x0F);
-  Printf("July %i %x\n", 0x3F, 22, 0x2024);
+  Printf("July %i %x\n", 0x3F, 23, 0x2024);
 
   for(;;);
 
