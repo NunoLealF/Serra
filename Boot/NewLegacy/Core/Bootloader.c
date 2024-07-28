@@ -54,21 +54,21 @@ void __attribute__((noreturn)) Bootloader(void) {
   Putchar('\n', 0);
   Message(Kernel, "Preparing to initialize the IDT.");
 
-  descriptorTable* IdtDescriptor;
-  IdtDescriptor->Size = (2048 - 1);
-  IdtDescriptor->Offset = IdtLocation; // Macro defined in Int/Int.h
+  descriptorTable IdtDescriptor;
+  IdtDescriptor.Size = (2048 - 1);
+  IdtDescriptor.Offset = IdtLocation;
 
   // (PIC section)
 
   Message(Kernel, "Initializing the 8259 PIC.");
 
-  MaskPic(0xFF); // Full mask, don't enable anything (set to 0xFE for timer, or 0xFD for keyboard that doesn't really work)
+  MaskPic(0xFE); // Full mask, don't enable anything (set to 0xFE for timer, or 0xFD for keyboard that doesn't really work)
   InitPic(0x20, 0x28); // IRQ1 is at 0x20-0x27, IRQ2 is at 0x28-0x2F
 
   // (Actually initialize the IDT)
 
-  MakeDefaultIdtEntries(IdtDescriptor, 0x08, 0x0F, 0x00);
-  LoadIdt(IdtDescriptor);
+  MakeDefaultIdtEntries(&IdtDescriptor, 0x08, 0x0F, 0x00);
+  LoadIdt(&IdtDescriptor);
 
   __asm__("sti");
   Message(Ok, "Successfully initialized the IDT and PIC.");
