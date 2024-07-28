@@ -57,6 +57,10 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   // [TODO - **For the love of god, clean this up**]
 
+
+
+  // (IDT section)
+
   Putchar('\n', 0);
   Message(Kernel, "Preparing to initialize the IDT.");
 
@@ -64,77 +68,19 @@ void __attribute__((noreturn)) Bootloader(void) {
   IdtDescriptor->Size = (2048 - 1);
   IdtDescriptor->Offset = IdtLocation;
 
-  MakeIdtEntry(IdtDescriptor, 0, (uint32)&IsrDivideFault, 0x08, 0x0F, 0x00);
-
-  MakeIdtEntry(IdtDescriptor, 1, (uint32)&IsrDebug, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 2, (uint32)&IsrNmi, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 3, (uint32)&IsrBreakpoint, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 4, (uint32)&IsrOverflow, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 5, (uint32)&IsrOutOfBounds, 0x08, 0x0F, 0x00);
-
-  MakeIdtEntry(IdtDescriptor, 6, (uint32)&IsrInvalidOpcode, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 7, (uint32)&IsrDeviceFault, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 8, (uint32)&IsrDoubleFault, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 9, (uint32)&IsrCoprocessorOverrun, 0x08, 0x0F, 0x00);
-
-  MakeIdtEntry(IdtDescriptor, 10, (uint32)&IsrInvalidTss, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 11, (uint32)&IsrSegmentFault, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 12, (uint32)&IsrStackFault, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 13, (uint32)&IsrGpFault, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 14, (uint32)&IsrPageFault, 0x08, 0x0F, 0x00);
-
-  MakeIdtEntry(IdtDescriptor, 15, (uint32)&IsrReservedA, 0x08, 0x0F, 0x00);
-
-  MakeIdtEntry(IdtDescriptor, 16, (uint32)&Isr87Fault, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 17, (uint32)&IsrAlignCheck, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 18, (uint32)&IsrMachineCheck, 0x08, 0x0F, 0x00);
-
-  MakeIdtEntry(IdtDescriptor, 19, (uint32)&IsrSimdFault, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 20, (uint32)&IsrVirtFault, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 21, (uint32)&IsrControlFault, 0x08, 0x0F, 0x00);
-
-  MakeIdtEntry(IdtDescriptor, 22, (uint32)&IsrReservedB, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 23, (uint32)&IsrReservedC, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 24, (uint32)&IsrReservedD, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 25, (uint32)&IsrReservedE, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 26, (uint32)&IsrReservedF, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 27, (uint32)&IsrReservedG, 0x08, 0x0F, 0x00);
-
-  MakeIdtEntry(IdtDescriptor, 28, (uint32)&IsrHypervisorFault, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 29, (uint32)&IsrVmmFault, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 30, (uint32)&IsrSecurityFault, 0x08, 0x0F, 0x00);
-
-  MakeIdtEntry(IdtDescriptor, 31, (uint32)&IsrReservedH, 0x08, 0x0F, 0x00);
-
-  // (Set up PIC/IRQs)
-
-  MakeIdtEntry(IdtDescriptor, 32, (uint32)&IrqTimer, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 33, (uint32)&IrqKeyboard, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 34, (uint32)&IrqCascade, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 35, (uint32)&IrqCom2, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 36, (uint32)&IrqCom1, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 37, (uint32)&IrqLpt2, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 38, (uint32)&IrqFloppy, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 39, (uint32)&IrqLpt1, 0x08, 0x0F, 0x00);
-
-  MakeIdtEntry(IdtDescriptor, 40, (uint32)&IrqCmos, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 41, (uint32)&IrqPeripheralA, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 42, (uint32)&IrqPeripheralB, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 43, (uint32)&IrqPeripheralC, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 44, (uint32)&IrqMouse, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 45, (uint32)&IrqFpu, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 46, (uint32)&IrqHddA, 0x08, 0x0F, 0x00);
-  MakeIdtEntry(IdtDescriptor, 47, (uint32)&IrqHddB, 0x08, 0x0F, 0x00);
+  // (PIC section)
 
   Message(Kernel, "Initializing the 8259 PIC.");
 
-  MaskPic(0xFF); // Full mask, don't enable anything
+  MaskPic(0xFF); // Full mask, don't enable anything (set to 0xFE for timer, or 0xFD for keyboard that doesn't really work)
   InitPic(0x20, 0x28); // IRQ1 is at 0x20-0x27, IRQ2 is at 0x28-0x2F
 
+  // (Initializing everything section)
+
+  MakeDefaultIdtEntries(IdtDescriptor, 0x08, 0x0F, 0x00);
   LoadIdt(IdtDescriptor);
 
   __asm__("sti");
-  MaskPic(0xFF); // I've already tested it and it works but let's not enable anything for now
   Message(Ok, "Successfully initialized the IDT and PIC.");
 
 

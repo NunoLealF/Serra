@@ -102,7 +102,7 @@
   #define PicB_Data 0xA0
   #define PicB_Command 0xA1
 
-  // Functions from Irq.c.
+  // Functions and handlers from Irq.c.
 
   uint8 Inb(uint16 Port);
   void Outb(uint16 Port, uint8 Data);
@@ -112,10 +112,11 @@
   void InitPic(uint8 PicA_Offset, uint8 PicB_Offset);
   void MaskPic(uint8 Mask);
 
-  // Functions from Idt.c.
+  // Functions and handlers from Idt.c.
 
   void LoadIdt(descriptorTable* IdtDescriptor);
   void MakeIdtEntry(descriptorTable* IdtDescriptor, uint16 EntryNum, uint32 Offset, uint16 Selector, uint8 Gate, uint8 Dpl);
+  void MakeDefaultIdtEntries(descriptorTable* IdtDescriptor, uint16 Selector, uint8 Gate, uint8 Dpl);
 
   void IsrFault(uint8 Vector, uint32 Eip);
   void IsrFaultWithError(uint8 Vector, uint32 Eip, uint32 Error);

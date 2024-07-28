@@ -5,67 +5,12 @@
 #include "../../Shared/Stdint.h"
 #include "../Memory/Memory.h"
 #include "../Graphics/Graphics.h"
-
-/* (typedef) struct __attribute__((packed)) descriptorTable{}
-
-   Location: (User-defined)
-
-   Elements: uint16 Size - The size of the GDT/IDT, in bytes.
-             uint32 Offset - The location of the GDT/IDT, expressed as a 32-bit memory address.
-
-   This structure defines an important structure for both the GDT (General Descriptor Table)
-   and the IDT (Interrupt Descriptor Table) - its descriptor.
-
-   It contains two values - the size of the GDT/IDT, and the 'offset' (or, more accurately,
-   the location) of the GDT/IDT, expressed as a memory address. As we're in 32-bit mode right
-   now, that memory address is also 32 bits wide.
-
-*/
-
-typedef struct {
-
-  uint16 Size;
-  uint32 Offset;
-
-} __attribute__((packed)) descriptorTable;
-
-
-/* (typedef) struct __attribute__((packed)) idtEntry{}
-
-   Location: (IdtLocation + (vNum * 8))
-
-   Elements: uint16 OffsetLow - ...
-             uint16 Selector - ...
-             uint8 Reserved - ...
-             uint8 Flags - ...
-             uint16 OffsetHigh - ...
-
-   This structure defines an IDT (gate) entry. It contains four main values:
-   - The offset, which indicates the location of the ISR assigned to that IDT entry;
-   - The segment selector, which must point to a valid code segment in our GDT;
-   - The reserved area, which isn't really used for anything;
-   - The flags, which contain important information about the nature of the IDT entry.
-
-   For more information, please refer to volume 3 of the Intel(R) 64 and IA-32 Architectures
-   Software Developer's Manual.
-
-*/
-
-typedef struct {
-
-  uint16 OffsetLow;
-  uint16 Selector;
-  uint8 Reserved;
-  uint8 Flags;
-  uint16 OffsetHigh;
-
-} __attribute__((packed)) idtEntry;
-
+#include "Int.h"
 
 /* void LoadIdt()
 
    Inputs: descriptorTable* IdtDescriptor - The IDT descriptor that we want to load.
-   Outputs: (None)
+   Outputs: (none)
 
    This function takes the role of one simple, but very important job - it loads an IDT.
    Specifically, it's a wrapper around the 'lidt' instruction, that takes the address to an
@@ -91,7 +36,7 @@ void LoadIdt(descriptorTable* IdtDescriptor) {
            uint8 Gate - The gate type of the IDT entry we want to make.
            uint8 Dpl - The privilege level(s) allowed to access the IDT entry we want to make.
 
-   Outputs: (None)
+   Outputs: (none)
 
    This function writes an IDT entry to memory using the given information. With the exception
    of IdtDescriptor, each parameter (roughly) corresponds to a value in idtEntry{} - for more
@@ -132,6 +77,93 @@ void MakeIdtEntry(descriptorTable* IdtDescriptor, uint16 EntryNum, uint32 Offset
 
   Entry->Flags = (Gate & 0x0F) + ((Dpl & 0x03) << 5) + (1 << 7);
   Entry->Reserved = 0;
+
+}
+
+
+/* void MakeDefaultIdtEntries()
+
+   Inputs: descriptorTable* IdtDescriptor - The IDT descriptor (table) that we want to use.
+           uint16 Selector - The segment selector of the IDT entries we want to make.
+           uint8 Gate - The gate type of the IDT entries we want to make.
+           uint8 Dpl - The privilege level(s) allowed to access the IDT entries we want to make.
+
+   Outputs: (none)
+
+   This function essentially just initializes the 'regular' set of IRQ/ISR handlers for a
+   given IDT, using MakeIdtEntry(), and the given selector/gate/DPL.
+
+   It's assumed that you want 32 ISR handlers (from entries 0 to 31) and 16 IRQ handlers
+   (from entries 32 to 47). Also, this function assumes that you already have functions defined
+   for each entry (for example, IsrDivideFault, IrqKeyboard, etc.)
+
+*/
+
+void MakeDefaultIdtEntries(descriptorTable* IdtDescriptor, uint16 Selector, uint8 Gate, uint8 Dpl) {
+
+  // (ISR handlers, 0-31)
+
+  MakeIdtEntry(IdtDescriptor, 0, (uint32)&IsrDivideFault, Selector, Gate, Dpl);
+
+  MakeIdtEntry(IdtDescriptor, 1, (uint32)&IsrDebug, Selector, Gate, Dpl);
+  MakeIdtEntry(IdtDescriptor, 2, (uint32)&IsrNmi, Selector, Gate, Dpl);
+  MakeIdtEntry(IdtDescriptor, 3, (uint32)&IsrBreakpoint, Selector, Gate, Dpl);
+  MakeIdtEntry(IdtDescriptor, 4, (uint32)&IsrOverflow, Selector, Gate, Dpl);
+  MakeIdtEntry(IdtDescriptor, 5, (uint32)&IsrOutOfBounds, Selector, Gate, Dpl);
+
+  MakeIdtEntry(IdtDescriptor, 6, (uint32)&IsrInvalidOpcode, Selector, Gate, Dpl);
+  MakeIdtEntry(IdtDescriptor, 7, (uint32)&IsrDeviceFault, Selector, Gate, Dpl);
+  MakeIdtEntry(IdtDescriptor, 8, (uint32)&IsrDoubleFault, Selector, Gate, Dpl);
+  MakeIdtEntry(IdtDescriptor, 9, (uint32)&IsrCoprocessorOverrun, Selector, Gate, Dpl);
+
+  MakeIdtEntry(IdtDescriptor, 10, (uint32)&IsrInvalidTss, Selector, Gate, Dpl);
+  MakeIdtEntry(IdtDescriptor, 11, (uint32)&IsrSegmentFault, Selector, Gate, Dpl);
+  MakeIdtEntry(IdtDescriptor, 12, (uint32)&IsrStackFault, Selector, Gate, Dpl);
+  MakeIdtEntry(IdtDescriptor, 13, (uint32)&IsrGpFault, Selector, Gate, Dpl);
+  MakeIdtEntry(IdtDescriptor, 14, (uint32)&IsrPageFault, Selector, Gate, Dpl);
+
+  MakeIdtEntry(IdtDescriptor, 15, (uint32)&IsrReservedA, Selector, Gate, Dpl);
+
+  MakeIdtEntry(IdtDescriptor, 16, (uint32)&Isr87Fault, Selector, Gate, Dpl);
+  MakeIdtEntry(IdtDescriptor, 17, (uint32)&IsrAlignCheck, Selector, Gate, Dpl);
+  MakeIdtEntry(IdtDescriptor, 18, (uint32)&IsrMachineCheck, Selector, Gate, Dpl);
+
+  MakeIdtEntry(IdtDescriptor, 19, (uint32)&IsrSimdFault, Selector, Gate, Dpl);
+  MakeIdtEntry(IdtDescriptor, 20, (uint32)&IsrVirtFault, Selector, Gate, Dpl);
+  MakeIdtEntry(IdtDescriptor, 21, (uint32)&IsrControlFault, Selector, Gate, Dpl);
+
+  MakeIdtEntry(IdtDescriptor, 22, (uint32)&IsrReservedB, Selector, Gate, Dpl);
+  MakeIdtEntry(IdtDescriptor, 23, (uint32)&IsrReservedC, Selector, Gate, Dpl);
+  MakeIdtEntry(IdtDescriptor, 24, (uint32)&IsrReservedD, Selector, Gate, Dpl);
+  MakeIdtEntry(IdtDescriptor, 25, (uint32)&IsrReservedE, Selector, Gate, Dpl);
+  MakeIdtEntry(IdtDescriptor, 26, (uint32)&IsrReservedF, Selector, Gate, Dpl);
+  MakeIdtEntry(IdtDescriptor, 27, (uint32)&IsrReservedG, Selector, Gate, Dpl);
+
+  MakeIdtEntry(IdtDescriptor, 28, (uint32)&IsrHypervisorFault, Selector, Gate, Dpl);
+  MakeIdtEntry(IdtDescriptor, 29, (uint32)&IsrVmmFault, Selector, Gate, Dpl);
+  MakeIdtEntry(IdtDescriptor, 30, (uint32)&IsrSecurityFault, Selector, Gate, Dpl);
+
+  MakeIdtEntry(IdtDescriptor, 31, (uint32)&IsrReservedH, Selector, Gate, Dpl);
+
+  // (IRQ/PIC handlers, 32-47)
+
+  MakeIdtEntry(IdtDescriptor, 32, (uint32)&IrqTimer, Selector, Gate, Dpl);
+  MakeIdtEntry(IdtDescriptor, 33, (uint32)&IrqKeyboard, Selector, Gate, Dpl);
+  MakeIdtEntry(IdtDescriptor, 34, (uint32)&IrqCascade, Selector, Gate, Dpl);
+  MakeIdtEntry(IdtDescriptor, 35, (uint32)&IrqCom2, Selector, Gate, Dpl);
+  MakeIdtEntry(IdtDescriptor, 36, (uint32)&IrqCom1, Selector, Gate, Dpl);
+  MakeIdtEntry(IdtDescriptor, 37, (uint32)&IrqLpt2, Selector, Gate, Dpl);
+  MakeIdtEntry(IdtDescriptor, 38, (uint32)&IrqFloppy, Selector, Gate, Dpl);
+  MakeIdtEntry(IdtDescriptor, 39, (uint32)&IrqLpt1, Selector, Gate, Dpl);
+
+  MakeIdtEntry(IdtDescriptor, 40, (uint32)&IrqCmos, Selector, Gate, Dpl);
+  MakeIdtEntry(IdtDescriptor, 41, (uint32)&IrqPeripheralA, Selector, Gate, Dpl);
+  MakeIdtEntry(IdtDescriptor, 42, (uint32)&IrqPeripheralB, Selector, Gate, Dpl);
+  MakeIdtEntry(IdtDescriptor, 43, (uint32)&IrqPeripheralC, Selector, Gate, Dpl);
+  MakeIdtEntry(IdtDescriptor, 44, (uint32)&IrqMouse, Selector, Gate, Dpl);
+  MakeIdtEntry(IdtDescriptor, 45, (uint32)&IrqFpu, Selector, Gate, Dpl);
+  MakeIdtEntry(IdtDescriptor, 46, (uint32)&IrqHddA, Selector, Gate, Dpl);
+  MakeIdtEntry(IdtDescriptor, 47, (uint32)&IrqHddB, Selector, Gate, Dpl);
 
 }
 
