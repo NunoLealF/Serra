@@ -21,7 +21,7 @@
   } messageType;
 
   void Message(messageType Type, char* String, ...);
-  void __attribute__((noreturn)) Panic(char* String);
+  void __attribute__((noreturn)) Panic(char* String, uint32 Eip);
 
   // Formatting and string-related functions. (Format.c)
 

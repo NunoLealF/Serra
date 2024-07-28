@@ -38,6 +38,10 @@ void __attribute__((noreturn)) Bootloader(void) {
   Putchar('\n', 0);
   Message(Kernel, "Successfully entered the third-stage bootloader.");
 
+  // So...
+
+  // IDT entries are at B000h
+
   // [For now, let's just leave it here]
 
   Debug = true;
@@ -45,7 +49,7 @@ void __attribute__((noreturn)) Bootloader(void) {
   Putchar('\n', 0);
 
   Printf("Hiya, this is Serra! <3\n", 0x0F);
-  Printf("July %i %x\n", 0x3F, 23, 0x2024);
+  Printf("July %i %x\n", 0x3F, 28, 0x2024);
 
   for(;;);
 

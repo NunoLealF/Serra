@@ -12,6 +12,7 @@
 
   #include "Memory/Memory.h"
   #include "Graphics/Graphics.h"
+  #include "Int/Int.h"
 
   // Declare functions in Bootloader.c
 

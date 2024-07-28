@@ -100,6 +100,8 @@ void Message(messageType Type, char* String, ...) {
 /* void __attribute__((noreturn)) Panic()
 
    Inputs: char* String - The error/panic message to be displayed to the user.
+           uint32 Eip - The instruction pointer of what caused the error (if not applicable,
+                        use 0).
 
    Outputs: (None)
 
@@ -113,7 +115,7 @@ void Message(messageType Type, char* String, ...) {
 
 */
 
-void __attribute__((noreturn)) Panic(char* String) {
+void __attribute__((noreturn)) Panic(char* String, uint32 Eip) {
 
   // Just in case, we want to disable interrupts, as they could interrupt the process
 
@@ -126,6 +128,12 @@ void __attribute__((noreturn)) Panic(char* String) {
 
   Debug = true;
   Message(Error, String);
+
+  // Show the instruction pointer, if applicable
+
+  if (Eip != 0) {
+    Message(Info, "Instruction pointer (EIP) was %xh.", Eip);
+  }
 
   // Finally, tell the user that the system will halt indefinitely (and that they should
   // probably restart their computer), and then do exactly that.

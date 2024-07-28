@@ -307,7 +307,7 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   biosParameterBlock Bpb = *(biosParameterBlock*)(Bpb_Address + 3);
 
-  biosParameterBlock_Fat16 Extended_Bpb16 = *(biosParameterBlock_Fat16*)(Bpb_Address + 36);
+  // biosParameterBlock_Fat16 Extended_Bpb16 = *(biosParameterBlock_Fat16*)(Bpb_Address + 36);
   biosParameterBlock_Fat32 Extended_Bpb32 = *(biosParameterBlock_Fat32*)(Bpb_Address + 36);
 
   Putchar('\n', 0);
