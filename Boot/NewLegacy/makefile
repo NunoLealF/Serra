@@ -70,6 +70,7 @@ Clean:
 	@-rm -f Core/Graphics/*.o
 	@-rm -f Core/Int/*.o
 	@-rm -f Core/Memory/*.o
+	@-rm -f Core/Memory/A20/*.o
 
 	@-rm -f Shared/Rm/*.o
 	@-rm -f Shared/Rm/*.elf
@@ -160,6 +161,14 @@ Core/Memory/Memory.o:
 	@echo "Building $@"
 	@$(CC) $(CFLAGS) -c Core/Memory/Memory.c -o Core/Memory/Memory.o
 
+Core/Memory/A20/A20.o:
+	@echo "Building $@"
+	@$(CC) $(CFLAGS) -c Core/Memory/A20/A20.s -o Core/Memory/A20/A20.o
+
+Core/Memory/A20/A20_Wrapper.o:
+	@echo "Building $@"
+	@$(CC) $(CFLAGS) -c Core/Memory/A20/A20_Wrapper.c -o Core/Memory/A20/A20_Wrapper.o
+
 Core/Graphics/Exceptions.o:
 	@echo "Building $@"
 	@$(CC) $(CFLAGS) -c Core/Graphics/Exceptions.c -o Core/Graphics/Exceptions.o
@@ -203,7 +212,7 @@ Init/Init.bin: Init/Bootloader.o Init/Disk/Disk.o Init/Memory/A20/A20.o Init/Mem
 	@$(CC) -T Init/Linker.ld $(LDFLAGS) -o Init/Init.elf -ffreestanding -nolibc -nostdlib -lgcc $^
 	@$(OBJC) -O binary Init/Init.elf Init/Init.bin
 
-Core/Serra.bin: Core/Bootloader.o Core/Memory/Memory.o Core/Graphics/Exceptions.o Core/Graphics/Format.o Core/Graphics/Graphics.o Core/Int/Idt.o Core/Int/Irq.o Core/Int/Isr.o Shared/Rm/RmWrapper.o
+Core/Serra.bin: Core/Bootloader.o Core/Memory/Memory.o Core/Memory/A20/A20.o Core/Memory/A20/A20_Wrapper.o Core/Graphics/Exceptions.o Core/Graphics/Format.o Core/Graphics/Graphics.o Core/Int/Idt.o Core/Int/Irq.o Core/Int/Isr.o Shared/Rm/RmWrapper.o
 	@echo "Building $@"
 	@$(CC) -T Core/Linker.ld $(LDFLAGS) -o Core/Serra.elf -ffreestanding -nolibc -nostdlib -lgcc $^
 	@$(OBJC) -O binary Core/Serra.elf Core/Serra.bin

@@ -101,7 +101,7 @@ void MakeIdtEntry(descriptorTable* IdtDescriptor, uint16 EntryNum, uint32 Offset
 
 void MakeDefaultIdtEntries(descriptorTable* IdtDescriptor, uint16 Selector, uint8 Gate, uint8 Dpl) {
 
-  // (ISR handlers, 0-31)
+  // First, we want to make entries for our ISR handlers, for entries 0 to 31.
 
   MakeIdtEntry(IdtDescriptor, 0, (uint32)&IsrDivideFault, Selector, Gate, Dpl);
 
@@ -145,7 +145,7 @@ void MakeDefaultIdtEntries(descriptorTable* IdtDescriptor, uint16 Selector, uint
 
   MakeIdtEntry(IdtDescriptor, 31, (uint32)&IsrReservedH, Selector, Gate, Dpl);
 
-  // (IRQ/PIC handlers, 32-47)
+  // Next, we want to make entries for our IRQ handlers, for entries 32 to 47.
 
   MakeIdtEntry(IdtDescriptor, 32, (uint32)&IrqTimer, Selector, Gate, Dpl);
   MakeIdtEntry(IdtDescriptor, 33, (uint32)&IrqKeyboard, Selector, Gate, Dpl);

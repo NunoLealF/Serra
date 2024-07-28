@@ -99,88 +99,6 @@ void __attribute__((noreturn)) Bootloader(void) {
   Putchar('\n', 0);
 
 
-  // (Set up A20)
-
-  // At the moment, we can only reliably access up to the first MiB of data (from 00000h to FFFFFh).
-  // This is because we haven't yet enabled the A20 line, which is a holdover from the 8086 days.
-
-  // Before having loaded our second-stage bootloader, our bootsector actually tried to enable it
-  // using the BIOS function int 15h, ax 2401h. However, this isn't guaranteed to work on all
-  // systems.
-
-  // Before we try to use any methods to enable the A20 line, we want to check if it's already been
-  // enabled (by the firmware, or by the BIOS function we executed earlier). If so, we want to skip
-  // to the next part of the bootloader.
-
-  bool A20_EnabledByDefault = false;
-  bool A20_EnabledByKbd = false;
-  bool A20_EnabledByFast = false;
-
-  Message(Kernel, "Preparing to enable the A20 line");
-
-  if (Check_A20() == true) {
-
-    // If the output of the CheckA20 function is true, then that means that the A20 line has
-    // already been enabled.
-
-    A20_EnabledByDefault = true;
-    Message(Ok, "The A20 line has already been enabled.");
-
-  } else {
-
-    // If the output of the CheckA20 function is false, then that means that the A20 line has not
-    // already been enabled.
-
-    // In this case, we want to try out two methods to enable the A20 line, the first of which
-    // involves the 8042 keyboard controller.
-
-    Message(Kernel, "Attempting to enable the A20 line using the 8042 keyboard method.");
-
-    EnableKbd_A20();
-    Wait_A20();
-
-    if (Check_A20() == true) {
-
-      A20_EnabledByKbd = true;
-      Message(Ok, "The A20 line has successfully been enabled.");
-
-    } else {
-
-      // If the first method didn't work, there's also a second method that works on some systems
-      // called 'fast A20'.
-      // This may crash the system, but we'll have to reset if we can't enable A20 anyways.
-
-      Message(Fail, "The A20 line was not successfully enabled.");
-      Message(Kernel, "Attempting to enable the A20 line using the fast A20 method");
-
-      EnableFast_A20();
-      Wait_A20();
-
-      if (Check_A20() == true) {
-
-        A20_EnabledByFast = true;
-        Message(Ok, "The A20 line has successfully been enabled.");
-
-      } else {
-
-        // At this point, we've exhausted all of the most common methods for enabling A20 (such
-        // as the aforementioned BIOS interrupt, the 8042 keyboard controller method, and the
-        // fast A20 method.
-
-        // As it's necessary for us to enable the A20 line, we'll need to crash the system /
-        // give out an error code if we get to this point.
-
-        Panic("Failed to enable the A20 line.");
-
-      }
-
-    }
-
-  }
-
-  Putchar('\n', 0);
-
-
 
 
   // In order to be able to load things from disk, we need to know the current drive number,
@@ -470,7 +388,6 @@ void __attribute__((noreturn)) Bootloader(void) {
   // First, we need to create and fill out the bootloader info table, which passes on some
   // of the information we've gathered off to the next stage of the bootloader, like this.
 
-  #define InfoTable_Location 0xAE00
   bootloaderInfoTable* InfoTable = (bootloaderInfoTable*)(InfoTable_Location);
 
   // (Fill out table info)
@@ -482,11 +399,7 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   // (Fill out system info)
 
-  InfoTable->Debug = Debug;
-
-  InfoTable->System_Info.A20_EnabledByDefault = A20_EnabledByDefault;
-  InfoTable->System_Info.A20_EnabledByKbd = A20_EnabledByKbd;
-  InfoTable->System_Info.A20_EnabledByFast = A20_EnabledByFast;
+  InfoTable->System_Info.Debug = Debug;
 
   // (Fill out disk/EDD info)
 

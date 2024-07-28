@@ -11,6 +11,8 @@
 
   // [VERSION 1; SIZE = 74 BYTES]
 
+  #define InfoTable_Location 0xAE00
+
   typedef struct {
 
     // [Table-related info]
@@ -22,13 +24,9 @@
 
     // [System-related]
 
-    bool Debug;
-
     struct __System_Info {
 
-      bool A20_EnabledByDefault;
-      bool A20_EnabledByKbd;
-      bool A20_EnabledByFast;
+      bool Debug;
 
     } __attribute__((packed)) System_Info;
 
