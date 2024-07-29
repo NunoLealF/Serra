@@ -3,7 +3,7 @@ An x86 bootloader under construction <3
 
 &nbsp;
 
-## Roadmap
+## Roadmap (Legacy/BIOS-only for now)
 
 ### 1st stage (7C00h -> 7E00h)
 
@@ -11,34 +11,34 @@ An x86 bootloader under construction <3
 - Protected mode **Done**
 - Set up a proper IDT **Done**
 
-### 2nd stage (7E00h -> 10000h)
+### 2nd stage (7E00h -> 9E00h)
 
 - String/terminal functions **Done, and now with printf!**
-- Enabling the A20 line **Done**
-- Interrupts and exceptions **Done (but a little bare-bones)**
 - Some way of going to and from real mode **Done**
-- E820 / memory map **Done (bug-testing might need to be done)**
-- CPUID *Also partly done, still need to interpret the data.*
+- Basic disk read support (using EDD / int 13h) **Done**
+- Basic FAT filesystem support (FAT16 and FAT32) **Done, read-only**
+- Transferring all the info from the above to the next stage **Done, a little barebones though**
+- Loading the next stage **Done**
+
+### 3rd stage (20000h -> ?????h)
+
+- String/terminal functions **Done, and now with printf!**
+- Some way of going to and from real mode **Done**
+- Interrupts and exceptions **Done (but a little bare-bones)**
+- E820 / memory map *Should be done soon*
 - VESA/VBE
-- Transferring all the info from the above to the next stage
-
-### 2.5th stage (20000h -> 80000h)
-
-- ACPI
-- Paging
-- PCI
-- Storage (ATAPI, AHCI, NVMe, Floppy, etc.)
 - An actual memory manager
-- Filesystem (FAT) support? (Need to work out BPB as well)
+- ACPI
+- PCI
+- Paging
+- Storage (ATAPI, AHCI, NVMe, USB, Floppy, etc.)
 
-### 3rd+ stages (???)
+### Common stage (?????h)
 
-- Long mode
-- TSS, ring 0-3(?)
-- EFI support?
-- Probably some other filesystem
-- Maybe some sort of standard protocol?
-- Might want Multiboot support and stuff too
+- Basically all of the above, but with long-mode support, and also with an EFI stub that
+does the same job as the BIOS/Legacy bootloader stub.
+
+- Should probably work on some sort of standard protocol (maybe reuse Multiboot/Limine?)
 
 &nbsp;
 

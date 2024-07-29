@@ -41,10 +41,10 @@ void Bootloader(void) {
     return;
   }
 
-
   // (Get info table, update debug)
 
   Debug = InfoTable->System_Info.Debug;
+
 
 
   // (Initialize terminal table..)
@@ -53,6 +53,7 @@ void Bootloader(void) {
 
   Putchar('\n', 0);
   Message(Kernel, "Successfully entered the third-stage bootloader.");
+
 
 
   // (Prepare to initialize IDT and PIC)
@@ -78,6 +79,8 @@ void Bootloader(void) {
 
   __asm__("sti");
   Message(Ok, "Successfully initialized the IDT and PIC.");
+
+
 
 
   // (Set up A20)
@@ -166,7 +169,7 @@ void Bootloader(void) {
   Putchar('\n', 0);
 
   Printf("Hiya, this is Serra! <3\n", 0x0F);
-  Printf("July %i %x\n", 0x3F, 28, 0x2024);
+  Printf("July %i %x\n", 0x3F, 29, 0x2024);
 
   for(;;);
 

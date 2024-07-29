@@ -7,7 +7,8 @@ second stage bootloader.
 and it will only serve to initialize a few important things, and to jump to the third stage
 bootloader.
 
-- Finally, the third stage (above 10000h) will initialize almost everything else.
+- Finally, the third stage (above 20000h) will initialize almost everything else. (Keep in
+mind that the stack is between 10000h and 20000h)
 
 &nbsp;
 
