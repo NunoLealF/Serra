@@ -31,14 +31,21 @@
 // 10000h -> 20000h: stack, 64 KiB
 // 20000h -> 80000h: third stage bootloader, 384 KiB
 
-void __attribute__((noreturn)) Bootloader(void) {
+void Bootloader(void) {
 
-  // TODO - a lot of things, but welcome to the third-stage bootloader!
-
-  // (Get info table..)
+  // (Get info table - check if signature is correct)
 
   bootloaderInfoTable* InfoTable = (bootloaderInfoTable*)(InfoTable_Location);
+
+  if (InfoTable->Signature != 0x65363231) {
+    return;
+  }
+
+
+  // (Get info table, update debug)
+
   Debug = InfoTable->System_Info.Debug;
+
 
   // (Initialize terminal table..)
 
@@ -46,8 +53,6 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   Putchar('\n', 0);
   Message(Kernel, "Successfully entered the third-stage bootloader.");
-
-
 
 
   // (Prepare to initialize IDT and PIC)
@@ -73,8 +78,6 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   __asm__("sti");
   Message(Ok, "Successfully initialized the IDT and PIC.");
-
-
 
 
   // (Set up A20)
