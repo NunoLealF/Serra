@@ -26,6 +26,7 @@
 
   #define IdtLocation 0xB000
 
+
   // ISRs for interrupt vectors between 0 and 31 (00h and 1Fh), defined in Isr.s.
   // These are just here so we can use them later on when making IDT entries.
 
@@ -94,6 +95,7 @@
   extern void IrqHddA(void);
   extern void IrqHddB(void);
 
+
   // Definitions from Irq.c.
 
   #define PicA_Data 0x20
@@ -101,6 +103,7 @@
 
   #define PicB_Data 0xA0
   #define PicB_Command 0xA1
+
 
   // Functions and handlers from Irq.c.
 
@@ -111,6 +114,7 @@
 
   void InitPic(uint8 PicA_Offset, uint8 PicB_Offset);
   void MaskPic(uint8 Mask);
+
 
   // Functions and handlers from Idt.c.
 

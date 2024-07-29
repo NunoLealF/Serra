@@ -9,7 +9,7 @@
   // bootloader; it's supposed to be placed at AE00h, and because of that, it has a maximum size
   // of 512 bytes.
 
-  // [VERSION 1; SIZE = 74 BYTES]
+  // [VERSION 1]
 
   #define InfoTable_Location 0xAE00
 

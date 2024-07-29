@@ -15,12 +15,11 @@
   bool Check_A20(void);
   void Wait_A20(void);
 
+
   // Standard memory functions; memset, memcpy, memmove.., from Memory.c
 
   void Memcpy(void* Destination, void* Source, uint32 Size);
   void Memmove(void* Destination, const void* Source, uint32 Size);
   void Memset(void* Buffer, uint8 Character, uint32 Size);
-
-  // (Todo: other functions)
 
 #endif

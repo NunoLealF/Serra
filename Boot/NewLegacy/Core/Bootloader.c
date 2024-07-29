@@ -49,6 +49,7 @@ void __attribute__((noreturn)) Bootloader(void) {
 
 
 
+
   // (Prepare to initialize IDT and PIC)
 
   Putchar('\n', 0);
@@ -62,7 +63,7 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   Message(Kernel, "Initializing the 8259 PIC.");
 
-  MaskPic(0xFE); // Full mask, don't enable anything (set to 0xFE for timer, or 0xFD for keyboard that doesn't really work)
+  MaskPic(0xFF); // Full mask, don't enable anything (set to 0xFE for timer, or 0xFD for keyboard that doesn't really work)
   InitPic(0x20, 0x28); // IRQ1 is at 0x20-0x27, IRQ2 is at 0x28-0x2F
 
   // (Actually initialize the IDT)
@@ -76,8 +77,10 @@ void __attribute__((noreturn)) Bootloader(void) {
 
 
 
-
   // (Set up A20)
+
+  // This can only safely be done *after* initializing the IDT, because some methods aren't
+  // really safe without one present (and also, they enable interrupts with sti)
 
   Putchar('\n', 0);
   Message(Kernel, "Preparing to enable the A20 line");

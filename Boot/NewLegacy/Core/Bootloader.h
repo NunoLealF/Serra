@@ -5,7 +5,7 @@
 #ifndef SERRA_BOOTLOADER_H
 #define SERRA_BOOTLOADER_H
 
-  // Import other headers (...)
+  // Import other headers..
 
   #include "../Shared/InfoTables.h"
   #include "../Shared/Rm/Rm.h"
@@ -17,7 +17,5 @@
   // Declare functions in Bootloader.c
 
   void __attribute__((noreturn)) Bootloader(void);
-
-  // todo...
 
 #endif

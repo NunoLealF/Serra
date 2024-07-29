@@ -23,11 +23,13 @@
   void Message(messageType Type, char* String, ...);
   void __attribute__((noreturn)) Panic(char* String);
 
+
   // Formatting and string-related functions. (Format.c)
 
   int Strlen(const char* String);
   char* Strrev(char* String);
   char* Itoa(uint32 Number, char* Buffer, uint8 Base);
+
 
   // The terminalDataStruct type, TerminalTable{}, and the debug (show non-important
   // messages) flag. (Graphics.c)
@@ -50,15 +52,18 @@
   extern terminalDataStruct TerminalTable;
   extern volatile bool Debug;
 
+
   // Functions that directly interact with the TerminalTable{} structure. (Graphics.c)
 
   void InitializeTerminal(uint16 LimitX, uint16 LimitY, uint32 Framebuffer);
   void ClearTerminal(void);
 
+
   // Functions that print data to the terminal. (Graphics.c)
 
   void Putchar(const char Character, uint8 Color);
   void Print(const char* String, uint8 Color);
+
 
   // Functions that print data to the terminal. (Format.c)
 

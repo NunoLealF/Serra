@@ -56,29 +56,25 @@ void __attribute__((noreturn)) Init(void) {
    Inputs:    (none)
    Outputs:   (none)
 
-   This is our second-stage bootloader's main function. We jump here after Init().
+   This is our second-stage bootloader's main function. We jump here after Init(),
+   which initializes the segment registers.
 
-   Todo: Write a more concise description. (I feel like this is only really possible after actually
-   finishing this part, lol)
+   This stage of the bootloader occupies the space between 7E00h and 9E00h in memory, and
+   its only role is to collect information about the system, and to jump to the next stage
+   of the bootloader (a file named 'Boot/Serra.bin' in a FAT filesystem).
 
 */
 
-// 7C00h -> 7E00h: 1st stage bootloader
-// 7E00h -> 9E00h: 2nd stage bootloader
-// 9E00h -> AC00h: Shared real-mode code
-// AC00h -> AE00h: Shared real-mode data
-// AE00h -> 10000h: (This is empty; maybe use it to pass info to the 3rd stage..?)
-// 10000h -> 20000h: Stack
-// 20000h -> ?????h: 3rd stage bootloader
-
-// F000h (4 bytes): A20 test location, should probably change that.
-
 void __attribute__((noreturn)) Bootloader(void) {
 
-  // We've finally made it to our second-stage bootloader. We're in 32-bit x86 protected mode with
-  // the stack at 20000h in memory, and our bootloader between 7E00h and CE00h in memory.
+  // We've finally made it to our second-stage bootloader; we're in 32-bit x86 protected
+  // mode with the stack at 20000h in memory, and our bootloader between 7E00h and 9E00h in
+  // memory (leaving us with a total of 8KiB of space).
 
-  // (Set up the debug flag; this dictates whether non-important messages are shown or not)
+
+  // First, we'll want to set up the Debug flag/variable, which dictates whether
+  // non-important messages should be shown or not. It's hardcoded at a specific offset
+  // in our bootsector, so we only need to do this:
 
   uint8 UseDebugFlag = *(uint8*)(0x7E00 - 4);
 
@@ -89,7 +85,8 @@ void __attribute__((noreturn)) Bootloader(void) {
   }
 
 
-  // (Set up terminal)
+  // Next, we can go ahead and set up the terminal, and then display a message showing
+  // that we've successfully entered the second-stage bootloader.
 
   InitializeTerminal(80, 25, 0xB8000);
   ClearTerminal();
@@ -99,18 +96,12 @@ void __attribute__((noreturn)) Bootloader(void) {
   Putchar('\n', 0);
 
 
+  // Now, we can get started on the next step - loading the next stage of the bootloader and
+  // jumping to it. In order to be able to do that, we need to be able to read bytes from
+  // disk, and later on, also interpret a FAT filesystem.
 
-
-  // In order to be able to load things from disk, we need to know the current drive number,
-  // which should (hopefully) be saved in the bootsector.
-
-  // By default, the BIOS passes the current drive number as dl, but it doesn't actually store it
-  // anywhere else; instead, our bootsector manually saves the value of dl right before the
-  // bootsector signature (AA55h).
-
-  // For now, we're just going to check if the bootsector is still in memory (by verifying the
-  // signature), and check to see if the drive number is in a valid range - otherwise, we'll just
-  // use the 'default' drive number (usually 80h).
+  // For now, we just want to collect some important data - specifically, we want to figure out
+  // the current drive number (which is also saved in the bootsector, at a given offset):
 
   DriveNumber = *(uint8*)(0x7E00 - 3);
   bool DriveNumberIsValid = true;
@@ -124,7 +115,7 @@ void __attribute__((noreturn)) Bootloader(void) {
   }
 
   // If the drive number saved in our bootsector is somehow invalid, then we're going to want
-  // to just set it to the default 80h, and to also show a warning.
+  // to just set it to the default 80h, and also show a warning.
 
   if (DriveNumberIsValid == true) {
 
@@ -138,24 +129,20 @@ void __attribute__((noreturn)) Bootloader(void) {
   }
 
 
-
-
   // Alright; now, we want to focus on getting information from our current drive - how large
   // is it, how many bytes are in a sector, how should we load our data?
 
   // We can get this information using the BIOS function (int 13h, ah 48h), which should
-  // (theoretically) return a table in [ds:si] for the drive in the dl register:
-
-  // [TODO: WRITE A BETTER COMMENT, C'MON C'MON]
-
-  // (prepare)
+  // return a table (as in eddDriveParameters) in the address at [ds:si], for the drive in
+  // the dl register.
 
   eddDriveParameters EDD_Parameters;
 
   Memset((void*)&EDD_Parameters, sizeof(eddDriveParameters), 0);
   EDD_Parameters.Size = sizeof(eddDriveParameters);
 
-  // (actually do it!)
+  // (In order to actually call a BIOS function from protected mode, we'll use the real-mode
+  // functions at Shared/Rm/ to do our work for us)
 
   realModeTable* Table = InitializeRealModeTable();
 
@@ -214,12 +201,12 @@ void __attribute__((noreturn)) Bootloader(void) {
   }
 
 
+  // Now that we've obtained the information we needed from our drive, we can start working
+  // on the next part - reading from the filesystem.
 
-  // Finally, let's load in the regular BPB, and see if it's even a proper FAT partition (if
-  // not, then panic, since the next stage of the bootloader is a FAT file lol)
-
-  // We don't need to load anything with the disk functions (yet!) since it's all in the
-  // bootsector, which is *guaranteed* to be at 7C00h.
+  // In order to do that, we first need to read data from the BPB (the BIOS Parameter Block),
+  // which is a table in our bootsector (which is already in memory, from 7C00h to 7E00h),
+  // like this:
 
   #define Bpb_Address 0x7C00
 
@@ -237,21 +224,20 @@ void __attribute__((noreturn)) Bootloader(void) {
   }
 
 
-  // Save the logical and physical sector size (the bytes per sector given by the BPB and by
-  // the EDD/int13h functions respectively)
+  // Next, we'll want to keep track of the physical sector size (specified by the system, and
+  // as used by BIOS functions), and the logical sector size (as specified in the BPB).
 
   LogicalSectorSize = Bpb.BytesPerSector;
   PhysicalSectorSize = EDD_Parameters.BytesPerSector;
 
 
+  // After that, we'll want to actually start *reading* from the BPB.
 
-  // (Get some variables from the BPB)
+  // At this point, we know that the BPB exists, and that it almost certainly represents a valid
+  // FAT filesystem of some sort, but we don't know anything else, so we'll be collecting the
+  // following variables:
 
-  // Now that we know that the BPB exists, and that it almost certainly represents a valid FAT
-  // partition, we want to actually start reading the data off of it. Specifically, we're going to
-  // focus on these specific variables:
-
-  // -> The total number of sectors within the partition, including reserved sectors;
+  // (The total number of sectors within the partition, including reserved sectors)
 
   uint32 TotalNumSectors = Bpb.NumSectors;
 
@@ -259,7 +245,7 @@ void __attribute__((noreturn)) Bootloader(void) {
     TotalNumSectors = Bpb.NumSectors_Large;
   }
 
-  // -> The size of each FAT (file allocation table)
+  // (The size of each FAT (file allocation table))
 
   uint32 FatSize = Bpb.SectorsPerFat;
 
@@ -267,26 +253,24 @@ void __attribute__((noreturn)) Bootloader(void) {
     FatSize = Extended_Bpb32.SectorsPerFat;
   }
 
-  // -> The number of root sectors (if the filesystem is FAT32, then this is always zero);
+  // (The number of root sectors (if the filesystem is FAT32, then this is always zero))
 
   uint32 NumRootSectors = ((Bpb.NumRootEntries * 32) + (LogicalSectorSize - 1)) / LogicalSectorSize;
 
-  // -> The position of the first data sector (relative to the start of the partition), along
-  // with the number of data (non-reserved + non-FAT) sectors in the partition.
+  // (The position of the first data sector (relative to the start of the partition), along
+  // with the number of data (non-reserved + non-FAT) sectors in the partition)
 
   uint32 DataSectorOffset = ((Bpb.NumFileAllocationTables * FatSize) + NumRootSectors) + Bpb.ReservedSectors;
   uint32 NumDataSectors = (TotalNumSectors - DataSectorOffset);
 
-  // -> And, finally, the number of clusters within the partition.
+  // (And finally, the number of clusters within the partition)
 
   uint32 NumClusters = (NumDataSectors / Bpb.SectorsPerCluster);
 
 
-
-
-  // Now that we've gone through this whole process, we can actually finally move on to
-  // determining the filesystem type. It's actually relatively simple - we just need to look at
-  // the number of clusters in the partition:
+  // Now that we've collected that data, we can start determining the filesystem type. This
+  // is actually *relatively* simple, as we just need to look at the number of clusters in
+  // the partition:
 
   // -> Any partition with less than 4085 clusters is guaranteed to be FAT12.
   // -> Any partition with between 4085 and 65524 clusters is guaranteed to be FAT16.
@@ -297,7 +281,7 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   if (NumClusters < 4085) {
 
-    Panic("FAT partitions with less than 4085 clusters are not supported.");
+    Panic("FAT partitions with less than 4085 clusters are not supported."); // FAT12 isn't supported
 
   } else if (NumClusters > 65524) {
 
@@ -308,8 +292,14 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   Message(Info, "The current FAT partition has %d clusters (each %d bytes long).", NumClusters, (Bpb.SectorsPerCluster * LogicalSectorSize));
 
-  // Now that we know the partition type, we can get the cluster (and the first sector of) the
-  // root directory, like this:
+
+  // Finally, now that we know all of these variables, we can actually start reading from the
+  // partition!
+
+  Putchar('\n', 0);
+  Message(Kernel, "Preparing to jump to the next stage of the bootloader.");
+
+  // (First, we need to get the root cluster, along with the sector offset of that cluster)
 
   uint32 RootCluster;
 
@@ -319,31 +309,14 @@ void __attribute__((noreturn)) Bootloader(void) {
     RootCluster = Extended_Bpb32.RootCluster;
   }
 
-
-
-
-  // ...
-
-  Putchar('\n', 0);
-  Message(Kernel, "Preparing to jump to the next stage of the bootloader.");
-
-  // [TODO - UPDATE COMMENTS]
-
-  // After that, we need to load the Serra.bin file from the Boot/ directory, which contains
-  // the next stage of our bootloader.
-
-  // First though, we need to calculate the sector offset of the (first) root cluster to search
-  // from; for FAT16 partitions, we need to start searching from an earlier offset, as there's a
-  // specific cluster area for root directories in FAT16.
-
   uint32 RootSectorOffset = DataSectorOffset;
 
   if (PartitionIsFat32 == false) {
     RootSectorOffset -= NumRootSectors;
   }
 
-  // Next, we need to search for the Boot/ directory (starting from the root directory), like
-  // this:
+  // (Next, we need to search for the Boot/ directory (starting from the root directory), like
+  // this (we use the functions in Init/Disk/Disk.h))
 
   fatDirectory BootDirectory = FindDirectory(RootCluster, Bpb.SectorsPerCluster, Bpb.HiddenSectors, Bpb.ReservedSectors, RootSectorOffset, "BOOT    ", "   ", true, PartitionIsFat32);
   uint32 BootCluster = GetDirectoryCluster(BootDirectory);
@@ -352,8 +325,8 @@ void __attribute__((noreturn)) Bootloader(void) {
     Panic("Failed to locate Boot/.");
   }
 
-  // Following that, we need to search for a file called 'Serra.bin' within the Boot/ directory,
-  // like this:
+  // (After that, we need to search for a file called 'Serra.bin' from within the Boot/ folder,
+  // this time using the DataSectorOffset instead of the RootSectorOffset)
 
   fatDirectory SerraDirectory = FindDirectory(BootCluster, Bpb.SectorsPerCluster, Bpb.HiddenSectors, Bpb.ReservedSectors, DataSectorOffset, "SERRA   ", "BIN", false, PartitionIsFat32);
   uint32 SerraCluster = GetDirectoryCluster(SerraDirectory);
@@ -364,10 +337,12 @@ void __attribute__((noreturn)) Bootloader(void) {
     Message(Ok, "Located Boot/Serra.bin.");
   }
 
-  // Finally, we can actually go ahead and load the file from disk.
 
-  // With the way our bootloader is set up, the third stage should reside at 20000h in memory,
-  // being able to occupy everything up to 7FFFFh (as the EBDA starts at 80000h).
+  // Now, we can actually go ahead and load the file from disk. Since we know the cluster
+  // number of the "Boot/Serra.bin" file, we can just put it into ReadFile(), and it'll read
+  // everything for us, like this:
+
+  // (Our third-stage bootloader will occupy the space from 20000h onwards)
 
   #define Bootloader_Address 0x20000
 
@@ -381,12 +356,12 @@ void __attribute__((noreturn)) Bootloader(void) {
 
 
 
+  // Finally, now that we've loaded the third-stage bootloader, all that's left to do is to
+  // fill out the bootloader info table (which passes on some of the information we've
+  // gathered off to the next stage), and jump to the next stage.
 
-  // (Update terminal info in the info table, since a few messages are displayed before
-  // this)
-
-  // First, we need to create and fill out the bootloader info table, which passes on some
-  // of the information we've gathered off to the next stage of the bootloader, like this.
+  // First, we need to create and fill out the table, like this (see Shared/InfoTables.h
+  // for more details):
 
   bootloaderInfoTable* InfoTable = (bootloaderInfoTable*)(InfoTable_Location);
 
@@ -421,12 +396,14 @@ void __attribute__((noreturn)) Bootloader(void) {
   Memcpy(&InfoTable->Terminal_Info, &TerminalTable, sizeof(InfoTable->Terminal_Info));
 
 
+  // And now, all that's left to do is to jump to the next stage (using inline assembly).
 
+  // (In the event that the function returns for some reason, we'll just print out an error
+  // and halt)
 
-  // [TODO] Finish writing comments, organize everything, etc.
-  // (TEST, THIS JUMPS TO THE NEXT STAGE)
+  __asm__ __volatile__ ("call *%0" : : "r"(Bootloader_Address));
 
-  __asm__ __volatile__ ("jmp *%0" : : "r"(Bootloader_Address));
+  Panic("Failed to load the third-stage bootloader.");
   for(;;);
 
 }

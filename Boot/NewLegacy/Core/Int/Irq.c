@@ -31,7 +31,6 @@
 uint8 Inb(uint16 Port) {
 
   uint8 Output = 0;
-
   __asm__("inb %1, %0" : "=a"(Output) : "Nd"(Port));
 
   return Output;
@@ -128,7 +127,9 @@ void IrqHandler(uint8 Vector, uint8 Port) {
   // Show a message to the user (saying that an IRQ has occured, and which).
   // We take our message from the Irqs[] array.
 
+  Putchar('\n', 0);
   Message(Kernel, "An IRQ has occured.");
+  
   Message(Info, Irqs[Vector]);
 
   // If necessary, read from a specific port, using the Inb() function.
