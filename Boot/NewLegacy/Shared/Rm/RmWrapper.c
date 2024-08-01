@@ -76,7 +76,15 @@ typedef struct {
 } __attribute__((packed)) realModeTable;
 
 
-/* void realMode()
+// Functions that save and restore the state of the system, to use within RealMode(); these
+// functions aren't declared anywhere near the Shared/ folder, but rather within each
+// respective stage's Bootloader.c
+
+extern void SaveState(void);
+extern void RestoreState(void);
+
+
+/* void RealMode()
 
    Inputs: (None, except realModeTable at AC00h)
    Outputs: (None, except realModeTable at AC00h)
@@ -99,12 +107,14 @@ typedef struct {
 
 void RealMode(void) {
 
+  SaveState();
   __asm__ __volatile__ ("movl $0x9E00, %%eax; call *%%eax" : : : "eax");
+  RestoreState();
 
 }
 
 
-/* realModeTable* initializeRealModeTable()
+/* realModeTable* InitializeRealModeTable()
 
    Inputs: (None)
    Outputs: realModeTable* Table - A pointer to an initialized realModeTable struct

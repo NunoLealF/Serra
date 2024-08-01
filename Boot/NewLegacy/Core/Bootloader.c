@@ -9,6 +9,28 @@
 #error "This code is supposed to be compiled with an i686-elf cross-compiler."
 #endif
 
+/* void SaveState(), RestoreState()
+
+   Inputs: (none)
+   Outputs: (none)
+
+   These two functions are called by Shared/Rm/RmWrapper.c, and they basically just save and
+   restore the state of the system (for example, they might restore the IDT, paging, etc.)
+
+   (TODO: actually comment this better, the specifics of what this is guaranteed to vary
+   quite a bit)
+
+*/
+
+void SaveState(void) {
+  return;
+}
+
+void RestoreState(void) {
+  return;
+}
+
+
 /* void __attribute__((noreturn)) Bootloader()
 
    Inputs:    (none)
