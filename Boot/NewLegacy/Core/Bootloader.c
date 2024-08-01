@@ -22,12 +22,23 @@
 
 */
 
+descriptorTable IdtDescriptor;
+
 void SaveState(void) {
+
+  __asm__ __volatile__ ("cli");
+
   return;
+
 }
 
 void RestoreState(void) {
+
+  __asm__ __volatile__ ("sti");
+  LoadIdt(&IdtDescriptor);
+
   return;
+
 }
 
 
@@ -83,7 +94,6 @@ void Bootloader(void) {
   Putchar('\n', 0);
   Message(Kernel, "Preparing to initialize the IDT.");
 
-  descriptorTable IdtDescriptor;
   IdtDescriptor.Size = (2048 - 1);
   IdtDescriptor.Offset = IdtLocation;
 
