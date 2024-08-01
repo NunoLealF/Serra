@@ -23,6 +23,31 @@
   void Memset(void* Buffer, uint8 Character, uint32 Size);
 
 
-  // (Todo: functions from Mmap/Mmap.c)
+  // Memory-map-related structures, from Mmap/Mmap.c.
+
+  typedef struct {
+
+    uint64 Base;
+    uint64 Limit;
+    uint32 Type;
+
+    uint32 Acpi;
+
+  } __attribute__((packed)) mmapEntry;
+
+  #define mmapEntryFree 1
+  #define mmapEntryReserved 2
+  #define mmapEntryAcpiReclaimable 3
+  #define mmapEntryAcpiNvs 4
+  #define mmapEntryUnusable 5
+  #define mmapEntryDisabled 6
+  #define mmapEntryPersistent 7
+  #define mmapEntryUnaccepted 8
+
+
+  // Memory-map-related functions, from Mmap/Mmap.c.
+
+  uint32 GetMmapEntry(void* Buffer, uint32 Size, uint32 Continuation);
+  // (TODO: others)
 
 #endif
