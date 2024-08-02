@@ -192,7 +192,10 @@ void Bootloader(void) {
 
 
 
-  // (Get the *raw* E820 memory map)
+  // [Get the *raw* E820 memory map]
+
+  Putchar('\n', 0);
+  Message(Kernel, "Preparing to obtain the system's memory map, using E820");
 
   // First, we need to prepare, and check if it even works; each entry is 24 bytes, and
   // some systems can have a huge amount of entries, so we'll reserve space on the stack
@@ -204,9 +207,6 @@ void Bootloader(void) {
   mmapEntry* Mmap = (mmapEntry*)MmapBuffer;
 
   // Now, let's actually go ahead and fill that
-
-  Putchar('\n', 0);
-  Message(Kernel, "Preparing to obtain the system's memory map, using E820");
 
   uint8 NumMmapEntries = 0;
   uint32 MmapContinuation = 0;
@@ -244,6 +244,31 @@ void Bootloader(void) {
 
   }
 
+
+
+
+  // [Process the E820 memory map]
+
+  // The first step here is to just sort each entry according to its base address,
+  // like this (this is an O(n²) algorithm):
+
+  for (uint16 Threshold = 1; Threshold < NumMmapEntries; Threshold++) {
+
+    for (uint16 Position = Threshold; Position > 0; Position--) {
+
+      if (Mmap[Position].Base < Mmap[Position - 1].Base) {
+        Memswap((void*)(int)&Mmap[Position], (void*)(int)&Mmap[Position - 1], sizeof(mmapEntry));
+      } else {
+        break;
+      }
+
+    }
+
+  }
+
+  Message(Ok, "Successfully sorted the system memory map entries.");
+
+  // Next, ...
 
 
 

@@ -21,6 +21,7 @@
   void Memcpy(void* Destination, void* Source, uint32 Size);
   void Memmove(void* Destination, const void* Source, uint32 Size);
   void Memset(void* Buffer, uint8 Character, uint32 Size);
+  void Memswap(void* BufferA, void* BufferB, uint32 Size);
 
 
   // Memory-map-related structures, from Mmap/Mmap.c.
