@@ -63,7 +63,8 @@ uint32 GetMmapEntry(void* Buffer, uint32 Size, uint32 Continuation) {
   Table->Ecx = Size;
   Table->Edx = 0x534D4150;
 
-  Table->Di = (uint16)(int)Buffer;
+  Table->Es = (uint16)((int)(Buffer) >> 4);
+  Table->Di = (uint16)((int)(Buffer) & 0x0F);
 
   // We can now call our BIOS function. We're in protected mode, so we'll need to temporarily
   // return to real mode to actually do so.
