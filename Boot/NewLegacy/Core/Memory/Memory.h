@@ -44,10 +44,9 @@
   #define mmapEntryPersistent 7
   #define mmapEntryUnaccepted 8
 
-
   // Memory-map-related functions, from Mmap/Mmap.c.
 
   uint32 GetMmapEntry(void* Buffer, uint32 Size, uint32 Continuation);
-  // (TODO: others)
+  // ...
 
 #endif

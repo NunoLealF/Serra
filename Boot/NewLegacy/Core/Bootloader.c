@@ -192,6 +192,60 @@ void Bootloader(void) {
 
 
 
+  // (Get the *raw* E820 memory map)
+
+  // First, we need to prepare, and check if it even works; each entry is 24 bytes, and
+  // some systems can have a huge amount of entries, so we'll reserve space on the stack
+  // (128 entries should be enough)
+
+  #define MaxMmapEntries 128
+
+  uint8 MmapBuffer[sizeof(mmapEntry) * MaxMmapEntries];
+  mmapEntry* Mmap = (mmapEntry*)MmapBuffer;
+
+  // Now, let's actually go ahead and fill that
+
+  Putchar('\n', 0);
+  Message(Kernel, "Preparing to obtain the system's memory map, using E820");
+
+  uint8 NumMmapEntries = 0;
+  uint32 MmapContinuation = 0;
+
+  do {
+
+    // Get the memory map entry, and save the continuation number in MmapContinuation
+
+    MmapContinuation = GetMmapEntry((void*)&Mmap[NumMmapEntries], sizeof(mmapEntry), MmapContinuation);
+
+    // Increment the number of entries, and break if we've reached the mmap entry limit
+
+    NumMmapEntries++;
+
+    if (NumMmapEntries >= MaxMmapEntries) {
+      break;
+    }
+
+  } while (MmapContinuation != 0);
+
+
+  // Show messages, if necessary
+
+  if (NumMmapEntries > 0) {
+
+    Message(Ok, "Successfully obtained the system memory map.");
+
+    if (NumMmapEntries >= MaxMmapEntries) {
+      Message(Warning, "Memory map entry limit exceeded; final map may be incomplete.");
+    }
+
+  } else {
+
+    Panic("Failed to obtain the system's memory map.", 0);
+
+  }
+
+
+
 
 
   // [For now, let's just leave things here]
@@ -201,7 +255,7 @@ void Bootloader(void) {
   Putchar('\n', 0);
 
   Printf("Hiya, this is Serra! <3\n", 0x0F);
-  Printf("August %i %x\n", 0x3F, 1, 0x2024);
+  Printf("August %i %x\n", 0x3F, 2, 0x2024);
 
   for(;;);
 
