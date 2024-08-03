@@ -276,15 +276,8 @@ void Bootloader(void) {
 
   Message(Ok, "Successfully sorted the system memory map entries.");
 
-
-  // [DEBUG]
-
-  for (int a = 0; a < NumMmapEntries; a++) {
-    Printf("%xh, %xh, %xh, %xh\n", 0xF3, (uint32)(Mmap[a].Base & 0xFFFFFFFF), (uint32)(Mmap[a].Limit & 0xFFFFFFFF), (uint32)(Mmap[a].Type), (uint32)(Mmap[a].Acpi));
-  }
-
   // Next, we just need to isolate all the usable entries, and deal with overlapping
-  // entries.
+  // entries. (might be a good idea to put this in a function..)
 
   uint8 UsableMmapBuffer[sizeof(mmapEntry) * NumUsableMmapEntries];
   mmapEntry* UsableMmap = (mmapEntry*)UsableMmap;
@@ -299,10 +292,8 @@ void Bootloader(void) {
     uint64 Start = Mmap[Position].Base;
     uint64 End = (Start + Mmap[Position].Limit);
 
-    Printf("(regular) Start = %xh, End = %xh, Type = %xh, MINSTART = %xh\n", 0xF2, (uint32)(Start & 0xFFFFFFFF), (uint32)(End & 0xFFFFFFFF), Mmap[Position].Type, (uint32)(MinStart & 0xFFFFFFFF  ));
-
-    // Next, update the minimum start, and skip over any entries that end before
-    // it (if it's a usable entry, then decrement the number of usable entries)
+    // Next, update the minimum start, and skip over any entries that end before it
+    // (if it's a usable/'free' entry, then decrement the number of usable/'free' entries)
 
     if (Start < MinStart) {
       Start = MinStart;
@@ -340,12 +331,12 @@ void Bootloader(void) {
 
       }
 
-      // Finally, add the entry
+      // Finally, add the entry to the usable memory map area, and increment the position
 
-      UsableMmap[UsablePosition].Base = Start; Printf("Base: %xh, ", 0xF7, (uint32)(UsableMmap[UsablePosition].Base & 0xFFFFFFFF));
-      UsableMmap[UsablePosition].Limit = (End - Start); Printf("Limit: %xh, End: %xh, ", 0xF7, (uint32)(UsableMmap[UsablePosition].Limit & 0xFFFFFFFF), (uint32)(End & 0xFFFFFFFF));
-      UsableMmap[UsablePosition].Type = Mmap[Position].Type; Printf("Type: %xh, ", 0xF7, (uint32)UsableMmap[UsablePosition].Type);
-      UsableMmap[UsablePosition].Acpi = Mmap[Position].Acpi; Printf("Acpi: %xh\n", 0xF7, (uint32)UsableMmap[UsablePosition].Acpi);
+      UsableMmap[UsablePosition].Base = Start; Printf("Base: %xh, ", 0x0F, (uint32)(UsableMmap[UsablePosition].Base & 0xFFFFFFFF));
+      UsableMmap[UsablePosition].Limit = (End - Start); Printf("Limit: %xh, End: %xh, ", 0x0F, (uint32)(UsableMmap[UsablePosition].Limit & 0xFFFFFFFF), (uint32)(End & 0xFFFFFFFF));
+      UsableMmap[UsablePosition].Type = Mmap[Position].Type; Printf("Type: %xh, ", 0x0F, (uint32)UsableMmap[UsablePosition].Type);
+      UsableMmap[UsablePosition].Acpi = Mmap[Position].Acpi; Printf("Acpi: %xh\n", 0x0F, (uint32)UsableMmap[UsablePosition].Acpi);
 
       UsablePosition++;
 
@@ -357,7 +348,7 @@ void Bootloader(void) {
 
   }
 
-
+  // (Everything is done; we have the number of usable mmap entries in NumUsableMmapEntries)
   Printf("Number of usable entries: %d\n", 0x7F, NumUsableMmapEntries);
 
 
