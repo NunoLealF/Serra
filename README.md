@@ -25,13 +25,12 @@ An x86 bootloader under construction <3
 - String/terminal functions **Done, and now with printf!**
 - Some way of going to and from real mode **Done**
 - Interrupts and exceptions **Done (but a little bare-bones)**
-- E820 / memory map *Should be done soon*
-- VESA/VBE
-- An actual memory manager
-- ACPI
-- PCI
-- Paging
-- Storage (ATAPI, AHCI, NVMe, USB, Floppy, etc.)
+- E820 / memory map **Done**
+- A physical memory manager
+- VESA/EDID
+- PCI (long, but doesn't rely on ACPI)
+- ATA PIO, along with basic storage
+- ACPI (this is long); I might leave this for later, tbh.
 
 ### Common stage (?????h)
 
