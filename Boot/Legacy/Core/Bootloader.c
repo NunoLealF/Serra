@@ -274,8 +274,6 @@ void Bootloader(void) {
 
   }
 
-  Message(Ok, "Successfully sorted the system memory map entries.");
-
   // Next, we just need to isolate all the usable entries, and deal with overlapping
   // entries. (might be a good idea to put this in a function..)
 
@@ -333,10 +331,10 @@ void Bootloader(void) {
 
       // Finally, add the entry to the usable memory map area, and increment the position
 
-      UsableMmap[UsablePosition].Base = Start; Printf("Base: %xh, ", 0x0F, (uint32)(UsableMmap[UsablePosition].Base & 0xFFFFFFFF));
-      UsableMmap[UsablePosition].Limit = (End - Start); Printf("Limit: %xh, End: %xh, ", 0x0F, (uint32)(UsableMmap[UsablePosition].Limit & 0xFFFFFFFF), (uint32)(End & 0xFFFFFFFF));
-      UsableMmap[UsablePosition].Type = Mmap[Position].Type; Printf("Type: %xh, ", 0x0F, (uint32)UsableMmap[UsablePosition].Type);
-      UsableMmap[UsablePosition].Acpi = Mmap[Position].Acpi; Printf("Acpi: %xh\n", 0x0F, (uint32)UsableMmap[UsablePosition].Acpi);
+      UsableMmap[UsablePosition].Base = Start;
+      UsableMmap[UsablePosition].Limit = (End - Start);
+      UsableMmap[UsablePosition].Type = Mmap[Position].Type;
+      UsableMmap[UsablePosition].Acpi = Mmap[Position].Acpi;
 
       UsablePosition++;
 
@@ -349,9 +347,28 @@ void Bootloader(void) {
   }
 
   // (Everything is done; we have the number of usable mmap entries in NumUsableMmapEntries)
-  Printf("Number of usable entries: %d\n", 0x7F, NumUsableMmapEntries);
+
+  Message(Ok, "Successfully sorted the system memory map entries.");
+
+  for (uint8 Position = 0; Position < NumUsableMmapEntries; Position++) {
+
+    // TODO: This doesn't accurately show 64-bit addresses (above 4GiB), or sizes above 4
+    // TiB, due to the limits of Itoa() (since our implementation only accepts 32-bit numbers)
+
+    uint32 Base = (uint32)(UsableMmap[Position].Base & 0xFFFFFFFF);
+    uint32 Limit = (uint32)((UsableMmap[Position].Base + UsableMmap[Position].Limit) & 0xFFFFFFFF);
+
+    uint32 Size = (uint32)((UsableMmap[Position].Base + UsableMmap[Position].Limit) / 1024);
+
+    Message(Info, "Free memory area from %xh to %xh (%d KiB)", Base, Limit, Size);
+
+  }
 
 
+
+  // [CPUID]
+
+  // (todo: everything else)
 
 
 
@@ -364,7 +381,7 @@ void Bootloader(void) {
   Putchar('\n', 0);
 
   Printf("Hiya, this is Serra! <3\n", 0x0F);
-  Printf("August %i %x\n", 0x3F, 3, 0x2024);
+  Printf("August %i %x\n", 0x3F, 4, 0x2024);
 
   for(;;);
 
