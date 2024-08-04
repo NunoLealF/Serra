@@ -26,11 +26,12 @@ An x86 bootloader under construction <3
 - Some way of going to and from real mode **Done**
 - Interrupts and exceptions **Done (but a little bare-bones)**
 - E820 / memory map **Done**
-- A physical memory manager
-- VESA/EDID
-- PCI (long, but doesn't rely on ACPI)
+- CPUID (?)
+- PCI (a little difficult, but doesn't rely on ACPI)
 - ATA PIO, along with basic storage
-- ACPI (this is long); I might leave this for later, tbh.
+- A basic filesystem driver (supporting int 13h, ATAPI, maybe NVMe or USB?)
+- VESA/EDID (?)
+- ACPI (this is really complicated, idk if it's worth the benefit)
 
 ### Common stage (?????h)
 
