@@ -4,8 +4,8 @@
 
 #include "../../Shared/Stdint.h"
 #include "../../Shared/Rm/Rm.h"
+#include "Cpu.h"
 
-// (Todo: functions)
 
 // First, we need to check to see if CPUID is even available
 
@@ -51,14 +51,15 @@ void ChangeEflags(uint8 Bit, bool Set) {
   }
 
   // Now, change eflags
+  // The "cc" clobber is to tell the compiler that eflags changes
 
-  __asm__ __volatile__ ("pushfl; movl %0, (%%esp); popfl" :: "r"(Eflags));
+  __asm__ __volatile__ ("pushfl; movl %0, (%%esp); popfl" :: "r"(Eflags) : "cc");
 
 }
 
 
-// ...
 
+// ...
 
 bool SupportsCpuid(void) {
 
@@ -84,5 +85,20 @@ bool SupportsCpuid(void) {
     return false;
   }
 
+}
+
+
+
+
+// ...
+
+// (Eax and ecx is only supported because there's a few instructions that use ecx, but
+// for the most part it's usually useless)
+
+registerTable GetCpuid(uint32 Eax, uint32 Ecx) {
+
+  registerTable Table;
+  __asm__ __volatile__ ("cpuid" : "=a"(Table.Eax), "=b"(Table.Ebx), "=c"(Table.Ecx), "=d"(Table.Edx) : "a"(Eax), "c"(Ecx));
+  return Table;
 
 }

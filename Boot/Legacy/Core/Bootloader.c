@@ -380,6 +380,23 @@ void Bootloader(void) {
     Message(Warning, "CPUID appears to be unsupported; trying anyway");
   }
 
+  // (...)
+
+  registerTable Test = GetCpuid(0, 0);
+  uint8* Nya = (uint8*)&Test;
+
+  for (int a = 4; a < 8; a++) {
+    Putchar(Nya[a], 0x7F);
+  }
+
+  for (int b = 12; b < 16; b++) {
+    Putchar(Nya[b], 0x7F);
+  }
+
+  for (int c = 8; c < 12; c++) {
+    Putchar(Nya[c], 0x7F);
+  }
+
 
 
 

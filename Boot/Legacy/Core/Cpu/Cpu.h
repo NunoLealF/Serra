@@ -5,11 +5,24 @@
 #ifndef SERRA_CPU_H
 #define SERRA_CPU_H
 
-  // (Todo: functions from Cpu.c)
+  // structures from Cpu.c
+
+  typedef struct {
+
+    uint32 Eax;
+    uint32 Ebx;
+    uint32 Ecx;
+    uint32 Edx;
+
+  } __attribute__ ((packed)) registerTable;
+
+  // functions from Cpu.c
 
   uint32 ReadEflags(void);
   void ChangeEflags(uint8 Bit, bool Set);
+
   bool SupportsCpuid(void);
+  registerTable GetCpuid(uint32 Eax, uint32 Ecx);
 
 
 #endif
