@@ -358,7 +358,7 @@ void Bootloader(void) {
     uint32 Base = (uint32)(UsableMmap[Position].Base & 0xFFFFFFFF);
     uint32 Limit = (uint32)((UsableMmap[Position].Base + UsableMmap[Position].Limit) & 0xFFFFFFFF);
 
-    uint32 Size = (uint32)((UsableMmap[Position].Base + UsableMmap[Position].Limit) / 1024);
+    uint32 Size = (uint32)(UsableMmap[Position].Limit / 1024);
 
     Message(Info, "Free memory area from %xh to %xh (%d KiB)", Base, Limit, Size);
 
@@ -396,6 +396,8 @@ void Bootloader(void) {
   for (int c = 8; c < 12; c++) {
     Putchar(Nya[c], 0x7F);
   }
+
+  Putchar('\n', 0);
 
 
 
