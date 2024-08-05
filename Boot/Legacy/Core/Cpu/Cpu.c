@@ -64,7 +64,8 @@ void ChangeEflags(uint8 Bit, bool Set) {
 
 bool SupportsCpuid(void) {
 
-  // ...
+  // First, read the 'original'/'old' eflags, and isolate the CPUID bit, before
+  // inverting it with ChangeEflags()
 
   uint32 Eflags = ReadEflags();
 
@@ -78,7 +79,8 @@ bool SupportsCpuid(void) {
 
   }
 
-  // ...
+  // Now, we want to compare the value of our previous eflags register with the current
+  // one (after we already inverted the CPUID bit).
 
   if ((Eflags & CpuidFlag) != (ReadEflags() & CpuidFlag)) {
     return true;
@@ -109,12 +111,7 @@ registerTable GetCpuid(uint32 Eax, uint32 Ecx) {
 
 // ...
 
-void GetVendorString(char* Buffer) {
-
-  // Call CPUID with eax=0000_0000h (and ecx empty as well); this will
-  // return the vendor string in ebx, edx and ecx
-
-  registerTable Table = GetCpuid(0x00000000, 0);
+void GetVendorString(char* Buffer, registerTable Table) {
 
   // Now, just copy the vendor string to the given buffer.
 

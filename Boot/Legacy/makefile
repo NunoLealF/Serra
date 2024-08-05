@@ -101,7 +101,7 @@ RunInt:
 	@qemu-system-i386 -cpu pentium3 -m 128 -drive file=Legacy.bin,format=raw -d int
 
 RunKvm:
-	@echo "Launching Qemu.."
+	@echo "Launching Qemu with KVM.."
 	@qemu-system-i386 -cpu pentium3 -m 128 -drive file=Legacy.bin,format=raw -enable-kvm
 
 # Lowercase names

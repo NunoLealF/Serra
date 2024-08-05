@@ -380,12 +380,24 @@ void Bootloader(void) {
     Message(Warning, "CPUID appears to be unsupported; trying anyway");
   }
 
-  // (Next, let's get the CPU vendor string)
+  // (Next, let's get some important data from CPUID)
 
-  char CpuidVendorString[13]; // length of the string is 12, plus one null byte
-  GetVendorString(CpuidVendorString);
+  registerTable Cpuid_Info = GetCpuid(0x00000000, 0);
+  registerTable Cpuid_Features = GetCpuid(0x00000001, 0);
+  uint32 Cpuid_HighestLevel = Cpuid_Info.Eax;
 
-  Message(Info, "CPU vendor string is \'%s\'", CpuidVendorString);
+  Message(Ok, "Successfully obtained CPUID data.");
+
+  // (Show info; for now we're just collecting data, but it would definitely help to
+  // make this more complete tbh)
+
+  char VendorString[16];
+  GetVendorString(VendorString, Cpuid_Info);
+
+  Message(Info, "Highest supported (standard) CPUID level is %xh", Cpuid_HighestLevel);
+  Message(Info, "CPU vendor ID is \'%s\'", VendorString);
+
+
 
 
 
