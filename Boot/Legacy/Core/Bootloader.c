@@ -382,22 +382,10 @@ void Bootloader(void) {
 
   // (...)
 
-  registerTable Test = GetCpuid(0, 0);
-  uint8* Nya = (uint8*)&Test;
+  char Temp[13]; // length of the string is 12, plus one null byte
+  GetVendorString(Temp);
 
-  for (int a = 4; a < 8; a++) {
-    Putchar(Nya[a], 0x7F);
-  }
-
-  for (int b = 12; b < 16; b++) {
-    Putchar(Nya[b], 0x7F);
-  }
-
-  for (int c = 8; c < 12; c++) {
-    Putchar(Nya[c], 0x7F);
-  }
-
-  Putchar('\n', 0);
+  Printf("Test (CPUID vendor string): %s\n", 0xF7, Temp);
 
 
 

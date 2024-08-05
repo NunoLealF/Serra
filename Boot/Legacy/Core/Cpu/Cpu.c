@@ -4,6 +4,7 @@
 
 #include "../../Shared/Stdint.h"
 #include "../../Shared/Rm/Rm.h"
+#include "../Memory/Memory.h"
 #include "Cpu.h"
 
 
@@ -99,6 +100,37 @@ registerTable GetCpuid(uint32 Eax, uint32 Ecx) {
 
   registerTable Table;
   __asm__ __volatile__ ("cpuid" : "=a"(Table.Eax), "=b"(Table.Ebx), "=c"(Table.Ecx), "=d"(Table.Edx) : "a"(Eax), "c"(Ecx));
+
   return Table;
+
+}
+
+
+
+// ...
+
+void GetVendorString(char* Buffer) {
+
+  // Call CPUID with eax=0000_0000h (and ecx empty as well); this will
+  // return the vendor string in ebx, edx and ecx
+
+  registerTable Table = GetCpuid(0x00000000, 0);
+
+  // Now, just copy the vendor string to the given buffer.
+
+  // Because of how the string is laid out, we'll be using a for loop instead of something
+  // like Memcpy():
+
+  for (uint8 Offset = 0; Offset < 4; Offset++) {
+
+    Buffer[Offset + 0] = ((Table.Ebx >> (Offset * 8)) & 0xFF);
+    Buffer[Offset + 4] = ((Table.Edx >> (Offset * 8)) & 0xFF);
+    Buffer[Offset + 8] = ((Table.Ecx >> (Offset * 8)) & 0xFF);
+
+  }
+
+  // Finally, we can append a null byte to the end of the string to terminate it there
+
+  Buffer[12] = '\0';
 
 }

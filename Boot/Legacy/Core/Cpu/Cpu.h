@@ -23,6 +23,7 @@
 
   bool SupportsCpuid(void);
   registerTable GetCpuid(uint32 Eax, uint32 Ecx);
+  void GetVendorString(char* Buffer);
 
 
 #endif
