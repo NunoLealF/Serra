@@ -366,10 +366,19 @@ void Bootloader(void) {
 
 
 
-  // [CPUID]
 
-  // (todo: everything else)
+  // [Get CPUID data]
 
+  Putchar('\n', 0);
+  Message(Kernel, "Preparing to get data from CPUID");
+
+  // (First, let's see if it's even supported)
+
+  if (SupportsCpuid() == true) {
+    Message(Ok, "CPUID appears to be supported (the ID flag is volatile)");
+  } else {
+    Message(Warning, "CPUID appears to be unsupported; trying anyway");
+  }
 
 
 
@@ -381,7 +390,7 @@ void Bootloader(void) {
   Putchar('\n', 0);
 
   Printf("Hiya, this is Serra! <3\n", 0x0F);
-  Printf("August %i %x\n", 0x3F, 4, 0x2024);
+  Printf("August %i %x\n", 0x3F, 5, 0x2024);
 
   for(;;);
 

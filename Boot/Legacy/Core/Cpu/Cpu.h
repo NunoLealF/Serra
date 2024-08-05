@@ -7,5 +7,9 @@
 
   // (Todo: functions from Cpu.c)
 
+  uint32 ReadEflags(void);
+  void ChangeEflags(uint8 Bit, bool Set);
+  bool SupportsCpuid(void);
+
 
 #endif
