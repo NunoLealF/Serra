@@ -80,7 +80,7 @@ Clean:
 	@-rm -f *.bin
 
 Dump:
-	$(OBJD) -S Init/Init.elf
+	$(OBJD) -S Core/Serra.elf
 
 Dumpbin:
 	$(OBJD) -Mintel,i686 -b binary -m i386 --adjust-vma=0x7E00 -D Legacy.bin
