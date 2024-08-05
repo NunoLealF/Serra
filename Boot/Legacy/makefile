@@ -40,7 +40,7 @@ CFLAGS = -std=c11 -ffunction-sections -funsigned-char -ffreestanding -Os -Wall -
 # it skips it (for example, for the target 'example.o', if it sees example.o is already there, it skips compiling it),
 # and this can cause problems for targets that don't output anything. These are called 'phony targets'.
 
-.PHONY: All Clean Dump Run RunGdb RunInt all dump clean run rungdb runint
+.PHONY: All Clean Dump Run RunGdb RunInt RunKvm all dump clean run rungdb runint runkvm
 
 
 # Names ->>
@@ -79,6 +79,9 @@ Clean:
 
 	@-rm -f *.bin
 
+
+# (...)
+
 Dump:
 	$(OBJD) -S Core/Serra.elf
 
@@ -97,6 +100,10 @@ RunInt:
 	@echo "Launching Qemu with -d int.."
 	@qemu-system-i386 -cpu pentium3 -m 128 -drive file=Legacy.bin,format=raw -d int
 
+RunKvm:
+	@echo "Launching Qemu.."
+	@qemu-system-i386 -cpu pentium3 -m 128 -drive file=Legacy.bin,format=raw -enable-kvm
+
 # Lowercase names
 
 all: All
@@ -106,6 +113,8 @@ dumpbin: Dumpbin
 run: Run
 rungdb: RunGdb
 runint: RunInt
+runkvm: RunKvm
+
 
 
 # [The files themselves]
