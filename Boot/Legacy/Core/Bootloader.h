@@ -10,6 +10,7 @@
   #include "../Shared/InfoTables.h"
   #include "../Shared/Rm/Rm.h"
 
+  #include "Cpu/Cpu.h"
   #include "Memory/Memory.h"
   #include "Graphics/Graphics.h"
   #include "Int/Int.h"
