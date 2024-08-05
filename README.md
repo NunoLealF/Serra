@@ -26,7 +26,7 @@ An x86 bootloader under construction <3
 - Some way of going to and from real mode **Done**
 - Interrupts and exceptions **Done (but a little bare-bones)**
 - E820 / memory map **Done**
-- CPUID (?)
+- CPUID *(In progress)*
 - PCI (a little difficult, but doesn't rely on ACPI)
 - ATA PIO, along with basic storage
 - A basic filesystem driver (supporting int 13h, ATAPI, maybe NVMe or USB?)

@@ -380,12 +380,14 @@ void Bootloader(void) {
     Message(Warning, "CPUID appears to be unsupported; trying anyway");
   }
 
-  // (...)
+  // (Next, let's get the CPU vendor string)
 
-  char Temp[13]; // length of the string is 12, plus one null byte
-  GetVendorString(Temp);
+  char CpuidVendorString[13]; // length of the string is 12, plus one null byte
+  GetVendorString(CpuidVendorString);
 
-  Printf("Test (CPUID vendor string): %s\n", 0xF7, Temp);
+  Message(Info, "CPU vendor string is \'%s\'", CpuidVendorString);
+
+
 
 
 
