@@ -47,6 +47,18 @@
 
   // Regular CPU flags - most of these are present on the 8086/286.
 
+  #define CarryBit 0
+  #define ParityBit 2
+  #define AuxCarryBit 4
+  #define ZeroBit 6
+  #define SignBit 7
+  #define TrapBit 8
+  #define InterruptBit 9
+  #define DirectionBit 10
+  #define OverflowBit 11
+  #define IoPrivilegeBit 12
+  #define NestedBit 14
+
   #define CarryFlag (1 << 0)
   #define ParityFlag (1 << 2)
   #define AuxCarryFlag (1 << 4)
@@ -60,6 +72,13 @@
   #define NestedFlag (1 << 14)
 
   // Extended CPU flags (eflags) - most of these are present on the 386/486.
+
+  #define ResumeBit 16
+  #define Virtual86Bit 17
+  #define AlignBit 18
+  #define VirtualIntBit 19
+  #define VirtualIntPendingBit 20
+  #define CpuidBit 21
 
   #define ResumeFlag (1 << 16)
   #define Virtual86Flag (1 << 17)

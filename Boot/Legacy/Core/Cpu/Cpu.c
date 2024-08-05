@@ -68,11 +68,11 @@ bool SupportsCpuid(void) {
 
   if ((Eflags & CpuidFlag) == 0) {
 
-    ChangeEflags(21, true);
+    ChangeEflags(CpuidBit, true);
 
   } else {
 
-    ChangeEflags(21, false);
+    ChangeEflags(CpuidBit, false);
 
   }
 
