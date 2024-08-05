@@ -5,7 +5,7 @@
 #ifndef SERRA_CPU_H
 #define SERRA_CPU_H
 
-  // structures from Cpu.c
+  // (Structures from Cpu.c)
 
   typedef struct {
 
@@ -16,14 +16,14 @@
 
   } __attribute__ ((packed)) registerTable;
 
-  // functions from Cpu.c
+  // (Functions from Cpu.c)
 
   uint32 ReadEflags(void);
   void ChangeEflags(uint8 Bit, bool Set);
 
   bool SupportsCpuid(void);
   registerTable GetCpuid(uint32 Eax, uint32 Ecx);
-  
+
   void GetVendorString(char* Buffer, registerTable Table);
 
 #endif

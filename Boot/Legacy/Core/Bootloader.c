@@ -400,6 +400,10 @@ void Bootloader(void) {
 
 
 
+  // [Memory management]
+  // (...)
+
+
 
 
 
