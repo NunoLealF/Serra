@@ -163,10 +163,6 @@ Core/Cpu/Cpu.o:
 	@echo "Building $@"
 	@$(CC) $(CFLAGS) -c Core/Cpu/Cpu.c -o Core/Cpu/Cpu.o
 
-Core/Cpu/Pci.o:
-	@echo "Building $@"
-	@$(CC) $(CFLAGS) -c Core/Cpu/Pci.c -o Core/Cpu/Pci.o
-
 Core/Memory/Memory.o:
 	@echo "Building $@"
 	@$(CC) $(CFLAGS) -c Core/Memory/Memory.c -o Core/Memory/Memory.o
@@ -226,7 +222,7 @@ Init/Init.bin: Init/Bootloader.o Init/Disk/Disk.o Init/Memory/Memory.o Init/Grap
 	@$(CC) -T Init/Linker.ld $(LDFLAGS) -o Init/Init.elf -ffreestanding -nolibc -nostdlib -lgcc $^
 	@$(OBJC) -O binary Init/Init.elf Init/Init.bin
 
-Core/Serra.bin: Core/Bootloader.o Core/Cpu/Cpu.o Core/Cpu/Pci.o Core/Memory/Memory.o Core/Memory/A20/A20.o Core/Memory/A20/A20_Wrapper.o Core/Memory/Mmap/Mmap.o Core/Graphics/Exceptions.o Core/Graphics/Format.o Core/Graphics/Graphics.o Core/Int/Idt.o Core/Int/Irq.o Core/Int/Isr.o Shared/Rm/RmWrapper.o
+Core/Serra.bin: Core/Bootloader.o Core/Cpu/Cpu.o Core/Memory/Memory.o Core/Memory/A20/A20.o Core/Memory/A20/A20_Wrapper.o Core/Memory/Mmap/Mmap.o Core/Graphics/Exceptions.o Core/Graphics/Format.o Core/Graphics/Graphics.o Core/Int/Idt.o Core/Int/Irq.o Core/Int/Isr.o Shared/Rm/RmWrapper.o
 	@echo "Building $@"
 	@$(CC) -T Core/Linker.ld $(LDFLAGS) -o Core/Serra.elf -ffreestanding -nolibc -nostdlib -lgcc $^
 	@$(OBJC) -O binary Core/Serra.elf Core/Serra.bin
