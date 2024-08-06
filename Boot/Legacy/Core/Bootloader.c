@@ -400,8 +400,14 @@ void Bootloader(void) {
 
 
 
-  // [Memory management]
-  // (...)
+  // [PCI]
+
+  // PCI is a pretty important component of any operating system; in this case, we're using
+  // it so we can interface with AHCI/NVMe/USB later on, which is crucial if we actually
+  // want to load anything
+
+  // I had the idea a memory manager was necessary here, but it isn't, the stack should be
+  // enough
 
 
 

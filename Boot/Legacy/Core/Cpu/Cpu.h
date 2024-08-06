@@ -16,6 +16,7 @@
 
   } __attribute__ ((packed)) registerTable;
 
+
   // (Functions from Cpu.c)
 
   uint32 ReadEflags(void);
@@ -25,5 +26,10 @@
   registerTable GetCpuid(uint32 Eax, uint32 Ecx);
 
   void GetVendorString(char* Buffer, registerTable Table);
+
+
+  // (todo: functions from Pci.c)
+
+  // ...
 
 #endif

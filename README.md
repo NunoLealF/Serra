@@ -27,7 +27,6 @@ An x86 bootloader under construction <3
 - Interrupts and exceptions **Done (but a little bare-bones)**
 - E820 / memory map **Done**
 - CPUID ***Mostly done***
-- A physical memory manager
 - PCI
 - Some sort of timer?
 - Disk drivers (int13h/ATA/AHCI/NVMe/etc.)
