@@ -161,7 +161,7 @@ Core/Bootloader.o:
 
 Core/Cpu/Cpu.o:
 	@echo "Building $@"
-	@$(CC) $(CFLAGS) -c Core/Cpu/Cpu.c -o Core/Cpu/Cpu.o
+	@$(CC) $(CFLAGS) -Wno-array-bounds -c Core/Cpu/Cpu.c -o Core/Cpu/Cpu.o
 
 Core/Memory/Memory.o:
 	@echo "Building $@"

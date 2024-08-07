@@ -141,7 +141,7 @@ acpiRsdpTable* GetAcpiRsdpTable(void) {
   // memory (offset 0Eh from the start of the *regular* BDA); in order to turn it into a
   // proper memory address, we just need to multiply it by 16, like this:
 
-  uint16 EbdaSegment = *(uint16*)(0x40E);
+  uint16 EbdaSegment = *(uint16*)(0x40E); // If you're getting an array bounds warning here, it's a GCC optimization bug
   uint32 EbdaAddress = (uint32)(EbdaSegment << 4);
 
   // Assuming that address isn't zero, we can then start looking for the EBDA. Since it's
