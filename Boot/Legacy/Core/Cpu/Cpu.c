@@ -90,9 +90,6 @@ bool SupportsCpuid(void) {
 
 }
 
-
-
-
 // ...
 
 // (Eax and ecx is only supported because there's a few instructions that use ecx, but
@@ -106,8 +103,6 @@ registerTable GetCpuid(uint32 Eax, uint32 Ecx) {
   return Table;
 
 }
-
-
 
 // ...
 
@@ -129,5 +124,57 @@ void GetVendorString(char* Buffer, registerTable Table) {
   // Finally, we can append a null byte to the end of the string to terminate it there
 
   Buffer[12] = '\0';
+
+}
+
+
+
+
+// ...
+// (get the ACPI table (RSDP))
+
+acpiRsdpTable* GetAcpiRsdpTable(void) {
+
+  // First, see if we can find it within the first 1 KiB of the EBDA.
+
+  // On most (?) systems, the segment of the address of the EBDA can be located at 40Eh in
+  // memory (offset 0Eh from the start of the *regular* BDA); in order to turn it into a
+  // proper memory address, we just need to multiply it by 16, like this:
+
+  uint16 EbdaSegment = *(uint16*)(0x40E);
+  uint32 EbdaAddress = (uint32)(EbdaSegment << 4);
+
+  // Assuming that address isn't zero, we can then start looking for the EBDA. Since it's
+  // only found on 16-byte boundaries, and always starts with the signature 'RSD PTR ', we
+  // can just look for it like this:
+
+  uint64 Signature = 0x2052545020445352;
+
+  if (EbdaAddress != 0) {
+
+    for (unsigned int Offset = 0; Offset <= 1024; Offset += 16) {
+
+      if (Signature == *(uint64*)(EbdaAddress + Offset)) {
+        return (acpiRsdpTable*)(EbdaAddress + Offset);
+      }
+
+    }
+
+  }
+
+  // If we didn't find it using hte last method, then we need to look through the (read-only) area
+  // between E0000h and FFFFFh in memory, using the same logic as before:
+
+  for (unsigned int Position = 0xE0000; Position < 0x100000; Position += 16) {
+
+    if (Signature == *(uint64*)(Position)) {
+      return (acpiRsdpTable*)(Position);
+    }
+
+  }
+
+  // Otherwise, we just need to return NULL.
+
+  return NULL;
 
 }

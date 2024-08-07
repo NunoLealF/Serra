@@ -412,6 +412,37 @@ void Bootloader(void) {
 
 
 
+  // [ACPI]
+
+  Putchar('\n', 0);
+  Message(Kernel, "Preparing to get ACPI info");
+
+  // I think all that's actually needed for now is to just get the RSDP/XSDP, but other
+  // than that, I'm pretty sure nothing else is needed
+
+  // That still takes some work though
+
+  acpiRsdpTable* acpiRsdp = GetAcpiRsdpTable();
+
+  if (acpiRsdp == 0) {
+
+    Message(Error, "RSDP doesn't exist?");
+
+  } else {
+
+    Message(Ok, "RSDP exists at %xh", (uint32)acpiRsdp);
+
+    char Test[9];
+    Test[8] = '\0';
+    Memcpy((void*)(int)Test, (int)&acpiRsdp->Signature, 8);
+
+    Message(Info, "Signature is %s", Test);
+
+    Message(Info, "ACPI revision is %d, RSDT exists at %xh, XSDT may exist at %x:%xh", acpiRsdp->Revision, acpiRsdp->Rsdt, (uint32)(acpiRsdp->Xsdt >> 32), (uint32)(acpiRsdp->Xsdt & 0xFFFFFFFF));
+
+  }
+
+
 
 
   // [For now, let's just leave things here]
@@ -421,7 +452,7 @@ void Bootloader(void) {
   Putchar('\n', 0);
 
   Printf("Hiya, this is Serra! <3\n", 0x0F);
-  Printf("August %i %x\n", 0x3F, 6, 0x2024);
+  Printf("August %i %x\n", 0x3F, 7, 0x2024);
 
   for(;;);
 
