@@ -79,6 +79,11 @@
 
   typedef uint8 bool;
 
+  // Null type
+
+  #define null 0
+  #define NULL null
+
   // Macros/definitions for variadic functions.
   // (We just use <stdarg.h> because this is difficult to implement, and our compiler has it)
 
