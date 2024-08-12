@@ -422,25 +422,37 @@ void Bootloader(void) {
 
   // That still takes some work though
 
-  acpiRsdpTable* acpiRsdp = GetAcpiRsdpTable();
+  acpiRsdpTable* AcpiRsdp = GetAcpiRsdpTable();
+  bool AcpiSupported = true;
 
-  if (acpiRsdp == 0) {
+  if (AcpiRsdp == 0) {
 
     Message(Error, "RSDP doesn't exist?");
+    AcpiSupported = false;
 
   } else {
 
-    Message(Ok, "RSDP exists at %xh", (uint32)acpiRsdp);
+    Message(Ok, "RSDP exists at %xh", (uint32)AcpiRsdp);
 
     char Test[9];
     Test[8] = '\0';
-    Memcpy((void*)(int)Test, (int)&acpiRsdp->Signature, 8);
+    Memcpy((void*)(int)Test, (int)&AcpiRsdp->Signature, 8);
 
     Message(Info, "Signature is %s", Test);
 
-    Message(Info, "ACPI revision is %d, RSDT exists at %xh, XSDT may exist at %x:%xh", acpiRsdp->Revision, acpiRsdp->Rsdt, (uint32)(acpiRsdp->Xsdt >> 32), (uint32)(acpiRsdp->Xsdt & 0xFFFFFFFF));
+    Message(Info, "ACPI revision is %d, RSDT exists at %xh, XSDT may exist at %x:%xh", AcpiRsdp->Revision, AcpiRsdp->Rsdt, (uint32)(AcpiRsdp->Xsdt >> 32), (uint32)(AcpiRsdp->Xsdt & 0xFFFFFFFF));
 
   }
+
+
+
+  // [VESA/VBE, and maybe EDID]
+  // https://pdos.csail.mit.edu/6.828/2012/readings/hardware/vbe3.pdf (important)
+
+  // *All VESA functions return 4Fh in AL if they are supported and use AH as a status flag, with 00h being success.*
+  Test();
+
+
 
 
 

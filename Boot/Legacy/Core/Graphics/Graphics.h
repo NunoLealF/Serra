@@ -70,4 +70,10 @@
   void Printf(const char* String, uint8 Color, ...);
   void vPrintf(const char* String, uint8 Color, va_list Arguments);
 
+
+  // (TODO: functions from Vbe.c)
+
+  void Test(void);
+
+
 #endif
