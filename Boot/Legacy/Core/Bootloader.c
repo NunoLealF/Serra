@@ -452,7 +452,7 @@ void Bootloader(void) {
   Putchar('\n', 0);
 
   Printf("Hiya, this is Serra! <3\n", 0x0F);
-  Printf("August %i %x\n", 0x3F, 7, 0x2024);
+  Printf("August %i %x\n", 0x3F, 12, 0x2024);
 
   for(;;);
 

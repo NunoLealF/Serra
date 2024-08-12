@@ -7,20 +7,16 @@
 #include "../Memory/Memory.h"
 #include "Cpu.h"
 
+/* uint32 ReadEflags()
 
-// First, we need to check to see if CPUID is even available
+   Inputs: (none)
+   Outputs: uint32 - The current value of the eflags register
 
-// There are two ways of doing this - either we can check for the ID flag in EFLAGS (doesn't
-// work with a few CPUs from the 90s, whatever), or, we can just.. run it lol.
+   This function reads the current value of eflags, which is a CPU register that keeps track
+   of several important flags (for example, the carry flag, the interrupt enable flag, among
+   others).
 
-// Given that CPUID is basically necessary, and that the only CPUs that don't really support
-// it are Cyrixes from a pretty long time ago, let's just.. check for it the normal way, lol.
-
-
-// [TODO - I'm *really* not sure whether these functions are safe, honestly. They work just
-// fine on my machine, but they could be a huge issue on another one]
-
-// ...
+*/
 
 uint32 ReadEflags(void) {
 
@@ -31,7 +27,23 @@ uint32 ReadEflags(void) {
 
 }
 
-// ...
+
+/* void ChangeEflags()
+
+   Inputs: uint8 Bit - The bit number that you want to change (in the eflags register)
+           bool Set - Whether you want to set that bit (true), or clear it (false)
+
+   Outputs: (none)
+
+   This function changes one specific bit in the eflags register. This can be useful for a
+   few things - for example, enabling/disabling virtual 8086 mode, or modifying the ID bit
+   (which is useful for detecting CPUID support).
+
+   As an example, if you wanted to *set* the carry flag (which is bit 0 in eflags), you
+   could do the following:
+   -> ChangeEflags(0, true);
+
+*/
 
 void ChangeEflags(uint8 Bit, bool Set) {
 
@@ -39,7 +51,7 @@ void ChangeEflags(uint8 Bit, bool Set) {
 
   uint32 Eflags = ReadEflags();
 
-  // Next, change the bit
+  // Next, change the given bit
 
   if (Set == true) {
 
@@ -59,8 +71,16 @@ void ChangeEflags(uint8 Bit, bool Set) {
 }
 
 
+/* bool SupportsCpuid()
 
-// ...
+   Inputs: (none)
+   Outputs: bool - Whether this system supports CPUID (true) or not (false)
+
+   This function checks for the presence of CPUID, by seeing if the ID flag (bit 21 in the
+   eflags register) can be modified. This method is guaranteed to work on practically any
+   modern system, with the exception of some old Cyrix and NexGen CPUs.
+
+*/
 
 bool SupportsCpuid(void) {
 
@@ -90,10 +110,26 @@ bool SupportsCpuid(void) {
 
 }
 
-// ...
 
-// (Eax and ecx is only supported because there's a few instructions that use ecx, but
-// for the most part it's usually useless)
+/* registerTable GetCpuid()
+
+   Inputs: uint32 Eax - The value of the eax register that you want to call CPUID with.
+           uint32 Ecx - The value of the ecx register that you want to call CPUID with.
+
+   Outputs: registerTable - A table with the value of eax, ebx, ecx and edx after the call
+
+   This function has one very simple job - it calls CPUID with the given parameters (the value
+   of Eax, and sometimes Ecx), and returns the output of that instruction in a registerTable{}.
+
+   Most CPUID instructions only require an input value for the eax register, but some may
+   require one for the ecx register as well, which is why it's included in this function; that
+   being said, you can usually just leave Ecx blank.
+
+   As an example, if you wanted to call CPUID with the instruction (eax = 0h, ecx = 0h), you
+   could do the following:
+   -> registerTable Table = GetCpuid(0x00000000, 0x00000000);
+
+*/
 
 registerTable GetCpuid(uint32 Eax, uint32 Ecx) {
 
@@ -104,7 +140,26 @@ registerTable GetCpuid(uint32 Eax, uint32 Ecx) {
 
 }
 
-// ...
+
+/* void GetVendorString()
+
+   Inputs: char* Buffer - The buffer you want to store the vendor string in (size > 12 bytes!).
+           registerTable Table - The table returned by GetCpuid(0, 0), or CPUID with eax=0.
+
+   Outputs: (none, but Buffer is modified)
+
+   This function uses the data returned by CPUID (with eax = 0h) to get the system's vendor
+   ID string, which is stored in ebx ~ edx ~ ecx. Most modern CPUs support this query, and
+   depending on the brand, they'll return different values:
+
+   -> Intel processors will generally return "GenuineIntel";
+   -> AMD processors will generally return "AuthenticAMD".
+
+   Keep in mind that, even though this function only takes in a char*, the buffer you
+   use *must* be at least 13 bytes long, in order to store the vendor string (12 characters)
+   and the null byte at the end.
+
+*/
 
 void GetVendorString(char* Buffer, registerTable Table) {
 
@@ -128,10 +183,24 @@ void GetVendorString(char* Buffer, registerTable Table) {
 }
 
 
+/* acpiRsdpTable* GetAcpiRsdpTable()
 
+   Inputs: (none)
+   Outputs: acpiRsdpTable* - A pointer to the ACPI RSDP table, if it exists (otherwise, NULL)
 
-// ...
-// (get the ACPI table (RSDP))
+   This function tries to find the location of the ACPI Root System Description Pointer (also
+   known as the RSDP), using the two methods outlined in the ACPI specification:
+
+   -> First, it tries to find the table within the first 1 KiB of the EBDA;
+   -> Second, it may also try to find the table between E0000h and FFFFFh in memory.
+
+   If any of these methods are successful, this function returns a pointer to the RSDP table;
+   otherwise, it returns a null pointer (!).
+
+   For reference, the definition of the acpiRsdpTable{} table can be found in Cpu.h, and
+   also in the ACPI specification.
+
+*/
 
 acpiRsdpTable* GetAcpiRsdpTable(void) {
 
