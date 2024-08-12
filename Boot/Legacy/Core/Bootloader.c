@@ -449,8 +449,10 @@ void Bootloader(void) {
   // [VESA/VBE, and maybe EDID]
   // https://pdos.csail.mit.edu/6.828/2012/readings/hardware/vbe3.pdf (important)
 
+  Putchar('\n', 0);
+  Message(Kernel, "Preparing to get VESA-related data.");
+
   // *All VESA functions return 4Fh in AL if they are supported and use AH as a status flag, with 00h being success.*
-  Test();
 
 
 

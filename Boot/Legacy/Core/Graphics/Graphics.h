@@ -73,7 +73,5 @@
 
   // (TODO: functions from Vbe.c)
 
-  void Test(void);
-
 
 #endif
