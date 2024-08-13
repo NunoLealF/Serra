@@ -39,7 +39,7 @@
 
 
 
-// ...
+// Returns the value of (E)AX; first, check to see if it's 4Fh
 
 uint32 GetVbeInfoBlock(vbeInfoBlock* Buffer) {
 
