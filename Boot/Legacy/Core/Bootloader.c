@@ -446,13 +446,50 @@ void Bootloader(void) {
 
 
 
+
   // [VESA/VBE, and maybe EDID]
   // https://pdos.csail.mit.edu/6.828/2012/readings/hardware/vbe3.pdf (important)
 
   Putchar('\n', 0);
   Message(Kernel, "Preparing to get VESA-related data.");
 
-  // *All VESA functions return 4Fh in AL if they are supported and use AH as a status flag, with 00h being success.*
+  // (call it)
+
+  vbeInfoBlock VbeInfo;
+  uint32 VbeReturnStatus = GetVbeInfoBlock(&VbeInfo);
+
+  // (check to see if it's supported)
+
+  bool VbeIsSupported = true;
+
+  if ((VbeReturnStatus & 0xFFFF) != 0x4F) {
+    VbeIsSupported = false;
+  }
+
+  // (show info)
+
+  // TODO: This actually works!.. With the caveat that the pointers seem to be garbage (they're
+  // correctly converted, they just.. don't make much sense)
+
+  if (VbeIsSupported == true) {
+
+    Message(Ok, "VBE appears to be supported.");
+
+    Message(Info, "The table signature is %xh, and the VBE version is %xh", (uint32)VbeInfo.Signature, (uint32)VbeInfo.Version);
+
+    int StringAddress = (int)(convertFarPtr(VbeInfo.OemStringPtr));
+    char* String = (char*)(StringAddress);
+    Message(Info, "OEM string is \'%s\', video mode list ptr is %xh", String, (uint32)convertFarPtr(VbeInfo.VideoModeListPtr));
+    Message(Info, "(for reference, video mode list ptr is %x:%xh)", (uint32)VbeInfo.VideoModeListPtr.Segment, (uint32)VbeInfo.VideoModeListPtr.Offset);
+    Message(Info, "Capabilities are %xh, number of 64KiB blocks is %d", (uint32)VbeInfo.Capabilities, (uint32)VbeInfo.NumBlocks);
+
+
+  } else {
+
+    Message(Warning, "VBE appears to be unsupported.");
+
+  }
+
 
 
 
@@ -466,7 +503,7 @@ void Bootloader(void) {
   Putchar('\n', 0);
 
   Printf("Hiya, this is Serra! <3\n", 0x0F);
-  Printf("August %i %x\n", 0x3F, 12, 0x2024);
+  Printf("August %i %x\n", 0x3F, 13, 0x2024);
 
   for(;;);
 

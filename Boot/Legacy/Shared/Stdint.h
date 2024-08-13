@@ -79,7 +79,7 @@
 
   } __attribute__((packed)) farPtr;
 
-  #define convertFarPtr(Address) ((Ptr.Segment << 4) + Ptr.Offset)
+  #define convertFarPtr(Ptr) ((Ptr.Segment << 4) + Ptr.Offset)
 
   // Non-integer types.
 
