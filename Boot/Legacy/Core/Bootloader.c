@@ -278,7 +278,7 @@ void Bootloader(void) {
   // entries. (might be a good idea to put this in a function..)
 
   uint8 UsableMmapBuffer[sizeof(mmapEntry) * NumUsableMmapEntries];
-  mmapEntry* UsableMmap = (mmapEntry*)UsableMmap;
+  mmapEntry* UsableMmap = (mmapEntry*)UsableMmapBuffer;
 
   uint64 MinStart = 0;
   uint8 UsablePosition = 0;
@@ -455,7 +455,7 @@ void Bootloader(void) {
 
   // (call it)
 
-  vbeInfoBlock VbeInfo;
+  volatile vbeInfoBlock VbeInfo;
   uint32 VbeReturnStatus = GetVbeInfoBlock(&VbeInfo);
 
   // (check to see if it's supported)
@@ -470,7 +470,7 @@ void Bootloader(void) {
 
   if (VbeIsSupported == true) {
 
-    Message(Ok, "VBE appears to be supported.");
+    Message(Ok, "VBE appears to be supported (the table itself is at %xh).", &VbeInfo);
 
     Message(Info, "The table signature is %xh, and the VBE version is %xh", (uint32)VbeInfo.Signature, (uint32)VbeInfo.Version);
     Message(Info, "OEM string is \'%s\', video mode list ptr is %xh", (char*)(convertFarPtr(VbeInfo.OemStringPtr)), (uint32)convertFarPtr(VbeInfo.VideoModeListPtr));
