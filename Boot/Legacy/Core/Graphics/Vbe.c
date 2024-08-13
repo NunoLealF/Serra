@@ -28,18 +28,6 @@
 
 
 
-// (far pointers, with segment and offset; these are used a *lot* by VBE)
-
-typedef struct {
-
-  uint16 Segment;
-  uint16 Offset;
-
-} __attribute__((packed)) farPtr;
-
-#define convertFarPtr(Address) ((Ptr.Segment << 4) + Ptr.Offset)
-
-
 
 //
 // (ax = 4F00h, es:di = location) is the most important one
@@ -68,9 +56,10 @@ typedef struct {
 
   } __attribute__((packed)) OemInfo;
 
-  // (Reserved for future use; the size of all of the above is 34 bytes, so 512-32 = 478)
+  // (Reserved for future use)
 
-  uint8 Reserved[478];
+  uint8 Reserved[222]; // Reserved for future VESA/VBE versions
+  uint8 OemData[256]; // Reserved by the OEM; VBE 2.x+ *only*
 
 } __attribute__((packed)) vbeInfoBlock;
 

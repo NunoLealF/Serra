@@ -67,10 +67,19 @@
     typedef unsigned long long uint64;
   #endif
 
-  // Other integer types.
+  // Other integer/pointer types.
 
   #define intmax  0x0FFFFFFF
   #define uintmax 0xFFFFFFFF
+
+  typedef struct {
+
+    uint16 Segment;
+    uint16 Offset;
+
+  } __attribute__((packed)) farPtr;
+
+  #define convertFarPtr(Address) ((Ptr.Segment << 4) + Ptr.Offset)
 
   // Non-integer types.
 
