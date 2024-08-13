@@ -74,8 +74,8 @@
 
   typedef struct {
 
-    uint16 Segment;
     uint16 Offset;
+    uint16 Segment;
 
   } __attribute__((packed)) farPtr;
 

@@ -468,19 +468,12 @@ void Bootloader(void) {
 
   // (show info)
 
-  // TODO: This actually works!.. With the caveat that the pointers seem to be garbage (they're
-  // correctly converted, they just.. don't make much sense)
-
   if (VbeIsSupported == true) {
 
     Message(Ok, "VBE appears to be supported.");
 
     Message(Info, "The table signature is %xh, and the VBE version is %xh", (uint32)VbeInfo.Signature, (uint32)VbeInfo.Version);
-
-    int StringAddress = (int)(convertFarPtr(VbeInfo.OemStringPtr));
-    char* String = (char*)(StringAddress);
-    Message(Info, "OEM string is \'%s\', video mode list ptr is %xh", String, (uint32)convertFarPtr(VbeInfo.VideoModeListPtr));
-    Message(Info, "(for reference, video mode list ptr is %x:%xh)", (uint32)VbeInfo.VideoModeListPtr.Segment, (uint32)VbeInfo.VideoModeListPtr.Offset);
+    Message(Info, "OEM string is \'%s\', video mode list ptr is %xh", (char*)(convertFarPtr(VbeInfo.OemStringPtr)), (uint32)convertFarPtr(VbeInfo.VideoModeListPtr));
     Message(Info, "Capabilities are %xh, number of 64KiB blocks is %d", (uint32)VbeInfo.Capabilities, (uint32)VbeInfo.NumBlocks);
 
 
