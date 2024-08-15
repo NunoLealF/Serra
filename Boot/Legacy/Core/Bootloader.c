@@ -475,10 +475,28 @@ void Bootloader(void) {
   }
 
 
-  // [TEST]
+  // [TEST, show all (or, well, *some*) VBE modes]
 
-  Printf("Size of vbeModeInfoBlock table (should be 256) is %d\n", 0x7F, sizeof(vbeModeInfoBlock));
+  uint32 VideoModeListPtr = convertFarPtr(VbeInfo.VideoModeListPtr);
+  uint16* Mode = (uint16*)(VideoModeListPtr);
 
+  vbeModeInfoBlock Nyah;
+  int Times = 0;
+
+  while ((VbeIsSupported == true) && (*Mode != 0xFFFF)) {
+
+    GetVbeModeInfo(&Nyah, *Mode);
+    Printf("(mode %xh [%d*%d, %d bpp, bufr=%xh, hz=%d, r/g/b/rsvd = %d/%d/%d/%d])\n", 0x07, *Mode, Nyah.ModeInfo.X_Resolution, Nyah.ModeInfo.Y_Resolution, Nyah.ModeInfo.BitsPerPixel, Nyah.Vbe2Info.Framebuffer, Nyah.Vbe3Info.MaxPixelClock, Nyah.ColorInfo.RedMaskSize, Nyah.ColorInfo.GreenMaskSize, Nyah.ColorInfo.BlueMaskSize, Nyah.ColorInfo.ReservedMaskSize);
+
+    Mode++;
+    Times++;
+
+    if (Times > 18) {
+      Printf("Not showing any more modes\n", 0x7F); // I don't want to spam the terminal *too* badly
+      break;
+    }
+
+  }
 
 
 

@@ -4,6 +4,7 @@
 
 #include "../../Shared/Stdint.h"
 #include "../../Shared/Rm/Rm.h"
+#include "../Memory/Memory.h"
 #include "Graphics.h"
 
 // A few things to keep in mind:
@@ -64,5 +65,34 @@ uint32 GetVbeInfoBlock(vbeInfoBlock* Buffer) {
   } else {
     return 0;
   }
+
+}
+
+// ...
+
+
+uint32 GetVbeModeInfo(vbeModeInfoBlock* Buffer, uint16 ModeNumber) {
+
+  // Prepare the info block itself
+
+  Buffer->ModeInfo.Reserved_Vbe1 = 1;
+  Memset((void*)(int)&Buffer->Vbe2Info.Reserved_Vbe2, 0, 6);
+
+  // Prepare the BIOS interrupt
+
+  realModeTable* Table = InitializeRealModeTable();
+  Table->Eax = 0x4F01;
+
+  Table->Ecx = ModeNumber;
+
+  Table->Es = (uint16)((int)Buffer >> 4);
+  Table->Di = (uint16)((int)Buffer & 0x0F);
+
+  Table->Int = 0x10;
+
+  // Actually execute it
+
+  RealMode();
+  return Table->Eax;
 
 }

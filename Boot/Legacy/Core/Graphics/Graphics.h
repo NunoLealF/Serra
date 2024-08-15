@@ -206,6 +206,7 @@
   // (TODO: functions from Vbe.c)
 
   uint32 GetVbeInfoBlock(vbeInfoBlock* Buffer);
+  uint32 GetVbeModeInfo(vbeModeInfoBlock* Buffer, uint16 ModeNumber);
 
 
 #endif
