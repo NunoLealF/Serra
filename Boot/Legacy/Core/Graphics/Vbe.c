@@ -26,14 +26,10 @@
 
 */
 
+// I should also do something to get vbe mode info
+// First, the table
 
 
-
-//
-// (ax = 4F00h, es:di = location) is the most important one
-// This is what it returns:
-
-// ...
 
 
 

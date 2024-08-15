@@ -469,27 +469,17 @@ void Bootloader(void) {
   // (show info)
 
   if (VbeIsSupported == true) {
-
-    Message(Ok, "VBE appears to be supported (the table itself is at %xh).\n", &VbeInfo);
-
-    Message(Info, "The table signature is %xh, and the VBE version is %xh", (uint32)VbeInfo.Signature, (uint32)VbeInfo.Version);
-    Message(Info, "OEM string is \'%s\', video mode list ptr is %xh", (char*)(convertFarPtr(VbeInfo.OemStringPtr)), (uint32)convertFarPtr(VbeInfo.VideoModeListPtr));
-    Message(Info, "Capabilities are %xh, number of 64KiB blocks is %d\n", (uint32)VbeInfo.Capabilities, (uint32)VbeInfo.NumBlocks);
-
-    if (VbeInfo.Version >= 0x200) {
-
-      Message(Info, "VBE 2.x+ revision is %xh", (uint32)VbeInfo.OemInfo.VbeRevision);
-      Message(Info, "VBE 2.x+ vendor name is '\%s\'", (char*)(convertFarPtr(VbeInfo.OemInfo.VendorNamePtr)));
-      Message(Info, "VBE 2.x+ product name/revision is '\%s\' and '\%s\'", (char*)(convertFarPtr(VbeInfo.OemInfo.ProductNamePtr)), (char*)(convertFarPtr(VbeInfo.OemInfo.ProductRevPtr)));
-
-    }
-
-
+    Message(Ok, "VBE appears to be supported (the table itself is at %xh).", &VbeInfo);
   } else {
-
     Message(Warning, "VBE appears to be unsupported.");
-
   }
+
+
+  // [TEST]
+
+  Printf("Size of vbeModeInfoBlock table (should be 256) is %d\n", 0x7F, sizeof(vbeModeInfoBlock));
+
+
 
 
 
@@ -504,7 +494,7 @@ void Bootloader(void) {
   Putchar('\n', 0);
 
   Printf("Hiya, this is Serra! <3\n", 0x0F);
-  Printf("August %i %x\n", 0x3F, 13, 0x2024);
+  Printf("August %i %x\n", 0x3F, 15, 0x2024);
 
   for(;;);
 
