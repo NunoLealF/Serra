@@ -466,7 +466,7 @@ void Bootloader(void) {
     VbeIsSupported = false;
   }
 
-  // (show info)
+  // (show info on whether VBE is supported)
 
   if (VbeIsSupported == true) {
     Message(Ok, "VBE appears to be supported (the table itself is at %xh).", &VbeInfo);
@@ -474,43 +474,55 @@ void Bootloader(void) {
     Message(Warning, "VBE appears to be unsupported.");
   }
 
-  // [TEST, show all (or, well, *some*) VBE modes]
-  // For now we obviously don't want to set any, but the question is what mode to set it to
+  // (check for EDID)
 
-  uint32 VideoModeListPtr = convertFarPtr(VbeInfo.VideoModeListPtr);
-  uint16* Mode = (uint16*)(VideoModeListPtr);
+  volatile edidInfoBlock EdidInfo;
 
-  vbeModeInfoBlock Nyah;
-  int Times = 0;
+  bool EdidIsSupported = true;
+  uint32 EdidReturnStatus = GetEdidInfoBlock(&EdidInfo);
 
-  while ((VbeIsSupported == true) && (*Mode != 0xFFFF)) {
+  if ((EdidReturnStatus & 0xFF) != 0x4F) {
+    EdidIsSupported = false;
+  }
 
-    GetVbeModeInfo(&Nyah, *Mode);
-    Printf("(mode %xh [%d*%d, %d bpp, bufr=%xh, hz=%d, r/g/b/rsvd = %d/%d/%d/%d])\n", 0x07, *Mode, Nyah.ModeInfo.X_Resolution, Nyah.ModeInfo.Y_Resolution, Nyah.ModeInfo.BitsPerPixel, Nyah.Vbe2Info.Framebuffer, Nyah.Vbe3Info.MaxPixelClock, Nyah.ColorInfo.RedMaskSize, Nyah.ColorInfo.GreenMaskSize, Nyah.ColorInfo.BlueMaskSize, Nyah.ColorInfo.ReservedMaskSize);
+  // (show info on whether EDID is supported)
 
-    Mode++;
-    Times++;
+  if (EdidIsSupported == true) {
+    Message(Ok, "EDID appears to be supported (the table itself is at %xh).", &EdidInfo);
+  } else {
+    Message(Warning, "EDID appears to be unsupported; using lowest video mode.");
+  }
 
-    if (Times > 18) {
-      Printf("Not showing any more modes\n", 0x7F); // I don't want to spam the terminal *too* badly
-      break;
-    }
+  // (get preferred resolution)
+
+  edidDetailedTiming PreferredTimings = EdidInfo.DetailedTimings[0];
+  uint16 PreferredResolution[2];
+
+  if (EdidIsSupported == true) {
+
+    PreferredResolution[0] = (PreferredTimings.Timings.HorizontalInfo_Low >> 8) | (PreferredTimings.Timings.HorizontalInfo_High & 0xF0) << 4;
+    PreferredResolution[1] = (PreferredTimings.Timings.VerticalInfo_Low >> 8) | (PreferredTimings.Timings.VerticalInfo_High & 0xF0) << 4;
+
+  } else {
+
+    PreferredResolution[0] = 720;
+    PreferredResolution[1] = 480;
 
   }
+
+  // (show actual VBE/EDID info)
+
+  if (VbeIsSupported == true) {
+    Message(Info, "Preferred resolution is %d * %d.", PreferredResolution[0], PreferredResolution[1]);
+  }
+
+
+
 
   // My idea for now is, obviously don't change anything yet, but when we read the config:
   // -> If VESA isn't supported, use text mode
   // -> If VESA is supported but EDID isn't, use the best 720x480 or 640x480 mode available
   // -> If VESA and EDID are both supported, use the best mode available
-
-  // (test EDID?)
-
-  edidInfoBlock Nyah_2;
-  uint32 Output = GetEdidInfoBlock(&Nyah_2, 0x00);
-
-  edidDetailedTiming PreferredTiming = Nyah_2.DetailedTimings[0];
-
-  Printf("Output is %xh, and signature is %x%xh; resolution is %d by %d\n", 0x7F, Output, (uint32)(Nyah_2.Signature >> 32), (uint32)(Nyah_2.Signature & 0xFFFFFFFF), ((PreferredTiming.Timings.HorizontalInfo_Low >> 8) | (PreferredTiming.Timings.HorizontalInfo_High >> 4) << 8), ((PreferredTiming.Timings.VerticalInfo_Low >> 8) | (PreferredTiming.Timings.VerticalInfo_High >> 4) << 8));
 
 
 

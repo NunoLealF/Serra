@@ -209,7 +209,7 @@
 
     struct __Timings {
 
-      uint16 PixelClock;
+      uint16 PixelClock; // The pixel clock, in 10 kHz steps, and with the upper/lower halves reversed..?
 
       uint16 HorizontalInfo_Low; // Upper half is resolution, lower half is blanking
       uint8 HorizontalInfo_High; // Upper half is resolution, lower half is blanking
