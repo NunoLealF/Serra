@@ -203,7 +203,66 @@
   } __attribute__((packed)) vbeModeInfoBlock;
 
 
-  // (TODO: functions from Vbe.c)
+  // EDID-related data structures. (Vbe.c)
+
+  typedef struct {
+
+    struct __Timings {
+
+      uint16 PixelClock;
+
+      uint16 HorizontalInfo_Low; // Upper half is resolution, lower half is blanking
+      uint8 HorizontalInfo_High; // Upper half is resolution, lower half is blanking
+
+      uint16 VerticalInfo_Low; // Upper half is resolution, lower half is blanking
+      uint8 VerticalInfo_High; // Upper half is resolution, lower half is blanking
+
+      uint16 HorizontalSyncData; // Upper half is offset/front porch, lower half is pulse width
+      uint8 VerticalSyncData; // Upper half is offset/front porch, lower half is pulse width
+
+      uint8 PixelSyncData; // Like the above, but smaller, and in pixels..?
+
+    } __attribute__((packed)) Timings;
+
+    struct __Display {
+
+      uint16 Size_Low; // Upper half is horizontal (low 8 bits), lower half is vertical (low 8 bits)
+      uint8 Size_High; // Upper half is horizontal (high 4 bits), lower half is vertical (high 4 bits)
+
+      uint8 HorizontalBorder; // Defined in the EDID standard
+      uint8 VerticalBorder; // Defined in the EDID standard
+
+      uint8 Flags; // Defined in the EDID standard
+
+    } __attribute__((packed)) Display;
+
+  } __attribute__((packed)) edidDetailedTiming;
+
+
+  typedef struct {
+
+    uint64 Signature; // This should be 00FFFFFFFFFFFF00h
+
+    uint8 VendorInfo[10]; // We don't need this for now, so we just keep it empty
+
+    uint8 Version;
+    uint8 Revision;
+
+    uint8 DisplayInfo[5]; // Same as VendorInfo
+    uint8 ColorInfo[10]; // Same as VendorInfo
+
+    uint8 EstablishedTimings[3]; // Defined in the VESA specification
+    uint16 StandardTimings[8]; // Defined in the VESA specification; different format though
+
+    edidDetailedTiming DetailedTimings[4]; // Format defined in edidDetailedTiming (get your preferred resolution here)
+
+    uint8 NumExtensionBlocks;
+    uint8 Checksum; // (..check this?)
+
+  } __attribute__((packed)) edidInfoBlock;
+
+
+  // VBE- and EDID-related functions. (Vbe.c)
 
   uint32 GetVbeInfoBlock(vbeInfoBlock* Buffer);
   uint32 GetVbeModeInfo(vbeModeInfoBlock* Buffer, uint16 ModeNumber);

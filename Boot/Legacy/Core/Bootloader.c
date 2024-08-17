@@ -500,8 +500,17 @@ void Bootloader(void) {
 
   // My idea for now is, obviously don't change anything yet, but when we read the config:
   // -> If VESA isn't supported, use text mode
-  // -> If VESA is supported but EDID isn't, use the best 640x480 mode available
+  // -> If VESA is supported but EDID isn't, use the best 720x480 or 640x480 mode available
   // -> If VESA and EDID are both supported, use the best mode available
+
+  // (test EDID?)
+
+  edidInfoBlock Nyah_2;
+  uint32 Output = GetEdidInfoBlock(&Nyah_2, 0x00);
+
+  edidDetailedTiming PreferredTiming = Nyah_2.DetailedTimings[0];
+
+  Printf("Output is %xh, and signature is %x%xh; resolution is %d by %d\n", 0x7F, Output, (uint32)(Nyah_2.Signature >> 32), (uint32)(Nyah_2.Signature & 0xFFFFFFFF), ((PreferredTiming.Timings.HorizontalInfo_Low >> 8) | (PreferredTiming.Timings.HorizontalInfo_High >> 4) << 8), ((PreferredTiming.Timings.VerticalInfo_Low >> 8) | (PreferredTiming.Timings.VerticalInfo_High >> 4) << 8));
 
 
 

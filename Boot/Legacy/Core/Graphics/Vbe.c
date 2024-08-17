@@ -69,7 +69,9 @@ uint32 GetVbeInfoBlock(vbeInfoBlock* Buffer) {
 }
 
 
-// Something to get mode info
+
+
+// Something to get mode info; ax = 4F01h.
 
 uint32 GetVbeModeInfo(vbeModeInfoBlock* Buffer, uint16 ModeNumber) {
 
@@ -98,7 +100,10 @@ uint32 GetVbeModeInfo(vbeModeInfoBlock* Buffer, uint16 ModeNumber) {
 }
 
 
-// Something to set the mode.
+
+
+
+// Something to set the mode; ax = 4F02h.
 // (Disclaimer: CrtcBuffer only matters if UseCrtc == true)
 
 uint32 SetVbeMode(uint16 ModeNumber, bool UseCrtc, bool UseLinearModel, bool ClearDisplay, void* CrtcBuffer) {
@@ -136,5 +141,38 @@ uint32 SetVbeMode(uint16 ModeNumber, bool UseCrtc, bool UseLinearModel, bool Cle
   RealMode();
   return Table->Eax;
 
+}
+
+
+
+// Something to get EDID data; ax = 4F15h, bl = 01h
+
+uint32 GetEdidInfoBlock(edidInfoBlock* Buffer, uint16 ControllerNum) {
+
+  // Prepare the BIOS interrupt
+
+  realModeTable* Table = InitializeRealModeTable();
+  Table->Eax = 0x4F15;
+  Table->Ebx = 0x01;
+
+  Table->Ecx = ControllerNum;
+  Table->Edx = 0;
+
+  Table->Es = (uint16)((int)Buffer >> 4);
+  Table->Di = (uint16)((int)Buffer & 0x0F);
+
+  Table->Int = 0x10;
+
+  // Actually execute it
+
+  RealMode();
+
+  // If the signature checks out, return eax; otherwise..
+
+  if (Buffer->Signature == 0x00FFFFFFFFFFFF00) {
+    return Table->Eax;
+  } else {
+    return 0;
+  }
 
 }
