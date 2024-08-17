@@ -207,6 +207,7 @@
 
   uint32 GetVbeInfoBlock(vbeInfoBlock* Buffer);
   uint32 GetVbeModeInfo(vbeModeInfoBlock* Buffer, uint16 ModeNumber);
+  uint32 SetVbeMode(uint16 ModeNumber, bool UseCrtc, bool UseLinearModel, bool ClearDisplay, void* CrtcBuffer);
 
 
 #endif

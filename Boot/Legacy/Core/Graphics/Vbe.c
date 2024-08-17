@@ -68,8 +68,8 @@ uint32 GetVbeInfoBlock(vbeInfoBlock* Buffer) {
 
 }
 
-// ...
 
+// Something to get mode info
 
 uint32 GetVbeModeInfo(vbeModeInfoBlock* Buffer, uint16 ModeNumber) {
 
@@ -94,5 +94,47 @@ uint32 GetVbeModeInfo(vbeModeInfoBlock* Buffer, uint16 ModeNumber) {
 
   RealMode();
   return Table->Eax;
+
+}
+
+
+// Something to set the mode.
+// (Disclaimer: CrtcBuffer only matters if UseCrtc == true)
+
+uint32 SetVbeMode(uint16 ModeNumber, bool UseCrtc, bool UseLinearModel, bool ClearDisplay, void* CrtcBuffer) {
+
+  // Prepare the mode number
+
+  ModeNumber &= 0x1FF; // Preserve bits 0 through 8
+
+  if (UseCrtc == true) {
+    ModeNumber |= (1 << 11);
+  }
+
+  if (UseLinearModel == true) {
+    ModeNumber |= (1 << 14);
+  }
+
+  if (ClearDisplay == false) {
+    ModeNumber |= (1 << 15);
+  }
+
+  // Prepare the BIOS interrupt
+
+  realModeTable* Table = InitializeRealModeTable();
+  Table->Eax = 0x4F02;
+
+  Table->Ebx = ModeNumber;
+
+  Table->Es = (uint16)((int)CrtcBuffer >> 4);
+  Table->Di = (uint16)((int)CrtcBuffer & 0x0F);
+
+  Table->Int = 0x10;
+
+  // Actually execute it
+
+  RealMode();
+  return Table->Eax;
+
 
 }

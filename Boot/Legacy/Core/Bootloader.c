@@ -474,8 +474,8 @@ void Bootloader(void) {
     Message(Warning, "VBE appears to be unsupported.");
   }
 
-
   // [TEST, show all (or, well, *some*) VBE modes]
+  // For now we obviously don't want to set any, but the question is what mode to set it to
 
   uint32 VideoModeListPtr = convertFarPtr(VbeInfo.VideoModeListPtr);
   uint16* Mode = (uint16*)(VideoModeListPtr);
@@ -498,7 +498,10 @@ void Bootloader(void) {
 
   }
 
-
+  // My idea for now is, obviously don't change anything yet, but when we read the config:
+  // -> If VESA isn't supported, use text mode
+  // -> If VESA is supported but EDID isn't, use the best 640x480 mode available
+  // -> If VESA and EDID are both supported, use the best mode available
 
 
 
@@ -512,7 +515,7 @@ void Bootloader(void) {
   Putchar('\n', 0);
 
   Printf("Hiya, this is Serra! <3\n", 0x0F);
-  Printf("August %i %x\n", 0x3F, 15, 0x2024);
+  Printf("August %i %x\n", 0x3F, 17, 0x2024);
 
   for(;;);
 
