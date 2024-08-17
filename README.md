@@ -27,9 +27,9 @@ An x86 bootloader under construction <3
 - Interrupts and exceptions **Done (but a little bare-bones)**
 - E820 / memory map **Done**
 - CPUID ***Mostly done***
-- ACPI (?)
-- VESA/EDID (?)
-- Disk drivers (int13h only for now; *maybe* ATA PIO?)
+- ACPI ***Mostly done, if a little bare-bones***
+- VESA/EDID *Somewhat done*
+- Disk drivers (int13h only for now, maybe ATA PIO?)
 - Filesystem drivers
 - Loading the next stage (with long mode!)
 
