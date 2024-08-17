@@ -462,7 +462,7 @@ void Bootloader(void) {
 
   bool VbeIsSupported = true;
 
-  if ((VbeReturnStatus & 0xFFFF) != 0x4F) {
+  if ((VbeReturnStatus & 0xFF) != 0x4F) {
     VbeIsSupported = false;
   }
 
