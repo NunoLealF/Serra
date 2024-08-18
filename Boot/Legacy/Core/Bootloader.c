@@ -433,13 +433,6 @@ void Bootloader(void) {
   } else {
 
     Message(Ok, "RSDP exists at %xh", (uint32)AcpiRsdp);
-
-    char Test[9];
-    Test[8] = '\0';
-    Memcpy((void*)(int)Test, (int)&AcpiRsdp->Signature, 8);
-
-    Message(Info, "Signature is %s", Test);
-
     Message(Info, "ACPI revision is %d, RSDT exists at %xh, XSDT may exist at %x:%xh", AcpiRsdp->Revision, AcpiRsdp->Rsdt, (uint32)(AcpiRsdp->Xsdt >> 32), (uint32)(AcpiRsdp->Xsdt & 0xFFFFFFFF));
 
   }
@@ -462,7 +455,7 @@ void Bootloader(void) {
 
   bool VbeIsSupported = true;
 
-  if ((VbeReturnStatus & 0xFF) != 0x4F) {
+  if (VbeReturnStatus != 0x004F) {
     VbeIsSupported = false;
   }
 
@@ -500,8 +493,8 @@ void Bootloader(void) {
 
   if (EdidIsSupported == true) {
 
-    PreferredResolution[0] = (PreferredTimings.Timings.HorizontalInfo_Low >> 8) | (PreferredTimings.Timings.HorizontalInfo_High & 0xF0) << 4;
-    PreferredResolution[1] = (PreferredTimings.Timings.VerticalInfo_Low >> 8) | (PreferredTimings.Timings.VerticalInfo_High & 0xF0) << 4;
+    PreferredResolution[0] = (PreferredTimings.Timings.HorizontalInfo_Low & 0xFF) | (PreferredTimings.Timings.HorizontalInfo_High & 0xF0) << 4;
+    PreferredResolution[1] = (PreferredTimings.Timings.VerticalInfo_Low & 0xFF) | (PreferredTimings.Timings.VerticalInfo_High & 0xF0) << 4;
 
   } else {
 
@@ -511,6 +504,7 @@ void Bootloader(void) {
   }
 
   // (show actual VBE/EDID info)
+  // TODO: Show more!!!
 
   if (VbeIsSupported == true) {
     Message(Info, "Preferred resolution is %d * %d.", PreferredResolution[0], PreferredResolution[1]);
@@ -526,6 +520,92 @@ void Bootloader(void) {
 
 
 
+  // (get best mode)
+  // This should definitely be a function
+
+  uint16 BestMode = 0;
+
+  uint16* Mode = (uint16*)(convertFarPtr(VbeInfo.VideoModeListPtr));
+  uint16 ModeResolution[2] = {0, 0};
+  vbeModeInfoBlock VbeModeInfo;
+
+  bool Supports16bColor = false;
+  bool Supports24bColor = false;
+
+  while (*Mode != 0xFFFF) {
+
+    // First, get information about the current mode
+
+    VbeReturnStatus = GetVbeModeInfo(&VbeModeInfo, *Mode);
+
+    if (VbeReturnStatus != 0x004F) {
+
+      Mode++;
+      continue;
+
+    }
+
+    // Next, let's analyze that information: first, is this the first time we see a
+    // 16-bit or a 24/32-bit mode?
+
+    bool FoundBestMode = false;
+
+    if ((VbeModeInfo.ModeInfo.BitsPerPixel >= 24) && (Supports24bColor == false)) {
+
+      FoundBestMode = true;
+      Supports24bColor = true;
+
+    } else if ((VbeModeInfo.ModeInfo.BitsPerPixel >= 16) && (Supports16bColor == false)) {
+
+      FoundBestMode = true;
+      Supports16bColor = true;
+
+    }
+
+    // And, second, if the color depth is 'up to our standards', then does it meet the
+    // resolution criteria?
+
+    if ((VbeModeInfo.ModeInfo.BitsPerPixel >= 24) && (Supports24bColor == true)) {
+
+      if (VbeModeInfo.ModeInfo.X_Resolution > PreferredResolution[0] || VbeModeInfo.ModeInfo.Y_Resolution > PreferredResolution[1]) {
+        FoundBestMode = false;
+      } else if (VbeModeInfo.ModeInfo.X_Resolution < ModeResolution[0] || VbeModeInfo.ModeInfo.Y_Resolution < ModeResolution[1]) {
+        FoundBestMode = false;
+      } else {
+        FoundBestMode = true;
+      }
+
+    } else if ((VbeModeInfo.ModeInfo.BitsPerPixel >= 16) && (Supports16bColor == true)) {
+
+      if (VbeModeInfo.ModeInfo.X_Resolution > PreferredResolution[0] || VbeModeInfo.ModeInfo.Y_Resolution > PreferredResolution[1]) {
+        FoundBestMode = false;
+      } else if (VbeModeInfo.ModeInfo.X_Resolution < ModeResolution[0] || VbeModeInfo.ModeInfo.Y_Resolution < ModeResolution[1]) {
+        FoundBestMode = false;
+      } else {
+        FoundBestMode = true;
+      }
+
+    }
+
+    // Finally, we can now update the best mode, and continue the loop
+
+    if (FoundBestMode == true) {
+
+      BestMode = *Mode;
+      ModeResolution[0] = VbeModeInfo.ModeInfo.X_Resolution;
+      ModeResolution[1] = VbeModeInfo.ModeInfo.Y_Resolution;
+
+    }
+
+    Mode++;
+
+  }
+
+  Message(Info, "Best mode is %xh, with resolution %d*%d, and (16b=%d,24b=%d)", BestMode, ModeResolution[0], ModeResolution[1], Supports16bColor, Supports24bColor);
+
+  // (TEST!!!)
+
+
 
 
 
@@ -536,7 +616,7 @@ void Bootloader(void) {
   Putchar('\n', 0);
 
   Printf("Hiya, this is Serra! <3\n", 0x0F);
-  Printf("August %i %x\n", 0x3F, 17, 0x2024);
+  Printf("August %i %x\n", 0x3F, 18, 0x2024);
 
   for(;;);
 
