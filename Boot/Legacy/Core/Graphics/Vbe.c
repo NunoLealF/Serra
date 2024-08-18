@@ -176,3 +176,104 @@ uint32 GetEdidInfoBlock(edidInfoBlock* Buffer, uint16 ControllerNum) {
   }
 
 }
+
+
+
+// A function to find (and return) the best VBE mode
+
+uint16 FindBestVbeMode(uint16* VbeModeList, uint16 PreferredX_Resolution, uint16 PreferredY_Resolution) {
+
+  // Declare a few initial variables.
+
+  uint16 BestVbeMode = 0;
+
+  uint16 ModeX_Resolution = 0;
+  uint16 ModeY_Resolution = 0;
+
+  bool Supports16bColor = false;
+  bool Supports24bColor = false;
+
+  vbeModeInfoBlock VbeModeInfo;
+  uint32 VbeReturnStatus;
+
+  // Then, just.. go through the modes, I guess
+
+  while (*VbeModeList != 0xFFFF) {
+
+    // First, get information about the current mode
+
+    VbeReturnStatus = GetVbeModeInfo(&VbeModeInfo, *VbeModeList);
+
+    if (VbeReturnStatus != 0x004F) {
+
+      VbeModeList++;
+      continue;
+
+    }
+
+    // Next, let's analyze that information: first, is this the first time we see a
+    // 16-bit or a 24/32-bit mode?
+
+    uint16 BitsPerPixel = VbeModeInfo.ModeInfo.BitsPerPixel;
+    uint16 X_Resolution = VbeModeInfo.ModeInfo.X_Resolution;
+    uint16 Y_Resolution = VbeModeInfo.ModeInfo.Y_Resolution;
+
+    bool FoundBestMode = false;
+
+    if ((BitsPerPixel >= 24) && (Supports24bColor == false)) {
+
+      FoundBestMode = true;
+      Supports24bColor = true;
+
+    } else if ((BitsPerPixel >= 16) && (Supports16bColor == false)) {
+
+      FoundBestMode = true;
+      Supports16bColor = true;
+
+    }
+
+    // And, second, if the color depth is 'up to our standards', then does it meet the
+    // resolution criteria?
+
+    if ((BitsPerPixel >= 24) && (Supports24bColor == true)) {
+
+      if (X_Resolution > PreferredX_Resolution || Y_Resolution > PreferredY_Resolution) {
+        FoundBestMode = false;
+      } else if (X_Resolution < ModeX_Resolution || Y_Resolution < ModeY_Resolution) {
+        FoundBestMode = false;
+      } else {
+        FoundBestMode = true;
+      }
+
+    } else if ((BitsPerPixel >= 16) && (Supports16bColor == true)) {
+
+      if (X_Resolution > PreferredX_Resolution || Y_Resolution > PreferredY_Resolution) {
+        FoundBestMode = false;
+      } else if (X_Resolution < ModeX_Resolution || Y_Resolution < ModeY_Resolution) {
+        FoundBestMode = false;
+      } else {
+        FoundBestMode = true;
+      }
+
+    }
+
+    // Finally, we can now update the best mode, and continue the loop
+
+    if (FoundBestMode == true) {
+
+      BestVbeMode = *VbeModeList;
+      ModeX_Resolution = X_Resolution;
+      ModeY_Resolution = Y_Resolution;
+
+    }
+
+    VbeModeList++;
+
+  }
+
+  // Finally, we can return the answer; if we didn't find any mode, we'll return 0h, but
+  // otherwise..
+
+  return BestVbeMode;
+
+}

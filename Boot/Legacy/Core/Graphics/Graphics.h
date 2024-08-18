@@ -268,5 +268,9 @@
   uint32 GetVbeModeInfo(vbeModeInfoBlock* Buffer, uint16 ModeNumber);
   uint32 SetVbeMode(uint16 ModeNumber, bool UseCrtc, bool UseLinearModel, bool ClearDisplay, void* CrtcBuffer);
 
+  uint32 GetEdidInfoBlock(edidInfoBlock* Buffer, uint16 ControllerNum);
+  
+  uint16 FindBestVbeMode(uint16* VbeModeList, uint16 PreferredX_Resolution, uint16 PreferredY_Resolution);
+
 
 #endif

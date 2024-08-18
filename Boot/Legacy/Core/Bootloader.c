@@ -472,7 +472,7 @@ void Bootloader(void) {
   volatile edidInfoBlock EdidInfo;
 
   bool EdidIsSupported = true;
-  uint32 EdidReturnStatus = GetEdidInfoBlock(&EdidInfo);
+  uint32 EdidReturnStatus = GetEdidInfoBlock(&EdidInfo, 0x00);
 
   if ((EdidReturnStatus & 0xFF) != 0x4F) {
     EdidIsSupported = false;
@@ -521,89 +521,18 @@ void Bootloader(void) {
 
 
   // (get best mode)
-  // This should definitely be a function
+  
+  // This should definitely be a function - okay, it is one now, but *I still haven't tested
+  // this super extensively, so do that first!!*
 
-  uint16 BestMode = 0;
+  uint16 BestVbeMode = FindBestVbeMode((uint16*)(convertFarPtr(VbeInfo.VideoModeListPtr)), PreferredResolution[0], PreferredResolution[1]);
+  vbeModeInfoBlock Test;
+  GetVbeModeInfo(&Test, BestVbeMode);
 
-  uint16* Mode = (uint16*)(convertFarPtr(VbeInfo.VideoModeListPtr));
-  uint16 ModeResolution[2] = {0, 0};
-  vbeModeInfoBlock VbeModeInfo;
+  bool Supports16bColor = (Test.ModeInfo.BitsPerPixel >= 16) ? true : false;
+  bool Supports24bColor = (Test.ModeInfo.BitsPerPixel >= 24) ? true : false;
 
-  bool Supports16bColor = false;
-  bool Supports24bColor = false;
-
-  while (*Mode != 0xFFFF) {
-
-    // First, get information about the current mode
-
-    VbeReturnStatus = GetVbeModeInfo(&VbeModeInfo, *Mode);
-
-    if (VbeReturnStatus != 0x004F) {
-
-      Mode++;
-      continue;
-
-    }
-
-    // Next, let's analyze that information: first, is this the first time we see a
-    // 16-bit or a 24/32-bit mode?
-
-    bool FoundBestMode = false;
-
-    if ((VbeModeInfo.ModeInfo.BitsPerPixel >= 24) && (Supports24bColor == false)) {
-
-      FoundBestMode = true;
-      Supports24bColor = true;
-
-    } else if ((VbeModeInfo.ModeInfo.BitsPerPixel >= 16) && (Supports16bColor == false)) {
-
-      FoundBestMode = true;
-      Supports16bColor = true;
-
-    }
-
-    // And, second, if the color depth is 'up to our standards', then does it meet the
-    // resolution criteria?
-
-    if ((VbeModeInfo.ModeInfo.BitsPerPixel >= 24) && (Supports24bColor == true)) {
-
-      if (VbeModeInfo.ModeInfo.X_Resolution > PreferredResolution[0] || VbeModeInfo.ModeInfo.Y_Resolution > PreferredResolution[1]) {
-        FoundBestMode = false;
-      } else if (VbeModeInfo.ModeInfo.X_Resolution < ModeResolution[0] || VbeModeInfo.ModeInfo.Y_Resolution < ModeResolution[1]) {
-        FoundBestMode = false;
-      } else {
-        FoundBestMode = true;
-      }
-
-    } else if ((VbeModeInfo.ModeInfo.BitsPerPixel >= 16) && (Supports16bColor == true)) {
-
-      if (VbeModeInfo.ModeInfo.X_Resolution > PreferredResolution[0] || VbeModeInfo.ModeInfo.Y_Resolution > PreferredResolution[1]) {
-        FoundBestMode = false;
-      } else if (VbeModeInfo.ModeInfo.X_Resolution < ModeResolution[0] || VbeModeInfo.ModeInfo.Y_Resolution < ModeResolution[1]) {
-        FoundBestMode = false;
-      } else {
-        FoundBestMode = true;
-      }
-
-    }
-
-    // Finally, we can now update the best mode, and continue the loop
-
-    if (FoundBestMode == true) {
-
-      BestMode = *Mode;
-      ModeResolution[0] = VbeModeInfo.ModeInfo.X_Resolution;
-      ModeResolution[1] = VbeModeInfo.ModeInfo.Y_Resolution;
-
-    }
-
-    Mode++;
-
-  }
-
-  Message(Info, "Best mode is %xh, with resolution %d*%d, and (16b=%d,24b=%d)", BestMode, ModeResolution[0], ModeResolution[1], Supports16bColor, Supports24bColor);
-
-  // (TEST!!!)
+  Message(Info, "Best mode is %xh, with resolution %d*%d, and (16b=%d,24b=%d)", BestVbeMode, Test.ModeInfo.X_Resolution, Test.ModeInfo.Y_Resolution, Supports16bColor, Supports24bColor);
 
 
 
