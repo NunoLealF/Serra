@@ -26,9 +26,10 @@ An x86 bootloader under construction <3
 - Some way of going to and from real mode **Done**
 - Interrupts and exceptions **Done (but a little bare-bones)**
 - E820 / memory map **Done**
-- CPUID ***Mostly done***
-- ACPI ***Mostly done, if a little bare-bones***
-- VESA/EDID *Somewhat done*
+- CPUID ***Somewhat done?***
+- ACPI **Done, if a little bare-bones**
+- VESA/EDID **Done**
+- Other miscellaneous things
 - Disk drivers (int13h only for now, maybe ATA PIO?)
 - Filesystem drivers
 - Loading the next stage (with long mode!)

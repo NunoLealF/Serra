@@ -423,12 +423,12 @@ void Bootloader(void) {
   // That still takes some work though
 
   acpiRsdpTable* AcpiRsdp = GetAcpiRsdpTable();
-  bool AcpiSupported = true;
+  bool AcpiIsSupported = true;
 
   if (AcpiRsdp == 0) {
 
     Message(Error, "RSDP doesn't exist?");
-    AcpiSupported = false;
+    AcpiIsSupported = false;
 
   } else {
 
@@ -474,7 +474,7 @@ void Bootloader(void) {
   bool EdidIsSupported = true;
   uint32 EdidReturnStatus = GetEdidInfoBlock(&EdidInfo, 0x00);
 
-  if ((EdidReturnStatus & 0xFF) != 0x4F) {
+  if (((EdidReturnStatus & 0xFF) != 0x4F) || (VbeIsSupported == false)) {
     EdidIsSupported = false;
   }
 
@@ -510,29 +510,29 @@ void Bootloader(void) {
     Message(Info, "Preferred resolution is %d * %d.", PreferredResolution[0], PreferredResolution[1]);
   }
 
-
-
-
-  // My idea for now is, obviously don't change anything yet, but when we read the config:
-  // -> If VESA isn't supported, use text mode
-  // -> If VESA is supported but EDID isn't, use the best 720x480 or 640x480 mode available
-  // -> If VESA and EDID are both supported, use the best mode available
-
-
-
   // (get best mode)
-  
+
   // This should definitely be a function - okay, it is one now, but *I still haven't tested
   // this super extensively, so do that first!!*
 
-  uint16 BestVbeMode = FindBestVbeMode((uint16*)(convertFarPtr(VbeInfo.VideoModeListPtr)), PreferredResolution[0], PreferredResolution[1]);
-  vbeModeInfoBlock Test;
-  GetVbeModeInfo(&Test, BestVbeMode);
+  uint16 BestVbeMode = 0xFFFF;
+  volatile vbeModeInfoBlock BestVbeModeInfo;
 
-  bool Supports16bColor = (Test.ModeInfo.BitsPerPixel >= 16) ? true : false;
-  bool Supports24bColor = (Test.ModeInfo.BitsPerPixel >= 24) ? true : false;
+  if (VbeIsSupported == true) {
 
-  Message(Info, "Best mode is %xh, with resolution %d*%d, and (16b=%d,24b=%d)", BestVbeMode, Test.ModeInfo.X_Resolution, Test.ModeInfo.Y_Resolution, Supports16bColor, Supports24bColor);
+    BestVbeMode = FindBestVbeMode((uint16*)(convertFarPtr(VbeInfo.VideoModeListPtr)), PreferredResolution[0], PreferredResolution[1]);
+    GetVbeModeInfo(&BestVbeModeInfo, BestVbeMode);
+
+    Message(Info, "Using mode %xh, with a %dx%d resolution and a %d-bit color depth.", BestVbeMode, BestVbeModeInfo.ModeInfo.X_Resolution, BestVbeModeInfo.ModeInfo.Y_Resolution, BestVbeModeInfo.ModeInfo.BitsPerPixel);
+
+  } else {
+
+    Message(Info, "Using VGA text mode (due to a lack of VBE support)");
+
+  }
+
+  // (TODO: All that's left to do on this front is to actually comment everything in Vbe.c)
+
 
 
 
@@ -545,7 +545,7 @@ void Bootloader(void) {
   Putchar('\n', 0);
 
   Printf("Hiya, this is Serra! <3\n", 0x0F);
-  Printf("August %i %x\n", 0x3F, 18, 0x2024);
+  Printf("August %i %x\n", 0x3F, 20, 0x2024);
 
   for(;;);
 
