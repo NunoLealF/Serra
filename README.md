@@ -29,7 +29,8 @@ An x86 bootloader under construction <3
 - CPUID ***Somewhat done?***
 - ACPI **Done, if a little bare-bones**
 - VESA/EDID **Done**
-- Other miscellaneous things
+- SMBIOS **Done (but a little bare-bones)**
+- Other miscellaneous things *In progress*
 - Disk drivers (int13h only for now, maybe ATA PIO?)
 - Filesystem drivers
 - Loading the next stage (with long mode!)
