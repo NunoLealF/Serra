@@ -38,6 +38,17 @@
 
   } __attribute__ ((packed)) acpiRsdpTable;
 
+  typedef struct {
+
+    uint32 Signature; // This should be set to 'PCI', or 20494350h
+
+    uint8 Characteristics; // Bitfield
+    uint8 InterfaceLevel[2]; // First is major version, second is minor version
+
+    uint8 LastPciBus; // Last PCI bus in system (it's normal for this to return 00h!)
+
+  } __attribute__((packed)) pciBiosInfoTable;
+
 
   // (Functions from Cpu.c)
 
@@ -50,5 +61,6 @@
 
   acpiRsdpTable* GetAcpiRsdpTable(void);
   void* GetSmbiosEntryPointTable(void);
+  uint32 GetPciBiosInfoTable(pciBiosInfoTable* PciBiosTable);
 
 #endif

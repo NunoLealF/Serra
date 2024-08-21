@@ -444,7 +444,7 @@ void Bootloader(void) {
 
   } else {
 
-    Message(Error, "RSDP doesn't exist?");
+    Message(Warning, "RSDP doesn't exist?");
 
   }
 
@@ -544,6 +544,7 @@ void Bootloader(void) {
 
 
 
+
   // [SMBIOS]
   // F0000h to FFFFFh; this is pretty important, but it can be dealt with later on, for now
   // I mostly just want to check to see if SMBIOS even exists.
@@ -571,11 +572,20 @@ void Bootloader(void) {
 
 
 
+
   // (...)
   // Alright, next, we want to get miscellaneous information:
 
   // -> int 1Ah, ax = B101h [PCI-related; *may* be important later on]
-  // -> SMBIOS might be important? I doubt it would hurt (okay *definitely* SMBIOS)
+
+  pciBiosInfoTable PciBiosTable;
+  uint32 PciBiosReturnStatus = GetPciBiosInfoTable(&PciBiosTable);
+
+  if (((PciBiosReturnStatus >> 4) & 0xFF) == 0) {
+    Message(Info, "It works yay, (edx=%xh, al=%xh, version = %d.%d, lastpci = %xh)", PciBiosTable.Signature, PciBiosTable.Characteristics, PciBiosTable.InterfaceLevel[0], PciBiosTable.InterfaceLevel[1], PciBiosTable.LastPciBus);
+  } else {
+    Message(Info, "Doesn't work .-.");
+  }
 
 
 

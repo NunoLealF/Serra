@@ -297,3 +297,34 @@ void* GetSmbiosEntryPointTable(void) {
   return NULL;
 
 }
+
+
+// ...
+// Returns eax, status code; should be 00h, but..
+
+uint32 GetPciBiosInfoTable(pciBiosInfoTable* PciBiosTable) {
+
+  // ...
+
+  realModeTable* Table = InitializeRealModeTable();
+  Table->Eax = 0xB101;
+
+  Table->Int = 0x1A;
+
+  RealMode();
+
+  // ...
+
+  PciBiosTable->Signature = Table->Edx;
+  PciBiosTable->Characteristics = (uint8)(Table->Eax & 0xFF); // AL; lower 8 bytes
+
+  PciBiosTable->InterfaceLevel[0] = (uint8)((Table->Ebx >> 8) & 0xFF); // BH; higher 8 bytes
+  PciBiosTable->InterfaceLevel[1] = (uint8)(Table->Ebx & 0xFF); // BL; lower 8 bytes
+
+  PciBiosTable->LastPciBus = (uint8)(Table->Ecx & 0xFF); // CL; lower 8 bytes
+
+  // ...
+
+  return Table->Eax;
+
+}
