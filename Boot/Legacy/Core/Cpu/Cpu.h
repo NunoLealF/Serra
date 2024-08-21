@@ -49,5 +49,6 @@
   void GetVendorString(char* Buffer, registerTable Table);
 
   acpiRsdpTable* GetAcpiRsdpTable(void);
+  void* GetSmbiosEntryPointTable(void);
 
 #endif

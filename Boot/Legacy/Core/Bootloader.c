@@ -531,7 +531,39 @@ void Bootloader(void) {
 
   }
 
-  // (TODO: All that's left to do on this front is to actually comment everything in Vbe.c)
+
+
+  // [SMBIOS]
+  // F0000h to FFFFFh
+
+  Putchar('\n', 0);
+  Message(Kernel, "Preparing to get SMBIOS info");
+
+  // (get the table itself)
+
+  void* SmbiosEntryPoint = GetSmbiosEntryPointTable();
+  bool SmbiosIsSupported = true;
+
+  if (SmbiosEntryPoint == NULL) {
+    SmbiosIsSupported = false;
+  }
+
+  // ...
+
+  if (SmbiosIsSupported == true) {
+
+    Message(Info, "SMBIOS appears to be supported (info: table at %xh).", SmbiosEntryPoint);
+  } else {
+    Message(Warning, "SMBIOS appears to be unsupported.");
+  }
+
+
+
+  // (...)
+  // Alright, next, we want to get miscellaneous information:
+
+  // -> int 1Ah, ax = B101h [PCI-related; *may* be important later on]
+  // -> SMBIOS might be important? I doubt it would hurt (okay *definitely* SMBIOS)
 
 
 
@@ -545,7 +577,7 @@ void Bootloader(void) {
   Putchar('\n', 0);
 
   Printf("Hiya, this is Serra! <3\n", 0x0F);
-  Printf("August %i %x\n", 0x3F, 20, 0x2024);
+  Printf("August %i %x\n", 0x3F, 21, 0x2024);
 
   for(;;);
 

@@ -247,3 +247,37 @@ acpiRsdpTable* GetAcpiRsdpTable(void) {
   return NULL;
 
 }
+
+
+// (Something to get the SMBIOS table as well)
+
+void* GetSmbiosEntryPointTable(void) {
+
+  // On non-UEFI systems, the 32-bit SMBIOS Entry Point structure, can be located by application software
+  // by searching for the anchor-string on paragraph (16-byte) boundaries within the physical memory address
+  // range 000F0000h to 000FFFFFh.
+
+  // 32-bit reference is 000000005F4D535Fh, or '_SM_'; make sure to do (test & 0xFFFFFFFF)
+  // 64-bit reference is 0000005F334D535Fh, or '__S__'; make sure to do (test & 0xFFFFFFFFFF)
+
+  #define AnchorString_32b 0x000000005F4D535F
+  #define AnchorString_64b 0x0000005F334D535F
+
+  for (uint32 Position = 0xF0000; Position < 0x100000; Position += 16) {
+
+    uint64 Reference = *(uint64*)(Position);
+    bool FoundTable = false;
+
+    if ((Reference & 0xFFFFFFFF) == AnchorString_32b) {
+      return (void*)(Position);
+    } else if ((Reference & 0xFFFFFFFFFF) == AnchorString_64b) {
+      return (void*)(Position);
+    }
+
+  }
+
+  // If that didn't work, then return NULL
+
+  return NULL;
+
+}
