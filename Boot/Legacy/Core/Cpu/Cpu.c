@@ -249,19 +249,35 @@ acpiRsdpTable* GetAcpiRsdpTable(void) {
 }
 
 
-// (Something to get the SMBIOS table as well)
+/* void* GetSmbiosEntryPointTable()
+
+   Inputs: (none)
+   Outputs: void* - A pointer to the SMBIOS entry point structure, if found; otherwise, NULL.
+
+   This function searches through the memory area (between F0000h and FFFFFh) to find the
+   SMBIOS entry point table. On non-UEFI systems, *which this function is targeted towards*,
+   this is as simple as just looking for a 16-bit aligned 'anchor string' within the
+   aforementioned memory area.
+
+   That being said, SMBIOS is not available on every system, and if this function fails to
+   detect it, it will only return NULL, so make sure to check for that first.
+
+*/
 
 void* GetSmbiosEntryPointTable(void) {
 
-  // On non-UEFI systems, the 32-bit SMBIOS Entry Point structure, can be located by application software
-  // by searching for the anchor-string on paragraph (16-byte) boundaries within the physical memory address
-  // range 000F0000h to 000FFFFFh.
+  // On non-UEFI systems, the SMBIOS entry point table can be located by searching for a
+  // 16-bit aligned 'anchor string' (basically, a signature) between F0000h and FFFFFh in
+  // physical memory.
 
-  // 32-bit reference is 000000005F4D535Fh, or '_SM_'; make sure to do (test & 0xFFFFFFFF)
-  // 64-bit reference is 0000005F334D535Fh, or '__S__'; make sure to do (test & 0xFFFFFFFFFF)
+  // Before we can start searching, we need to define the 32-bit and 64-bit anchor strings
+  // that we need to search for, like this:
 
   #define AnchorString_32b 0x000000005F4D535F
   #define AnchorString_64b 0x0000005F334D535F
+
+  // After that, we can just search for the table between F0000h and FFFFFh in memory,
+  // like this:
 
   for (uint32 Position = 0xF0000; Position < 0x100000; Position += 16) {
 
@@ -275,7 +291,8 @@ void* GetSmbiosEntryPointTable(void) {
 
   }
 
-  // If that didn't work, then return NULL
+  // Finally, if that didn't work, then we can return NULL to indicate that SMBIOS
+  // isn't supported.
 
   return NULL;
 
