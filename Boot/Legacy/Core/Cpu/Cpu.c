@@ -266,7 +266,6 @@ void* GetSmbiosEntryPointTable(void) {
   for (uint32 Position = 0xF0000; Position < 0x100000; Position += 16) {
 
     uint64 Reference = *(uint64*)(Position);
-    bool FoundTable = false;
 
     if ((Reference & 0xFFFFFFFF) == AnchorString_32b) {
       return (void*)(Position);

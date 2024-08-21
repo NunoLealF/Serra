@@ -384,6 +384,10 @@ void Bootloader(void) {
 
   registerTable Cpuid_Info = GetCpuid(0x00000000, 0);
   registerTable Cpuid_Features = GetCpuid(0x00000001, 0);
+
+  registerTable Cpuid_ExtendedInfo = GetCpuid(0x80000000, 0);
+  registerTable Cpuid_ExtendedFeatures = GetCpuid(0x80000001, 0);
+
   uint32 Cpuid_HighestLevel = Cpuid_Info.Eax;
 
   Message(Ok, "Successfully obtained CPUID data.");
@@ -422,18 +426,25 @@ void Bootloader(void) {
 
   // That still takes some work though
 
+  // (get table and check for ACPI support)
+
   acpiRsdpTable* AcpiRsdp = GetAcpiRsdpTable();
   bool AcpiIsSupported = true;
 
-  if (AcpiRsdp == 0) {
-
-    Message(Error, "RSDP doesn't exist?");
+  if (AcpiRsdp == NULL) {
     AcpiIsSupported = false;
+  }
 
-  } else {
+  // (show info)
+
+  if (AcpiIsSupported == true) {
 
     Message(Ok, "RSDP exists at %xh", (uint32)AcpiRsdp);
     Message(Info, "ACPI revision is %d, RSDT exists at %xh, XSDT may exist at %x:%xh", AcpiRsdp->Revision, AcpiRsdp->Rsdt, (uint32)(AcpiRsdp->Xsdt >> 32), (uint32)(AcpiRsdp->Xsdt & 0xFFFFFFFF));
+
+  } else {
+
+    Message(Error, "RSDP doesn't exist?");
 
   }
 
@@ -534,7 +545,8 @@ void Bootloader(void) {
 
 
   // [SMBIOS]
-  // F0000h to FFFFFh
+  // F0000h to FFFFFh; this is pretty important, but it can be dealt with later on, for now
+  // I mostly just want to check to see if SMBIOS even exists.
 
   Putchar('\n', 0);
   Message(Kernel, "Preparing to get SMBIOS info");
@@ -548,14 +560,14 @@ void Bootloader(void) {
     SmbiosIsSupported = false;
   }
 
-  // ...
+  // (show info)
 
   if (SmbiosIsSupported == true) {
-
-    Message(Info, "SMBIOS appears to be supported (info: table at %xh).", SmbiosEntryPoint);
+    Message(Info, "SMBIOS appears to be supported (the entry point table is at %xh).", SmbiosEntryPoint);
   } else {
     Message(Warning, "SMBIOS appears to be unsupported.");
   }
+
 
 
 
