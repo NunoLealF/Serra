@@ -1,6 +1,8 @@
 # Serra
 An x86 bootloader under construction <3
 
+![A screenshot of Serra](screenshot.png)
+
 &nbsp;
 
 ## Roadmap (Legacy/BIOS-only for now)

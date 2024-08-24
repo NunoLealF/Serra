@@ -299,11 +299,17 @@ void* GetSmbiosEntryPointTable(void) {
 }
 
 
+
+
 // ...
 // Returns eax, status code; should be 00h, but..
 
 // [TODO - I should rewrite the table, and make it into something that isn't a bitfield *and*
 // that's easy to find documentation on; set a bool for each bit basically]
+
+// Honestly, thinking about it, I'm not all that sure. Bitfields are a little difficult to
+// implement, and this sort of data can be interpreted later on, it's not the end of the
+// world! Right now we don't need to interpret the table
 
 uint32 GetPciBiosInfoTable(pciBiosInfoTable* PciBiosTable) {
 
