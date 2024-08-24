@@ -573,8 +573,7 @@ void Bootloader(void) {
 
 
 
-  // (...)
-  // Alright, next, we want to get miscellaneous information:
+  // [PCI]
 
   Putchar('\n', 0);
   Message(Kernel, "Preparing to get PCI-related info");
@@ -607,6 +606,13 @@ void Bootloader(void) {
   }
 
 
+
+
+  // [Disk and filesystem drivers (this is the last thing to do)]
+
+  // As far as I can tell, the best thing to do is to kind of transfer Disk/ to the shared
+  // section; you *could* kinda outsource the memory part as well, but it's better to just
+  // extern it, if that makes sense (in this case, Memset and Memcpy).
 
 
 

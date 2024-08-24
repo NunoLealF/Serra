@@ -2,17 +2,19 @@
 // This file is part of the Serra project, which is released under the MIT license.
 // For more information, please refer to the accompanying license agreement. <3
 
-#include "../../Shared/Stdint.h"
-#include "../../Shared/Rm/Rm.h"
-#include "../Memory/Memory.h"
+#include "../Stdint.h"
+#include "../Rm/Rm.h"
 #include "Disk.h"
 
-// Global variables. (These are also defined in Disk.h, but just in case..)
+// Global functions and variables. (These are also defined in Disk.h, but just in case..)
 
 uint8 DriveNumber;
 
 uint16 LogicalSectorSize;
 uint16 PhysicalSectorSize;
+
+extern void Memcpy(void* Destination, void* Source, uint32 Size);
+extern void Memset(void* Buffer, uint8 Character, uint32 Size);
 
 
 /* realModeTable* ReadSector()

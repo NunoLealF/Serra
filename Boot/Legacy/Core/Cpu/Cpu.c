@@ -299,30 +299,36 @@ void* GetSmbiosEntryPointTable(void) {
 }
 
 
+/* uint32 GetPciBiosInfoTable()
 
+   Inputs: pciBiosInfoTable* PciBiosTable - A pointer to the pciBiosInfoTable{} structure
+           that you want to fill out.
 
-// ...
-// Returns eax, status code; should be 00h, but..
+   Outputs: uint32 - The value of eax after executing the BIOS interrupt call, the upper 8
+            bits of which determine the status code
 
-// [TODO - I should rewrite the table, and make it into something that isn't a bitfield *and*
-// that's easy to find documentation on; set a bool for each bit basically]
+   This function calls the BIOS interrupt (int 1Ah, ax = B101h) in order to get some
+   information about the firmware's PCI implementation (the 'PCI BIOS'). This function isn't
+   necessarily supported everywhere, so make sure to check for the return value first.
 
-// Honestly, thinking about it, I'm not all that sure. Bitfields are a little difficult to
-// implement, and this sort of data can be interpreted later on, it's not the end of the
-// world! Right now we don't need to interpret the table
+*/
 
 uint32 GetPciBiosInfoTable(pciBiosInfoTable* PciBiosTable) {
 
-  // ...
+  // First, we need to prepare the BIOS interrupt call (int 1Ah, ax = B101h, *edi = (optional
+  // protected mode handler that we won't be using here))
 
   realModeTable* Table = InitializeRealModeTable();
   Table->Eax = 0xB101;
 
   Table->Int = 0x1A;
 
+  // Second, we need to actually make that interrupt call;
+
   RealMode();
 
-  // ...
+  // And, finally, we need to update the table we were given with the information
+  // returned in the registers.
 
   PciBiosTable->Signature = Table->Edx;
   PciBiosTable->Characteristics = (uint8)(Table->Eax & 0xFF); // AL; lower 8 bytes
@@ -332,7 +338,8 @@ uint32 GetPciBiosInfoTable(pciBiosInfoTable* PciBiosTable) {
 
   PciBiosTable->LastPciBus = (uint8)(Table->Ecx & 0xFF); // CL; lower 8 bytes
 
-  // ...
+  // Now, we can safely exit (we'll be returning the value of Eax, as it contains the
+  // status code)
 
   return Table->Eax;
 

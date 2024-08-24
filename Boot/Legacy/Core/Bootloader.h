@@ -9,6 +9,7 @@
 
   #include "../Shared/InfoTables.h"
   #include "../Shared/Rm/Rm.h"
+  #include "../Shared/Disk/Disk.h"
 
   #include "Cpu/Cpu.h"
   #include "Memory/Memory.h"

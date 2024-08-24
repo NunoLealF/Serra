@@ -9,7 +9,8 @@
 
   #include "../Shared/InfoTables.h"
   #include "../Shared/Rm/Rm.h"
-  #include "Disk/Disk.h"
+  #include "../Shared/Disk/Disk.h"
+  
   #include "Memory/Memory.h"
   #include "Graphics/Graphics.h"
 

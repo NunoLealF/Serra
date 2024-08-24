@@ -58,7 +58,6 @@ Clean:
 	@-rm -f Init/*.elf
 	@-rm -f Init/*.bin
 
-	@-rm -f Init/Disk/*.o
 	@-rm -f Init/Memory/*.o
 	@-rm -f Init/Graphics/*.o
 
@@ -76,6 +75,8 @@ Clean:
 	@-rm -f Shared/Rm/*.o
 	@-rm -f Shared/Rm/*.elf
 	@-rm -f Shared/Rm/*.bin
+
+	@-rm -f Shared/Disk/*.o
 
 	@-rm -f *.bin
 
@@ -131,10 +132,6 @@ Bootsector/Bootsector.bin:
 Init/Bootloader.o:
 	@echo "Building $@"
 	@$(CC) $(CFLAGS) -c Init/Bootloader.c -o Init/Bootloader.o
-
-Init/Disk/Disk.o:
-	@echo "Building $@"
-	@$(CC) $(CFLAGS) -c Init/Disk/Disk.c -o Init/Disk/Disk.o
 
 Init/Memory/Memory.o:
 	@echo "Building $@"
@@ -218,15 +215,19 @@ Shared/Rm/RmWrapper.o:
 	@echo "Building $@"
 	@$(CC) $(CFLAGS) -c Shared/Rm/RmWrapper.c -o Shared/Rm/RmWrapper.o
 
+Shared/Disk/Disk.o:
+	@echo "Building $@"
+	@$(CC) $(CFLAGS) -c Shared/Disk/Disk.c -o Shared/Disk/Disk.o
+
 
 # Link the stages into .bin
 
-Init/Init.bin: Init/Bootloader.o Init/Disk/Disk.o Init/Memory/Memory.o Init/Graphics/Exceptions.o Init/Graphics/Format.o Init/Graphics/Graphics.o Shared/Rm/RmWrapper.o
+Init/Init.bin: Init/Bootloader.o Init/Memory/Memory.o Init/Graphics/Exceptions.o Init/Graphics/Format.o Init/Graphics/Graphics.o Shared/Rm/RmWrapper.o Shared/Disk/Disk.o
 	@echo "Building $@"
 	@$(CC) -T Init/Linker.ld $(LDFLAGS) -o Init/Init.elf -ffreestanding -nolibc -nostdlib -lgcc $^
 	@$(OBJC) -O binary Init/Init.elf Init/Init.bin
 
-Core/Serra.bin: Core/Bootloader.o Core/Cpu/Cpu.o Core/Memory/Memory.o Core/Memory/A20/A20.o Core/Memory/A20/A20_Wrapper.o Core/Memory/Mmap/Mmap.o Core/Graphics/Exceptions.o Core/Graphics/Format.o Core/Graphics/Graphics.o Core/Graphics/Vbe.o Core/Int/Idt.o Core/Int/Irq.o Core/Int/Isr.o Shared/Rm/RmWrapper.o
+Core/Serra.bin: Core/Bootloader.o Core/Cpu/Cpu.o Core/Memory/Memory.o Core/Memory/A20/A20.o Core/Memory/A20/A20_Wrapper.o Core/Memory/Mmap/Mmap.o Core/Graphics/Exceptions.o Core/Graphics/Format.o Core/Graphics/Graphics.o Core/Graphics/Vbe.o Core/Int/Idt.o Core/Int/Irq.o Core/Int/Isr.o Shared/Rm/RmWrapper.o Shared/Disk/Disk.o
 	@echo "Building $@"
 	@$(CC) -T Core/Linker.ld $(LDFLAGS) -o Core/Serra.elf -ffreestanding -nolibc -nostdlib -lgcc $^
 	@$(OBJC) -O binary Core/Serra.elf Core/Serra.bin
