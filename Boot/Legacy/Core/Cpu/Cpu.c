@@ -302,6 +302,9 @@ void* GetSmbiosEntryPointTable(void) {
 // ...
 // Returns eax, status code; should be 00h, but..
 
+// [TODO - I should rewrite the table, and make it into something that isn't a bitfield *and*
+// that's easy to find documentation on; set a bool for each bit basically]
+
 uint32 GetPciBiosInfoTable(pciBiosInfoTable* PciBiosTable) {
 
   // ...

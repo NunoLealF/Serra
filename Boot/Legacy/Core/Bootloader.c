@@ -576,16 +576,36 @@ void Bootloader(void) {
   // (...)
   // Alright, next, we want to get miscellaneous information:
 
+  Putchar('\n', 0);
+  Message(Kernel, "Preparing to get PCI-related info");
+
   // -> int 1Ah, ax = B101h [PCI-related; *may* be important later on]
+  // (get info)
 
   pciBiosInfoTable PciBiosTable;
   uint32 PciBiosReturnStatus = GetPciBiosInfoTable(&PciBiosTable);
 
-  if (((PciBiosReturnStatus >> 4) & 0xFF) == 0) {
-    Message(Info, "It works yay, (edx=%xh, al=%xh, version = %d.%d, lastpci = %xh)", PciBiosTable.Signature, PciBiosTable.Characteristics, PciBiosTable.InterfaceLevel[0], PciBiosTable.InterfaceLevel[1], PciBiosTable.LastPciBus);
-  } else {
-    Message(Info, "Doesn't work .-.");
+  // (is it supported?)
+
+  bool PciBiosIsSupported = true;
+
+  if ((PciBiosReturnStatus & 0xFF00) != 0) {
+    PciBiosIsSupported = false;
   }
+
+  // (show info)
+
+  if (PciBiosIsSupported == true) {
+
+    Message(Info, "Successfully obtained information using the PCI BIOS interrupt call.");
+
+  } else {
+
+    Message(Warning, "Failed to obtain information using the PCI BIOS interrupt call.");
+    Message(Info, "PCI BIOS may not be available on this system.");
+
+  }
+
 
 
 
@@ -599,7 +619,7 @@ void Bootloader(void) {
   Putchar('\n', 0);
 
   Printf("Hiya, this is Serra! <3\n", 0x0F);
-  Printf("August %i %x\n", 0x3F, 21, 0x2024);
+  Printf("August %i %x\n", 0x3F, 24, 0x2024);
 
   for(;;);
 
