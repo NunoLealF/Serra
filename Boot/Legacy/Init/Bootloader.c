@@ -339,7 +339,7 @@ void __attribute__((noreturn)) Bootloader(void) {
   }
 
   // (Next, we need to search for the Boot/ directory (starting from the root directory), like
-  // this (we use the functions in Init/Disk/Disk.h))
+  // this (we use the functions in Shared/Disk/Disk.h))
 
   fatDirectory BootDirectory = FindDirectory(RootCluster, Bpb.SectorsPerCluster, Bpb.HiddenSectors, Bpb.ReservedSectors, RootSectorOffset, "BOOT    ", "   ", true, PartitionIsFat32);
   uint32 BootCluster = GetDirectoryCluster(BootDirectory);
