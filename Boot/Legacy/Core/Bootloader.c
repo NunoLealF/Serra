@@ -550,7 +550,7 @@ void Bootloader(void) {
   // I mostly just want to check to see if SMBIOS even exists.
 
   Putchar('\n', 0);
-  Message(Kernel, "Preparing to get SMBIOS info");
+  Message(Kernel, "Preparing to get SMBIOS data");
 
   // (get the table itself)
 
@@ -576,7 +576,7 @@ void Bootloader(void) {
   // [PCI]
 
   Putchar('\n', 0);
-  Message(Kernel, "Preparing to get PCI-related info");
+  Message(Kernel, "Preparing to get PCI-BIOS data");
 
   // -> int 1Ah, ax = B101h [PCI-related; *may* be important later on]
   // (get info)
@@ -608,11 +608,123 @@ void Bootloader(void) {
 
 
 
+
   // [Disk and filesystem drivers (this is the last thing to do)]
 
-  // As far as I can tell, the best thing to do is to kind of transfer Disk/ to the shared
-  // section; you *could* kinda outsource the memory part as well, but it's better to just
-  // extern it, if that makes sense (in this case, Memset and Memcpy).
+  Putchar('\n', 0);
+  Message(Kernel, "Preparing to get EDD/FAT data");
+
+
+  // (get a few initial variables)
+
+  DriveNumber = InfoTable->DriveNumber;
+  bool Edd_Valid = InfoTable->Edd_Valid;
+
+  LogicalSectorSize = InfoTable->LogicalSectorSize;
+  PhysicalSectorSize = InfoTable->PhysicalSectorSize;
+
+  bool IsFat32 = InfoTable->Bpb_IsFat32;
+
+  Message(Info, "Successfully obtained drive/EDD-related information.");
+
+  // (get bpb)
+
+  #define Bpb_Address (&InfoTable->Bpb[0])
+
+  biosParameterBlock Bpb = *(biosParameterBlock*)(Bpb_Address);
+
+  biosParameterBlock_Fat16 Extended_Bpb16 = *(biosParameterBlock_Fat16*)(Bpb_Address + 33);
+  biosParameterBlock_Fat32 Extended_Bpb32 = *(biosParameterBlock_Fat32*)(Bpb_Address + 33);
+
+  // (sanity-check the BPB)
+
+  if (Bpb.BytesPerSector == 0) {
+    Panic("Failed to obtain the BPB.", 0);
+  } else {
+    Message(Info, "Successfully obtained the BPB from the bootloader's info table.");
+  }
+
+
+
+  // (now, let's focus on getting fs info)
+  // (now, let's focus on getting fs info)
+  // (now, let's focus on getting fs info)
+
+  // -> the total number of sectors within the partition, including reserved sectors
+
+  uint32 TotalNumSectors = Bpb.NumSectors;
+
+  if (TotalNumSectors == 0) {
+    TotalNumSectors = Bpb.NumSectors_Large;
+  }
+
+  // -> the size of each FAT
+
+  uint32 FatSize = Bpb.SectorsPerFat;
+
+  if (FatSize == 0) {
+    FatSize = Extended_Bpb32.SectorsPerFat;
+  }
+
+  // -> the number of root sectors
+
+  uint32 NumRootSectors = ((Bpb.NumRootEntries * 32) + (LogicalSectorSize - 1)) / LogicalSectorSize;
+
+  // -> the position of the first data sector, relative to the start of the partition
+
+  uint32 DataSectorOffset = ((Bpb.NumFileAllocationTables * FatSize) + NumRootSectors) + Bpb.ReservedSectors;
+
+  // -> the number of data (non-reserved + non-FAT) sectors in the partition
+
+  uint32 NumDataSectors = (TotalNumSectors - DataSectorOffset);
+
+  // -> the number of clusters in the partition
+
+  uint32 NumClusters = (NumDataSectors / Bpb.SectorsPerCluster);
+
+  // -> the cluster limit
+
+  uint32 ClusterLimit = 0xFFF6;
+
+  if (IsFat32 == true) {
+    ClusterLimit = 0x0FFFFFF6;
+  }
+
+
+
+
+  // (now, let's actually load things)
+  // (now, let's actually load things)
+  // (now, let's actually load things)
+
+  // -> first, we need to get the root cluster, along with the sector offset of that cluster
+
+  uint32 RootCluster;
+
+  if (IsFat32 == false) {
+    RootCluster = 2;
+  } else {
+    RootCluster = Extended_Bpb32.RootCluster;
+  }
+
+  uint32 RootSectorOffset = DataSectorOffset;
+
+  if (IsFat32 == false) {
+    RootSectorOffset -= NumRootSectors;
+  }
+
+  // -> next, we need to search for the Boot/ directory, starting from the root directory,
+  // like this:
+
+  fatDirectory BootDirectory = FindDirectory(RootCluster, Bpb.SectorsPerCluster, Bpb.HiddenSectors, Bpb.ReservedSectors, RootSectorOffset, "BOOT    ", "   ", true, IsFat32);
+  uint32 BootCluster = GetDirectoryCluster(BootDirectory);
+
+  if (ExceedsLimit(BootCluster, ClusterLimit)) {
+    Panic("Failed to locate Boot/.", 0);
+  } else {
+    Message(Kernel, "(debug) Found the Boot/ directory; yay");
+  }
+
 
 
 
@@ -625,7 +737,7 @@ void Bootloader(void) {
   Putchar('\n', 0);
 
   Printf("Hiya, this is Serra! <3\n", 0x0F);
-  Printf("August %i %x\n", 0x3F, 24, 0x2024);
+  Printf("August %i %x\n", 0x3F, 30, 0x2024);
 
   for(;;);
 
