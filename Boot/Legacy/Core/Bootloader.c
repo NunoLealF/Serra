@@ -401,6 +401,22 @@ void Bootloader(void) {
   Message(Info, "Highest supported (standard) CPUID level is %xh", Cpuid_HighestLevel);
   Message(Info, "CPU vendor ID is \'%s\'", VendorString);
 
+  // (This is also important - check for PAE and long-mode support, so we know how to
+  // implement paging)
+
+  bool SupportsPae = false;
+  bool SupportsLongMode = false;
+
+  if (Cpuid_Features.Edx | (1 << 6)) {
+    Message(Ok, "PAE (Page Address Extensions) appears to be supported");
+    SupportsPae = true;
+  }
+
+  if (Cpuid_ExtendedFeatures.Edx | (1 << 29)) {
+    Message(Ok, "64-bit mode appears to be supported");
+    SupportsLongMode = true;
+  }
+
 
 
 
@@ -737,7 +753,7 @@ void Bootloader(void) {
   Putchar('\n', 0);
 
   Printf("Hiya, this is Serra! <3\n", 0x0F);
-  Printf("September %i %x\n", 0x3F, 12345, 0x2024);
+  Printf("September %i %x\n", 0x3F, 15, 0x2024);
 
   for(;;);
 
