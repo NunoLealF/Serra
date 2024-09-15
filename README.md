@@ -28,13 +28,15 @@ An x86 bootloader under construction <3
 - Some way of going to and from real mode **Done**
 - Interrupts and exceptions **Done (but a little bare-bones)**
 - E820 / memory map **Done**
-- CPUID ***Somewhat done?***
+- Writing a (simple) physical memory manager
+- CPUID ***Somewhat done? (haven't scanned for PAE/long mode yet)***
 - ACPI **Done, if a little bare-bones**
 - VESA/EDID **Done**
 - SMBIOS **Done (but a little bare-bones)**
-- Other miscellaneous things *In progress*
-- Disk drivers (int13h only for now, maybe ATA PIO?) *In progress?*
+- Disk drivers (int13h) *Mostly done already*
 - Filesystem drivers *Mostly done already*
+- Paging, 32-bit and PAE/long-mode
+- Other miscellaneous things *In progress*
 - Loading the next stage (with long mode!)
 
 ### Common stage (?????h)
@@ -50,4 +52,4 @@ does the same job as the BIOS/Legacy bootloader stub.
 This project has been released under the MIT license. For more information, please
 refer to the accompanying license agreement. <3
 
-*Last updated on August 29th 2024*
+*Last updated on September 15th 2024*
