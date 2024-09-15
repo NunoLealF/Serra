@@ -401,19 +401,26 @@ void Bootloader(void) {
   Message(Info, "Highest supported (standard) CPUID level is %xh", Cpuid_HighestLevel);
   Message(Info, "CPU vendor ID is \'%s\'", VendorString);
 
-  // (This is also important - check for PAE and long-mode support, so we know how to
+  // (This is also important - check for PAE, PSE and long-mode support, so we know how to
   // implement paging)
 
   bool SupportsPae = false;
+  bool SupportsPse = false;
   bool SupportsLongMode = false;
 
-  if (Cpuid_Features.Edx | (1 << 6)) {
-    Message(Ok, "PAE (Page Address Extensions) appears to be supported");
+  if (Cpuid_Features.Edx & (1 << 3)) {
+    SupportsPse = true;
+  } else {
+    Panic("Non-4KiB pages appear to be unsupported.", 0);
+  }
+
+  if (Cpuid_Features.Edx & (1 << 6)) {
+    Message(Info, "PAE (Page Address Extension) appears to be supported");
     SupportsPae = true;
   }
 
-  if (Cpuid_ExtendedFeatures.Edx | (1 << 29)) {
-    Message(Ok, "64-bit mode appears to be supported");
+  if (Cpuid_ExtendedFeatures.Edx & (1 << 29)) {
+    Message(Info, "64-bit mode appears to be supported");
     SupportsLongMode = true;
   }
 
@@ -743,6 +750,19 @@ void Bootloader(void) {
 
 
 
+  // TODO:
+
+  // -> Check if PSE is available ()
+
+  // -> Create a physical memory allocator. This doesn't have to be anything complicated, and
+  // you don't need to implement anything to free memory either; just make sure that it can
+  // actually allocate memory, and that it works on non-consecutive areas (above 1MiB).
+
+  // -> Identity-map all of memory (or at least, all that actually matters). This generally
+  // uses up to 0.2% of total memory, so for a 128MiB system, it'll occupy around 256KiB, give
+  // or take.
+
+  // -> Finally, actually load the rest of the bootloader and jump to it.
 
 
 
