@@ -47,7 +47,9 @@
 
   // Memory-map-related functions, from Mmap/Mmap.c.
 
+  #define GetEndOfMmapEntry(MmapEntry) (MmapEntry.Base + MmapEntry.Limit)
+
   uint32 GetMmapEntry(void* Buffer, uint32 Size, uint32 Continuation);
-  // ...
+  uint64 AllocFromUsableMmap(uint64 Address, uint32 Size, mmapEntry* UsableMmap, uint8 NumUsableMmapEntries);
 
 #endif
