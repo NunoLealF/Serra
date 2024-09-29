@@ -752,8 +752,6 @@ void Bootloader(void) {
 
   // TODO:
 
-  // -> Check if PSE is available ()
-
   // -> Create a physical memory allocator. This doesn't have to be anything complicated, and
   // you don't need to implement anything to free memory either; just make sure that it can
   // actually allocate memory, and that it works on non-consecutive areas (above 1MiB).
@@ -773,8 +771,72 @@ void Bootloader(void) {
   Putchar('\n', 0);
 
   Printf("Hiya, this is Serra! <3\n", 0x0F);
-  Printf("September %i %x\n", 0x3F, 15, 0x2024);
+  Printf("September %i %x\n", 0x3F, 29, 0x2024);
 
   for(;;);
+
+}
+
+
+// TODO: finish this!!
+//uint64 AddressThing = (Whatever the start of the first free area (>= 1MiB) is);
+
+#define GetEndOfMmapEntry(MmapEntry) (MmapEntry.Base + MmapEntry.Limit)
+
+uint64 MallocThing(uint64 Address, uint32 Size, mmapEntry* UsableMmap, uint8 NumUsableMmapEntries) {
+
+  // (Wait, are there even any usable mmap entries?)
+
+  if (NumUsableMmapEntries == 0) {
+    return 0;
+  } else if (Address < UsableMmap[0].Base) {
+    return 0;
+  }
+
+
+  // (Find current mmap entry)
+
+  uint8 Entry = (NumUsableMmapEntries - 1);
+
+  while (Address <= UsableMmap[Entry].Base) {
+
+    if (Entry > 0) {
+      Entry--;
+    } else {
+      break;
+    }
+
+  }
+
+  if (Address >= GetEndOfMmapEntry(UsableMmap[Entry])) {
+    return 0;
+  }
+
+
+  // While it doesn't exceed the entry limit..
+
+  while (Entry < NumUsableMmapEntries) {
+
+    // (Do the thing)
+
+    if ((Address + Size) < GetEndOfMmapEntry(UsableMmap[Entry])) {
+      return (Address + Size);
+    } else {
+      Entry++;
+    }
+
+    // (Transfer to the next entry)
+
+    if (Entry >= NumUsableMmapEntries) {
+      return 0;
+    } else {
+      Address = UsableMmap[Entry].Base;
+    }
+
+  }
+
+  // (If there isn't enough space, just return NULL I guess)
+
+  return 0;
 
 }
