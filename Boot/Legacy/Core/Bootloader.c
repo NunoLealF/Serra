@@ -756,6 +756,17 @@ void Bootloader(void) {
   // you don't need to implement anything to free memory either; just make sure that it can
   // actually allocate memory, and that it works on non-consecutive areas (above 1MiB).
 
+  Putchar('\n', 0);
+
+  uint64 MallocThing(uint64 Address, uint32 Size, mmapEntry* UsableMmap, uint8 NumUsableMmapEntries);
+
+  uint64 AddressThing = 0xCAFEE; // Needs to be >1MiB, since we wanna preserve everything below that
+  uint32 SizeThing = 0xBABEE;
+
+  uint64 Test = MallocThing(AddressThing, SizeThing, UsableMmap, NumUsableMmapEntries);
+
+  Message(Info, "Tested out MallocThing()\n       (initial address: %xh, new address: [%xh, %xh])", (uint32)AddressThing, (uint32)(Test - SizeThing), (uint32)Test);
+
   // -> Identity-map all of memory (or at least, all that actually matters). This generally
   // uses up to 0.2% of total memory, so for a 128MiB system, it'll occupy around 256KiB, give
   // or take.
@@ -779,7 +790,6 @@ void Bootloader(void) {
 
 
 // TODO: finish this!!
-//uint64 AddressThing = (Whatever the start of the first free area (>= 1MiB) is);
 
 #define GetEndOfMmapEntry(MmapEntry) (MmapEntry.Base + MmapEntry.Limit)
 
@@ -787,18 +797,15 @@ uint64 MallocThing(uint64 Address, uint32 Size, mmapEntry* UsableMmap, uint8 Num
 
   // (Wait, are there even any usable mmap entries?)
 
-  if (NumUsableMmapEntries == 0) {
-    return 0;
-  } else if (Address < UsableMmap[0].Base) {
+  if (Address < UsableMmap[0].Base) {
     return 0;
   }
-
 
   // (Find current mmap entry)
 
   uint8 Entry = (NumUsableMmapEntries - 1);
 
-  while (Address <= UsableMmap[Entry].Base) {
+  while (Address < UsableMmap[Entry].Base) {
 
     if (Entry > 0) {
       Entry--;
@@ -808,14 +815,13 @@ uint64 MallocThing(uint64 Address, uint32 Size, mmapEntry* UsableMmap, uint8 Num
 
   }
 
-  if (Address >= GetEndOfMmapEntry(UsableMmap[Entry])) {
-    return 0;
-  }
-
+  Message(Kernel, "Found entry: %d", (uint32)Entry);
 
   // While it doesn't exceed the entry limit..
 
   while (Entry < NumUsableMmapEntries) {
+
+    Message(Kernel, "Entry is %d (b:%xh | l:%xh), addr is %xh", (uint32)Entry, (uint32)UsableMmap[Entry].Base, (uint32)UsableMmap[Entry].Limit, (uint32)Address);
 
     // (Do the thing)
 
