@@ -122,7 +122,63 @@ static char* Irqs[] = {
 
 */
 
+// [DEMO] MOUSE DATA
+
+volatile uint8 Demo_MouseData[3] = {0, 0, 0};
+volatile uint8 Demo_MouseCycleThing = 3;
+
+volatile uint16 Demo_MousePosition[2] = {0, 0};
+volatile uint16 Demo_MouseBoundaries[2] = {320, 240};
+
 void IrqHandler(uint8 Vector, uint8 Port) {
+
+  // [DEMO] - Handle mouse data (IRQ 12)
+
+  // Whenever we get a new mouse movement, we get three separate IRQs for some reason, and
+  // this helps keep track of it.
+
+  if (Vector == 12) {
+
+    Demo_MouseData[Demo_MouseCycleThing] = Inb(0x60);
+    Demo_MouseCycleThing++;
+
+    if (Demo_MouseCycleThing >= 3) {
+
+      // We've reached the last one, so let's update it
+      Demo_MouseCycleThing = 0;
+
+      // Calculate the actual.. position, basically
+
+      uint8 State = Demo_MouseData[0];
+      int16 Demo_MouseX = (int16)(Demo_MouseData[1]) - ((State << 4) & 0x100);
+      int16 Demo_MouseY = (int16)(Demo_MouseData[2]) - ((State << 3) & 0x100);
+
+      // Update the position variable thing.
+
+      int16 NewX = (Demo_MousePosition[0] + Demo_MouseX) % Demo_MouseBoundaries[0];
+      while (NewX < 0) NewX += Demo_MouseBoundaries[0];
+      Demo_MousePosition[0] = NewX;
+
+      int16 NewY = (Demo_MousePosition[1] + Demo_MouseY) % Demo_MouseBoundaries[1];
+      while (NewY < 0) NewY += Demo_MouseBoundaries[1];
+      Demo_MousePosition[1] = NewY;
+
+      // Show the position to user
+
+      char PrefixX = ' '; char PrefixY = ' ';
+      uint16 ActualX = Demo_MouseX; if (ActualX >= 0x80) {ActualX = ~(ActualX); ActualX++; PrefixX = '-';} // Workaround as itoa doesn't support negative ints yet
+      uint16 ActualY = Demo_MouseY; if (ActualY >= 0x80) {ActualY = ~(ActualY); ActualY++; PrefixY = '-';} // Workaround as itoa doesn't support negative ints yet
+
+      Message(Info, "[Demo] PS/2 mouse data: [%xh, x=%c%d, y=%c%d]", State, PrefixX, ActualX, PrefixY, ActualY);
+      Message(Info, "[Demo] Current position: [x=%d, y=%d, limit=%d*%d]", Demo_MousePosition[0], Demo_MousePosition[1], Demo_MouseBoundaries[0], Demo_MouseBoundaries[1]);
+
+
+    }
+
+    return;
+
+  }
+
 
   // Show a message to the user (saying that an IRQ has occured, and which).
   // We take our message from the Irqs[] array.

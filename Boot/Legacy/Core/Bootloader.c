@@ -783,11 +783,32 @@ void Bootloader(void) {
   // [TODO - MIT maker portfolio demo]
   // [Maker portfolio] -> create a simple PS/2 mouse driver
 
-  MaskPic(0xFFFF - (1 << 12)); // Enable PS/2 mouse
+  Print("\n\n", 0);
+  Message(Kernel, "[Demo] Attempting to enable PS/2 mouse.");
+
+  while(Inb(0x64) & 2 != 0); Outb(0x64, 0xA8); // Enable second PS/2 device (supposed to be a mouse)
+  while(Inb(0x64) & 2 != 0); Outb(0x64, 0x20); // Enable interrupts; get data
+  while(Inb(0x64) & 1 != 1); uint8 Status = Inb(0x60) | 2; // Get data (status)
+  while(Inb(0x64) & 2 != 0); Outb(0x64, 0x60); // Enable interrupts; write data
+  while(Inb(0x64) & 2 != 0); Outb(0x60, Status); // Write data (status)
+  while(Inb(0x64) & 2 != 0); Outb(0x64, 0xD4); while(Inb(0x64) & 2 != 0); Outb(0x60, 0xF6); // Tell the mouse to use default settings (0xF6);
+  while(Inb(0x64) & 1 != 1); Inb(0x60); // Acknowledge the last command
+  while(Inb(0x64) & 2 != 0); Outb(0x64, 0xD4); while(Inb(0x64) & 2 != 0); Outb(0x60, 0xF4); // Enable the mouse (0xF4);
+  while(Inb(0x64) & 1 != 1); Inb(0x60); // Acknowledge the last command
+  Message(Info, "[Demo] Enabled PS/2 mouse via 8042 controller (port 60h, 64h).");
+
+  MaskPic(0xFFFF - (1 << 2) - (1 << 12)); // Enable cascade and PS/2 mouse IRQs; we need to know when the mouse is being moved
   InitPic(0x20, 0x28); // Initialize PIC (again)
+  Message(Info, "[Demo] Unmasked PS/2 mouse IRQ and reinitialized the PIC.");
+
+  extern volatile uint16 Demo_MousePosition[2]; // To get the position later (*read* this)
+  extern volatile uint16 Demo_MouseBoundaries[2]; // The boundaries of the mouse (*write* to this)
+
+  // [Maker portfolio] -> enable best VESA mode, display logo at center, with mouse.
+  // ...
 
   // [Maker portfolio] -> bring in the MIT logo (monochrome? to save space)
-  // [Maker portfolio] -> enable best VESA mode, display logo at center, with mouse.
+
 
 
 
