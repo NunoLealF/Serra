@@ -9,6 +9,10 @@
 #error "This code is supposed to be compiled with an i686-elf cross-compiler."
 #endif
 
+// [DEMO DEMO DEMO]
+
+volatile vbeModeInfoBlock* ModeInfo;
+
 /* void SaveState(), RestoreState()
 
    Inputs: (none)
@@ -786,30 +790,90 @@ void Bootloader(void) {
   Print("\n\n", 0);
   Message(Kernel, "[Demo] Attempting to enable PS/2 mouse.");
 
-  while(Inb(0x64) & 2 != 0); Outb(0x64, 0xA8); // Enable second PS/2 device (supposed to be a mouse)
-  while(Inb(0x64) & 2 != 0); Outb(0x64, 0x20); // Enable interrupts; get data
-  while(Inb(0x64) & 1 != 1); uint8 Status = Inb(0x60) | 2; // Get data (status)
-  while(Inb(0x64) & 2 != 0); Outb(0x64, 0x60); // Enable interrupts; write data
-  while(Inb(0x64) & 2 != 0); Outb(0x60, Status); // Write data (status)
-  while(Inb(0x64) & 2 != 0); Outb(0x64, 0xD4); while(Inb(0x64) & 2 != 0); Outb(0x60, 0xF6); // Tell the mouse to use default settings (0xF6);
-  while(Inb(0x64) & 1 != 1); Inb(0x60); // Acknowledge the last command
-  while(Inb(0x64) & 2 != 0); Outb(0x64, 0xD4); while(Inb(0x64) & 2 != 0); Outb(0x60, 0xF4); // Enable the mouse (0xF4);
-  while(Inb(0x64) & 1 != 1); Inb(0x60); // Acknowledge the last command
+
+  // [WARNING, *WARNING*, *READ THIS*]
+
+  // The PS/2 standard is an absolute abomination; and after 5+ hours of troubleshooting, I settled on this half-functional solution.
+
+  // It *will* lock up and/or crash if you use the keyboard or mouse during the initialization process. It also probably won't work
+  // on real hardware, and it's so unstable that it will completely break apart if you change even the tiniest detail.
+
+  extern void Demo_8042Wait(uint8 Type);
+  extern void Demo_8042Send(uint8 Message);
+
+  __asm__ volatile ("cli");
+
+  Demo_8042Wait(1); Outb(0x64, 0x20); // Get the controller configuration byte
+  Demo_8042Wait(0); uint8 ConfigByte = Inb(0x60) | (1 << 1); // Read it into ConfigByte, OR with bit 1 (enable 2nd port)
+
+  Demo_8042Wait(1); Outb(0x64, 0x60); // Write to the controller configuration byte
+  Demo_8042Wait(1); Outb(0x60, ConfigByte); // Write ConfigByte (basically, enable the 2nd port by setting bit 1)
+
+  Demo_8042Wait(1); Outb(0x64, 0xAD); // Disable first PS/2 device (which should be a keyboard)
+  Demo_8042Wait(1); Outb(0x64, 0xA8); // Enable second PS/2 device (which should be a mouse)
+
+  Demo_8042Send(0xF6); // Tell the mouse to use default settings (0xF6);
+  Demo_8042Wait(0); while(Inb(0x60) == 0); // Acknowledge the last command
+
+  Demo_8042Send(0xF4); // Enable the mouse (0xF4);
+  Demo_8042Wait(0); while(Inb(0x60) == 0); // Acknowledge the last command
+
   Message(Info, "[Demo] Enabled PS/2 mouse via 8042 controller (port 60h, 64h).");
+
+  // (unmask the ps/2 irqs)
 
   MaskPic(0xFFFF - (1 << 2) - (1 << 12)); // Enable cascade and PS/2 mouse IRQs; we need to know when the mouse is being moved
   InitPic(0x20, 0x28); // Initialize PIC (again)
   Message(Info, "[Demo] Unmasked PS/2 mouse IRQ and reinitialized the PIC.");
 
+  // (for later..)
+
   extern volatile uint16 Demo_MousePosition[2]; // To get the position later (*read* this)
   extern volatile uint16 Demo_MouseBoundaries[2]; // The boundaries of the mouse (*write* to this)
 
+
   // [Maker portfolio] -> enable best VESA mode, display logo at center, with mouse.
-  // ...
 
-  // [Maker portfolio] -> bring in the MIT logo (monochrome? to save space)
+  if (VbeIsSupported == false) {
+    Panic("VBE is unsupported, can't display any graphics for the demo.", 0); // We need VESA/VBE
+  } else if ((BestVbeModeInfo.ModeAttributes & (1 << 7)) == 0) {
+    Panic("VBE linear framebuffer unsupported, no support for that yet.", 0); // We also need a linear framebuffer
+  } else {
+    Message(Kernel, "[Demo] Attempting to switch to the best VBE mode available.");
+  }
+
+  Demo_MouseBoundaries[0] = BestVbeModeInfo.ModeInfo.X_Resolution; // Get the horizontal resolution
+  Demo_MousePosition[0] = (Demo_MouseBoundaries[0] / 2); // And center the mouse position
+
+  Demo_MouseBoundaries[1] = BestVbeModeInfo.ModeInfo.Y_Resolution; // Get the vertical resolution
+  Demo_MousePosition[1] = (Demo_MouseBoundaries[1] / 2); // And also center the mouse position
+
+  Message(Info, "[Demo] Found mode %xh, with resolution (x=%d, y=%d).", BestVbeMode, Demo_MouseBoundaries[0], Demo_MouseBoundaries[1]);
+  SetVbeMode(BestVbeMode, false, true, true, 0); // Set vbe mode, using linear model, clearing the screen
 
 
+  // [Maker portfolio] -> bring in the Serra logo (monochrome? to save space)
+
+  extern void Demo_DrawPixel(vbeModeInfoBlock* Info, uint16 X, uint16 Y, uint32 Color);
+  extern void Demo_DrawMouse(vbeModeInfoBlock* Info, uint16 Position[2], uint16 Boundaries[2]);
+  ModeInfo = &BestVbeModeInfo;
+
+  #include "Img.h" // Draw image
+
+  #define xOffset ((Demo_MouseBoundaries[0] - ImgWidth) / 2)
+  #define yOffset ((Demo_MouseBoundaries[1] - ImgHeight) / 2)
+
+  for (int y = 0; y < ImgHeight; y++) {
+    for (int x = 0; x < ImgWidth; x++) {
+      Demo_DrawPixel(ModeInfo, x+xOffset, y+yOffset, (Img[GetImgPosition(x,y)] * 0x010101));
+    }
+  }
+
+  Demo_DrawMouse(ModeInfo, Demo_MousePosition, Demo_MouseBoundaries); // Fix a bug where the starting position is always inverted
+  __asm__ volatile ("sti"); // Enable interrupts
+
+
+  for(;;);
 
 
   // [For now, let's just leave things here]

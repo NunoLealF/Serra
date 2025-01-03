@@ -271,7 +271,7 @@ uint16 FindBestVbeMode(uint16* VbeModeList, uint16 PreferredX_Resolution, uint16
 
   // Then, let's just go through each mode until we reach FFFFh (which indicates that we're
   // at the end of the list)
-  
+
   while (*VbeModeList != 0xFFFF) {
 
     // First, get information about the current mode
@@ -349,5 +349,96 @@ uint16 FindBestVbeMode(uint16* VbeModeList, uint16 PreferredX_Resolution, uint16
   // otherwise..
 
   return BestVbeMode;
+
+}
+
+// [DEMO] Draw pixel.
+
+void Demo_DrawPixel(vbeModeInfoBlock* Info, uint16 X, uint16 Y, uint32 Color) {
+
+  // First - let's extract the red, green and blue values from our color variable.
+
+  uint8 Blue = (Color & 0xFF);
+  uint8 Green = ((Color >> 8) & 0xFF);
+  uint8 Red = ((Color >> 16) & 0xFF);
+
+  // Next, let's compose that into an actual color, based off of the bit positions; there *is*
+  // a reserved field you're not supposed to overwrite, but ehhhh it works in qemu anyway
+
+  Red >>= (8 - Info->ColorInfo.RedMaskSize);
+  Green >>= (8 - Info->ColorInfo.GreenMaskSize);
+  Blue >>= (8 - Info->ColorInfo.BlueMaskSize);
+
+  uint32 ConvertedColor = (Red << Info->ColorInfo.RedBit) | (Green << Info->ColorInfo.GreenBit) | (Blue << Info->ColorInfo.BlueBit);
+
+  // Finally, let's actually write that color
+
+  uint32 Address = (Info->Vbe2Info.Framebuffer + (X * Info->ModeInfo.BitsPerPixel / 8) + (Y * Info->ModeInfo.BytesPerScanLine));
+
+  if (Info->ModeInfo.BitsPerPixel <= 8) {
+    *(uint8*)(Address) = (uint8)(ConvertedColor);
+  } else if (Info->ModeInfo.BitsPerPixel <= 16) {
+    *(uint16*)(Address) = (uint16)(ConvertedColor);
+  } else if (Info->ModeInfo.BitsPerPixel <= 32) {
+    *(uint32*)(Address) = (uint32)(ConvertedColor);
+  }
+
+}
+
+// [DEMO] Draw mouse.
+
+#include "../Img.h" // Get the pointer image.
+
+void Demo_DrawMouse(vbeModeInfoBlock* Info, uint16 Position[2], uint16 Boundaries[2]) {
+
+  // We're supposed to start drawing from the top left corner, so..
+
+  const int16 StartX = Position[0] - (PointerWidth / 2);
+  const int16 StartY = Position[1] - (PointerHeight / 2);
+
+  // Okay, now just draw. The pointer image isn't a bitmap, we just xor it really:
+
+  for (int i = 0; i < PointerHeight; i++) {
+
+    for (int j = 0; j < PointerWidth; j++) {
+
+      // First, do we even need to do anything?
+
+      if (Pointer[(i * PointerWidth) + j] != 0xFF) {
+        continue;
+      }
+
+      // Deal with edges and such
+
+      int16 X = (StartX + j);
+      int16 Y = (StartY + i);
+
+      if (X < 0) {
+        X += Boundaries[0];
+      } else if (X >= Boundaries[0]) {
+        X -= Boundaries[0];
+      }
+
+      if (Y < 0) {
+        Y += Boundaries[1];
+      } else if (Y >= Boundaries[1]) {
+        Y -= Boundaries[1];
+      }
+
+      // Okay now just xor it
+
+      uint32 Address = (Info->Vbe2Info.Framebuffer + (X * Info->ModeInfo.BitsPerPixel / 8) + (Y * Info->ModeInfo.BytesPerScanLine));
+
+      if (Info->ModeInfo.BitsPerPixel <= 8) {
+        *(uint8*)(Address) ^= 0xFF;
+      } else if (Info->ModeInfo.BitsPerPixel <= 16) {
+        *(uint16*)(Address) ^= 0xFFFF;
+      } else if (Info->ModeInfo.BitsPerPixel <= 32) {
+        *(uint32*)(Address) ^= 0xFFFFFFFF;
+      }
+
+    }
+
+  }
 
 }
