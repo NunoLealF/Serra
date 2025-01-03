@@ -210,7 +210,7 @@ void InitPic(uint8 PicA_Offset, uint8 PicB_Offset) {
 
 /* void MaskPic()
 
-   Inputs: uint8 Mask - The mask we want to put on our PIC.
+   Inputs: uint16 Mask - The mask we want to put on our PIC.
 
    Outputs: (None)
 
@@ -227,9 +227,9 @@ void InitPic(uint8 PicA_Offset, uint8 PicB_Offset) {
 
 */
 
-void MaskPic(uint8 Mask) {
+void MaskPic(uint16 Mask) {
 
-  Outb(PicA_Data, Mask); // Master PIC (0x21)
-  Outb(PicB_Data, Mask); // Slave PIC (0x21)
+  Outb(PicA_Data, (uint8)(Mask & 0xFF)); // Master PIC (0x21)
+  Outb(PicB_Data, (uint8)((Mask >> 8) & 0xFF)); // Slave PIC (0xA1)
 
 }

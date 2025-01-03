@@ -101,7 +101,7 @@ void Bootloader(void) {
 
   Message(Kernel, "Initializing the 8259 PIC.");
 
-  MaskPic(0xFF); // Full mask, don't enable anything (set to 0xFE for timer, or 0xFD for keyboard that doesn't really work)
+  MaskPic(0xFFFF); // Full mask, don't enable anything (set to 0xFFFE for timer, or 0xFFFD for keyboard that doesn't really work)
   InitPic(0x20, 0x28); // IRQ1 is at 0x20-0x27, IRQ2 is at 0x28-0x2F
 
   // (Actually initialize the IDT)
@@ -782,6 +782,10 @@ void Bootloader(void) {
 
   // [TODO - MIT maker portfolio demo]
   // [Maker portfolio] -> create a simple PS/2 mouse driver
+
+  MaskPic(0xFFFF - (1 << 12)); // Enable PS/2 mouse
+  InitPic(0x20, 0x28); // Initialize PIC (again)
+
   // [Maker portfolio] -> bring in the MIT logo (monochrome? to save space)
   // [Maker portfolio] -> enable best VESA mode, display logo at center, with mouse.
 

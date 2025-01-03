@@ -113,7 +113,7 @@
   void IrqHandler(uint8 Vector, uint8 Port);
 
   void InitPic(uint8 PicA_Offset, uint8 PicB_Offset);
-  void MaskPic(uint8 Mask);
+  void MaskPic(uint16 Mask);
 
 
   // Functions and handlers from Idt.c.
