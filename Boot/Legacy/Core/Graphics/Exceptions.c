@@ -1,4 +1,4 @@
-// Copyright (C) 2024 NunoLealF
+// Copyright (C) 2025 NunoLealF
 // This file is part of the Serra project, which is released under the MIT license.
 // For more information, please refer to the accompanying license agreement. <3
 
@@ -60,7 +60,7 @@ void Message(messageType Type, char* String, ...) {
       break;
 
     case Kernel:
-      Print("Serra", 0x09);
+      Print("Kernel", 0x0B);
       break;
 
     case Ok:

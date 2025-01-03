@@ -11,7 +11,7 @@ An x86 bootloader under construction <3
 
 - Bootsector **Done**
 - Protected mode **Done**
-- Set up a proper IDT **Done**
+- Set up a proper GDT **Done**
 
 ### 2nd stage (7E00h -> 9E00h)
 
@@ -19,6 +19,7 @@ An x86 bootloader under construction <3
 - Some way of going to and from real mode **Done**
 - Basic disk read support (using EDD / int 13h) **Done**
 - Basic FAT filesystem support (FAT16 and FAT32) **Done, read-only**
+- Set up a proper IDT **Done**
 - Transferring all the info from the above to the next stage **Done, a little barebones though**
 - Loading the next stage **Done**
 
@@ -28,13 +29,13 @@ An x86 bootloader under construction <3
 - Some way of going to and from real mode **Done**
 - Interrupts and exceptions **Done (but a little bare-bones)**
 - E820 / memory map **Done**
-- Writing a (simple) physical memory manager
 - CPUID ***Somewhat done? (haven't scanned for PAE/long mode yet)***
 - ACPI **Done, if a little bare-bones**
 - VESA/EDID **Done**
 - SMBIOS **Done (but a little bare-bones)**
 - Disk drivers (int13h) *Mostly done already*
 - Filesystem drivers *Mostly done already*
+- Writing a (simple) physical memory manager *Very bare-bones*
 - Paging, 32-bit and PAE/long-mode
 - Other miscellaneous things *In progress*
 - Loading the next stage (with long mode!)
@@ -52,4 +53,4 @@ does the same job as the BIOS/Legacy bootloader stub.
 This project has been released under the MIT license. For more information, please
 refer to the accompanying license agreement. <3
 
-*Last updated on September 15th 2024*
+*Last updated on January 3rd 2025*

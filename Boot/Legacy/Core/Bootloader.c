@@ -1,4 +1,4 @@
-// Copyright (C) 2024 NunoLealF
+// Copyright (C) 2025 NunoLealF
 // This file is part of the Serra project, which is released under the MIT license.
 // For more information, please refer to the accompanying license agreement. <3
 
@@ -762,14 +762,28 @@ void Bootloader(void) {
   uint32 SizeThing = 0x23456;
 
   uint64 Test = AllocFromUsableMmap(AddressThing, SizeThing, UsableMmap, NumUsableMmapEntries);
-
   Message(Info, "(debug) Tested out AllocFromUsableMmap()\n       (debug) (initial address: %xh, new address: [%xh, %xh])", (uint32)AddressThing, (uint32)(Test - SizeThing), (uint32)Test);
+
+  uint64 Test2 = AllocFromUsableMmap(Test, 0x122A, UsableMmap, NumUsableMmapEntries);
+  Message(Info, "(debug) Tested out AllocFromUsableMmap()\n       (debug) (initial address: %xh, new address: [%xh, %xh])", (uint32)Test, (uint32)(Test2 - 0x122A), (uint32)Test2);
+
 
   // -> Identity-map all of memory (or at least, all that actually matters). This generally
   // uses up to 0.2% of total memory, so for a 128MiB system, it'll occupy around 256KiB, give
   // or take.
 
   // -> Finally, actually load the rest of the bootloader and jump to it.
+
+
+
+
+
+
+
+  // [TODO - MIT maker portfolio demo]
+  // [Maker portfolio] -> create a simple PS/2 mouse driver
+  // [Maker portfolio] -> bring in the MIT logo (monochrome? to save space)
+  // [Maker portfolio] -> enable best VESA mode, display logo at center, with mouse.
 
 
 
@@ -780,7 +794,7 @@ void Bootloader(void) {
   Putchar('\n', 0);
 
   Printf("Hiya, this is Serra! <3\n", 0x0F);
-  Printf("September %i %x\n", 0x3F, 29, 0x2024);
+  Printf("January %i %x\n", 0x3F, 3, 0x2025);
 
   for(;;);
 
