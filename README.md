@@ -1,4 +1,5 @@
 # Serra
+### TODO - Show logo, give a better (less technical) description, show a proper roadmap.
 An x86 bootloader under construction <3
 
 ![A screenshot of Serra](screenshot.png)

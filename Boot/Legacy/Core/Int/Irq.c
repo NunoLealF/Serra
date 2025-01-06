@@ -170,10 +170,10 @@ void IrqHandler(uint8 Vector, uint8 Port) {
       int16 Demo_MouseX = (int16)(Demo_MouseData[1]) - ((State << 4) & 0x100);
       int16 Demo_MouseY = (int16)(Demo_MouseData[2]) - ((State << 3) & 0x100);
 
-      // Un-invert the last position
+      // Un-invert the last position (unless the left-click button is being held)
 
       extern void Demo_DrawMouse(vbeModeInfoBlock* Info, uint16 Position[2], uint16 Boundaries[2]);
-      Demo_DrawMouse(ModeInfo, Demo_MousePosition, Demo_MouseBoundaries);
+      if (!(State & 1)) Demo_DrawMouse(ModeInfo, Demo_MousePosition, Demo_MouseBoundaries);
 
       // Update the position variable thing.
 

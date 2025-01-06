@@ -402,12 +402,6 @@ void Demo_DrawMouse(vbeModeInfoBlock* Info, uint16 Position[2], uint16 Boundarie
 
     for (int j = 0; j < PointerWidth; j++) {
 
-      // First, do we even need to do anything?
-
-      if (Pointer[(i * PointerWidth) + j] != 0xFF) {
-        continue;
-      }
-
       // Deal with edges and such
 
       int16 X = (StartX + j);
@@ -428,13 +422,16 @@ void Demo_DrawMouse(vbeModeInfoBlock* Info, uint16 Position[2], uint16 Boundarie
       // Okay now just xor it
 
       uint32 Address = (Info->Vbe2Info.Framebuffer + (X * Info->ModeInfo.BitsPerPixel / 8) + (Y * Info->ModeInfo.BytesPerScanLine));
+      uint8 Thing = Pointer[(i*PointerWidth)+j];
+
+
 
       if (Info->ModeInfo.BitsPerPixel <= 8) {
-        *(uint8*)(Address) ^= 0xFF;
+        *(uint8*)(Address) ^= Thing;
       } else if (Info->ModeInfo.BitsPerPixel <= 16) {
-        *(uint16*)(Address) ^= 0xFFFF;
+        *(uint16*)(Address) ^= Thing + (Thing << 8);
       } else if (Info->ModeInfo.BitsPerPixel <= 32) {
-        *(uint32*)(Address) ^= 0xFFFFFFFF;
+        *(uint32*)(Address) ^= Thing + (Thing << 8) + (Thing << 16) + (Thing << 24);
       }
 
     }
