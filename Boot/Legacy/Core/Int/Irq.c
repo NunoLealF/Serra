@@ -122,81 +122,7 @@ static char* Irqs[] = {
 
 */
 
-// [DEMO] MOUSE DATA
-
-volatile uint8 Demo_MouseData[3] = {0, 0, 0};
-volatile uint8 Demo_MouseCycleThing = 0;
-
-volatile uint16 Demo_MousePosition[2] = {0, 0};
-volatile uint16 Demo_MouseBoundaries[2] = {720, 480};
-
-void Demo_8042Send(uint8 Message);
-void Demo_8042Wait(uint8 Type);
-
 void IrqHandler(uint8 Vector, uint8 Port) {
-
-  // [DEMO] - Handle mouse data (IRQ 12)
-
-  // Whenever we get a new mouse movement, we get three separate IRQs for some reason, and
-  // this helps keep track of it.
-
-  if (Vector == 12) {
-
-    extern volatile vbeModeInfoBlock* ModeInfo;
-
-    // Get data, and check for sync errors
-
-    Demo_MouseData[Demo_MouseCycleThing] = Inb(0x60);
-
-    if (Demo_MouseCycleThing == 0) {
-
-      if (Demo_MouseData[0] & (1 << 3) == 0) {
-        Demo_8042Send(0xFF);
-        return;
-      }
-
-    }
-
-    Demo_MouseCycleThing++;
-
-    // meow
-
-    if (Demo_MouseCycleThing >= 3) {
-
-      // We've reached the last one, so let's update it
-
-      Demo_MouseCycleThing = 0;
-
-      // Calculate the actual.. position, basically
-
-      uint8 State = Demo_MouseData[0];
-      int16 Demo_MouseX = (int16)(Demo_MouseData[1]) - ((State << 4) & 0x100);
-      int16 Demo_MouseY = (int16)(Demo_MouseData[2]) - ((State << 3) & 0x100);
-
-      // Un-invert the last position (unless the left-click button is being held)
-
-      extern void Demo_DrawMouse(vbeModeInfoBlock* Info, uint16 Position[2], uint16 Boundaries[2]);
-      if (!(State & 1)) Demo_DrawMouse(ModeInfo, Demo_MousePosition, Demo_MouseBoundaries);
-
-      // Update the position variable thing.
-
-      int16 NewX = (Demo_MousePosition[0] + Demo_MouseX) % Demo_MouseBoundaries[0];
-      while (NewX < 0) NewX += Demo_MouseBoundaries[0];
-      Demo_MousePosition[0] = NewX;
-
-      int16 NewY = (Demo_MousePosition[1] - Demo_MouseY) % Demo_MouseBoundaries[1];
-      while (NewY < 0) NewY += Demo_MouseBoundaries[1];
-      Demo_MousePosition[1] = NewY;
-
-      // Invert the new position
-      Demo_DrawMouse(ModeInfo, Demo_MousePosition, Demo_MouseBoundaries);
-
-    }
-
-    return;
-
-  }
-
 
   // Show a message to the user (saying that an IRQ has occured, and which).
   // We take our message from the Irqs[] array.
@@ -305,39 +231,5 @@ void MaskPic(uint16 Mask) {
 
   Outb(PicA_Data, (uint8)(Mask & 0xFF)); // Master PIC (0x21)
   Outb(PicB_Data, (uint8)((Mask >> 8) & 0xFF)); // Slave PIC (0xA1)
-
-}
-
-
-// [DEMO] Wait for 8042 input
-
-void Demo_8042Wait(uint8 Type) {
-
-  unsigned int Timeout = 100000;
-
-  if (Type == 0) {
-
-    while (Timeout--) {
-      if (Inb(0x64) & 1 == 1) return;
-    }
-
-  } else {
-
-    while (Timeout--) {
-      if (Inb(0x64) & 2 == 0) return;
-    }
-
-  }
-
-  return;
-
-}
-
-// [DEMO] Send something to the 8042 controller
-
-void Demo_8042Send(uint8 Message) {
-
-  Demo_8042Wait(1); Outb(0x64, 0xD4); // 0xD4 -> send something
-  Demo_8042Wait(1); Outb(0x60, Message);
 
 }
