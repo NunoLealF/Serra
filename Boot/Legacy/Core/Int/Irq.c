@@ -130,6 +130,9 @@ volatile uint8 Demo_MouseCycleThing = 0;
 volatile uint16 Demo_MousePosition[2] = {0, 0};
 volatile uint16 Demo_MouseBoundaries[2] = {720, 480};
 
+void Demo_8042Send(uint8 Message);
+void Demo_8042Wait(uint8 Type);
+
 void IrqHandler(uint8 Vector, uint8 Port) {
 
   // [DEMO] - Handle mouse data (IRQ 12)
