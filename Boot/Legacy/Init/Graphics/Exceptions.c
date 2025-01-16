@@ -60,7 +60,7 @@ void Message(messageType Type, char* String, ...) {
       break;
 
     case Kernel:
-      Print("Kernel", 0x0B);
+      Print("Boot", 0x0B);
       break;
 
     case Ok:
