@@ -756,6 +756,14 @@ void Bootloader(void) {
   // you don't need to implement anything to free memory either; just make sure that it can
   // actually allocate memory, and that it works on non-consecutive areas (above 1MiB).
 
+  // TODO: What you have now is called a watermark allocator, which is sort of fine, but
+  // only *for simple things that you don't intend on deallocating*, like page tables.
+
+  // Assume that PAE works - it's part of i686 (Pentium Pro+), and it makes things a
+  // lot more convenient for higher half kernels. Identity-map everything below 1MiB
+  // and everything else used by the system, and *then*, map the rest of the free
+  // entries to something like E000000000000000h lol)
+
   Putchar('\n', 0);
 
   uint64 AddressThing = 0x100000; // Needs to be >1MiB, since we wanna preserve everything below that
@@ -784,7 +792,7 @@ void Bootloader(void) {
   Putchar('\n', 0);
 
   Printf("Hiya, this is Serra! <3\n", 0x0F);
-  Printf("January %i %x\n", 0x3F, 16, 0x2025);
+  Printf("January %i %x\n", 0x3F, 26, 0x2025);
 
   for(;;);
 
