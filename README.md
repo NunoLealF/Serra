@@ -1,8 +1,8 @@
 # Serra
 
-<div align="center">
-  ![The Serra logo](Branding/Serra-logo.svg)
-</div>
+<p align="center">
+  <img src="Branding/Serra-logo.svg">The Serra logo</img>
+</p>
 
 &nbsp;
 
@@ -14,9 +14,10 @@ different systems, focusing on code quality and user experience.
 It's currently a work in progress, but **(TODO - finish this soon)**
 **(also, i could probably add)
 
-<div align="center">
-  ![A screenshot of Serra](Branding/Screenshot.png)
-</div>
+<p align="center">
+  <img src="Branding/Screenshot.png">A screenshot of Serra</img>
+</p>
+
 &nbsp;
 
 ## Roadmap
