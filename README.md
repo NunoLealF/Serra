@@ -1,7 +1,7 @@
 # Serra
 
 <p align="center">
-  <img src="Branding/Serra-logo.svg">The Serra logo</img>
+  <img src="Branding/Serra-logo.png" alt="The Serra logo"></img>
 </p>
 
 &nbsp;
@@ -15,7 +15,7 @@ It's currently a work in progress, but **(TODO - finish this soon)**
 **(also, i could probably add)
 
 <p align="center">
-  <img src="Branding/Screenshot.png">A screenshot of Serra</img>
+  <img src="Branding/Screenshot.png" alt="A screenshot of Serra"></img>
 </p>
 
 &nbsp;
