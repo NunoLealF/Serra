@@ -1,57 +1,49 @@
 # Serra
-### TODO - Show logo, give a better (less technical) description, show a proper roadmap.
-An x86 bootloader under construction <3
 
-![A screenshot of Serra](screenshot.png)
+<div align="center">
+  ![The Serra logo](Branding/Serra-logo.svg)
+</div>
 
 &nbsp;
 
-## Roadmap (Legacy/BIOS-only for now)
+Serra is an open-source x86 boot manager currently under construction.
 
-### 1st stage (7C00h -> 7E00h)
+My goal was to develop a universal and reliable boot manager that works across
+different systems, focusing on code quality and user experience.
 
-- Bootsector **Done**
-- Protected mode **Done**
-- Set up a proper GDT **Done**
+It's currently a work in progress, but **(TODO - finish this soon)**
+**(also, i could probably add)
 
-### 2nd stage (7E00h -> 9E00h)
+<div align="center">
+  ![A screenshot of Serra](Branding/Screenshot.png)
+</div>
+&nbsp;
 
-- String/terminal functions **Done, and now with printf!**
-- Some way of going to and from real mode **Done**
-- Basic disk read support (using EDD / int 13h) **Done**
-- Basic FAT filesystem support (FAT16 and FAT32) **Done, read-only**
-- Set up a proper IDT **Done**
-- Transferring all the info from the above to the next stage **Done, a little barebones though**
-- Loading the next stage **Done**
+## Roadmap
 
-### 3rd stage (20000h -> ?????h)
+### Boot/
+- Finish working on my legacy/BIOS bootloader (roadmap in Boot/Legacy/);
+- - Work on a watermark allocator (it should be okay for page tables);
+- - Create a decent paging implementation;
+- Create a proper outline for how the bootloader will hand over control to the kernel;
+- In the future, work on the UEFI bootloader part (Boot/Efi/).
 
-- String/terminal functions **Done, and now with printf!**
-- Some way of going to and from real mode **Done**
-- Interrupts and exceptions **Done (but a little bare-bones)**
-- E820 / memory map **Done**
-- CPUID ***Somewhat done? (haven't scanned for PAE/long mode yet)***
-- ACPI **Done, if a little bare-bones**
-- VESA/EDID **Done**
-- SMBIOS **Done (but a little bare-bones)**
-- Disk drivers (int13h) *Mostly done already*
-- Filesystem drivers *Mostly done already*
-- Writing a (simple) physical memory manager *Very bare-bones*
-- Paging, 32-bit and PAE/long-mode
-- Other miscellaneous things *In progress*
-- Loading the next stage (with long mode!)
+### Branding/
+- - Update screenshots, add more media;
 
-### Common stage (?????h)
-
-- Basically all of the above, but with long-mode support, and also with an EFI stub that
-does the same job as the BIOS/Legacy bootloader stub.
-
-- Should probably work on some sort of standard protocol (maybe reuse Multiboot/Limine?)
+### Common/
+- Create a common 'kernel', loaded by the bootloader in Boot/Legacy or Boot/Efi;
+- - Work on boot tables, configuration files, etc.;
+- - Implement a few common drivers, for things like graphics support, PCI, etc.;
+- - Add filesystem support (something involving a VFS maybe?);
+- Add the actual boot manager functionality (support for boot protocols);
+- Create a simple user interface (GUI *and* text-mode as fallback)
 
 &nbsp;
 
 ## Disclaimer
 This project has been released under the MIT license. For more information, please
 refer to the accompanying license agreement. <3
+**(TODO: add a disclaimer that it's not affiliated with MIT)**
 
-*Last updated on January 3rd 2025*
+*Last updated on February 3rd 2025*
