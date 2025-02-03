@@ -12,7 +12,7 @@ My goal was to develop a universal and reliable boot manager that works across
 different systems, focusing on code quality and user experience.
 
 It's currently a work in progress, but **(TODO - finish this soon)**
-**(also, i could probably add)
+**(also, i could probably add better screenshots, etc. etc.)**
 
 <p align="center">
   <img src="Branding/Screenshot.png" alt="A screenshot of Serra"></img>
