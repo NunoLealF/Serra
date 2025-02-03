@@ -1,4 +1,6 @@
-# Serra
+# Serra - a boot manager under construction <3
+
+&nbsp;
 
 <p align="center">
   <img src="Branding/Serra-logo.png" alt="The Serra logo"></img>
