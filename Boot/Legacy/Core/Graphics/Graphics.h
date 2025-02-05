@@ -1,4 +1,4 @@
-// Copyright (C) 2024 NunoLealF
+// Copyright (C) 2025 NunoLealF
 // This file is part of the Serra project, which is released under the MIT license.
 // For more information, please refer to the accompanying license agreement. <3
 
@@ -269,7 +269,7 @@
   uint32 SetVbeMode(uint16 ModeNumber, bool UseCrtc, bool UseLinearModel, bool ClearDisplay, void* CrtcBuffer);
 
   uint32 GetEdidInfoBlock(edidInfoBlock* Buffer, uint16 ControllerNum);
-  
+
   uint16 FindBestVbeMode(uint16* VbeModeList, uint16 PreferredX_Resolution, uint16 PreferredY_Resolution);
 
 
