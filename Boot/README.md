@@ -1,4 +1,4 @@
-## Boot/ roadmap <sub>(Legacy/BIOS-only for now)</sub>
+## Boot/ roadmap <sup>(Legacy/BIOS-only for now)</sup>
 
 (Disclaimer: Boot/Legacy/ is for the BIOS bootloader, Boot/Efi is for the
 future UEFI bootloader, and Common/ is for the common kernel/manager)
