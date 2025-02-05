@@ -13,8 +13,10 @@ Serra is an open-source x86 boot manager currently under construction.
 My goal was to develop a universal and reliable boot manager that works across
 different systems, focusing on code quality and user experience.
 
-It's currently a work in progress (see the [Roadmap](#roadmap) below), but
-right now, **(todo: my current goal is to have it ready by early June.)**
+It's currently a work in progress (see the [roadmap](#roadmap) below), but
+right now, ***(todo:* my current goal is to have it ready by early June.)**
+
+&nbsp;
 
 <p align="center">
   <img src="Branding/Boot-process.png" alt="A write-up of Serra's boot process"></img>
@@ -59,4 +61,4 @@ For more information, please refer to the accompanying license agreement. <3
 
 &nbsp;
 
-*Last updated on February 5th 2025*
+*(last updated on February 5th 2025)*
