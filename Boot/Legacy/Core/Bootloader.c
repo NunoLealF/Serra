@@ -780,8 +780,34 @@ void Bootloader(void) {
   // uses up to 0.2% of total memory, so for a 128MiB system, it'll occupy around 256KiB, give
   // or take.
 
-  // -> Finally, actually load the rest of the bootloader and jump to it.
-  // [TODO: ...well, that, lol.]
+  /*
+
+  Okay, *here's the plan.*
+
+  -> [1] Read up on this: https://os.phil-opp.com/paging-introduction/
+   -> [1a] The 8b 'address space' is just the *PML-4 entry*.
+
+  -> [2] Use a bump/watermark allocator for the initial page tables.
+   -> [2a] Use 2MiB pages for the [00h] identity-mapped address space.
+   -> [2b] Use 4KiB pages for the [80h] free memory address space.
+
+  -> [3] Identity-map everything to 'address space' [00h] with 2MiB pages.
+
+  -> [4] Map all free memory areas to 'address space' [80h] with 4KiB pages.
+   -> [4a] This doesn't include the page tables; reserve space beforehand.
+
+  -> [5] Enable paging.
+
+  -> [6] Using the FAT driver, load the modules and kernel to the beginning
+  of the 'address space' [80h].
+   -> [6a] Also allocate some additional space for the stack.
+
+  -> [7] Configure everything as needed, and jump to the kernel.
+
+  */
+
+  Putchar('\n', 0);
+  Message(Kernel, "TODO: Enable paging, load kernel, etc.; \n(I'll need to carefully plan this out).");
 
 
 
@@ -792,7 +818,7 @@ void Bootloader(void) {
   Putchar('\n', 0);
 
   Printf("Hiya, this is Serra! <3\n", 0x0F);
-  Printf("February %i %x\n", 0x3F, 5, 0x2025);
+  Printf("February %i %x\n", 0x3F, 7, 0x2025);
 
   for(;;);
 
