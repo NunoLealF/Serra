@@ -91,19 +91,19 @@ Dumpbin:
 
 Run:
 	@echo "Launching Qemu.."
-	@qemu-system-i386 -cpu pentium3 -m 128 -drive file=Legacy.bin,format=raw
+	@qemu-system-x86_64 -cpu qemu64 -m 128 -drive file=Legacy.bin,format=raw
 
 RunGdb:
 	@echo "Launching Qemu.."
-	@qemu-system-i386 -s -S -cpu pentium3 -m 128 -drive file=Legacy.bin,format=raw
+	@qemu-system-x86_64 -s -S -cpu qemu64 -m 128 -drive file=Legacy.bin,format=raw
 
 RunInt:
 	@echo "Launching Qemu with -d int.."
-	@qemu-system-i386 -cpu pentium3 -m 128 -drive file=Legacy.bin,format=raw -d int
+	@qemu-system-x86_64 -cpu qemu64 -m 128 -drive file=Legacy.bin,format=raw -d int
 
 RunKvm:
 	@echo "Launching Qemu with KVM.."
-	@qemu-system-i386 -cpu pentium3 -m 128 -drive file=Legacy.bin,format=raw -enable-kvm
+	@qemu-system-x86_64 -cpu qemu64 -m 128 -drive file=Legacy.bin,format=raw -enable-kvm
 
 # Lowercase names
 

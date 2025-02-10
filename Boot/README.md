@@ -25,14 +25,14 @@ future UEFI bootloader, and Common/ is for the common kernel/manager)
 - Some way of going to and from real mode **Done**
 - Interrupts and exceptions **Done (but a little bare-bones)**
 - E820 / memory map **Done**
-- CPUID ***Somewhat done? (haven't scanned for PAE/long mode yet)***
+- CPUID ***Done (might be incomplete)***
 - ACPI **Done, if a little bare-bones**
 - VESA/EDID **Done**
 - SMBIOS **Done (but a little bare-bones)**
-- Disk drivers (int13h) *Mostly done already; might need to fix bugs*
-- Filesystem drivers *Mostly done already; might need to fix bugs*
-- Writing a (simple) physical memory manager *Very bare-bones*
-- Paging, 32-bit and PAE/long-mode
+- Disk drivers (int13h) ***Close to done** (read-only, might need to fix bugs)*
+- Filesystem drivers ***Close to done** (read-only, might need to fix bugs)*
+- Writing a (simple) physical memory manager *Initial implementation*
+- Paging, 32-bit and PAE/long-mode *Planning stages, long-mode support is needed*
 - Other miscellaneous things *In progress*
 - Loading the next stage (with long mode!)
 
@@ -56,4 +56,4 @@ For more information, please refer to the accompanying license agreement. <3
 
 &nbsp;
 
-*(last updated on February 5th 2025)*
+*(last updated on February 10th 2025)*
