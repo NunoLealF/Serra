@@ -2,36 +2,38 @@
 # This file is part of the Serra project, which is released under the MIT license.
 # For more information, please refer to the accompanying license agreement. <3
 
-# You'll need an i686-elf-gcc toolchain and nasm
+# You'll need an i686-elf-gcc toolchain and nasm, as well as qemu if you want
+# to emulate it.
 
 AS = nasm
 CC = i686-elf-gcc
 LD = i686-elf-ld
 OBJC = i686-elf-objcopy
 OBJD = i686-elf-objdump
+QEMU = qemu-system-x86_64
 
 
-# Compiler flags:
+# [Linker flags]
+# -Wl,--no-warn-rwx-segments: Don't warn about mixing data and executable sections.
 
+# [Compiler flags]
 # -ffunction-sections: Split up every function into a separate section in the object file.
-# You want to place the main function in the beginning, so this is needed.
-
+# (You want to place the main function in the beginning, so this is needed.)
 # -ffreestanding: This is a freestanding environment. Also, implies fno-builtin.
-
 # -std=c11: Use the regular C11 standard
-
 # -Os: Optimize the resulting file/binary for space. [Warning, do *not* use O3]
-
 # -Wall: Enable all warnings.
-
 # -Wextra: Enable even more warnings. (Not sure why wall doesn't take care of this)
-
 # -Wpedantic: Be pedantic about the C standard / any possible mistakes
-
 # -funsigned-char: Use unsigned chars for characters.
+
+# [Emulator flags]
+# -cpu qemu64: Use QEMU's default 64-bit CPU (with the minimum feature set)
+# -m 128: Limit the virtual machine to 128 MiB of RAM
 
 LDFLAGS = -Wl,--no-warn-rwx-segments
 CFLAGS = -std=c11 -ffunction-sections -funsigned-char -ffreestanding -Os -Wall -Wextra -Wpedantic -Wno-discarded-qualifiers
+QFLAGS = -cpu qemu64 -m 128
 
 
 # The .PHONY directive is used on targets that don't output anything. For example, running 'make all' builds our
@@ -85,26 +87,26 @@ Clean:
 # (...)
 
 Dump:
-	$(OBJD) -S Core/Serra.elf
+	@$(OBJD) -S Core/Serra.elf
 
 Dumpbin:
-	$(OBJD) -Mintel,i686 -b binary -m i386 --adjust-vma=0x7E00 -D Legacy.bin
+	@$(OBJD) -Mintel,i686 -b binary -m i386 --adjust-vma=0x7E00 -D Legacy.bin
 
 Run:
-	@echo "Launching Qemu.."
-	@qemu-system-x86_64 -cpu qemu64 -m 128 -drive file=Legacy.bin,format=raw
+	@echo "\nLaunching QEMU.."
+	$(QEMU) $(QFLAGS) -drive file=Legacy.bin,format=raw
 
 RunGdb:
-	@echo "Launching Qemu.."
-	@qemu-system-x86_64 -s -S -cpu qemu64 -m 128 -drive file=Legacy.bin,format=raw
+	@echo "\nLaunching QEMU with GDB.."
+	$(QEMU) $(QFLAGS) -s -S -drive file=Legacy.bin,format=raw
 
 RunInt:
-	@echo "Launching Qemu with -d int.."
-	@qemu-system-x86_64 -cpu qemu64 -m 128 -drive file=Legacy.bin,format=raw -d int
+	@echo "\nLaunching QEMU with -d int.."
+	@$(QEMU) $(QFLAGS) -drive file=Legacy.bin,format=raw -d int
 
 RunKvm:
-	@echo "Launching Qemu with KVM.."
-	@qemu-system-x86_64 -cpu qemu64 -m 128 -drive file=Legacy.bin,format=raw -enable-kvm
+	@echo "\nLaunching QEMU with KVM.."
+	$(QEMU) $(QFLAGS) -drive file=Legacy.bin,format=raw -enable-kvm
 
 # Lowercase names
 
