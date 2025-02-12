@@ -53,6 +53,6 @@
   // Paging- and allocation-related functions, from Paging/Paging.c.
   // (TODO: Do that, I guess)
 
-  uint64 AllocFromUsableMmap(uint64 Address, uint32 Size, mmapEntry* UsableMmap, uint8 NumUsableMmapEntries);
+  uint64 AllocateFromMmap(uint64 Start, uint32 Size, mmapEntry* UsableMmap, uint8 NumUsableMmapEntries);
 
 #endif

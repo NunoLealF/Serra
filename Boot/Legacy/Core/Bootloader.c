@@ -771,11 +771,11 @@ void Bootloader(void) {
   uint64 AddressThing = 0x100000; // Needs to be >1MiB, since we wanna preserve everything below that
   uint32 SizeThing = 0x23456;
 
-  uint64 Test = AllocFromUsableMmap(AddressThing, SizeThing, UsableMmap, NumUsableMmapEntries);
-  Message(Info, "(debug) Tested out AllocFromUsableMmap()\n       (debug) (initial address: %xh, new address: [%xh, %xh])", (uint32)AddressThing, (uint32)(Test - SizeThing), (uint32)Test);
+  uint64 Test = AllocateFromMmap(AddressThing, SizeThing, UsableMmap, NumUsableMmapEntries);
+  Message(Info, "(debug) Tested out AllocateFromMmap()\n       (debug) (initial address: %xh, new address: [%xh, %xh])", (uint32)AddressThing, (uint32)(Test - SizeThing), (uint32)Test);
 
-  uint64 Test2 = AllocFromUsableMmap(Test, 0x122A, UsableMmap, NumUsableMmapEntries);
-  Message(Info, "(debug) Tested out AllocFromUsableMmap()\n       (debug) (initial address: %xh, new address: [%xh, %xh])", (uint32)Test, (uint32)(Test2 - 0x122A), (uint32)Test2);
+  uint64 Test2 = AllocateFromMmap(Test, 0x122A, UsableMmap, NumUsableMmapEntries);
+  Message(Info, "(debug) Tested out AllocateFromMmap()\n       (debug) (initial address: %xh, new address: [%xh, %xh])", (uint32)Test, (uint32)(Test2 - 0x122A), (uint32)Test2);
 
 
   // -> Identity-map all of memory (or at least, all that actually matters). This generally
@@ -820,7 +820,7 @@ void Bootloader(void) {
   Putchar('\n', 0);
 
   Printf("Hiya, this is Serra! <3\n", 0x0F);
-  Printf("February %i %x\n", 0x3F, 10, 0x2025);
+  Printf("February %i %x\n", 0x3F, 12, 0x2025);
 
   for(;;);
 
