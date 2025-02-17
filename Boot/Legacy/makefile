@@ -48,7 +48,7 @@ QFLAGS = -cpu qemu64 -m 128
 # Names ->>
 # (By the way, it's assumed that you're on Linux, or at least some sort of Unix-like system)
 
-All: Clean Bootsector/Bootsector.bin Init/Init.bin Shared/Rm/Rm.bin Core/Serra.bin Legacy.bin
+All: Clean Bootsector/Bootsector.bin Init/Init.bin Shared/Rm/Rm.bin Core/Serra.bin Bootx32.bin Legacy.bin
 
 Clean:
 	@echo "Cleaning leftover files (*.o, *.elf, *.bin).."
@@ -239,10 +239,12 @@ Core/Serra.bin: Core/Bootloader.o Core/Cpu/Cpu.o Core/Memory/Memory.o Core/Memor
 	@$(CC) -T Core/Linker.ld $(LDFLAGS) -o Core/Serra.elf -ffreestanding -nolibc -nostdlib -lgcc $^
 	@$(OBJC) -O binary Core/Serra.elf Core/Serra.bin
 
+Bootx32.bin: Core/Serra.bin
+	@cp Core/Serra.bin Bootx32.bin
 
 # Mix all of the different stages together (8192 sectors, so, a 4MiB img)
 
-Legacy.bin: Bootsector/Bootsector.bin Init/Init.bin Shared/Rm/Rm.bin Core/Serra.bin
+Legacy.bin: Bootsector/Bootsector.bin Init/Init.bin Shared/Rm/Rm.bin Core/Serra.bin Bootx32.bin
 
 	@echo "Building $@"
 	@dd if=/dev/zero of=Legacy.bin bs=512 count=8192 status=none
@@ -260,7 +262,8 @@ Legacy.bin: Bootsector/Bootsector.bin Init/Init.bin Shared/Rm/Rm.bin Core/Serra.
 
 	@mformat -i Legacy.bin -c 1 -k -R 32 ::
 
-# (Add the 3rd stage bootloader)
+# (Add the 3rd stage bootloader; it's assumed that the actual bootloader will be in
+# Boot/Bootx32.bin, with the kernel/common stage coming later on.)
 
 	@mmd -i Legacy.bin ::/Boot
-	@mcopy -i Legacy.bin Core/Serra.bin ::/Boot
+	@mcopy -i Legacy.bin Bootx32.bin ::/Boot/

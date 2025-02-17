@@ -84,7 +84,7 @@ void __attribute__((noreturn)) Init(void) {
 
    This stage of the bootloader occupies the space between 7E00h and 9E00h in memory, and
    its only role is to collect information about the system, and to jump to the next stage
-   of the bootloader (a file named 'Boot/Serra.bin' in a FAT filesystem).
+   of the bootloader (a file named 'Boot/Bootx32.bin' in a FAT filesystem).
 
 */
 
@@ -348,21 +348,21 @@ void __attribute__((noreturn)) Bootloader(void) {
     Panic("Failed to locate Boot/.");
   }
 
-  // (After that, we need to search for a file called 'Serra.bin' from within the Boot/ folder,
+  // (After that, we need to search for a file called 'Bootx32.bin' from within the Boot/ folder,
   // this time using the DataSectorOffset instead of the RootSectorOffset)
 
-  fatDirectory SerraDirectory = FindDirectory(BootCluster, Bpb.SectorsPerCluster, Bpb.HiddenSectors, Bpb.ReservedSectors, DataSectorOffset, "SERRA   ", "BIN", false, PartitionIsFat32);
+  fatDirectory SerraDirectory = FindDirectory(BootCluster, Bpb.SectorsPerCluster, Bpb.HiddenSectors, Bpb.ReservedSectors, DataSectorOffset, "BOOTX32 ", "BIN", false, PartitionIsFat32);
   uint32 SerraCluster = GetDirectoryCluster(SerraDirectory);
 
   if (ExceedsLimit(SerraCluster, ClusterLimit)) {
-    Panic("Failed to locate Boot/Serra.bin.");
+    Panic("Failed to locate Boot/Bootx32.bin.");
   } else {
-    Message(Ok, "Located Boot/Serra.bin.");
+    Message(Ok, "Located Boot/Bootx32.bin.");
   }
 
 
   // Now, we can actually go ahead and load the file from disk. Since we know the cluster
-  // number of the "Boot/Serra.bin" file, we can just put it into ReadFile(), and it'll read
+  // number of the "Boot/Bootx32.bin" file, we can just put it into ReadFile(), and it'll read
   // everything for us, like this:
 
   // (Our third-stage bootloader will occupy the space from 20000h onwards)
@@ -372,9 +372,9 @@ void __attribute__((noreturn)) Bootloader(void) {
   bool ReadFileSuccessful = ReadFile((void*)Bootloader_Address, SerraDirectory, Bpb.SectorsPerCluster, Bpb.HiddenSectors, Bpb.ReservedSectors, DataSectorOffset, PartitionIsFat32);
 
   if (ReadFileSuccessful == true) {
-    Message(Ok, "Successfully read Boot/Serra.bin to %xh.", Bootloader_Address);
+    Message(Ok, "Successfully read Boot/Bootx32.bin to %xh.", Bootloader_Address);
   } else {
-    Panic("Failed to read Boot/Serra.bin from disk.");
+    Panic("Failed to read Boot/Bootx32.bin from disk.");
   }
 
 
