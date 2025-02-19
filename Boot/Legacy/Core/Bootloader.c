@@ -255,118 +255,6 @@ void Bootloader(void) {
 
 
 
-  // [Process the E820 memory map]
-
-  // The first step here is to just sort each entry according to its base address,
-  // like this (this is an O(n²) algorithm):
-
-  for (uint16 Threshold = 1; Threshold < NumMmapEntries; Threshold++) {
-
-    for (uint16 Position = Threshold; Position > 0; Position--) {
-
-      if (Mmap[Position].Base < Mmap[Position - 1].Base) {
-        Memswap((void*)(int)&Mmap[Position], (void*)(int)&Mmap[Position - 1], sizeof(mmapEntry));
-      } else {
-        break;
-      }
-
-    }
-
-  }
-
-  // Next, we just need to isolate all the usable entries, and deal with overlapping
-  // entries. (might be a good idea to put this in a function..)
-
-  uint8 UsableMmapBuffer[sizeof(mmapEntry) * NumUsableMmapEntries];
-  mmapEntry* UsableMmap = (mmapEntry*)UsableMmapBuffer;
-
-  uint64 MinStart = 0;
-  uint8 UsablePosition = 0;
-
-  for (uint8 Position = 0; Position < NumMmapEntries; Position++) {
-
-    // Get the start and end position of this entry
-
-    uint64 Start = Mmap[Position].Base;
-    uint64 End = (Start + Mmap[Position].Limit);
-
-    // Next, update the minimum start, and skip over any entries that end before it
-    // (if it's a usable/'free' entry, then decrement the number of usable/'free' entries)
-
-    if (Start < MinStart) {
-      Start = MinStart;
-    }
-
-    if (End <= MinStart) {
-
-      if (Mmap[Position].Type == 1) {
-        NumUsableMmapEntries--;
-      }
-
-      continue;
-
-    }
-
-    // Finally, if the type is right, then let's go ahead and actually add the entry
-    // (if the type shows that it's usable)
-
-    if (Mmap[Position].Type == 1) {
-
-      // Update the start variable, if necessary
-
-      if (Start < MinStart) {
-        Start = MinStart;
-      }
-
-      // Update the end variable; for this, we only need to check for the next entry,
-      // as the list of entries is already sorted for us
-
-      if (Position < (NumMmapEntries - 1)) {
-
-        if (End > Mmap[Position + 1].Base) {
-          End = Mmap[Position + 1].Base;
-        }
-
-      }
-
-      // Finally, add the entry to the usable memory map area, and increment the position
-
-      UsableMmap[UsablePosition].Base = Start;
-      UsableMmap[UsablePosition].Limit = (End - Start);
-      UsableMmap[UsablePosition].Type = Mmap[Position].Type;
-      UsableMmap[UsablePosition].Acpi = Mmap[Position].Acpi;
-
-      UsablePosition++;
-
-    }
-
-    // Update MinStart
-
-    MinStart = End;
-
-  }
-
-  // (Everything is done; we have the number of usable mmap entries in NumUsableMmapEntries)
-
-  Message(Ok, "Successfully sorted the system memory map entries.");
-
-  for (uint8 Position = 0; Position < NumUsableMmapEntries; Position++) {
-
-    // TODO: This doesn't accurately show 64-bit addresses (above 4GiB), or sizes above 4
-    // TiB, due to the limits of Itoa() (since our implementation only accepts 32-bit numbers)
-
-    uint32 Base = (uint32)(UsableMmap[Position].Base & 0xFFFFFFFF);
-    uint32 Limit = (uint32)((UsableMmap[Position].Base + UsableMmap[Position].Limit) & 0xFFFFFFFF);
-
-    uint32 Size = (uint32)(UsableMmap[Position].Limit / 1024);
-
-    Message(Info, "Free memory area from %xh to %xh (%d KiB)", Base, Limit, Size);
-
-  }
-
-
-
-
   // [Get CPUID data]
 
   Putchar('\n', 0);
@@ -752,35 +640,147 @@ void Bootloader(void) {
 
 
 
-  // TODO:
 
-  // -> Create a physical memory allocator. This doesn't have to be anything complicated, and
-  // you don't need to implement anything to free memory either; just make sure that it can
-  // actually allocate memory, and that it works on non-consecutive areas (above 1MiB).
 
-  // TODO: What you have now is called a watermark allocator, which is sort of fine, but
-  // only *for simple things that you don't intend on deallocating*, like page tables.
 
-  // Assume that PAE works - it's part of i686 (Pentium Pro+), and it makes things a
-  // lot more convenient for higher half kernels. Identity-map everything below 1MiB
-  // and everything else used by the system, and *then*, map the rest of the free
-  // entries to something like E000000000000000h lol)
+  // [Process the E820 memory map]
+
+  // (TODO 1: add this to its own function, i guess..? in Mmap.c)
+  // (TODO 2: also, add specific exceptions for areas under 1MiB, VESA video modes, etc.)
 
   Putchar('\n', 0);
+  Message(Kernel, "Preparing to process the system's memory map.");
+
+  // The first step here is to just sort each entry according to its base address,
+  // like this (this is an O(n²) algorithm):
+
+  for (uint16 Threshold = 1; Threshold < NumMmapEntries; Threshold++) {
+
+    for (uint16 Position = Threshold; Position > 0; Position--) {
+
+      if (Mmap[Position].Base < Mmap[Position - 1].Base) {
+        Memswap((void*)(int)&Mmap[Position], (void*)(int)&Mmap[Position - 1], sizeof(mmapEntry));
+      } else {
+        break;
+      }
+
+    }
+
+  }
+
+  // Next, we just need to isolate all the usable entries, and deal with overlapping
+  // entries. (might be a good idea to put this in a function..)
+
+  uint8 UsableMmapBuffer[sizeof(mmapEntry) * NumUsableMmapEntries];
+  mmapEntry* UsableMmap = (mmapEntry*)UsableMmapBuffer;
+
+  uint64 MinStart = 0;
+  uint8 UsablePosition = 0;
+
+  for (uint8 Position = 0; Position < NumMmapEntries; Position++) {
+
+    // Get the start and end position of this entry
+
+    uint64 Start = Mmap[Position].Base;
+    uint64 End = (Start + Mmap[Position].Limit);
+
+    // Next, update the minimum start, and skip over any entries that end before it
+    // (if it's a usable/'free' entry, then decrement the number of usable/'free' entries)
+
+    if (Start < MinStart) {
+      Start = MinStart;
+    }
+
+    if (End <= MinStart) {
+
+      if (Mmap[Position].Type == 1) {
+        NumUsableMmapEntries--;
+      }
+
+      continue;
+
+    }
+
+    // Finally, if the type is right, then let's go ahead and actually add the entry
+    // (if the type shows that it's usable)
+
+    if (Mmap[Position].Type == 1) {
+
+      // Update the start variable, if necessary
+
+      if (Start < MinStart) {
+        Start = MinStart;
+      }
+
+      // Update the end variable; for this, we only need to check for the next entry,
+      // as the list of entries is already sorted for us
+
+      if (Position < (NumMmapEntries - 1)) {
+
+        if (End > Mmap[Position + 1].Base) {
+          End = Mmap[Position + 1].Base;
+        }
+
+      }
+
+      // Finally, add the entry to the usable memory map area, and increment the position
+
+      UsableMmap[UsablePosition].Base = Start;
+      UsableMmap[UsablePosition].Limit = (End - Start);
+      UsableMmap[UsablePosition].Type = Mmap[Position].Type;
+      UsableMmap[UsablePosition].Acpi = Mmap[Position].Acpi;
+
+      UsablePosition++;
+
+    }
+
+    // Update MinStart
+
+    MinStart = End;
+
+  }
+
+  // (Everything is done; we have the number of usable mmap entries in NumUsableMmapEntries)
+
+  Message(Ok, "Successfully sorted the system memory map entries.");
+
+  for (uint8 Position = 0; Position < NumUsableMmapEntries; Position++) {
+
+    // TODO: This doesn't accurately show 64-bit addresses (above 4GiB), or sizes above 4
+    // TiB, due to the limits of Itoa() (since our implementation only accepts 32-bit numbers)
+
+    uint32 Base = (uint32)(UsableMmap[Position].Base & 0xFFFFFFFF);
+    uint32 Limit = (uint32)((UsableMmap[Position].Base + UsableMmap[Position].Limit) & 0xFFFFFFFF);
+
+    uint32 Size = (uint32)(UsableMmap[Position].Limit / 1024);
+
+    Message(Info, "Free memory area from %xh to %xh (%d KiB)", Base, Limit, Size);
+
+  }
+
+
+
+
+
+
+  // TODO: (This is basically just a test of a simple bump allocator, based on
+  // the UsableMmap we just made. Use it for page tables and such)
+
+  /*
+
+  Putchar('\n', 0);
+  Message(Kernel, "(debug) Testing out a simple bump allocator, AllocateFromMmap()");
 
   uint64 AddressThing = 0x100000; // Needs to be >1MiB, since we wanna preserve everything below that
   uint32 SizeThing = 0x23456;
 
   uint64 Test = AllocateFromMmap(AddressThing, SizeThing, UsableMmap, NumUsableMmapEntries);
-  Message(Info, "(debug) Tested out AllocateFromMmap()\n       (debug) (initial address: %xh, new address: [%xh, %xh])", (uint32)AddressThing, (uint32)(Test - SizeThing), (uint32)Test);
+  Message(Info, "Tested out AllocateFromMmap()\n       (debug) (initial address: %xh, new address: [%xh, %xh])", (uint32)AddressThing, (uint32)(Test - SizeThing), (uint32)Test);
 
   uint64 Test2 = AllocateFromMmap(Test, 0x122A, UsableMmap, NumUsableMmapEntries);
-  Message(Info, "(debug) Tested out AllocateFromMmap()\n       (debug) (initial address: %xh, new address: [%xh, %xh])", (uint32)Test, (uint32)(Test2 - 0x122A), (uint32)Test2);
+  Message(Info, "Tested out AllocateFromMmap()\n       (debug) (initial address: %xh, new address: [%xh, %xh])", (uint32)Test, (uint32)(Test2 - 0x122A), (uint32)Test2);
 
-
-  // -> Identity-map all of memory (or at least, all that actually matters). This generally
-  // uses up to 0.2% of total memory, so for a 128MiB system, it'll occupy around 256KiB, give
-  // or take.
+  */
 
   /*
 
@@ -794,6 +794,9 @@ void Bootloader(void) {
    -> [2b] Use 4KiB pages for the [80h] free memory address space.
 
   -> [3] Identity-map everything to 'address space' [00h] with 2MiB pages.
+   -> [3a] Just to be clear, these are universally supported in long mode,
+   they're part of PSE which is required
+   -> [3b] And, yes, this should work
 
   -> [4] Map all free memory areas to 'address space' [80h] with 4KiB pages.
    -> [4a] This doesn't include the page tables; reserve space beforehand.
@@ -809,9 +812,30 @@ void Bootloader(void) {
   */
 
   Putchar('\n', 0);
-  Message(Kernel, "TODO: Enable paging, load kernel, etc.; \n(I'll need to carefully plan this out).");
+  Message(Warning, "TODO: Enable paging, load kernel, etc.; \n(I'll need to carefully plan this out).");
 
+  // (DEBUG: Show unfiltered memory map, just to check for any weird
+  // abnormalities)
 
+  /*
+
+  Putchar('\n', 0);
+
+  for (uint8 Position = 0; Position < NumMmapEntries; Position++) {
+
+    uint32 BaseLow = (uint32)(Mmap[Position].Base & 0xFFFFFFFF);
+    uint32 BaseHigh = (uint32)(((uint64)Mmap[Position].Base >> 32) & 0xFFFFFFFF);
+    uint32 LimitLow = (uint32)((uint64)(Mmap[Position].Base + Mmap[Position].Limit) & 0xFFFFFFFF);
+    uint32 LimitHigh = (uint32)(((uint64)(Mmap[Position].Base + Mmap[Position].Limit) >> 32) & 0xFFFFFFFF);
+    uint32 Size = (uint32)(Mmap[Position].Limit / 1024);
+
+    Message(Info, "Type %d memory area from %x,%xh to %x,%xh (%d KiB)", Mmap[Position].Type, BaseHigh, BaseLow, LimitHigh, LimitLow, Size);
+
+  }
+
+  Message(Info, "Vga -> %xh, Vbe -> %xh, Edid -> %xh, Framebuffer -> %xh", 0xB8000, &VbeInfo, &EdidInfo, BestVbeModeInfo.Vbe2Info.Framebuffer);
+
+  */
 
   // [For now, let's just leave things here]
 
@@ -819,8 +843,8 @@ void Bootloader(void) {
 
   Putchar('\n', 0);
 
-  Printf("Hiya, this is Serra! <3\n", 0x0F);
-  Printf("February %i %x\n", 0x3F, 17, 0x2025);
+  Printf("Hi, this is Serra! <3\n", 0x0F);
+  Printf("February %i %x\n", 0x3F, 19, 0x2025);
 
   for(;;);
 
