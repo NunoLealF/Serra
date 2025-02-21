@@ -824,6 +824,26 @@ void Bootloader(void) {
   Message(Info, "Pde=%x,%x", (uint32)(PdeTest >> 32), (uint32)(PdeTest & 0xFFFFFFFF)); // looks fine
   Message(Info, "Pml=%x,%x", (uint32)(PmlTest >> 32), (uint32)(PmlTest & 0xFFFFFFFF)); //seems to work okay?
 
+  // (DEBUG: Why not)
+
+  Putchar('\n', 0);
+  Message(Kernel, "(debug) Attempting to literally enable paging+longmode");
+
+  uint64* Pde = (uint64*)0x100000; *Pde = MakePdeEntry(0, false, false, true, true, false, true);
+  uint64* Pml3 = (uint64*)0x101000; *Pml3 = MakePmlEntry((uint64)Pde, false, true, true, false, true);
+  uint64* Pml4 = (uint64*)0x102000; *Pml4 = MakePmlEntry((uint64)Pml3, false, true, true, false, true);
+
+  Message(Info, "Basepde = %x, basepml3 = %x, basepml4 = %x", (uint32)(Pde), (uint32)(Pml3), (uint32)(Pml4));
+
+  __asm__ volatile ("mov %cr4, %edx; or $(1 << 5), %edx; mov %edx, %cr4;"
+                    "mov $0xC0000080, %ecx; rdmsr; or $(1 << 8), %eax; wrmsr;"
+                    "mov $0x102000, %eax; mov %eax, %cr3;"
+                    "or $((1 << 31) | (1 << 0)), %ebx; mov %ebx, %cr0");
+
+  Putchar('\n', 0);
+  Message(Info, "If you are somehow seeing this message, you're in 64-bit mode, hooray!");
+  Message(Warning, "In order to crash the system, press any key"); // The IDT is broken as hell right now
+  MaskPic(0xFFFD);
 
   // (DEBUG: Show unfiltered memory map, just to check for any weird
   // abnormalities)
