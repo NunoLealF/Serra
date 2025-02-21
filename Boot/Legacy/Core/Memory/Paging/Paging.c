@@ -6,10 +6,99 @@
 #include "../Memory.h"
 
 // TODO - paging-related functions.
-// ...
+
+// (This is basically just a simple implementation, but in the future, try
+// to make specific #defines for flags, etc. etc.; also, the address doesn't
+// need to go through anything too weird for the most part
 
 
 
+// TODO/DEBUG: (4kib page)
+
+uint64 MakePteEntry(uint64 Address, bool Xd, bool Global, bool CacheDisable, bool WriteThrough, bool User, bool Rw) {
+
+  // Initialize the entry itself (the present (P) bit is always set to 1).
+
+  uint64 Entry = (1 << 0);
+
+  // Write the necessary flag bits to the entry; we ignore the accessed (A),
+  // dirty (D), PAT and Protection Key bits, setting them to zero.
+
+  if (Rw == true) (Entry |= (1 << 1)); // RW bit
+  if (User == true) (Entry |= (1 << 2)); // User/supervisor bit
+  if (WriteThrough == true) (Entry |= (1 << 3)); // PWT bit
+  if (CacheDisable == true) (Entry |= (1 << 4)); // PCT bit
+  if (Global == true) (Entry |= (1 << 8)); // Global bit
+  if (Xd == true) (Entry |= (1ULL << 63)); // XD bit.
+
+  // Write the page frame address to the entry (from bit 12), and return.
+
+  Entry |= (Address & (~0ULL << 12)); // Physical address of the 4KiB page frame
+
+  return Entry;
+
+}
+
+
+
+// TODO/DEBUG: (2mib page)
+
+uint64 MakePdeEntry(uint64 Address, bool Xd, bool Global, bool CacheDisable, bool WriteThrough, bool User, bool Rw) {
+
+  // Initialize the entry itself (the present (P) bit is always set to 1).
+  // We also set the PS (page size) flag to make this a 2MiB page.
+
+  uint64 Entry = (1 << 0) | (1 << 7);
+
+  // Write the necessary flag bits to the entry; we ignore the accessed (A),
+  // dirty (D), PAT and Protection Key bits, setting them to zero.
+
+  if (Rw == true) (Entry |= (1 << 1)); // RW bit
+  if (User == true) (Entry |= (1 << 2)); // User/supervisor bit
+  if (WriteThrough == true) (Entry |= (1 << 3)); // PWT bit
+  if (CacheDisable == true) (Entry |= (1 << 4)); // PCT bit
+  if (Global == true) (Entry |= (1 << 8)); // Global bit
+  if (Xd == true) (Entry |= (1ULL << 63)); // XD bit.
+
+  // Write the page frame address to the entry (from bit 21), and return.
+
+  Entry |= (Address & (~0ULL << 21)); // Physical address of the 2MiB page frame.
+
+  return Entry;
+
+}
+
+
+
+// TODO/DEBUG: (Works equally for PML2/PML3/PML4 (PDE, PDPTE, PML4e))
+
+uint64 MakePmlEntry(uint64 Address, bool Xd, bool CacheDisable, bool WriteThrough, bool User, bool Rw) {
+
+  // Initialize the entry itself (the present (P) bit is always set to 1).
+
+  uint64 Entry = (1 << 0);
+
+  // Write the necessary flag bits to the entry; we ignore the accessed (A),
+  // PAT and Protection Key bits, setting them to zero.
+
+  if (Rw == true) (Entry |= (1 << 1)); // RW bit
+  if (User == true) (Entry |= (1 << 2)); // User/supervisor bit
+  if (WriteThrough == true) (Entry |= (1 << 3)); // PWT bit
+  if (CacheDisable == true) (Entry |= (1 << 4)); // PCT bit
+  if (Xd == true) (Entry |= (1ULL << 63)); // XD bit.
+
+  // Write the page table address to the entry (from bit 12), and return.
+
+  Entry |= (Address & ~(0ULL << 12)); // Physical address of the page table
+
+  return Entry;
+
+}
+
+
+
+
+// TODO: (Other functions, basically)
 
 /* uint64 AllocateFromMmap()
 

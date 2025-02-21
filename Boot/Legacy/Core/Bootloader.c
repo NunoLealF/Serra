@@ -814,6 +814,17 @@ void Bootloader(void) {
   Putchar('\n', 0);
   Message(Warning, "TODO: Enable paging, load kernel, etc.; \n(I'll need to carefully plan this out).");
 
+  // (DEBUG: Example pte/pde/pml entries.)
+
+  uint64 PteTest = MakePteEntry((uint64)0x1C00, false, true, false, true, false, true);
+  uint64 PdeTest = MakePdeEntry((uint64)0x700000, true, false, true, false, true, false);
+  uint64 PmlTest = MakePmlEntry((uint64)0xCAFEBABE123, false, true, true, false, true);
+
+  Message(Info, "Pte=%x,%x", (uint32)(PteTest >> 32), (uint32)(PteTest & 0xFFFFFFFF)); // also seems to work ok
+  Message(Info, "Pde=%x,%x", (uint32)(PdeTest >> 32), (uint32)(PdeTest & 0xFFFFFFFF)); // looks fine
+  Message(Info, "Pml=%x,%x", (uint32)(PmlTest >> 32), (uint32)(PmlTest & 0xFFFFFFFF)); //seems to work okay?
+
+
   // (DEBUG: Show unfiltered memory map, just to check for any weird
   // abnormalities)
 
@@ -844,7 +855,7 @@ void Bootloader(void) {
   Putchar('\n', 0);
 
   Printf("Hi, this is Serra! <3\n", 0x0F);
-  Printf("February %i %x\n", 0x3F, 19, 0x2025);
+  Printf("February %i %x\n", 0x3F, 21, 0x2025);
 
   for(;;);
 

@@ -53,6 +53,10 @@
   // Paging- and allocation-related functions, from Paging/Paging.c.
   // (TODO: Do that, I guess)
 
+  uint64 MakePteEntry(uint64 Address, bool Xd, bool Global, bool CacheDisable, bool WriteThrough, bool User, bool Rw);
+  uint64 MakePdeEntry(uint64 Address, bool Xd, bool Global, bool CacheDisable, bool WriteThrough, bool User, bool Rw);
+  uint64 MakePmlEntry(uint64 Address, bool Xd, bool CacheDisable, bool WriteThrough, bool User, bool Rw);
+
   uint64 AllocateFromMmap(uint64 Start, uint32 Size, mmapEntry* UsableMmap, uint8 NumUsableMmapEntries);
 
 #endif
