@@ -761,27 +761,6 @@ void Bootloader(void) {
 
 
 
-
-
-  // TODO: (This is basically just a test of a simple bump allocator, based on
-  // the UsableMmap we just made. Use it for page tables and such)
-
-  /*
-
-  Putchar('\n', 0);
-  Message(Kernel, "(debug) Testing out a simple bump allocator, AllocateFromMmap()");
-
-  uint64 AddressThing = 0x100000; // Needs to be >1MiB, since we wanna preserve everything below that
-  uint32 SizeThing = 0x23456;
-
-  uint64 Test = AllocateFromMmap(AddressThing, SizeThing, UsableMmap, NumUsableMmapEntries);
-  Message(Info, "Tested out AllocateFromMmap()\n       (debug) (initial address: %xh, new address: [%xh, %xh])", (uint32)AddressThing, (uint32)(Test - SizeThing), (uint32)Test);
-
-  uint64 Test2 = AllocateFromMmap(Test, 0x122A, UsableMmap, NumUsableMmapEntries);
-  Message(Info, "Tested out AllocateFromMmap()\n       (debug) (initial address: %xh, new address: [%xh, %xh])", (uint32)Test, (uint32)(Test2 - 0x122A), (uint32)Test2);
-
-  */
-
   /*
 
   Okay, *here's the plan.*
@@ -814,22 +793,24 @@ void Bootloader(void) {
   Putchar('\n', 0);
   Message(Warning, "TODO: Enable paging, load kernel, etc.; \n(I'll need to carefully plan this out).");
 
-  // (DEBUG: Why not)
+
+
+
+
+
+  // (DEBUG: Test long mode with some sample page tables, why not lol)
 
   Putchar('\n', 0);
   Message(Kernel, "(debug) Attempting to literally enable paging+longmode");
 
   uint64* Pde = (uint64*)0x100000;
-  // *Pde = MakePdeEntry(0, false, false, true, true, false, true);
-  *Pde = makePageEntry(pagePresent | pageSize | pageAddress(0) | pagePwt | pagePct | pageRw);
+  *Pde = makePageEntry(0, (pageSize | pagePwt | pagePct | pageRw | pageGlobal));
 
   uint64* Pml3 = (uint64*)0x101000;
-  // *Pml3 = MakePmlEntry((uint64)Pde, false, true, true, false, true);
-  *Pml3 = makePageEntry(pagePresent | pageAddress((uint64)Pde) | pagePwt | pagePct | pageRw);
+  *Pml3 = makePageEntry(Pde, (pagePwt | pagePct | pageRw));
 
   uint64* Pml4 = (uint64*)0x102000;
-  // *Pml4 = MakePmlEntry((uint64)Pml3, false, true, true, false, true);
-  *Pml4 = makePageEntry(pagePresent | pageAddress((uint64)Pml3) | pagePwt | pagePct | pageRw);
+  *Pml4 = makePageEntry(Pml3, (pagePwt | pagePct | pageRw));
 
   Message(Info, "Basepde = %x, basepml3 = %x, basepml4 = %x", (uint32)(*Pde), (uint32)(*Pml3), (uint32)(*Pml4));
 
@@ -842,6 +823,9 @@ void Bootloader(void) {
   Message(Info, "If you are somehow seeing this message, you're in 64-bit mode, hooray!");
   Message(Warning, "In order to crash the system, press any key"); // The IDT is broken as hell right now
   MaskPic(0xFFFD);
+
+
+
 
   // (DEBUG: Show unfiltered memory map, just to check for any weird
   // abnormalities)
