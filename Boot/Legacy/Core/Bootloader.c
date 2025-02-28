@@ -814,26 +814,24 @@ void Bootloader(void) {
   Putchar('\n', 0);
   Message(Warning, "TODO: Enable paging, load kernel, etc.; \n(I'll need to carefully plan this out).");
 
-  // (DEBUG: Example pte/pde/pml entries.)
-
-  uint64 PteTest = MakePteEntry((uint64)0x1C00, false, true, false, true, false, true);
-  uint64 PdeTest = MakePdeEntry((uint64)0x700000, true, false, true, false, true, false);
-  uint64 PmlTest = MakePmlEntry((uint64)0xCAFEBABE123, false, true, true, false, true);
-
-  Message(Info, "Pte=%x,%x", (uint32)(PteTest >> 32), (uint32)(PteTest & 0xFFFFFFFF)); // also seems to work ok
-  Message(Info, "Pde=%x,%x", (uint32)(PdeTest >> 32), (uint32)(PdeTest & 0xFFFFFFFF)); // looks fine
-  Message(Info, "Pml=%x,%x", (uint32)(PmlTest >> 32), (uint32)(PmlTest & 0xFFFFFFFF)); //seems to work okay?
-
   // (DEBUG: Why not)
 
   Putchar('\n', 0);
   Message(Kernel, "(debug) Attempting to literally enable paging+longmode");
 
-  uint64* Pde = (uint64*)0x100000; *Pde = MakePdeEntry(0, false, false, true, true, false, true);
-  uint64* Pml3 = (uint64*)0x101000; *Pml3 = MakePmlEntry((uint64)Pde, false, true, true, false, true);
-  uint64* Pml4 = (uint64*)0x102000; *Pml4 = MakePmlEntry((uint64)Pml3, false, true, true, false, true);
+  uint64* Pde = (uint64*)0x100000;
+  // *Pde = MakePdeEntry(0, false, false, true, true, false, true);
+  *Pde = makePageEntry(pagePresent | pageSize | pageAddress(0) | pagePwt | pagePct | pageRw);
 
-  Message(Info, "Basepde = %x, basepml3 = %x, basepml4 = %x", (uint32)(Pde), (uint32)(Pml3), (uint32)(Pml4));
+  uint64* Pml3 = (uint64*)0x101000;
+  // *Pml3 = MakePmlEntry((uint64)Pde, false, true, true, false, true);
+  *Pml3 = makePageEntry(pagePresent | pageAddress((uint64)Pde) | pagePwt | pagePct | pageRw);
+
+  uint64* Pml4 = (uint64*)0x102000;
+  // *Pml4 = MakePmlEntry((uint64)Pml3, false, true, true, false, true);
+  *Pml4 = makePageEntry(pagePresent | pageAddress((uint64)Pml3) | pagePwt | pagePct | pageRw);
+
+  Message(Info, "Basepde = %x, basepml3 = %x, basepml4 = %x", (uint32)(*Pde), (uint32)(*Pml3), (uint32)(*Pml4));
 
   __asm__ volatile ("mov %cr4, %edx; or $(1 << 5), %edx; mov %edx, %cr4;"
                     "mov $0xC0000080, %ecx; rdmsr; or $(1 << 8), %eax; wrmsr;"
@@ -875,7 +873,7 @@ void Bootloader(void) {
   Putchar('\n', 0);
 
   Printf("Hi, this is Serra! <3\n", 0x0F);
-  Printf("February %i %x\n", 0x3F, 21, 0x2025);
+  Printf("February %i %x\n", 0x3F, 28, 0x2025);
 
   for(;;);
 

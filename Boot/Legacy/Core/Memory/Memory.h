@@ -53,6 +53,30 @@
   // Paging- and allocation-related functions, from Paging/Paging.c.
   // (TODO: Do that, I guess)
 
+  // *Page-sized, and non-page-sized*
+
+  #define pagePresent (1ULL << 0)
+  #define pageRw (1ULL << 1)
+  #define pageUser (1ULL << 2)
+  #define pagePwt (1ULL << 3)
+  #define pagePct (1ULL << 4)
+  #define pageAccessed (1ULL << 5)
+  #define pageAddress(Addr) (Addr & (~0ULL << 12)) // Depending on the page type, upper bits should be reserved
+  #define pageXd (1ULL << 63)
+
+  // *Page-sized*
+
+  #define pageDirty (1ULL << 6)
+  #define ptePat (1ULL << 7) // PTE-only.
+  #define pageSize (1ULL << 7) // PS bit; makes a huge page (PDE/PDPE-only)
+  #define pageGlobal (1ULL << 8)
+  #define pdePat (1ULL << 12) // PDE-only.
+  #define pagePk(Key) ((uint64)(Key & 0xF) << 59))
+
+  // *Some standard configurations*
+
+  #define makePageEntry(n) ((uint64)(n))
+
   uint64 MakePteEntry(uint64 Address, bool Xd, bool Global, bool CacheDisable, bool WriteThrough, bool User, bool Rw);
   uint64 MakePdeEntry(uint64 Address, bool Xd, bool Global, bool CacheDisable, bool WriteThrough, bool User, bool Rw);
   uint64 MakePmlEntry(uint64 Address, bool Xd, bool CacheDisable, bool WriteThrough, bool User, bool Rw);
