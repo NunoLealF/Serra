@@ -794,11 +794,13 @@ void Bootloader(void) {
 
 
 
+
   // [2.1] Allocate space for the 512 initial PML4 tables, and for the
   // identity-map, the 512 PML3 tables and 262144 PDE tables.
 
   Putchar('\n', 0);
   Message(Kernel, "Allocating space for the initial (identity-mapped) page tables.");
+
 
   // [2.1.1] Find a suitable starting point; although 1MiB is a common starting
   // point, it might not work everywhere, so we scan the usable mmap first.
@@ -816,9 +818,10 @@ void Bootloader(void) {
 
   }
 
-  // [2.1.1] Allocate space for the 512 PML4 tables.
 
-  uint64 Pml4 = AllocateFromMmap(Offset, (512 * 8), UsableMmap, NumUsableMmapEntries);
+  // [2.1.2] Allocate space for the 512 PML4 tables.
+
+  uintptr Pml4 = (uintptr)(AllocateFromMmap(Offset, (512 * 8), UsableMmap, NumUsableMmapEntries));
   uint64* Pml4_Data;
 
   if (Pml4 == 0) {
@@ -834,10 +837,10 @@ void Bootloader(void) {
 
   }
 
-  // [2.1.2] Allocate space for the 512 PML3 tables, corresponding to the
+  // [2.1.3] Allocate space for the 512 PML3 tables, corresponding to the
   // first PML4 (for the identity-mapping).
 
-  uint64 IdmappedPml3 = AllocateFromMmap(Offset, (512 * 8), UsableMmap, NumUsableMmapEntries);
+  uintptr IdmappedPml3 = (uintptr)(AllocateFromMmap(Offset, (512 * 8), UsableMmap, NumUsableMmapEntries));
   uint64* IdmappedPml3_Data;
 
   if (IdmappedPml3 == 0) {
@@ -854,10 +857,11 @@ void Bootloader(void) {
 
   }
 
-  // [2.1.3] Allocate space for the 262,144 (4096*512) PDE tables,
+
+  // [2.1.4] Allocate space for the 262,144 (4096*512) PDE tables,
   // corresponding to each PML3.
 
-  uint64 IdmappedPde = AllocateFromMmap(Offset, (262144 * 8), UsableMmap, NumUsableMmapEntries);
+  uintptr IdmappedPde = (uintptr)(AllocateFromMmap(Offset, (262144 * 8), UsableMmap, NumUsableMmapEntries));
   uint64* IdmappedPde_Data;
 
   if (IdmappedPde == 0) {
@@ -873,13 +877,13 @@ void Bootloader(void) {
 
   }
 
-  // (*TODO* *DEBUG* The above code assumes our pointers are 64-bit.. which,
-  // they aren't, they're 32-bit, and that generates an error.)
 
-  // [2.2] (Actually fill them out; I should probably make a function to
-  // automatically identity-map them)
+  // [2.2] (TODO: Actually fill them out; I should probably make a function
+  // to automatically identity-map them. (Also these are dummy values))
 
   Pml4_Data[0] = 0x123456789;
+  IdmappedPml3_Data[0] = 0x987654321;
+  IdmappedPde_Data[0] = 0x1122334455667788;
 
 
 

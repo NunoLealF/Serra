@@ -12,7 +12,7 @@
   // aren't part of the C standard), we use the following:
   // - char for 8-bit types
   // - short for 16-bit types
-  // - int for 32-bit types
+  // - int for 32-bit (and pointer) types
   // - long long for 64-bit types
 
   // Signed integer types (int8 to int64).
@@ -41,6 +41,12 @@
     typedef signed long long int64;
   #endif
 
+  #ifdef __INTPTR__TYPE__
+    typedef __INTPTR_TYPE__ intptr;
+  #else
+    typedef int32 intptr;
+  #endif
+
   // Unsigned integer types (uint8 to uint64).
 
   #ifdef __UINT8_TYPE__
@@ -65,6 +71,12 @@
     typedef __UINT64_TYPE__ uint64;
   #else
     typedef unsigned long long uint64;
+  #endif
+
+  #ifdef __UINTPTR__TYPE__
+    typedef __UINTPTR_TYPE__ uintptr;
+  #else
+    typedef uint32 uintptr;
   #endif
 
   // Other integer/pointer types.
