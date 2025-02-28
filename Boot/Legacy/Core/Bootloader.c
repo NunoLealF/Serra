@@ -760,7 +760,6 @@ void Bootloader(void) {
 
 
 
-
   /*
 
   Okay, *here's the plan.*
@@ -795,60 +794,97 @@ void Bootloader(void) {
 
 
 
-
-
-
-  // (DEBUG: Test long mode with some sample page tables, why not lol)
+  // [2.1] Allocate space for the 512 initial PML4 tables, and for the
+  // identity-map, the 512 PML3 tables and 262144 PDE tables.
 
   Putchar('\n', 0);
-  Message(Kernel, "(debug) Attempting to literally enable paging+longmode");
+  Message(Kernel, "Allocating space for the initial (identity-mapped) page tables.");
 
-  uint64* Pde = (uint64*)0x100000;
-  *Pde = makePageEntry(0, (pageSize | pagePwt | pagePct | pageRw | pageGlobal));
+  // [2.1.1] Find a suitable starting point; although 1MiB is a common starting
+  // point, it might not work everywhere, so we scan the usable mmap first.
 
-  uint64* Pml3 = (uint64*)0x101000;
-  *Pml3 = makePageEntry(Pde, (pagePwt | pagePct | pageRw));
+  uint64 Offset = 0x100000;
 
-  uint64* Pml4 = (uint64*)0x102000;
-  *Pml4 = makePageEntry(Pml3, (pagePwt | pagePct | pageRw));
+  for (uint8 Entry = 0; Entry < NumUsableMmapEntries; Entry++) {
 
-  Message(Info, "Basepde = %x, basepml3 = %x, basepml4 = %x", (uint32)(*Pde), (uint32)(*Pml3), (uint32)(*Pml4));
+    if (UsableMmap[Entry].Base >= 0x100000) {
 
-  __asm__ volatile ("mov %cr4, %edx; or $(1 << 5), %edx; mov %edx, %cr4;"
-                    "mov $0xC0000080, %ecx; rdmsr; or $(1 << 8), %eax; wrmsr;"
-                    "mov $0x102000, %eax; mov %eax, %cr3;"
-                    "or $((1 << 31) | (1 << 0)), %ebx; mov %ebx, %cr0");
+      Offset = UsableMmap[Entry].Base;
+      break;
 
-  Putchar('\n', 0);
-  Message(Info, "If you are somehow seeing this message, you're in 64-bit mode, hooray!");
-  Message(Warning, "In order to crash the system, press any key"); // The IDT is broken as hell right now
-  MaskPic(0xFFFD);
-
-
-
-
-  // (DEBUG: Show unfiltered memory map, just to check for any weird
-  // abnormalities)
-
-  /*
-
-  Putchar('\n', 0);
-
-  for (uint8 Position = 0; Position < NumMmapEntries; Position++) {
-
-    uint32 BaseLow = (uint32)(Mmap[Position].Base & 0xFFFFFFFF);
-    uint32 BaseHigh = (uint32)(((uint64)Mmap[Position].Base >> 32) & 0xFFFFFFFF);
-    uint32 LimitLow = (uint32)((uint64)(Mmap[Position].Base + Mmap[Position].Limit) & 0xFFFFFFFF);
-    uint32 LimitHigh = (uint32)(((uint64)(Mmap[Position].Base + Mmap[Position].Limit) >> 32) & 0xFFFFFFFF);
-    uint32 Size = (uint32)(Mmap[Position].Limit / 1024);
-
-    Message(Info, "Type %d memory area from %x,%xh to %x,%xh (%d KiB)", Mmap[Position].Type, BaseHigh, BaseLow, LimitHigh, LimitLow, Size);
+    }
 
   }
 
-  Message(Info, "Vga -> %xh, Vbe -> %xh, Edid -> %xh, Framebuffer -> %xh", 0xB8000, &VbeInfo, &EdidInfo, BestVbeModeInfo.Vbe2Info.Framebuffer);
+  // [2.1.1] Allocate space for the 512 PML4 tables.
 
-  */
+  uint64 Pml4 = AllocateFromMmap(Offset, (512 * 8), UsableMmap, NumUsableMmapEntries);
+  uint64* Pml4_Data;
+
+  if (Pml4 == 0) {
+
+    Panic("Unable to allocate enough space for the page tables.", 0);
+
+  } else {
+
+    Offset = Pml4;
+    Pml4 -= (512 * 8); Pml4_Data = (uint64*)Pml4;
+
+    Message(Info, "Allocated PML4 space between %xh and %xh", (uint32)(Pml4), (uint32)(Offset));
+
+  }
+
+  // [2.1.2] Allocate space for the 512 PML3 tables, corresponding to the
+  // first PML4 (for the identity-mapping).
+
+  uint64 IdmappedPml3 = AllocateFromMmap(Offset, (512 * 8), UsableMmap, NumUsableMmapEntries);
+  uint64* IdmappedPml3_Data;
+
+  if (IdmappedPml3 == 0) {
+
+    Panic("Unable to allocate enough space for the page tables.", 0);
+
+  } else {
+
+    Offset = IdmappedPml3;
+    IdmappedPml3 -= (512 * 8); IdmappedPml3_Data = (uint64*)IdmappedPml3;
+
+    Message(Info, "Allocated idmap PML3 space between %xh and %xh", (uint32)(IdmappedPml3), (uint32)(Offset));
+
+
+  }
+
+  // [2.1.3] Allocate space for the 262,144 (4096*512) PDE tables,
+  // corresponding to each PML3.
+
+  uint64 IdmappedPde = AllocateFromMmap(Offset, (262144 * 8), UsableMmap, NumUsableMmapEntries);
+  uint64* IdmappedPde_Data;
+
+  if (IdmappedPde == 0) {
+
+    Panic("Unable to allocate enough space for the page tables.", 0);
+
+  } else {
+
+    Offset = IdmappedPde;
+    IdmappedPde -= (262144 * 8); IdmappedPde_Data = (uint64*)IdmappedPde;
+
+    Message(Info, "Allocated idmap PDE space between %xh and %xh", (uint32)(IdmappedPde), (uint32)(Offset));
+
+  }
+
+  // (*TODO* *DEBUG* The above code assumes our pointers are 64-bit.. which,
+  // they aren't, they're 32-bit, and that generates an error.)
+
+  // [2.2] (Actually fill them out; I should probably make a function to
+  // automatically identity-map them)
+
+  Pml4_Data[0] = 0x123456789;
+
+
+
+
+
 
   // [For now, let's just leave things here]
 
