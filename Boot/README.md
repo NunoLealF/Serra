@@ -3,6 +3,11 @@
 (Disclaimer: Boot/Legacy/ is for the BIOS bootloader, Boot/Efi is for the
 future UEFI bootloader, and Common/ is for the common kernel/manager)
 
+## System requirements
+
+- A 64-bit (long mode) capable x86 CPU, with support for i686* instructions
+- At least 32 MiB of available free memory *(this can absolutely vary; the latest build checks for >24-26 MiB)*
+
 ### 1st stage (7C00h -> 7E00h)
 
 - Bootsector **Done**
@@ -29,10 +34,10 @@ future UEFI bootloader, and Common/ is for the common kernel/manager)
 - ACPI **Done, if a little bare-bones**
 - VESA/EDID **Done**
 - SMBIOS **Done (but a little bare-bones)**
-- Disk drivers (int13h) ***Close to done** (read-only, might need to fix bugs)*
-- Filesystem drivers ***Close to done** (read-only, might need to fix bugs)*
-- Writing a (simple) physical memory manager *Initial implementation*
-- Paging, 32-bit and PAE/long-mode *Planning stages, long-mode support is needed*
+- Disk drivers (int13h) ***Close to done** (read-only, might need to fix bugs)***
+- Filesystem drivers ***Close to done** (read-only, might need to fix bugs)***
+- Writing a (simple) physical memory manager **Done**
+- Paging, IA-32e and long-mode *Halfway done,* ***in progress***
 - Other miscellaneous things *In progress*
 - Loading the next stage (with long mode!)
 
@@ -56,4 +61,4 @@ For more information, please refer to the accompanying license agreement. <3
 
 &nbsp;
 
-*(last updated on February 10th 2025)*
+*(last updated on March 3th 2025)*
