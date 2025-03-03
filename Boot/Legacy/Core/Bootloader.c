@@ -878,12 +878,67 @@ void Bootloader(void) {
   }
 
 
-  // [2.2] (TODO: Actually fill them out; I should probably make a function
-  // to automatically identity-map them. (Also these are dummy values))
 
-  Pml4_Data[0] = 0x123456789;
-  IdmappedPml3_Data[0] = 0x987654321;
-  IdmappedPde_Data[0] = 0x1122334455667788;
+  // TODO - WARNING - **PAGES NEED TO BE ALLOCATED ON 4KIB BOUNDARIES, PLEASE PLEASE
+  // CHECK THAT FIRST, MAKE SURE IT'S OKAY!!!**
+
+  // ^^^^^^^^^^^^^^^^
+
+
+
+  // [2.2] Now, we can actually get to work on filling out the page tables
+  // for the identity-mapped section. We'll set some starting values:
+
+  #define IdmappedFlags (pagePresent | pageRw | pagePcd) // (for 2MiB pages, add pageSize)
+
+  Putchar('\n', 0);
+  Message(Kernel, "Filling out identity-mapped page tables.");
+
+  // [2.2.1] First, let's work on the first PML4, which needs to point
+  // to our identity-mapped PML3 section (IdmappedPml3).
+
+  Pml4_Data[0] = makePageEntry(IdmappedPml3, IdmappedFlags);
+
+  // [2.2.2] Now, we need to fill out all the PML3s. Each PML3 needs to
+  // point to an array of 512 PDEs, and since we already have a consecutive
+  // data area for each, we can just do the following:
+
+  for (uint16 Entry = 0; Entry < 512; Entry++) {
+
+    IdmappedPml3_Data[Entry] = makePageEntry((IdmappedPde + (Entry * 4096)), IdmappedFlags);
+
+  }
+
+  Message(Info, "Filled out identity-mapped PML3 tables.");
+
+  // [2.2.3] Finally, we need to fill out each PDE; since we're identity-
+  // -mapping everything, each PDE just corresponds to (n * 2MiB):
+
+  for (uint32 Entry = 0; Entry < 262144; Entry++) {
+
+    IdmappedPde_Data[Entry] = makePageEntry(((uint64)Entry << 21), IdmappedFlags | pageSize);
+
+  }
+
+  Message(Info, "Filled out identity-mapped PDE (2MiB) tables.");
+
+
+
+  // [2.2.!] TODO - WARNING - **PAGES NEED TO BE ALLOCATED ON 4KIB BOUNDARIES, PLEASE PLEASE
+  // CHECK THAT FIRST, MAKE SURE IT'S OKAY!!!**
+
+
+
+  // [2.3] TODO: Map the free memory areas to 80h (the 256th and 257th PML4).
+
+
+  // [2.4] TODO: Enable paging, hopefully without breaking anything
+
+
+  // [2.5] TODO: Load kernel; this will take a little further preparation, but SaveState() and
+  // RestoreState() is our friend thankfully
+
+
 
 
 
@@ -897,7 +952,7 @@ void Bootloader(void) {
   Putchar('\n', 0);
 
   Printf("Hi, this is Serra! <3\n", 0x0F);
-  Printf("February %i %x\n", 0x3F, 28, 0x2025);
+  Printf("March %i %x\n", 0x3F, 3, 0x2025);
 
   for(;;);
 

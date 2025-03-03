@@ -59,7 +59,7 @@
     #define pageRw (1ULL << 1)
     #define pageUser (1ULL << 2)
     #define pagePwt (1ULL << 3)
-    #define pagePct (1ULL << 4)
+    #define pagePcd (1ULL << 4)
     #define pageAccessed (1ULL << 5)
     #define pageAddress(Addr) (Addr & (~0ULL << 12)) // Depending on the page type, upper bits should be reserved
     #define pageXd (1ULL << 63)
@@ -75,8 +75,7 @@
 
   // (the actual functions from Paging/Paging.c)
 
-  #define makePageEntry(Address, Flags) (pagePresent | (uint64)Address | (uint64)(Flags))
-
+  #define makePageEntry(Addr, Flags) ((uint64)(pageAddress(Addr)) | (uint64)(Flags))
   uint64 AllocateFromMmap(uint64 Start, uint32 Size, mmapEntry* UsableMmap, uint8 NumUsableMmapEntries);
 
 #endif
