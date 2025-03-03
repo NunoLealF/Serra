@@ -760,47 +760,17 @@ void Bootloader(void) {
 
 
 
-  /*
 
-  Okay, *here's the plan.*
 
-  -> [1] Read up on this: https://os.phil-opp.com/paging-introduction/
-   -> [1a] The 8b 'address space' is just the *PML-4 entry*.
-
-  -> [2] Use a bump/watermark allocator for the initial page tables.
-   -> [2a] Use 2MiB pages for the [00h] identity-mapped address space.
-   -> [2b] Use 4KiB pages for the [80h] free memory address space.
-
-  -> [3] Identity-map everything to 'address space' [00h] with 2MiB pages.
-   -> [3a] Just to be clear, these are universally supported in long mode,
-   they're part of PSE which is required
-   -> [3b] And, yes, this should work
-
-  -> [4] Map all free memory areas to 'address space' [80h] with 4KiB pages.
-   -> [4a] This doesn't include the page tables; reserve space beforehand.
-
-  -> [5] Enable paging.
-
-  -> [6] Using the FAT driver, load the modules and kernel to the beginning
-  of the 'address space' [80h].
-   -> [6a] Also allocate some additional space for the stack.
-
-  -> [7] Configure everything as needed, and jump to the kernel.
-
-  */
-
-  Putchar('\n', 0);
-  Message(Warning, "TODO: Enable paging, load kernel, etc.; \n(I'll need to carefully plan this out).");
+  // [2 - Basically just paging(TM)]
 
 
 
-
-  // [2.1] Allocate space for the 512 initial PML4 tables, and for the
-  // identity-map, the 512 PML3 tables and 262144 PDE tables.
+  // [2.1] Allocate space for the 512 initial PML4 tables, and identity-map
+  // the first 512GiB to 00h.low (the 1st PML4).
 
   Putchar('\n', 0);
   Message(Kernel, "Allocating space for the initial (identity-mapped) page tables.");
-
 
   // [2.1.1] Find a suitable starting point; although 1MiB is a common starting
   // point, it might not work everywhere, so we scan the usable mmap first.
@@ -818,7 +788,6 @@ void Bootloader(void) {
 
   }
 
-
   // [2.1.2] Allocate space for the 512 PML4 tables.
 
   uintptr Pml4 = (uintptr)(AllocateFromMmap(Offset, (512 * 8), UsableMmap, NumUsableMmapEntries));
@@ -833,10 +802,9 @@ void Bootloader(void) {
     Offset = Pml4;
     Pml4 -= (512 * 8); Pml4_Data = (uint64*)Pml4;
 
-    Message(Info, "Allocated PML4 space between %xh and %xh", (uint32)(Pml4), (uint32)(Offset));
+    Message(Ok, "Allocated PML4 space between %xh and %xh", (uint32)(Pml4), (uint32)(Offset));
 
   }
-
 
   // [2.1.3] Allocate space for the 512 PML3 tables, corresponding to the
   // first PML4 (for the identity-mapping).
@@ -857,10 +825,9 @@ void Bootloader(void) {
     Offset = IdmappedPml3;
     IdmappedPml3 -= (512 * 8); IdmappedPml3_Data = (uint64*)IdmappedPml3;
 
-    Message(Info, "Allocated idmap PML3 space between %xh and %xh", (uint32)(IdmappedPml3), (uint32)(Offset));
+    Message(Ok, "Allocated idmap PML3 space between %xh and %xh", (uint32)(IdmappedPml3), (uint32)(Offset));
 
   }
-
 
   // [2.1.4] Allocate space for the 262,144 (4096*512) PDE tables,
   // corresponding to each PML3.
@@ -881,7 +848,7 @@ void Bootloader(void) {
     Offset = IdmappedPde;
     IdmappedPde -= (262144 * 8); IdmappedPde_Data = (uint64*)IdmappedPde;
 
-    Message(Info, "Allocated idmap PDE space between %xh and %xh", (uint32)(IdmappedPde), (uint32)(Offset));
+    Message(Ok, "Allocated idmap PDE space between %xh and %xh", (uint32)(IdmappedPde), (uint32)(Offset));
 
   }
 
@@ -895,7 +862,7 @@ void Bootloader(void) {
   #define IdmappedFlags (pagePresent | pageRw | pagePcd) // (for 2MiB pages, add pageSize)
 
   Putchar('\n', 0);
-  Message(Kernel, "Filling out identity-mapped page tables.");
+  Message(Kernel, "Initializing identity-mapped page tables.");
 
   // [2.2.1] First, let's work on the first PML4, which needs to point
   // to our identity-mapped PML3 section (IdmappedPml3).
@@ -912,7 +879,7 @@ void Bootloader(void) {
 
   }
 
-  Message(Info, "Filled out identity-mapped PML3 tables.");
+  Message(Ok, "Initialized (identity-mapped) PML3 tables.");
 
   // [2.2.3] Finally, we need to fill out each PDE; since we're identity-
   // -mapping everything, each PDE just corresponds to (n * 2MiB):
@@ -923,12 +890,79 @@ void Bootloader(void) {
 
   }
 
-  Message(Info, "Filled out identity-mapped PDE (2MiB) tables.");
+  Message(Ok, "Initialized (identity-mapped) PDE (2MiB) tables.");
 
 
 
 
-  // [2.3] TODO: Map the free memory areas to 80h (the 256th and 257th PML4).
+  // [2.3] TODO TODO TODO TODO TODO: Map the free memory areas to 80h.low (the 256th PML4).
+
+  Putchar('\n', 0);
+  Message(Kernel, "Initializing usable page tables.");
+
+  // [2.3.1] Before we actually do anything, we need to figure out how
+  // much space is necessary for the page tables themselves.
+
+  // For that, we first need to figure out the number of usable 4KiB pages
+  // (like, in general) after Offset, with a limit of 134217728 pages:
+
+  uint32 NumFreePages = 0;
+
+  for (uint8 Position = 0; Position < NumUsableMmapEntries; Position++) {
+
+    if ((UsableMmap[Position].Base + UsableMmap[Position].Limit) < Offset) {
+
+      continue; // If this entry is 'too early', just continue forward
+
+    } else {
+
+      // Calculate a 4KiB-aligned lower and upper bound
+
+      uint64 Lower = (UsableMmap[Position].Base >= Offset) ? UsableMmap[Position].Base : Offset;
+      uint64 Upper = (UsableMmap[Position].Base + UsableMmap[Position].Limit);
+
+      if (Lower % 0x1000 != 0) {
+        Lower += (0x1000 - (Lower % 0x1000));
+      }
+
+      if (Upper % 0x1000 != 0) {
+        Upper -= (Upper % 0x1000);
+      }
+
+      // Add the distance between them - in units of 4KiB (1000h) - to
+      // NumFreePages, like this
+
+      NumFreePages += ((Upper - Lower) / 0x1000);
+
+      Message(Info, "uMmap[%d] from %x:%xh to %x:%xh has %d usable pages.", (uint32)Position, (uint32)(Lower >> 32), (uint32)Lower&0xFFFFFFFF, (uint32)(Upper >> 32), (uint32)Upper&0xFFFFFFFF, (uint32)((Upper-Lower)/0x1000));
+
+    }
+
+    if (NumFreePages >= (1 << 27)) {
+
+      NumFreePages = (1 << 27); // If we have more than 512GiB, just.. stop and break
+      break;
+
+    }
+
+  }
+
+  #define MinimumNumFreePages (24 * 256) // Corresponds to 24MiB
+  Message(Info, "Found %d free (4KiB) pages across all usable memory regions.", NumFreePages);
+
+  if (NumFreePages < MinimumNumFreePages) {
+
+    Panic("Not enough memory to successfully initialize paging.", 0);
+
+  }
+
+  Putchar('\n', 0);
+  Message(Warning, "TODO (2.3) - Get number of PTEs and PML2/3s");
+  Message(Warning, "TODO (2.3) - Init tables as necessary");
+
+
+
+
 
 
   // [2.4] TODO: Enable paging, hopefully without breaking anything
