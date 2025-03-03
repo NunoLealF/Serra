@@ -837,8 +837,13 @@ void Bootloader(void) {
 
   }
 
+
   // [2.1.3] Allocate space for the 512 PML3 tables, corresponding to the
   // first PML4 (for the identity-mapping).
+
+  if ((Offset % 0x1000) != 0) {
+    Offset += (0x1000 - (Offset % 0x1000)); // Make sure that it's 4KB aligned
+  }
 
   uintptr IdmappedPml3 = (uintptr)(AllocateFromMmap(Offset, (512 * 8), UsableMmap, NumUsableMmapEntries));
   uint64* IdmappedPml3_Data;
@@ -854,12 +859,15 @@ void Bootloader(void) {
 
     Message(Info, "Allocated idmap PML3 space between %xh and %xh", (uint32)(IdmappedPml3), (uint32)(Offset));
 
-
   }
 
 
   // [2.1.4] Allocate space for the 262,144 (4096*512) PDE tables,
   // corresponding to each PML3.
+
+  if ((Offset % 0x1000) != 0) {
+    Offset += (0x1000 - (Offset % 0x1000)); // Make sure that it's 4KB aligned
+  }
 
   uintptr IdmappedPde = (uintptr)(AllocateFromMmap(Offset, (262144 * 8), UsableMmap, NumUsableMmapEntries));
   uint64* IdmappedPde_Data;
@@ -878,11 +886,6 @@ void Bootloader(void) {
   }
 
 
-
-  // TODO - WARNING - **PAGES NEED TO BE ALLOCATED ON 4KIB BOUNDARIES, PLEASE PLEASE
-  // CHECK THAT FIRST, MAKE SURE IT'S OKAY!!!**
-
-  // ^^^^^^^^^^^^^^^^
 
 
 
@@ -922,10 +925,6 @@ void Bootloader(void) {
 
   Message(Info, "Filled out identity-mapped PDE (2MiB) tables.");
 
-
-
-  // [2.2.!] TODO - WARNING - **PAGES NEED TO BE ALLOCATED ON 4KIB BOUNDARIES, PLEASE PLEASE
-  // CHECK THAT FIRST, MAKE SURE IT'S OKAY!!!**
 
 
 
