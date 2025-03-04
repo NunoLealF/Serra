@@ -898,7 +898,7 @@ void Bootloader(void) {
   // [2.3] Map the free memory areas to 80h.low (the 256th PML4).
 
   Putchar('\n', 0);
-  Message(Kernel, "Initializing usable page tables.");
+  Message(Kernel, "Allocating space for usable page tables.");
 
   // [2.3.1] Before we actually do anything, we need to figure out how
   // much space is necessary for the page tables themselves.
@@ -990,7 +990,7 @@ void Bootloader(void) {
     Offset = UsablePte;
     UsablePte -= (NumReservedPtePages * 0x1000); UsablePte_Data = (uint64*)UsablePte;
 
-    Message(Ok, "Allocated space for PTE pages between %xh and %xh.", (uint32)(UsablePte), (uint32)(Offset));
+    Message(Ok, "Allocated space for (usable) PTE tables between %xh and %xh.", (uint32)(UsablePte), (uint32)(Offset));
 
   }
 
@@ -1008,7 +1008,7 @@ void Bootloader(void) {
     Offset = UsablePml2;
     UsablePml2 -= (NumReservedPml2Pages * 0x1000); UsablePml2_Data = (uint64*)UsablePml2;
 
-    Message(Ok, "Allocated space for PML2 pages between %xh and %xh.", (uint32)(UsablePml2), (uint32)(Offset));
+    Message(Ok, "Allocated space for (usable) PML2 tables between %xh and %xh.", (uint32)(UsablePml2), (uint32)(Offset));
 
   }
 
@@ -1026,7 +1026,7 @@ void Bootloader(void) {
     Offset = UsablePml3;
     UsablePml3 -= (NumReservedPml3Pages * 0x1000); UsablePml3_Data = (uint64*)UsablePml3;
 
-    Message(Ok, "Allocated space for PML3 pages between %xh and %xh.", (uint32)(UsablePml3), (uint32)(Offset));
+    Message(Ok, "Allocated space for (usable) PML3 tables between %xh and %xh.", (uint32)(UsablePml3), (uint32)(Offset));
 
   }
 
@@ -1038,12 +1038,13 @@ void Bootloader(void) {
 
 
 
-  // [2.3.4] Finally, let's actually initialize the pages. (TODO)
-
-  Message(Info, "(DEBUG) Free memory cutoff is at %x:%xh", (uint32)(Offset >> 32), (uint32)(Offset));
+  // [2.4] Finally, let's actually initialize the pages. (TODO)
 
   Putchar('\n', 0);
-  Message(Warning, "TODO (2.3) - Init tables as necessary");
+  Message(Kernel, "Initializing the usable page tables.");
+
+  Message(Warning, "TODO (2.4) - Init tables as necessary");
+  Message(Info, "(DEBUG) Free memory cutoff is at %x:%xh", (uint32)(Offset >> 32), (uint32)(Offset));
 
 
 
