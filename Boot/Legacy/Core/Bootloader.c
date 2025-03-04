@@ -895,7 +895,7 @@ void Bootloader(void) {
 
 
 
-  // [2.3] TODO TODO TODO TODO TODO: Map the free memory areas to 80h.low (the 256th PML4).
+  // [2.3] Map the free memory areas to 80h.low (the 256th PML4).
 
   Putchar('\n', 0);
   Message(Kernel, "Initializing usable page tables.");
@@ -947,23 +947,109 @@ void Bootloader(void) {
 
   }
 
-  #define MinimumNumFreePages (24 * 256) // Corresponds to 24MiB
+  #define MinimumNumFreePages (32 * 256) // Corresponds to 32MiB
   Message(Info, "Found %d free (4KiB) pages across all usable memory regions.", NumFreePages);
 
   if (NumFreePages < MinimumNumFreePages) {
 
-    Panic("Not enough memory to successfully initialize paging.", 0);
+    Panic("Not enough memory to initialize Serra.", 0);
 
   }
 
+  // [2.3.2] Now that we know how many free pages are available, we need
+  // to know how much space is needed for the page tables themselves.
+
+  // Although it's difficult to determine the exact amount of space, we
+  // can use a shortcut and just assume that our page tables are going
+  // to be mapping *every* free page, and calculate it that way:
+
+  #define findNumPages(Num) ((Num + 511) / 512) // Same as ceil(Num / (4096 / 8))
+
+  uint32 NumReservedPtePages = findNumPages(NumFreePages);
+  uint32 NumReservedPml2Pages = findNumPages(NumReservedPtePages);
+  uint32 NumReservedPml3Pages = 1; // (One page holds up to 512 PML3s, which is the maximum for a single PML4)
+
+  // [2.3.3] Now that we know how much space the page tables are supposed
+  // to occupy, we can allocate space for the page tables.
+
+  // Let's start off by allocating space for the PTEs:
+
+  if ((Offset % 0x1000) != 0) {
+    Offset += (0x1000 - (Offset % 0x1000)); // Make sure that it's 4KB aligned
+  }
+
+  uintptr UsablePte = (uintptr)(AllocateFromMmap(Offset, (NumReservedPtePages * 0x1000), UsableMmap, NumUsableMmapEntries));
+  uint64* UsablePte_Data;
+
+  if (UsablePte == 0) {
+
+    Panic("Unable to allocate enough space for the page tables.", 0);
+
+  } else {
+
+    Offset = UsablePte;
+    UsablePte -= (NumReservedPtePages * 0x1000); UsablePte_Data = (uint64*)UsablePte;
+
+    Message(Ok, "Allocated space for PTE pages between %xh and %xh.", (uint32)(UsablePte), (uint32)(Offset));
+
+  }
+
+  // Next, let's allocate space for the PML2s:
+
+  uintptr UsablePml2 = (uintptr)(AllocateFromMmap(Offset, (NumReservedPml2Pages * 0x1000), UsableMmap, NumUsableMmapEntries));
+  uint64* UsablePml2_Data;
+
+  if (UsablePml2 == 0) {
+
+    Panic("Unable to allocate enough space for the page tables.", 0);
+
+  } else {
+
+    Offset = UsablePml2;
+    UsablePml2 -= (NumReservedPml2Pages * 0x1000); UsablePml2_Data = (uint64*)UsablePml2;
+
+    Message(Ok, "Allocated space for PML2 pages between %xh and %xh.", (uint32)(UsablePml2), (uint32)(Offset));
+
+  }
+
+  // Finally, let's allocate space for the PML3s:
+
+  uintptr UsablePml3 = (uintptr)(AllocateFromMmap(Offset, (NumReservedPml3Pages * 0x1000), UsableMmap, NumUsableMmapEntries));
+  uint64* UsablePml3_Data;
+
+  if (UsablePml3 == 0) {
+
+    Panic("Unable to allocate enough space for the page tables.", 0);
+
+  } else {
+
+    Offset = UsablePml3;
+    UsablePml3 -= (NumReservedPml3Pages * 0x1000); UsablePml3_Data = (uint64*)UsablePml3;
+
+    Message(Ok, "Allocated space for PML3 pages between %xh and %xh.", (uint32)(UsablePml3), (uint32)(Offset));
+
+  }
+
+  // (TODO: ^^^^^^^^ for the love of god find a way to simplify this)
+  // (TODO: ^^^^^^^^ for the love of god find a way to simplify this)
+  // (TODO: ^^^^^^^^ for the love of god find a way to simplify this)
+
+
+
+
+
+  // [2.3.4] Finally, let's actually initialize the pages. (TODO)
+
+  Message(Info, "(DEBUG) Free memory cutoff is at %x:%xh", (uint32)(Offset >> 32), (uint32)(Offset));
+
   Putchar('\n', 0);
-  Message(Warning, "TODO (2.3) - Get number of PTEs and PML2/3s");
   Message(Warning, "TODO (2.3) - Init tables as necessary");
 
 
 
 
 
+  // (TODO: There should really be a function to 4k-align things)
 
   // [2.4] TODO: Enable paging, hopefully without breaking anything
 
@@ -985,7 +1071,7 @@ void Bootloader(void) {
   Putchar('\n', 0);
 
   Printf("Hi, this is Serra! <3\n", 0x0F);
-  Printf("March %i %x\n", 0x3F, 3, 0x2025);
+  Printf("March %i %x\n", 0x3F, 4, 0x2025);
 
   for(;;);
 
