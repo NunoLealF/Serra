@@ -1043,23 +1043,18 @@ void Bootloader(void) {
   Putchar('\n', 0);
   Message(Kernel, "Initializing the usable page tables.");
 
-  Message(Info, "(DEBUG-a) Offset(START) is at %x:%xh", (uint32)(Offset >> 32), (uint32)(Offset));
-
   // [2.4.1] First, we need to initialize the PTEs (Page Table Entries),
   // each of which represent a 4KiB page in memory. We can do that by
   // going through the memory map, like this:
 
-  // (TODO - Check to see if this *always* works - seems to work in QEMU with a bog-standard mmap, but does it work everywhere!?)
-
   #define UsableFlags (pagePresent | pageRw)
-
   uint32 NumPtes = 0;
 
   for (uint8 Position = 0; Position < NumUsableMmapEntries; Position++) {
 
     // If we've exceeded the number of PTEs, break
 
-    if (NumPtes > (NumReservedPtePages * 0x1000)) break;
+    if ((NumPtes / 0x1000) >= NumReservedPtePages) break;
 
     // Update offset, and make sure it's 4KiB-aligned.
 
@@ -1074,13 +1069,11 @@ void Bootloader(void) {
       Offset += (0x1000 - (Offset % 0x1000));
     }
 
-    Message(Info, "(DEBUG-b) Offset(%d, start) is at %x:%xh", Position, (uint32)(Offset >> 32), (uint32)(Offset));
-
     // Actually write the entries.
 
     while ((Base + Limit - 0x1000) >= Offset) {
 
-      if (NumPtes >= (NumReservedPtePages * 0x1000)) {
+      if ((NumPtes / 0x1000) >= NumReservedPtePages) {
         break;
       }
 
@@ -1091,25 +1084,62 @@ void Bootloader(void) {
 
     }
 
-    Message(Info, "(DEBUG-b) Offset(%d, end) is at %x:%xh", Position, (uint32)(Offset >> 32), (uint32)(Offset));
+    Message(Info, "Offset after processing uMmap[%d] is %x:%xh", Position, (uint32)(Offset >> 32), (uint32)Offset);
 
   }
 
-  Message(Info, "(DEBUG-a) Offset(END) is at %x:%xh", (uint32)(Offset >> 32), (uint32)(Offset));
+  Message(Ok, "Initialized %d (usable) PTEs.", NumPtes);
 
-  // [2.4.2] TODO: Write PML2s
+  // [2.4.2] Next, we need to initialize the PML2s and PML3s. This
+  // is actually relatively easy, since all of our entries are in
+  // one consecutive region:
 
-  // [2.4.3] TODO: Write PML3s
+  uint32 NumPml2s = (NumPtes + 511) / 512; // Equivalent to ceil(NumPtes / (4096 / 8))
+  uint32 NumPml3s = (NumPml2s + 511) / 512; // Equivalent to ceil(NumPml2s / (4096 / 8))
 
-  // [2.4.4] TODO: Point 256th PML4 to our PML3 array
+  for (uint32 Entry = 0; Entry < NumPml2s; Entry++) {
 
+    UsablePml2_Data[Entry] = makePageEntry((uint64)(UsablePte + (Entry * 0x1000)), UsableFlags);
 
+  }
 
+  for (uint32 Entry = 0; Entry < NumPml3s; Entry++) {
 
+    UsablePml3_Data[Entry] = makePageEntry((uint64)(UsablePml2 + (Entry * 0x1000)), UsableFlags);
 
-  // (TODO: There should really be a function to 4k-align things)
+  }
+
+  Message(Ok, "Initialized %d+%d (usable) PML2 + PML3s.", NumPml2s, NumPml3s);
+
+  // [2.4.3] Finally, in order to actually map our usable section to
+  // 80h.low, we need to point the 256th PML4 to our usable PML3, like
+  // this:
+
+  // (TODO: ^^^^^ Rewrite this, it's not that clear pfft.)
+
+  Pml4_Data[256] = makePageEntry(UsablePml3, UsableFlags);
+  Message(Ok, "(TODO?) Mapped the 256th PML4 to usable PML3 array.");
+
 
   // [2.5] TODO: Enable paging, hopefully without breaking anything
+
+  Putchar('\n', 0);
+  Message(Kernel, "Preparing to initialize IA-32e mode (with paging).");
+
+  // (TODO: old model)
+
+  Message(Info, "Initializing IA-32e with old model (the commit 3379c99 one).");
+  Message(Info, "We'll be using the PML4 at %xh", Pml4);
+  Message(Info, "PML4[256] -> %x:%x -> %x:%x -> %x:%x -> %x:%x", (uint32)(Pml4_Data[256]>>32), (uint32)Pml4_Data[256], (uint32)(UsablePml3_Data[0]>>32), (uint32)UsablePml3_Data[0], (uint32)(UsablePml2_Data[0]>>32), (uint32)(UsablePml2_Data[0]), (uint32)(UsablePte_Data[0]>>32), (uint32)(UsablePte_Data[0]));
+
+  __asm__ volatile ("mov %%cr4, %%edx; or $(1 << 5), %%edx; mov %%edx, %%cr4;"
+                    "mov $0xC0000080, %%ecx; rdmsr; or $(1 << 8), %%eax; wrmsr;"
+                    "mov %0, %%eax; mov %%eax, %%cr3;"
+                    "or $((1 << 31) | (1 << 0)), %%ebx; mov %%ebx, %%cr0" : : "g"(Pml4));
+
+  Putchar('\n', 0);
+  Message(Ok, "If you're somehow seeing this message, we're in IA-32e mode!!");
+  Message(Warning, "Unfortunately I can't see if 80h.low works without switching into long mode, which is annoying, but if you're reading this at least 00h.low works!");
 
 
   // [2.6] TODO: Load kernel; this will take a little further preparation, but SaveState() and
