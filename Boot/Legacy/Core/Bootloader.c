@@ -1038,13 +1038,70 @@ void Bootloader(void) {
 
 
 
-  // [2.4] Finally, let's actually initialize the pages. (TODO)
+  // [2.4] Finally, let's actually initialize the page tables.
 
   Putchar('\n', 0);
   Message(Kernel, "Initializing the usable page tables.");
 
-  Message(Warning, "TODO (2.4) - Init tables as necessary");
-  Message(Info, "(DEBUG) Free memory cutoff is at %x:%xh", (uint32)(Offset >> 32), (uint32)(Offset));
+  Message(Info, "(DEBUG-a) Offset(START) is at %x:%xh", (uint32)(Offset >> 32), (uint32)(Offset));
+
+  // [2.4.1] First, we need to initialize the PTEs (Page Table Entries),
+  // each of which represent a 4KiB page in memory. We can do that by
+  // going through the memory map, like this:
+
+  // (TODO - Check to see if this *always* works - seems to work in QEMU with a bog-standard mmap, but does it work everywhere!?)
+
+  #define UsableFlags (pagePresent | pageRw)
+
+  uint32 NumPtes = 0;
+
+  for (uint8 Position = 0; Position < NumUsableMmapEntries; Position++) {
+
+    // If we've exceeded the number of PTEs, break
+
+    if (NumPtes > (NumReservedPtePages * 0x1000)) break;
+
+    // Update offset, and make sure it's 4KiB-aligned.
+
+    uint64 Base = UsableMmap[Position].Base;
+    uint64 Limit = UsableMmap[Position].Limit;
+
+    if (Offset < Base) {
+      Offset = Base;
+    }
+
+    if ((Offset % 0x1000) != 0) {
+      Offset += (0x1000 - (Offset % 0x1000));
+    }
+
+    Message(Info, "(DEBUG-b) Offset(%d, start) is at %x:%xh", Position, (uint32)(Offset >> 32), (uint32)(Offset));
+
+    // Actually write the entries.
+
+    while ((Base + Limit - 0x1000) >= Offset) {
+
+      if (NumPtes >= (NumReservedPtePages * 0x1000)) {
+        break;
+      }
+
+      UsablePte_Data[NumPtes] = makePageEntry(Offset, UsableFlags);
+
+      Offset += 0x1000;
+      NumPtes++;
+
+    }
+
+    Message(Info, "(DEBUG-b) Offset(%d, end) is at %x:%xh", Position, (uint32)(Offset >> 32), (uint32)(Offset));
+
+  }
+
+  Message(Info, "(DEBUG-a) Offset(END) is at %x:%xh", (uint32)(Offset >> 32), (uint32)(Offset));
+
+  // [2.4.2] TODO: Write PML2s
+
+  // [2.4.3] TODO: Write PML3s
+
+  // [2.4.4] TODO: Point 256th PML4 to our PML3 array
 
 
 
@@ -1052,10 +1109,10 @@ void Bootloader(void) {
 
   // (TODO: There should really be a function to 4k-align things)
 
-  // [2.4] TODO: Enable paging, hopefully without breaking anything
+  // [2.5] TODO: Enable paging, hopefully without breaking anything
 
 
-  // [2.5] TODO: Load kernel; this will take a little further preparation, but SaveState() and
+  // [2.6] TODO: Load kernel; this will take a little further preparation, but SaveState() and
   // RestoreState() is our friend thankfully
 
 
@@ -1072,7 +1129,7 @@ void Bootloader(void) {
   Putchar('\n', 0);
 
   Printf("Hi, this is Serra! <3\n", 0x0F);
-  Printf("March %i %x\n", 0x3F, 4, 0x2025);
+  Printf("March %i %x\n", 0x3F, 5, 0x2025);
 
   for(;;);
 
