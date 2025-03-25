@@ -41,7 +41,7 @@ CFLAGS = -std=c11 -ffunction-sections -funsigned-char -ffreestanding -Os -Wall -
 # it skips it (for example, for the target 'example.o', if it sees example.o is already there, it skips compiling it),
 # and this can cause problems for targets that don't output anything. These are called 'phony targets'.
 
-.PHONY: All Compile Clean Dump Dumpbin all compile dump dumpbin clean
+.PHONY: All Clean Compile Dump Dumpbin all clean compile dump dumpbin
 
 
 # Names ->>
@@ -93,22 +93,6 @@ Dump:
 Dumpbin:
 	@$(OBJD) -Mintel,i686 -b binary -m i386 --adjust-vma=0x7E00 -D Legacy.bin
 
-Run:
-	@echo "\nLaunching QEMU.."
-	$(QEMU) $(QFLAGS) -drive file=Legacy.bin,format=raw
-
-RunGdb:
-	@echo "\nLaunching QEMU with GDB.."
-	$(QEMU) $(QFLAGS) -s -S -drive file=Legacy.bin,format=raw
-
-RunInt:
-	@echo "\nLaunching QEMU with -d int.."
-	@$(QEMU) $(QFLAGS) -drive file=Legacy.bin,format=raw -d int
-
-RunKvm:
-	@echo "\nLaunching QEMU with KVM.."
-	$(QEMU) $(QFLAGS) -drive file=Legacy.bin,format=raw -enable-kvm
-
 # Lowercase names
 
 all: All
@@ -116,10 +100,6 @@ clean: Clean
 compile: Compile
 dump: Dump
 dumpbin: Dumpbin
-run: Run
-rungdb: RunGdb
-runint: RunInt
-runkvm: RunKvm
 
 
 
