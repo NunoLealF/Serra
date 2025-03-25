@@ -33,7 +33,6 @@ QEMU = qemu-system-x86_64
 
 LDFLAGS = -Wl,--no-warn-rwx-segments
 CFLAGS = -std=c11 -ffunction-sections -funsigned-char -ffreestanding -Os -Wall -Wextra -Wpedantic -Wno-discarded-qualifiers
-QFLAGS = -cpu qemu64 -m 128
 
 
 # The .PHONY directive is used on targets that don't output anything. For example, running 'make all' builds our
@@ -42,16 +41,18 @@ QFLAGS = -cpu qemu64 -m 128
 # it skips it (for example, for the target 'example.o', if it sees example.o is already there, it skips compiling it),
 # and this can cause problems for targets that don't output anything. These are called 'phony targets'.
 
-.PHONY: All Clean Dump Run RunGdb RunInt RunKvm all dump clean run rungdb runint runkvm
+.PHONY: All Compile Clean Dump Dumpbin all compile dump dumpbin clean
 
 
 # Names ->>
 # (By the way, it's assumed that you're on Linux, or at least some sort of Unix-like system)
 
-All: Clean Bootsector/Bootsector.bin Init/Init.bin Shared/Rm/Rm.bin Core/Serra.bin Bootx32.bin Legacy.bin
+All: Clean Compile
+
+Compile: Bootsector/Bootsector.bin Init/Init.bin Shared/Rm/Rm.bin Core/Serra.bin Bootx32.bin
 
 Clean:
-	@echo "Cleaning leftover files (*.o, *.elf, *.bin).."
+	@echo "\033[0;2m""Cleaning leftover files (*.o, *.elf, *.bin).." "\033[0m"
 
 	@-rm -f Bootsector/*.o
 	@-rm -f Bootsector/*.bin
@@ -112,6 +113,7 @@ RunKvm:
 
 all: All
 clean: Clean
+compile: Compile
 dump: Dump
 dumpbin: Dumpbin
 run: Run
@@ -241,29 +243,3 @@ Core/Serra.bin: Core/Bootloader.o Core/Cpu/Cpu.o Core/Memory/Memory.o Core/Memor
 
 Bootx32.bin: Core/Serra.bin
 	@cp Core/Serra.bin Bootx32.bin
-
-# Mix all of the different stages together (8192 sectors, so, a 4MiB img)
-
-Legacy.bin: Bootsector/Bootsector.bin Init/Init.bin Shared/Rm/Rm.bin Core/Serra.bin Bootx32.bin
-
-	@echo "Building $@"
-	@dd if=/dev/zero of=Legacy.bin bs=512 count=8192 status=none
-
-	@dd if=Bootsector/Bootsector.bin of=Legacy.bin conv=notrunc bs=512 count=1 seek=0 status=none
-	@dd if=Init/Init.bin of=Legacy.bin conv=notrunc bs=512 count=16 seek=8 status=none
-	@dd if=Shared/Rm/Rm.bin of=Legacy.bin conv=notrunc bs=512 count=8 seek=24 status=none
-
-# (This formats it as a valid FAT16 filesystem while keeping the non-BPB part of the bootsector;
-# that being said, *it's a temporary solution*, since we'll eventually need to merge the
-# legacy and EFI code).
-
-# Specifically, this sets a cluster size of 1 sector, keeps the current bootsector except for
-# the BPB, and sets the number of reserved sectors to 32.
-
-	@mformat -i Legacy.bin -c 1 -k -R 32 ::
-
-# (Add the 3rd stage bootloader; it's assumed that the actual bootloader will be in
-# Boot/Bootx32.bin, with the kernel/common stage coming later on.)
-
-	@mmd -i Legacy.bin ::/Boot
-	@mcopy -i Legacy.bin Bootx32.bin ::/Boot/
