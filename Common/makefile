@@ -74,7 +74,7 @@ Kernel/Stub.bin:
 
 Kernel/Entry.o:
 	@echo "Building $@"
-	@$(CC) $(CFLAGS) -c Kernel/Entry.c -o Kernel/Entry.o
+	@$(CC) $(CFLAGS) -ffunction-sections -c Kernel/Entry.c -o Kernel/Entry.o
 
 # Link everything into one .elf file
 

@@ -12,20 +12,19 @@ SECTIONS
 
   . = 0xFFFFFFFF80000000; /* Tell our linker that our code will start at -2GiB. */
 
-  /* In order to load our kernel from a 32-bit environment, we first need
-  to switch into long mode, and prepare the GDT; this stub does that for us. */
-
-  .pmstub (READONLY) : ALIGN (4K)
-  {
-      KEEP(./Kernel/Stub.bin)
-  }
-
-  /* The rest of the kernel goes here: */
+  /* The sections of the kernel; the protected mode stub is placed after
+     .text, whereas the long mode entrypoint is placed at the beginning */
 
   .text : ALIGN(4K)
 	{
-		*(.text)
+    *(.text.Entrypoint)
+    *(.text)
 	}
+
+  .pmstub (READONLY) : ALIGN(4K)
+  {
+    KEEP(./Kernel/Stub.bin)
+  }
 
 	.rodata : ALIGN(4K)
 	{

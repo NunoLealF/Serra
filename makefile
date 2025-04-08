@@ -103,3 +103,8 @@ Legacy.bin:
 
 	@mmd -i Legacy.bin ::/Boot
 	@mcopy -i Legacy.bin Boot/Legacy/Bootx32.bin ::/Boot/
+
+# (Add the actual kernel files)
+
+	@mmd -i Legacy.bin ::/Boot/Serra
+	@mcopy -i Legacy.bin Common/Kernel/Kernel.elf ::/Boot/Serra/
