@@ -4,6 +4,9 @@
 
 ENTRY(Entrypoint) /* The entrypoint of our kernel. */
 
+TARGET(binary) /* Directly add a binary blob as an ELF section */
+INPUT(./Kernel/Stub.bin) /* (The blob is Kernel/Stub.bin) */
+
 SECTIONS
 {
 
@@ -12,32 +15,34 @@ SECTIONS
   /* In order to load our kernel from a 32-bit environment, we first need
   to switch into long mode, and prepare the GDT; this stub does that for us. */
 
-  .pmstub BLOCK(4K) : ALIGN (4K)
+  .pmstub (READONLY) : ALIGN (4K)
   {
-      *(.pmstub)
+      KEEP(./Kernel/Stub.bin)
   }
 
   /* The rest of the kernel goes here: */
 
-  .text BLOCK(4K) : ALIGN(4K)
+  .text : ALIGN(4K)
 	{
 		*(.text)
 	}
 
-	.rodata BLOCK(4K) : ALIGN(4K)
+	.rodata : ALIGN(4K)
 	{
 		*(.rodata)
 	}
 
-	.data BLOCK(4K) : ALIGN(4K)
+	.data : ALIGN(4K)
 	{
 		*(.data)
 	}
 
-	.bss BLOCK(4K) : ALIGN(4K)
+	.bss : ALIGN(4K)
 	{
 		*(COMMON)
 		*(.bss)
 	}
 
 }
+
+OUTPUT_FORMAT("elf64-x86-64") /* The output format here is an ELF64 executable */

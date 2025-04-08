@@ -36,7 +36,7 @@ CFLAGS = -std=c11 -funsigned-char -ffreestanding -mno-red-zone -O2 -Wall -Wextra
 # it skips it (for example, for the target 'example.o', if it sees example.o is already there, it skips compiling it),
 # and this can cause problems for targets that don't output anything. These are called 'phony targets'.
 
-.PHONY: All Compile Clean Dump Dumpbin all compile dump dumpbin clean
+.PHONY: All Compile Clean Dump all compile dump clean
 
 
 # Names ->>
@@ -44,19 +44,18 @@ CFLAGS = -std=c11 -funsigned-char -ffreestanding -mno-red-zone -O2 -Wall -Wextra
 
 All: Clean Compile
 
-Compile:
+Compile: Kernel/Stub.bin Kernel/Entry.o Kernel/Kernel.elf
 
 Clean:
 	@echo "\033[0;2m""Cleaning leftover files (*.o, *.elf, *.bin).." "\033[0m"
 
-
-# (...)
+	@-rm -f Kernel/*.o
+	@-rm -f Kernel/*.elf
+	@-rm -f Kernel/*.bin
 
 Dump:
-	# @$(OBJD) -S Core/Serra.elf
+	@$(OBJD) -S Kernel.elf
 
-Dumpbin:
-	# @$(OBJD) -Mintel,i686 -b binary -m i386 --adjust-vma=0x7E00 -D Legacy.bin
 
 # Lowercase names
 
@@ -64,12 +63,22 @@ all: All
 compile: Compile
 clean: Clean
 dump: Dump
-dumpbin: Dumpbin
 
 
 
 # [The files themselves]
 
-# (The stub thing we have to jump to first - TODO)
+Kernel/Stub.bin:
+	@echo "Building $@"
+	@$(AS) Kernel/Stub.asm -f bin -o Kernel/Stub.bin
 
-# (The kernel itself - TODO)
+Kernel/Entry.o:
+	@echo "Building $@"
+	@$(CC) $(CFLAGS) -c Kernel/Entry.c -o Kernel/Entry.o
+
+# Link everything into one .elf file
+
+Kernel/Kernel.elf: Kernel/Entry.o | Kernel/Stub.bin
+	@echo "Building $@"
+	@$(CC) -T Linker.ld $(LDFLAGS) -o Kernel/Kernel.elf -ffreestanding -nolibc -nostdlib -lgcc $^
+#@$(OBJC) --update-section .pmstub=Kernel/Stub.bin Kernel/Kernel.elf Kernel/Kernel.elf
