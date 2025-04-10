@@ -519,130 +519,6 @@ void Bootloader(void) {
   }
 
 
-
-
-
-  // [Disk and filesystem drivers (this is the last thing to do)]
-
-  Putchar('\n', 0);
-  Message(Kernel, "Preparing to get EDD/FAT data");
-
-
-  // (get a few initial variables)
-
-  DriveNumber = InfoTable->DriveNumber;
-  bool Edd_Valid = InfoTable->Edd_Valid;
-
-  LogicalSectorSize = InfoTable->LogicalSectorSize;
-  PhysicalSectorSize = InfoTable->PhysicalSectorSize;
-
-  bool IsFat32 = InfoTable->Bpb_IsFat32;
-
-  Message(Info, "Successfully obtained drive/EDD-related information.");
-
-  // (get bpb)
-
-  #define Bpb_Address (&InfoTable->Bpb[0])
-
-  biosParameterBlock Bpb = *(biosParameterBlock*)(Bpb_Address);
-
-  biosParameterBlock_Fat16 Extended_Bpb16 = *(biosParameterBlock_Fat16*)(Bpb_Address + 33);
-  biosParameterBlock_Fat32 Extended_Bpb32 = *(biosParameterBlock_Fat32*)(Bpb_Address + 33);
-
-  // (sanity-check the BPB)
-
-  if (Bpb.BytesPerSector == 0) {
-    Panic("Failed to obtain the BPB.", 0);
-  } else {
-    Message(Info, "Successfully obtained the BPB from the bootloader's info table.");
-  }
-
-
-
-  // (now, let's focus on getting fs info)
-  // (now, let's focus on getting fs info)
-  // (now, let's focus on getting fs info)
-
-  // -> the total number of sectors within the partition, including reserved sectors
-
-  uint32 TotalNumSectors = Bpb.NumSectors;
-
-  if (TotalNumSectors == 0) {
-    TotalNumSectors = Bpb.NumSectors_Large;
-  }
-
-  // -> the size of each FAT
-
-  uint32 FatSize = Bpb.SectorsPerFat;
-
-  if (FatSize == 0) {
-    FatSize = Extended_Bpb32.SectorsPerFat;
-  }
-
-  // -> the number of root sectors
-
-  uint32 NumRootSectors = ((Bpb.NumRootEntries * 32) + (LogicalSectorSize - 1)) / LogicalSectorSize;
-
-  // -> the position of the first data sector, relative to the start of the partition
-
-  uint32 DataSectorOffset = ((Bpb.NumFileAllocationTables * FatSize) + NumRootSectors) + Bpb.ReservedSectors;
-
-  // -> the number of data (non-reserved + non-FAT) sectors in the partition
-
-  uint32 NumDataSectors = (TotalNumSectors - DataSectorOffset);
-
-  // -> the number of clusters in the partition
-
-  uint32 NumClusters = (NumDataSectors / Bpb.SectorsPerCluster);
-
-  // -> the cluster limit
-
-  uint32 ClusterLimit = 0xFFF6;
-
-  if (IsFat32 == true) {
-    ClusterLimit = 0x0FFFFFF6;
-  }
-
-
-
-
-  // (now, let's actually load things)
-  // (now, let's actually load things)
-  // (now, let's actually load things)
-
-  // -> first, we need to get the root cluster, along with the sector offset of that cluster
-
-  uint32 RootCluster;
-
-  if (IsFat32 == false) {
-    RootCluster = 2;
-  } else {
-    RootCluster = Extended_Bpb32.RootCluster;
-  }
-
-  uint32 RootSectorOffset = DataSectorOffset;
-
-  if (IsFat32 == false) {
-    RootSectorOffset -= NumRootSectors;
-  }
-
-  // -> next, we need to search for the Boot/ directory, starting from the root directory,
-  // like this:
-
-  fatDirectory BootDirectory = FindDirectory(RootCluster, Bpb.SectorsPerCluster, Bpb.HiddenSectors, Bpb.ReservedSectors, RootSectorOffset, "BOOT    ", "   ", true, IsFat32);
-  uint32 BootCluster = GetDirectoryCluster(BootDirectory);
-
-  if (ExceedsLimit(BootCluster, ClusterLimit)) {
-    Panic("Failed to locate Boot/.", 0);
-  } else {
-    Message(Kernel, "(debug) Found the Boot/ directory; yay");
-  }
-
-
-
-
-
-
   // [Process the E820 memory map]
 
   // (TODO 1: add this to its own function, i guess..? in Mmap.c)
@@ -761,6 +637,162 @@ void Bootloader(void) {
 
 
 
+  // [Disk and filesystem drivers (this is the last thing to do)]
+
+  Putchar('\n', 0);
+  Message(Kernel, "Preparing to get EDD/FAT data");
+
+
+  // (get a few initial variables)
+
+  DriveNumber = InfoTable->DriveNumber;
+  bool Edd_Valid = InfoTable->Edd_Valid;
+
+  LogicalSectorSize = InfoTable->LogicalSectorSize;
+  PhysicalSectorSize = InfoTable->PhysicalSectorSize;
+
+  bool IsFat32 = InfoTable->Bpb_IsFat32;
+
+  Message(Info, "Successfully obtained drive/EDD-related information.");
+
+  // (get bpb)
+
+  #define Bpb_Address (&InfoTable->Bpb[0])
+
+  biosParameterBlock Bpb = *(biosParameterBlock*)(Bpb_Address);
+
+  biosParameterBlock_Fat16 Extended_Bpb16 = *(biosParameterBlock_Fat16*)(Bpb_Address + 33);
+  biosParameterBlock_Fat32 Extended_Bpb32 = *(biosParameterBlock_Fat32*)(Bpb_Address + 33);
+
+  // (sanity-check the BPB)
+
+  if (Bpb.BytesPerSector == 0) {
+    Panic("Failed to obtain the BPB.", 0);
+  } else {
+    Message(Info, "Successfully obtained the BPB from the bootloader's info table.");
+  }
+
+
+
+  // (now, let's focus on getting fs info)
+  // (now, let's focus on getting fs info)
+  // (now, let's focus on getting fs info)
+
+  // -> the total number of sectors within the partition, including reserved sectors
+
+  uint32 TotalNumSectors = Bpb.NumSectors;
+
+  if (TotalNumSectors == 0) {
+    TotalNumSectors = Bpb.NumSectors_Large;
+  }
+
+  // -> the size of each FAT
+
+  uint32 FatSize = Bpb.SectorsPerFat;
+
+  if (FatSize == 0) {
+    FatSize = Extended_Bpb32.SectorsPerFat;
+  }
+
+  // -> the number of root sectors
+
+  uint32 NumRootSectors = ((Bpb.NumRootEntries * 32) + (LogicalSectorSize - 1)) / LogicalSectorSize;
+
+  // -> the position of the first data sector, relative to the start of the partition
+
+  uint32 DataSectorOffset = ((Bpb.NumFileAllocationTables * FatSize) + NumRootSectors) + Bpb.ReservedSectors;
+
+  // -> the number of data (non-reserved + non-FAT) sectors in the partition
+
+  uint32 NumDataSectors = (TotalNumSectors - DataSectorOffset);
+
+  // -> the number of clusters in the partition
+
+  uint32 NumClusters = (NumDataSectors / Bpb.SectorsPerCluster);
+
+  // -> the cluster limit
+
+  uint32 ClusterLimit = 0xFFF6;
+
+  if (IsFat32 == true) {
+    ClusterLimit = 0x0FFFFFF6;
+  }
+
+
+
+
+  // (now, let's actually load things)
+  // (now, let's actually load things)
+  // (now, let's actually load things)
+
+  // -> first, we need to get the root cluster, along with the sector offset of that cluster
+
+  uint32 RootCluster;
+
+  if (IsFat32 == false) {
+    RootCluster = 2;
+  } else {
+    RootCluster = Extended_Bpb32.RootCluster;
+  }
+
+  uint32 RootSectorOffset = DataSectorOffset;
+
+  if (IsFat32 == false) {
+    RootSectorOffset -= NumRootSectors;
+  }
+
+  // -> next, we need to search for the Boot/ directory, starting from the root directory,
+  // like this:
+
+  fatDirectory BootDirectory = FindDirectory(RootCluster, Bpb.SectorsPerCluster, Bpb.HiddenSectors, Bpb.ReservedSectors, RootSectorOffset, "BOOT    ", "   ", true, IsFat32);
+  uint32 BootCluster = GetDirectoryCluster(BootDirectory);
+
+  if (ExceedsLimit(BootCluster, ClusterLimit)) {
+    Panic("Failed to locate Boot/.", 0);
+  }
+
+  // -> Then, Boot/Serra:
+
+  fatDirectory SerraDirectory = FindDirectory(BootCluster, Bpb.SectorsPerCluster, Bpb.HiddenSectors, Bpb.ReservedSectors, DataSectorOffset, "SERRA   ", "   ", true, IsFat32);
+  uint32 SerraCluster = GetDirectoryCluster(SerraDirectory);
+
+  if (ExceedsLimit(SerraCluster, ClusterLimit)) {
+    Panic("Failed to locate Boot/Serra/.", 0);
+  }
+
+  // -> Now, let's search for Boot/Serra/Kernel.elf.
+
+  fatDirectory KernelDirectory = FindDirectory(SerraCluster, Bpb.SectorsPerCluster, Bpb.HiddenSectors, Bpb.ReservedSectors, DataSectorOffset, "KERNEL  ", "ELF", false, IsFat32);
+  uint32 KernelCluster = GetDirectoryCluster(KernelDirectory);
+
+  if (ExceedsLimit(KernelCluster, ClusterLimit)) {
+    Panic("Failed to locate Boot/Serra/Kernel.elf.", 0);
+  } else {
+    Message(Ok, "Successfully located Boot/Serra/Kernel.elf.");
+  }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
   // [2 - Basically just paging(TM)]
 
@@ -785,6 +817,50 @@ void Bootloader(void) {
       break;
 
     }
+
+  }
+
+  // [2.1.k1] Allocate space for the kernel.
+  // (Do not name this 'Kernel', GCC will override any Message(Kernel, ...) msgs lmao.)
+
+  if ((Offset % 0x1000) != 0) {
+    Offset += (0x1000 - (Offset % 0x1000)); // Make sure that it's 4KB aligned
+  }
+
+  uintptr KernelPtr = (uintptr)(AllocateFromMmap(Offset, (uint32)(KernelDirectory.Size), UsableMmap, NumUsableMmapEntries));
+
+  if (KernelPtr == 0) {
+
+    Panic("Unable to allocate enough space for the kernel.", 0);
+
+  } else {
+
+    Offset = KernelPtr;
+    KernelPtr -= KernelDirectory.Size;
+
+    Message(Ok, "Allocated kernel between %xh and %xh (in pmem)", (uint32)KernelPtr, (uint32)Offset);
+
+  }
+
+  // [2.1.k2] Allocate space for the kernel *stack*.
+
+  if ((Offset % 0x1000) != 0) {
+    Offset += (0x1000 - (Offset % 0x1000)); // Make sure that it's 4KB aligned
+  }
+
+  #define KernelStackSize 0x100000
+  uintptr KernelStack = (uintptr)(AllocateFromMmap(Offset, KernelStackSize, UsableMmap, NumUsableMmapEntries));
+
+  if (KernelStack == 0) {
+
+    Panic("Unable to allocate enough space for the kernel stack.", 0);
+
+  } else {
+
+    Offset = KernelStack;
+    KernelStack -= KernelStackSize;
+
+    Message(Ok, "Allocated kernel stack between %xh and %xh (in pmem)", (uint32)(KernelStack), (uint32)(Offset));
 
   }
 
@@ -1112,42 +1188,64 @@ void Bootloader(void) {
   Message(Ok, "Initialized %d+%d (usable) PML2 + PML3s.", NumPml2s, NumPml3s);
 
   // [2.4.3] Finally, in order to actually map our usable section to
-  // 80h.low, we need to point the 256th PML4 to our usable PML3, like
-  // this:
+  // 80h.low, we need to point the 257th ([256]) PML4 to our usable PML3,
+  // like this:
 
   // (TODO: ^^^^^ Rewrite this, it's not that clear pfft.)
 
   Pml4_Data[256] = makePageEntry(UsablePml3, UsableFlags);
-  Message(Ok, "(TODO?) Mapped the 256th PML4 to usable PML3 array.");
+  Message(Ok, "(TODO?) Mapped the 257th PML4 to usable PML3 array.");
 
 
-  // [2.5] TODO: Enable paging, hopefully without breaking anything
 
-  Putchar('\n', 0);
-  Message(Kernel, "Preparing to initialize IA-32e mode (with paging).");
 
-  // (TODO: old model)
 
-  Message(Info, "Initializing IA-32e with old model (the commit 3379c99 one).");
-  Message(Info, "We'll be using the PML4 at %xh", Pml4);
-  Message(Info, "PML4[256] -> %x:%x -> %x:%x -> %x:%x -> %x:%x", (uint32)(Pml4_Data[256]>>32), (uint32)Pml4_Data[256], (uint32)(UsablePml3_Data[0]>>32), (uint32)UsablePml3_Data[0], (uint32)(UsablePml2_Data[0]>>32), (uint32)(UsablePml2_Data[0]), (uint32)(UsablePte_Data[0]>>32), (uint32)(UsablePte_Data[0]));
 
-  __asm__ volatile ("mov %%cr4, %%edx; or $(1 << 5), %%edx; mov %%edx, %%cr4;"
-                    "mov $0xC0000080, %%ecx; rdmsr; or $(1 << 8), %%eax; wrmsr;"
-                    "mov %0, %%eax; mov %%eax, %%cr3;"
-                    "or $((1 << 31) | (1 << 0)), %%ebx; mov %%ebx, %%cr0" : : "g"(Pml4));
+
+  // [3.1] Okay; now, let's actually *load* the kernel into memory.
 
   Putchar('\n', 0);
-  Message(Ok, "If you're somehow seeing this message, we're in IA-32e mode!!");
-  Message(Warning, "Unfortunately I can't see if 80h.low works without switching into long mode, which is annoying, but if you're reading this at least 00h.low works!");
+  Message(Kernel, "Preparing to load and execute the kernel.");
+
+  bool ReadFileSuccessful = ReadFile((void*)KernelPtr, KernelDirectory, Bpb.SectorsPerCluster, Bpb.HiddenSectors, Bpb.ReservedSectors, DataSectorOffset, IsFat32);
+
+  if (ReadFileSuccessful == true) {
+    Message(Ok, "Successfully loaded Boot/Serra/Kernel.elf to %xh.", (uint32)KernelPtr);
+  } else {
+    Panic("Failed to read Boot/Serra/Kernel.elf from disk.", 0);
+  }
+
+  // [3.2] Actually read the ELF file
+  // (TODO: implement a proper ELF driver, lol.)
+
+  Message(Info, "(TODO) Read ELF, get address of pmstub, etc. etc.");
+
+  // [3.3] Remap as necessary
+  // (Kernel will be in the last ([511], 512th) PML4, at FFFFFF.FF80000000-FFFFFF.FFFFFFFFFFh) -> KernelPtr
+  // (Kernel stack will be in the second-to-last ([510], 511th) PML4, at FFFFFF.FF00000000-FFFFFF.FF7FFFFFFFh) -> KernelStack
+
+  Message(Info, "(TODO) Remap kernel+stack as necessary");
 
 
-  // [2.6] TODO: Load kernel; this will take a little further preparation, but SaveState() and
-  // RestoreState() is our friend thankfully
 
 
 
 
+
+
+
+
+
+
+  // [4.1] Prepare info tables, set resolution, etc. etc.
+
+  Putchar('\n', 0);
+  Message(Kernel, "Preparing to transfer control to the kernel.");
+  Message(Info, "(TODO) Set up infotables, resolution, etc.");
+
+  // [4.2] Jump to .pmstub..
+
+  Message(Info, "(TODO) Jump to .pmstub");
 
 
 
@@ -1159,7 +1257,7 @@ void Bootloader(void) {
   Putchar('\n', 0);
 
   Printf("Hi, this is Serra! <3\n", 0x0F);
-  Printf("March %i %x\n", 0x3F, 5, 0x2025);
+  Printf("April %i %x\n", 0x3F, 10, 0x2025);
 
   for(;;);
 

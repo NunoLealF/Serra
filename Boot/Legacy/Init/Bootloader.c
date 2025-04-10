@@ -351,10 +351,10 @@ void __attribute__((noreturn)) Bootloader(void) {
   // (After that, we need to search for a file called 'Bootx32.bin' from within the Boot/ folder,
   // this time using the DataSectorOffset instead of the RootSectorOffset)
 
-  fatDirectory SerraDirectory = FindDirectory(BootCluster, Bpb.SectorsPerCluster, Bpb.HiddenSectors, Bpb.ReservedSectors, DataSectorOffset, "BOOTX32 ", "BIN", false, PartitionIsFat32);
-  uint32 SerraCluster = GetDirectoryCluster(SerraDirectory);
+  fatDirectory BootloaderDirectory = FindDirectory(BootCluster, Bpb.SectorsPerCluster, Bpb.HiddenSectors, Bpb.ReservedSectors, DataSectorOffset, "BOOTX32 ", "BIN", false, PartitionIsFat32);
+  uint32 BootloaderCluster = GetDirectoryCluster(BootloaderDirectory);
 
-  if (ExceedsLimit(SerraCluster, ClusterLimit)) {
+  if (ExceedsLimit(BootloaderCluster, ClusterLimit)) {
     Panic("Failed to locate Boot/Bootx32.bin.");
   } else {
     Message(Ok, "Located Boot/Bootx32.bin.");
@@ -369,7 +369,7 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   #define Bootloader_Address 0x20000
 
-  bool ReadFileSuccessful = ReadFile((void*)Bootloader_Address, SerraDirectory, Bpb.SectorsPerCluster, Bpb.HiddenSectors, Bpb.ReservedSectors, DataSectorOffset, PartitionIsFat32);
+  bool ReadFileSuccessful = ReadFile((void*)Bootloader_Address, BootloaderDirectory, Bpb.SectorsPerCluster, Bpb.HiddenSectors, Bpb.ReservedSectors, DataSectorOffset, PartitionIsFat32);
 
   if (ReadFileSuccessful == true) {
     Message(Ok, "Successfully read Boot/Bootx32.bin to %xh.", Bootloader_Address);
