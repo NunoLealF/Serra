@@ -39,6 +39,50 @@ int Strlen(const char* String) {
 }
 
 
+/* bool Strcmp()
+
+   Inputs: const char* StringA - The string we want to compare with StringB.
+           const char* StringB - The string we want to compare with StringA.
+
+   Outputs: bool - Whether the two strings are equal.
+
+   Unlike most other data types in C, strings can't be directly compared with ==, because
+   they function as pointers.
+
+   This means that, even if two strings are otherwise equal, comparing them directly
+   *only compares their addresses, not their content*. The purpose of this function is
+   to remedy that by comparing the *content* of both strings; for example:
+
+   - const char* strA = "abc";
+   - const char* strB = "abc";
+
+   -> (strA == strB) returns *false*, because A and B point to different locations;
+   -> Strcmp(strA, strB) returns *true*, because A and B are both "abc".
+
+*/
+
+bool Strcmp(const char* StringA, const char* StringB) {
+
+  // Compare each character of each string, until we hit a null byte,
+  // or until we find a different character.
+
+  unsigned int Position = 0;
+
+  while (StringA[Position] == StringB[Position]) {
+
+    if (StringA[Position] == '\0') {
+      return true;
+    }
+
+    Position++;
+
+  }
+
+  return false;
+
+}
+
+
 /* char* Strrev()
 
    Inputs: char* String - The string you want to reverse.

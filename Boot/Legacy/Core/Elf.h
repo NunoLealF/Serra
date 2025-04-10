@@ -5,10 +5,6 @@
 #ifndef SERRA_ELF_H
 #define SERRA_ELF_H
 
-  // ELF-related functions, from Elf.c
-
-
-
   // ELF-related structures, from Elf.c
 
   typedef struct {
@@ -50,5 +46,44 @@
     uint16 StringSectionIndex; // (The index of the string section header)
 
   } __attribute__((packed)) elfHeader;
+
+  typedef struct {
+
+    uint32 Type; // (0 = ignore, 1 = load, any other = ignore..?)
+    uint32 Flags; // (Can be ignored if we're just loading the kernel)
+    uint64 Offset; // (The offset where this segment begins, in bytes)
+
+    uint64 VirtAddress; // (The intended virtual address)
+    uint64 PhysAddress; // (The intended physical address; can be ignored)
+
+    uint64 Size; // (Copy this)
+    uint64 PaddedSize; // (But allocate this)
+    uint64 Alignment; // (Unless <= 2, necessary alignment as a power of 2)
+
+  } __attribute__((packed)) elfProgramHeader;
+
+  typedef struct {
+
+    uint32 NameOffset; // (The offset for the name string, in .shstrtab (StringSectionIndex))
+    uint32 Type; // (1 = load, 3 = string, otherwise ignore)
+    uint64 Flags; // (Can be ignored)
+
+    uint64 Address; // (Can be ignored)
+    uint64 Offset; // (The offset from which to start reading from, in bytes)
+    uint64 Size; // (The size of the section, also in bytes)
+
+    uint32 Link; // (Can be ignored)
+    uint32 Info; // (Can be ignored)
+
+    uint64 Alignment; // (Same definition as in elfProgramHeader)
+    uint64 EntrySize; // (If this section is for a table, the size of each entry)
+
+  } __attribute__((packed)) elfSectionHeader;
+
+  // ELF-related functions, from Elf.c
+
+  elfProgramHeader* GetProgramHeader(uintptr Start, elfHeader* ElfHeader, uint16 Index);
+  elfSectionHeader* GetSectionHeader(uintptr Start, elfHeader* ElfHeader, uint16 Index);
+  const char* GetElfSectionString(uintptr Start, elfSectionHeader* StringSection, uint32 Offset);
 
 #endif

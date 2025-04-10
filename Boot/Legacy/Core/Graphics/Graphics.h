@@ -27,6 +27,7 @@
   // Formatting and string-related functions. (Format.c)
 
   int Strlen(const char* String);
+  bool Strcmp(const char* StringA, const char* StringB);
   char* Strrev(char* String);
   char* Itoa(uint32 Number, char* Buffer, uint8 Base);
 

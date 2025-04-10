@@ -1223,7 +1223,8 @@ void Bootloader(void) {
   // (TODO: implement a proper ELF driver, lol.)
 
 
-  // [3.2.1] Check to see if it's a valid ELF file
+  // [3.2.1] Check to see if it's a valid ELF file, and show some
+  // basic debug information.
 
   elfHeader* KernelHeader = (elfHeader*)KernelPtr;
 
@@ -1231,53 +1232,115 @@ void Bootloader(void) {
     Panic("Kernel does not appear to be an actual ELF file.", 0);
   } else if ((KernelHeader->Ident.Class != 2) || (KernelHeader->MachineType != 0x3E)) {
     Panic("Kernel does not appear to be 64-bit.", 0);
-  } else if (KernelHeader->ProgramHeaderOffset == 0) {
+  } else if ((KernelHeader->ProgramHeaderOffset == 0) || (KernelHeader->NumProgramHeaders == 0)) {
     Panic("ELF header does not appear to have any program headers.", 0);
+  } else if ((KernelHeader->SectionHeaderOffset == 0) || (KernelHeader->NumSectionHeaders == 0)) {
+    Panic("ELF header does not appear to have any section headers.", 0);
+  } else if (KernelHeader->StringSectionIndex == 0) {
+    Panic("ELF header does not have a string section, so, can't locate .pmstub", 0);
   } else if (KernelHeader->Version < 1) {
-    Message(Warning, "ELF header version appears to be invalid (%d)", KernelHeader->Version);
+    Message(Warning, "ELF header version appears to be invalid (%d)", (uint32)KernelHeader->Version);
   } else if (KernelHeader->Entrypoint == 0) {
     Message(Warning, "ELF header does not have an entrypoint");
   } else if (KernelHeader->FileType != 2) {
-    Message(Warning, "ELF header appears to have a non-executable file type (%d)", KernelHeader->FileType);
+    Message(Warning, "ELF header appears to have a non-executable file type (%d)", (uint32)KernelHeader->FileType);
   } else {
     Message(Ok, "Kernel appears to be a valid ELF executable.");
   }
 
+  Message(Info, "File type: %d, machine type: %xh, version: %d, entry: %x:%xh",
+                (uint32)KernelHeader->FileType, (uint32)KernelHeader->MachineType, (uint32)KernelHeader->Version,
+                (uint32)(KernelHeader->Entrypoint >> 32), (uint32)(KernelHeader->Entrypoint & 0xFFFFFFFF));
 
-  // [3.2.2] ... the rest
+  Message(Info, "Real physical address (start of file) at %xh", (uint32)KernelPtr);
 
-  Message(Info, "(TODO) Read ELF, get address of pmstub, etc. etc.");
+  Message(Info, "%d program header(s) at +%xh, %d section header(s) at +%xh",
+                (uint32)(KernelHeader->NumProgramHeaders), (uint32)(KernelHeader->ProgramHeaderOffset & 0xFFFFFFFF),
+                (uint32)(KernelHeader->NumSectionHeaders), (uint32)(KernelHeader->SectionHeaderOffset & 0xFFFFFFFF));
+
+
+
+  // [3.2.2] Read section headers, to find .pmstub
+
+  elfSectionHeader* ElfStringSection = GetSectionHeader(KernelPtr, KernelHeader, KernelHeader->StringSectionIndex);
+  uint64 PmStubOffset = 0;
+
+  for (uint32 Index = 0; Index < KernelHeader->NumSectionHeaders; Index++) {
+
+    elfSectionHeader* Section = GetSectionHeader(KernelPtr, KernelHeader, Index);
+    char* SectionName = GetElfSectionString(KernelPtr, ElfStringSection, Section->NameOffset);
+
+    if (Strcmp(SectionName, ".pmstub") == true) {
+
+      PmStubOffset = Section->Offset;
+      break;
+
+    }
+
+  }
+
+  uintptr PmStubAddress = (uintptr)(KernelPtr + PmStubOffset);
+
+  if (PmStubOffset == 0) {
+
+    Panic("Kernel does not appear to have a .pmstub section.", 0);
+
+  } else {
+
+    Message(Ok, "Successfully found .pmstub section in kernel file");
+    Message(Info, "Found .pmstub at offset %xh, address %xh", (uint32)PmStubOffset, (uint32)PmStubAddress);
+
+  }
+
+
+
+  // [3.2.3] Read program headers.. may be best to put this off until necessary though
+  // (like, until we have a function that automatically maps this stuff, better not to)
+
+  Message(-1, "(TODO) Make sure to read program headers");
+
+  // It's dawning on me that including .pmstub *in the kernel file* is a stupid idea
+  // It's literally a binary blob. I can just. Include it here. 100x less hassle
+
+  /*
+
+  typedef void PmStubTemplate(uintptr InfoTable, uintptr Pml4);
+  PmStubTemplate* PmStub = (PmStubTemplate*)(PmStubAddress);
+
+  PmStub(0, Pml4);
+  */
 
 
 
 
 
-  // [3.3] Remap as necessary
+  // [4.1] Remap as necessary
   // (Kernel will be in the last ([511], 512th) PML4, at FFFFFF.FF80000000-FFFFFF.FFFFFFFFFFh) -> KernelPtr
   // (Kernel stack will be in the second-to-last ([510], 511th) PML4, at FFFFFF.FF00000000-FFFFFF.FF7FFFFFFFh) -> KernelStack
 
-  Message(Info, "(TODO) Remap kernel+stack as necessary");
-
-
-
-
-
-
-
-
-
-
-
-
-  // [4.1] Prepare info tables, set resolution, etc. etc.
-
   Putchar('\n', 0);
   Message(Kernel, "Preparing to transfer control to the kernel.");
-  Message(Info, "(TODO) Set up infotables, resolution, etc.");
 
-  // [4.2] Jump to .pmstub..
+  Message(-1, "(TODO) Remap kernel+stack as necessary");
 
-  Message(Info, "(TODO) Jump to .pmstub");
+
+
+
+
+
+
+
+
+
+
+
+  // [4.2] Prepare info tables, set resolution, etc. etc.
+
+  Message(-1, "(TODO) Set up infotables, resolution, etc.");
+
+  // [4.3] Jump to .pmstub..
+
+  Message(-1, "(TODO) Jump to .pmstub");
 
 
 
