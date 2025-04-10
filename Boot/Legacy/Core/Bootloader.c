@@ -1202,6 +1202,8 @@ void Bootloader(void) {
 
 
 
+
+
   // [3.1] Okay; now, let's actually *load* the kernel into memory.
 
   Putchar('\n', 0);
@@ -1215,10 +1217,40 @@ void Bootloader(void) {
     Panic("Failed to read Boot/Serra/Kernel.elf from disk.", 0);
   }
 
+
+
   // [3.2] Actually read the ELF file
   // (TODO: implement a proper ELF driver, lol.)
 
+
+  // [3.2.1] Check to see if it's a valid ELF file
+
+  elfHeader* KernelHeader = (elfHeader*)KernelPtr;
+
+  if (KernelHeader->Ident.MagicNumber != 0x464C457F) {
+    Panic("Kernel does not appear to be an actual ELF file.", 0);
+  } else if ((KernelHeader->Ident.Class != 2) || (KernelHeader->MachineType != 0x3E)) {
+    Panic("Kernel does not appear to be 64-bit.", 0);
+  } else if (KernelHeader->ProgramHeaderOffset == 0) {
+    Panic("ELF header does not appear to have any program headers.", 0);
+  } else if (KernelHeader->Version < 1) {
+    Message(Warning, "ELF header version appears to be invalid (%d)", KernelHeader->Version);
+  } else if (KernelHeader->Entrypoint == 0) {
+    Message(Warning, "ELF header does not have an entrypoint");
+  } else if (KernelHeader->FileType != 2) {
+    Message(Warning, "ELF header appears to have a non-executable file type (%d)", KernelHeader->FileType);
+  } else {
+    Message(Ok, "Kernel appears to be a valid ELF executable.");
+  }
+
+
+  // [3.2.2] ... the rest
+
   Message(Info, "(TODO) Read ELF, get address of pmstub, etc. etc.");
+
+
+
+
 
   // [3.3] Remap as necessary
   // (Kernel will be in the last ([511], 512th) PML4, at FFFFFF.FF80000000-FFFFFF.FFFFFFFFFFh) -> KernelPtr

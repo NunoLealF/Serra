@@ -15,6 +15,7 @@
   #include "Memory/Memory.h"
   #include "Graphics/Graphics.h"
   #include "Int/Int.h"
+  #include "Elf.h"
 
   // Declare functions in Bootloader.c
 
