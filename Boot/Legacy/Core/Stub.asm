@@ -2,16 +2,18 @@
 ; This file is part of the Serra project, which is released under the MIT license.
 ; For more information, please refer to the accompanying license agreement. <3
 
-SECTION .pmstub
 [BITS 32]
+
+SECTION .text
+GLOBAL LongmodeStub
 
 ; It's assumed that this stub will behave as a regular 32-bit function
 ; would, so we need to initialize a new call frame, and get arguments:
 
-; (uintptr* InfoTable [ebx], uintptr* Pml4 [edx])
+; (uintptr InfoTable [ebx], uintptr Pml4 [edx])
 ; (We discard [eax] and [ecx])
 
-Stub:
+LongmodeStub:
 
   ; Deal with the C calling convention / initialize the call frame.
 
@@ -41,9 +43,9 @@ Stub:
   mov eax, cr3
   and edx, 0xFFFFF000
   or eax, edx
+  mov cr3, eax
 
   ; Get the current value of the EFER register, and set bit 8 (long mode)
-  ; (We can safely discard [edx] as we already stored it in [cr3])
 
   mov ecx, 0xC0000080
   rdmsr
@@ -61,66 +63,12 @@ Stub:
   ; in order to start executing 64-bit code, we actually need to
   ; update the GDT with 64-bit segments, so let's do that.
 
-  ; We do quickly run into a problem though: *this stub is meant to
-  ; be position-independent*, so we can't just hardcode an address
-  ; into the GDT descriptor.
-
-  ; However, since we know this stub is guaranteed to be page-
-  ; -aligned and fit into one 4KiB page, we *are* able to:
-
-  ; -> Get the value of EIP by using 'call GetCurrentAddressInEdx'
-  ; -> Use that as a reference for the current memory position
-
-  call GetCurrentAddressInEdx
-
-  and edx, 0xFFFFF000
-  mov ecx, edx
-  mov eax, edx
-
-  push eax
-
-  add eax, (JumpToHigherHalf - Stub)
-  add ecx, (longModeGdt - Stub)
-  add edx, (longModeGdtDescriptor.addressLow - Stub)
-
-  mov [edx], ecx
-
-  ; (Prepare the far jump ahead, we need to load .Address)
-
-  pop ecx
-  add ecx, (emulatedFarJump.Address - Stub)
-
-  mov [ecx], eax
+  lgdt [longModeGdtDescriptor]
 
   ; Now that we've taken care of that, we can *finally* load the
   ; new GDT, and actually enter long mode!
 
-  ; We can't directly jump to our higher half kernel yet, as this
-  ; last jump is still in compatibility mode (and therefore
-  ; limited to 32-bit), but we can work around it still:
-
-  lgdt [edx - 8]
-
-  ; We *do* need to use the same hack we used in RmWrapper.asm
-  ; and hardcode the opcode for a far jump here, but we don't
-  ; have much of a choice with position-independent code
-
-  ; (For reference, this is the equivalent of jmp 0x08:Address)
-
-  emulatedFarJump.Opcode: db 0xEA
-  emulatedFarJump.Address: dd 0
-  emulatedFarJump.Segment: dw 0x08
-
-
-; -----------------------------------
-
-; Since 'call' pushes eip to the stack, this function basically
-; does the equivalent of "mov edx, eip"; pretty neat, uwu
-
-GetCurrentAddressInEdx:
-
-  mov edx, [esp]
-  ret
+  jmp 0x08:JumpToHigherHalf
 
 
 ; -----------------------------------
@@ -148,7 +96,8 @@ JumpToHigherHalf:
   ;mov rdi, rbx                       (*this^, but also, attribute noreturn = unnecessary)
   ;push rbp
 
-  jmp 0xFFFFFFFF80000000
+  call 0xFFFFFFFF80000000
+
 
 ; -----------------------------------
 
@@ -188,14 +137,4 @@ longModeGdt:
 longModeGdtDescriptor:
 
   .Size: dw (longModeGdtDescriptor - longModeGdt - 1) ; sizeof(longModeGdt) - 1
-
-  .addressHigh: dd 0 ; This is guaranteed to be 0 for any 32-bit address
-  .addressLow: dd 0 ; (This will later be set to the location of longModeGdt)
-
-
-; -----------------------------------
-
-; Tell our assembler that we want to pad the rest of our stub up to
-; the 4096th (or 0x1000th) byte, so it can be page-aligned.
-
-times 0x1000 - ($-$$) db 0
+  .Address: dq longModeGdt ; The location of longModeGdt

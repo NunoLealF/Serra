@@ -1234,10 +1234,6 @@ void Bootloader(void) {
     Panic("Kernel does not appear to be 64-bit.", 0);
   } else if ((KernelHeader->ProgramHeaderOffset == 0) || (KernelHeader->NumProgramHeaders == 0)) {
     Panic("ELF header does not appear to have any program headers.", 0);
-  } else if ((KernelHeader->SectionHeaderOffset == 0) || (KernelHeader->NumSectionHeaders == 0)) {
-    Panic("ELF header does not appear to have any section headers.", 0);
-  } else if (KernelHeader->StringSectionIndex == 0) {
-    Panic("ELF header does not have a string section, so, can't locate .pmstub", 0);
   } else if (KernelHeader->Version < 1) {
     Message(Warning, "ELF header version appears to be invalid (%d)", (uint32)KernelHeader->Version);
   } else if (KernelHeader->Entrypoint == 0) {
@@ -1260,61 +1256,24 @@ void Bootloader(void) {
 
 
 
-  // [3.2.2] Read section headers, to find .pmstub
 
-  elfSectionHeader* ElfStringSection = GetSectionHeader(KernelPtr, KernelHeader, KernelHeader->StringSectionIndex);
-  uint64 PmStubOffset = 0;
-
-  for (uint32 Index = 0; Index < KernelHeader->NumSectionHeaders; Index++) {
-
-    elfSectionHeader* Section = GetSectionHeader(KernelPtr, KernelHeader, Index);
-    char* SectionName = GetElfSectionString(KernelPtr, ElfStringSection, Section->NameOffset);
-
-    if (Strcmp(SectionName, ".pmstub") == true) {
-
-      PmStubOffset = Section->Offset;
-      break;
-
-    }
-
-  }
-
-  uintptr PmStubAddress = (uintptr)(KernelPtr + PmStubOffset);
-
-  if (PmStubOffset == 0) {
-
-    Panic("Kernel does not appear to have a .pmstub section.", 0);
-
-  } else {
-
-    Message(Ok, "Successfully found .pmstub section in kernel file");
-    Message(Info, "Found .pmstub at offset %xh, address %xh", (uint32)PmStubOffset, (uint32)PmStubAddress);
-
-  }
-
-
-
-  // [3.2.3] Read program headers.. may be best to put this off until necessary though
+  // [3.2.2] Read program headers.. may be best to put this off until necessary though
   // (like, until we have a function that automatically maps this stuff, better not to)
 
-  Message(-1, "(TODO) Make sure to read program headers");
+  Putchar('\n', 0);
+  Message(-1, "(TODO) Read program headers");
 
-  // It's dawning on me that including .pmstub *in the kernel file* is a stupid idea
-  // It's literally a binary blob. I can just. Include it here. 100x less hassle
+  for (uint32 Index = 0; Index < KernelHeader->NumProgramHeaders; Index++) {
 
-  /*
+    elfProgramHeader* Header = GetProgramHeader(KernelPtr, KernelHeader, Index);
 
-  typedef void PmStubTemplate(uintptr InfoTable, uintptr Pml4);
-  PmStubTemplate* PmStub = (PmStubTemplate*)(PmStubAddress);
+    Message(Info, "ProgramHeader(%d) | Type %d | Flags %xh | Offset %xh", Index, (uint32)Header->Type, (uint32)Header->Flags, (uint32)Header->Offset);
+    Message(Info, "ProgramHeader(%d) | Address %x:%xh, Size %d and %d bytes", Index, (uint32)(Header->VirtAddress >> 32), (uint32)Header->VirtAddress, (uint32)Header->Size, (uint32)Header->PaddedSize);
 
-  PmStub(0, Pml4);
-  */
-
+  }
 
 
-
-
-  // [4.1] Remap as necessary
+  // [3.3 / 4.1 / idk] Remap as necessary
   // (Kernel will be in the last ([511], 512th) PML4, at FFFFFF.FF80000000-FFFFFF.FFFFFFFFFFh) -> KernelPtr
   // (Kernel stack will be in the second-to-last ([510], 511th) PML4, at FFFFFF.FF00000000-FFFFFF.FF7FFFFFFFh) -> KernelStack
 
@@ -1338,9 +1297,9 @@ void Bootloader(void) {
 
   Message(-1, "(TODO) Set up infotables, resolution, etc.");
 
-  // [4.3] Jump to .pmstub..
+  // [4.3] Call Lmstub
 
-  Message(-1, "(TODO) Jump to .pmstub");
+  Message(-1, "(TODO) Call LongmodeStub()");
 
 
 

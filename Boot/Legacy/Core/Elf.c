@@ -39,21 +39,3 @@ elfSectionHeader* GetSectionHeader(uintptr Start, elfHeader* ElfHeader, uint16 I
   return (elfSectionHeader*)(Address);
 
 }
-
-
-// (TODO - write documentation)
-
-const char* GetElfSectionString(uintptr Start, elfSectionHeader* StringSection, uint32 Offset) {
-
-  // Are we actually looking at a string section?
-
-  if (StringSection->Type != 0x03) {
-    return NULL;
-  }
-
-  // Okay - now that we know we are, let's find the offset
-
-  uintptr Address = (uintptr)(Start + StringSection->Offset + Offset);
-  return (const char*)(Address);
-
-}

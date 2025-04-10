@@ -84,6 +84,5 @@
 
   elfProgramHeader* GetProgramHeader(uintptr Start, elfHeader* ElfHeader, uint16 Index);
   elfSectionHeader* GetSectionHeader(uintptr Start, elfHeader* ElfHeader, uint16 Index);
-  const char* GetElfSectionString(uintptr Start, elfSectionHeader* StringSection, uint32 Offset);
 
 #endif

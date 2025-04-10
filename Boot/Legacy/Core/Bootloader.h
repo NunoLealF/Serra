@@ -17,8 +17,9 @@
   #include "Int/Int.h"
   #include "Elf.h"
 
-  // Declare functions in Bootloader.c
+  // Declare functions in Bootloader.c and Stub.asm
 
   void Bootloader(void);
+  void LongmodeStub(uintptr InfoTable, uintptr Pml4);
 
 #endif

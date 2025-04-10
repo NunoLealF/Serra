@@ -44,7 +44,7 @@ CFLAGS = -std=c11 -funsigned-char -ffreestanding -mno-red-zone -O2 -Wall -Wextra
 
 All: Clean Compile
 
-Compile: Kernel/Stub.bin Kernel/Entry.o Kernel/Kernel.elf
+Compile: Kernel/Kernel.elf
 
 Clean:
 	@echo "\033[0;2m""Cleaning leftover files (*.o, *.elf, *.bin).." "\033[0m"
@@ -68,17 +68,12 @@ dump: Dump
 
 # [The files themselves]
 
-Kernel/Stub.bin:
-	@echo "Building $@"
-	@$(AS) Kernel/Stub.asm -f bin -o Kernel/Stub.bin
-
 Kernel/Entry.o:
 	@echo "Building $@"
 	@$(CC) $(CFLAGS) -ffunction-sections -c Kernel/Entry.c -o Kernel/Entry.o
 
 # Link everything into one .elf file
 
-Kernel/Kernel.elf: Kernel/Entry.o | Kernel/Stub.bin
+Kernel/Kernel.elf: Kernel/Entry.o
 	@echo "Building $@"
 	@$(CC) -T Linker.ld $(LDFLAGS) -o Kernel/Kernel.elf -ffreestanding -nolibc -nostdlib -lgcc $^
-#@$(OBJC) --update-section .pmstub=Kernel/Stub.bin Kernel/Kernel.elf Kernel/Kernel.elf
