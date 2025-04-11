@@ -7,7 +7,7 @@ ENTRY(Entrypoint) /* The entrypoint of our kernel. */
 SECTIONS
 {
 
-  . = 0xFFFFFFFF80000000; /* Tell our linker that our code will start at -2GiB. */
+  . = 0xFFFFFF8000000000; /* Tell our linker that our code will start at -2GiB. */
 
   .text : ALIGN(4K)
 	{

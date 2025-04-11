@@ -848,7 +848,7 @@ void Bootloader(void) {
     Offset += (0x1000 - (Offset % 0x1000)); // Make sure that it's 4KB aligned
   }
 
-  #define KernelStackSize 0x100000
+  #define KernelStackSize 0x200000 // Must be a multiple of 2MiB
   uintptr KernelStack = (uintptr)(AllocateFromMmap(Offset, KernelStackSize, UsableMmap, NumUsableMmapEntries));
 
   if (KernelStack == 0) {
@@ -1027,9 +1027,7 @@ void Bootloader(void) {
   Message(Info, "Found %d free (4KiB) pages across all usable memory regions.", NumFreePages);
 
   if (NumFreePages < MinimumNumFreePages) {
-
-    Panic("Not enough memory to initialize Serra.", 0);
-
+    Panic("Not enough memory to initialize paging.", 0);
   }
 
   // [2.3.2] Now that we know how many free pages are available, we need
@@ -1197,7 +1195,9 @@ void Bootloader(void) {
   Message(Ok, "(TODO?) Mapped the 257th PML4 to usable PML3 array.");
 
 
-
+  Message(Kernel, "Identity-mapping first 4gb (debug)");
+  Offset = InitializePageEntries(0, 0, 0xFFFFFFFF, Pml4_Data, IdmappedFlags, true, Offset, UsableMmap, NumUsableMmapEntries);
+  Message(Ok, "Okay done");
 
 
 
@@ -1216,7 +1216,6 @@ void Bootloader(void) {
   } else {
     Panic("Failed to read Boot/Serra/Kernel.elf from disk.", 0);
   }
-
 
 
   // [3.2] Actually read the ELF file
@@ -1270,7 +1269,20 @@ void Bootloader(void) {
     Message(Info, "ProgramHeader(%d) | Type %d | Flags %xh | Offset %xh", Index, (uint32)Header->Type, (uint32)Header->Flags, (uint32)Header->Offset);
     Message(Info, "ProgramHeader(%d) | Address %x:%xh, Size %d and %d bytes", Index, (uint32)(Header->VirtAddress >> 32), (uint32)Header->VirtAddress, (uint32)Header->Size, (uint32)Header->PaddedSize);
 
+    if (Header->Type = 0x01) {
+
+      uint64 PhysAddress = (uint64)(KernelPtr) + Header->Offset;
+      Offset = InitializePageEntries(PhysAddress, Header->VirtAddress, Header->Size, Pml4_Data, UsableFlags, false, Offset, UsableMmap, NumUsableMmapEntries);
+
+    }
+
   }
+
+  // Todo: there seems to be some alignment issues? but let me see if it works okay
+
+  Message(Kernel, "Mapping kernel stack");
+  Offset = InitializePageEntries((uint64)KernelStack, (0xFFFFFF8000000000 - KernelStackSize), (KernelStackSize - 0x1000), Pml4_Data, IdmappedFlags, true, Offset, UsableMmap, NumUsableMmapEntries);
+  Message(Ok, "Okay done");
 
 
   // [3.3 / 4.1 / idk] Remap as necessary
@@ -1291,8 +1303,6 @@ void Bootloader(void) {
 
 
 
-
-
   // [4.2] Prepare info tables, set resolution, etc. etc.
 
   Message(-1, "(TODO) Set up infotables, resolution, etc.");
@@ -1300,8 +1310,6 @@ void Bootloader(void) {
   // [4.3] Call Lmstub
 
   Message(-1, "(TODO) Call LongmodeStub()");
-
-
 
 
   // [For now, let's just leave things here]
