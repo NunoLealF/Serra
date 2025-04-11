@@ -823,10 +823,6 @@ void Bootloader(void) {
   // [2.1.k1] Allocate space for the kernel.
   // (Do not name this 'Kernel', GCC will override any Message(Kernel, ...) msgs lmao.)
 
-  if ((Offset % 0x1000) != 0) {
-    Offset += (0x1000 - (Offset % 0x1000)); // Make sure that it's 4KB aligned
-  }
-
   uintptr KernelPtr = (uintptr)(AllocateFromMmap(Offset, (uint32)(KernelDirectory.Size), UsableMmap, NumUsableMmapEntries));
 
   if (KernelPtr == 0) {
@@ -844,11 +840,7 @@ void Bootloader(void) {
 
   // [2.1.k2] Allocate space for the kernel *stack*.
 
-  if ((Offset % 0x1000) != 0) {
-    Offset += (0x1000 - (Offset % 0x1000)); // Make sure that it's 4KB aligned
-  }
-
-  #define KernelStackSize 0x200000 // Must be a multiple of 2MiB
+  #define KernelStackSize 0x100000 // Must be a multiple of 4KiB
   uintptr KernelStack = (uintptr)(AllocateFromMmap(Offset, KernelStackSize, UsableMmap, NumUsableMmapEntries));
 
   if (KernelStack == 0) {
