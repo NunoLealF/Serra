@@ -882,320 +882,16 @@ void Bootloader(void) {
 
   }
 
-  // [2.1.3] Allocate space for the 512 PML3 tables, corresponding to the
-  // first PML4 (for the identity-mapping).
-
-  if ((Offset % 0x1000) != 0) {
-    Offset += (0x1000 - (Offset % 0x1000)); // Make sure that it's 4KB aligned
-  }
-
-  uintptr IdmappedPml3 = (uintptr)(AllocateFromMmap(Offset, (512 * 8), UsableMmap, NumUsableMmapEntries));
-  uint64* IdmappedPml3_Data;
-
-  if (IdmappedPml3 == 0) {
-
-    Panic("Unable to allocate enough space for the page tables.", 0);
-
-  } else {
-
-    Offset = IdmappedPml3;
-    IdmappedPml3 -= (512 * 8); IdmappedPml3_Data = (uint64*)IdmappedPml3;
-
-    Message(Ok, "Allocated idmap PML3 space between %xh and %xh", (uint32)(IdmappedPml3), (uint32)(Offset));
-
-  }
-
-  // [2.1.4] Allocate space for the 262,144 (4096*512) PDE tables,
-  // corresponding to each PML3.
-
-  if ((Offset % 0x1000) != 0) {
-    Offset += (0x1000 - (Offset % 0x1000)); // Make sure that it's 4KB aligned
-  }
-
-  uintptr IdmappedPde = (uintptr)(AllocateFromMmap(Offset, (262144 * 8), UsableMmap, NumUsableMmapEntries));
-  uint64* IdmappedPde_Data;
-
-  if (IdmappedPde == 0) {
-
-    Panic("Unable to allocate enough space for the page tables.", 0);
-
-  } else {
-
-    Offset = IdmappedPde;
-    IdmappedPde -= (262144 * 8); IdmappedPde_Data = (uint64*)IdmappedPde;
-
-    Message(Ok, "Allocated idmap PDE space between %xh and %xh", (uint32)(IdmappedPde), (uint32)(Offset));
-
-  }
-
-
-
-
-
-  // [2.2] Now, we can actually get to work on filling out the page tables
-  // for the identity-mapped section. We'll set some starting values:
-
-  #define IdmappedFlags (pagePresent | pageRw | pagePcd) // (for 2MiB pages, add pageSize)
-
-  Putchar('\n', 0);
-  Message(Kernel, "Initializing identity-mapped page tables.");
-
-  // [2.2.1] First, let's work on the first PML4, which needs to point
-  // to our identity-mapped PML3 section (IdmappedPml3).
-
-  Pml4_Data[0] = makePageEntry(IdmappedPml3, IdmappedFlags);
-
-  // [2.2.2] Now, we need to fill out all the PML3s. Each PML3 needs to
-  // point to an array of 512 PDEs, and since we already have a consecutive
-  // data area for each, we can just do the following:
-
-  for (uint16 Entry = 0; Entry < 512; Entry++) {
-
-    IdmappedPml3_Data[Entry] = makePageEntry((IdmappedPde + (Entry * 4096)), IdmappedFlags);
-
-  }
-
-  Message(Ok, "Initialized (identity-mapped) PML3 tables.");
-
-  // [2.2.3] Finally, we need to fill out each PDE; since we're identity-
-  // -mapping everything, each PDE just corresponds to (n * 2MiB):
-
-  for (uint32 Entry = 0; Entry < 262144; Entry++) {
-
-    IdmappedPde_Data[Entry] = makePageEntry(((uint64)Entry << 21), IdmappedFlags | pageSize);
-
-  }
-
-  Message(Ok, "Initialized (identity-mapped) PDE (2MiB) tables.");
-
-
-
-
-  // [2.3] Map the free memory areas to 80h.low (the 256th PML4).
-
-  Putchar('\n', 0);
-  Message(Kernel, "Allocating space for usable page tables.");
-
-  // [2.3.1] Before we actually do anything, we need to figure out how
-  // much space is necessary for the page tables themselves.
-
-  // For that, we first need to figure out the number of usable 4KiB pages
-  // (like, in general) after Offset, with a limit of 134217728 pages:
-
-  uint32 NumFreePages = 0;
-
-  for (uint8 Position = 0; Position < NumUsableMmapEntries; Position++) {
-
-    if ((UsableMmap[Position].Base + UsableMmap[Position].Limit) < Offset) {
-
-      continue; // If this entry is 'too early', just continue forward
-
-    } else {
-
-      // Calculate a 4KiB-aligned lower and upper bound
-
-      uint64 Lower = (UsableMmap[Position].Base >= Offset) ? UsableMmap[Position].Base : Offset;
-      uint64 Upper = (UsableMmap[Position].Base + UsableMmap[Position].Limit);
-
-      if (Lower % 0x1000 != 0) {
-        Lower += (0x1000 - (Lower % 0x1000));
-      }
-
-      if (Upper % 0x1000 != 0) {
-        Upper -= (Upper % 0x1000);
-      }
-
-      // Add the distance between them - in units of 4KiB (1000h) - to
-      // NumFreePages, like this
-
-      NumFreePages += ((Upper - Lower) / 0x1000);
-
-      Message(Info, "uMmap[%d] from %x:%xh to %x:%xh has %d usable pages.", (uint32)Position, (uint32)(Lower >> 32), (uint32)Lower&0xFFFFFFFF, (uint32)(Upper >> 32), (uint32)Upper&0xFFFFFFFF, (uint32)((Upper-Lower)/0x1000));
-
-    }
-
-    if (NumFreePages >= (1 << 27)) {
-
-      NumFreePages = (1 << 27); // If we have more than 512GiB, just.. stop and break
-      break;
-
-    }
-
-  }
-
-  #define MinimumNumFreePages (32 * 256) // Corresponds to 32MiB
-  Message(Info, "Found %d free (4KiB) pages across all usable memory regions.", NumFreePages);
-
-  if (NumFreePages < MinimumNumFreePages) {
-    Panic("Not enough memory to initialize paging.", 0);
-  }
-
-  // [2.3.2] Now that we know how many free pages are available, we need
-  // to know how much space is needed for the page tables themselves.
-
-  // Although it's difficult to determine the exact amount of space, we
-  // can use a shortcut and just assume that our page tables are going
-  // to be mapping *every* free page, and calculate it that way:
-
-  #define findNumPages(Num) ((Num + 511) / 512) // Same as ceil(Num / (4096 / 8))
-
-  uint32 NumReservedPtePages = findNumPages(NumFreePages);
-  uint32 NumReservedPml2Pages = findNumPages(NumReservedPtePages);
-  uint32 NumReservedPml3Pages = 1; // (One page holds up to 512 PML3s, which is the maximum for a single PML4)
-
-  // [2.3.3] Now that we know how much space the page tables are supposed
-  // to occupy, we can allocate space for the page tables.
-
-  // Let's start off by allocating space for the PTEs:
-
-  if ((Offset % 0x1000) != 0) {
-    Offset += (0x1000 - (Offset % 0x1000)); // Make sure that it's 4KB aligned
-  }
-
-  uintptr UsablePte = (uintptr)(AllocateFromMmap(Offset, (NumReservedPtePages * 0x1000), UsableMmap, NumUsableMmapEntries));
-  uint64* UsablePte_Data;
-
-  if (UsablePte == 0) {
-
-    Panic("Unable to allocate enough space for the page tables.", 0);
-
-  } else {
-
-    Offset = UsablePte;
-    UsablePte -= (NumReservedPtePages * 0x1000); UsablePte_Data = (uint64*)UsablePte;
-
-    Message(Ok, "Allocated space for (usable) PTE tables between %xh and %xh.", (uint32)(UsablePte), (uint32)(Offset));
-
-  }
-
-  // Next, let's allocate space for the PML2s:
-
-  uintptr UsablePml2 = (uintptr)(AllocateFromMmap(Offset, (NumReservedPml2Pages * 0x1000), UsableMmap, NumUsableMmapEntries));
-  uint64* UsablePml2_Data;
-
-  if (UsablePml2 == 0) {
-
-    Panic("Unable to allocate enough space for the page tables.", 0);
-
-  } else {
-
-    Offset = UsablePml2;
-    UsablePml2 -= (NumReservedPml2Pages * 0x1000); UsablePml2_Data = (uint64*)UsablePml2;
-
-    Message(Ok, "Allocated space for (usable) PML2 tables between %xh and %xh.", (uint32)(UsablePml2), (uint32)(Offset));
-
-  }
-
-  // Finally, let's allocate space for the PML3s:
-
-  uintptr UsablePml3 = (uintptr)(AllocateFromMmap(Offset, (NumReservedPml3Pages * 0x1000), UsableMmap, NumUsableMmapEntries));
-  uint64* UsablePml3_Data;
-
-  if (UsablePml3 == 0) {
-
-    Panic("Unable to allocate enough space for the page tables.", 0);
-
-  } else {
-
-    Offset = UsablePml3;
-    UsablePml3 -= (NumReservedPml3Pages * 0x1000); UsablePml3_Data = (uint64*)UsablePml3;
-
-    Message(Ok, "Allocated space for (usable) PML3 tables between %xh and %xh.", (uint32)(UsablePml3), (uint32)(Offset));
-
-  }
-
-  // (TODO: ^^^^^^^^ for the love of god find a way to simplify this)
-  // (TODO: ^^^^^^^^ for the love of god find a way to simplify this)
-  // (TODO: ^^^^^^^^ for the love of god find a way to simplify this)
-
-
-
-
-
-  // [2.4] Finally, let's actually initialize the page tables.
-
-  Putchar('\n', 0);
-  Message(Kernel, "Initializing the usable page tables.");
-
-  // [2.4.1] First, we need to initialize the PTEs (Page Table Entries),
-  // each of which represent a 4KiB page in memory. We can do that by
-  // going through the memory map, like this:
 
   #define UsableFlags (pagePresent | pageRw)
-  uint32 NumPtes = 0;
-
-  for (uint8 Position = 0; Position < NumUsableMmapEntries; Position++) {
-
-    // If we've exceeded the number of PTEs, break
-
-    if ((NumPtes / 0x1000) >= NumReservedPtePages) break;
-
-    // Update offset, and make sure it's 4KiB-aligned.
-
-    uint64 Base = UsableMmap[Position].Base;
-    uint64 Limit = UsableMmap[Position].Limit;
-
-    if (Offset < Base) {
-      Offset = Base;
-    }
-
-    if ((Offset % 0x1000) != 0) {
-      Offset += (0x1000 - (Offset % 0x1000));
-    }
-
-    // Actually write the entries.
-
-    while ((Base + Limit - 0x1000) >= Offset) {
-
-      if ((NumPtes / 0x1000) >= NumReservedPtePages) {
-        break;
-      }
-
-      UsablePte_Data[NumPtes] = makePageEntry(Offset, UsableFlags);
-
-      Offset += 0x1000;
-      NumPtes++;
-
-    }
-
-    Message(Info, "Offset after processing uMmap[%d] is %x:%xh", Position, (uint32)(Offset >> 32), (uint32)Offset);
-
-  }
-
-  Message(Ok, "Initialized %d (usable) PTEs.", NumPtes);
-
-  // [2.4.2] Next, we need to initialize the PML2s and PML3s. This
-  // is actually relatively easy, since all of our entries are in
-  // one consecutive region:
-
-  uint32 NumPml2s = (NumPtes + 511) / 512; // Equivalent to ceil(NumPtes / (4096 / 8))
-  uint32 NumPml3s = (NumPml2s + 511) / 512; // Equivalent to ceil(NumPml2s / (4096 / 8))
-
-  for (uint32 Entry = 0; Entry < NumPml2s; Entry++) {
-
-    UsablePml2_Data[Entry] = makePageEntry((uint64)(UsablePte + (Entry * 0x1000)), UsableFlags);
-
-  }
-
-  for (uint32 Entry = 0; Entry < NumPml3s; Entry++) {
-
-    UsablePml3_Data[Entry] = makePageEntry((uint64)(UsablePml2 + (Entry * 0x1000)), UsableFlags);
-
-  }
-
-  Message(Ok, "Initialized %d+%d (usable) PML2 + PML3s.", NumPml2s, NumPml3s);
-
-  // [2.4.3] Finally, in order to actually map our usable section to
-  // 80h.low, we need to point the 257th ([256]) PML4 to our usable PML3,
-  // like this:
-
-  // (TODO: ^^^^^ Rewrite this, it's not that clear pfft.)
-
-  Pml4_Data[256] = makePageEntry(UsablePml3, UsableFlags);
-  Message(Ok, "(TODO?) Mapped the 257th PML4 to usable PML3 array.");
+  #define IdmappedFlags (pagePresent | pageRw | pagePcd) // (for 2MiB pages, add pageSize)
 
 
-  Message(Kernel, "Identity-mapping first 4gb (debug)");
+
+
+
+
+  Message(Kernel, "Identity-mapping first 4gb (debug); offset = %xh");
   Offset = InitializePageEntries(0, 0, 0xFFFFFFFF, Pml4_Data, IdmappedFlags, true, Offset, UsableMmap, NumUsableMmapEntries);
   Message(Ok, "Okay done");
 
@@ -1281,7 +977,7 @@ void Bootloader(void) {
   // Todo: there seems to be some alignment issues? but let me see if it works okay
 
   Message(Kernel, "Mapping kernel stack");
-  Offset = InitializePageEntries((uint64)KernelStack, (0xFFFFFF8000000000 - KernelStackSize), (KernelStackSize - 0x1000), Pml4_Data, IdmappedFlags, true, Offset, UsableMmap, NumUsableMmapEntries);
+  Offset = InitializePageEntries((uint64)KernelStack, (0xFFFFFFFF80000000 - KernelStackSize), (KernelStackSize - 0x1000), Pml4_Data, UsableFlags, false, Offset, UsableMmap, NumUsableMmapEntries);
   Message(Ok, "Okay done");
 
 
@@ -1293,7 +989,6 @@ void Bootloader(void) {
   Message(Kernel, "Preparing to transfer control to the kernel.");
 
   Message(-1, "(TODO) Remap kernel+stack as necessary");
-
 
 
 
@@ -1316,10 +1011,19 @@ void Bootloader(void) {
 
   Debug = true;
 
+
+  char* Teststring = "This is also Serra! <3                                                          "
+                     "(long mode kernel edition)                                                      "
+                     "                                                                                ";
+
+
   Putchar('\n', 0);
 
   Printf("Hi, this is Serra! <3\n", 0x0F);
-  Printf("April %i %x\n", 0x3F, 10, 0x2025);
+  Printf("April %i %x\n", 0x3F, 11, 0x2025);
+
+  LongmodeStub((uintptr)Teststring, Pml4);
+
 
   for(;;);
 

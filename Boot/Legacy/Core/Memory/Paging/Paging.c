@@ -70,6 +70,8 @@ static uint64 PageAlign(uint64 Offset) {
 
 */
 
+void __attribute__((noreturn)) Panic(char* String, uint32 Eip); // So the function can panic when necessary
+
 uint64 AllocateFromMmap(uint64 Start, uint32 Size, mmapEntry* UsableMmap, uint8 NumUsableMmapEntries) {
 
   // (First, let's find the mmap entry that corresponds to Start, or at the very
@@ -138,8 +140,6 @@ uint64 AllocateFromMmap(uint64 Start, uint32 Size, mmapEntry* UsableMmap, uint8 
 // (TODO: Write documentation)
 // Returns offset. (It's assumed that PhysAddress and VirtAddress are page-aligned)
 
-#include "../../Graphics/Graphics.h" // (DEBUG ONLY!!!)
-
 uint64 InitializePageEntries(uint64 PhysAddress, uint64 VirtAddress, uint64 Size, uint64* Pml4, uint64 Flags, bool UseLargePages, uint64 MmapOffset, mmapEntry* UsableMmap, uint8 NumUsableMmapEntries) {
 
   // (I don't know how to describe this but we're figuring out the
@@ -147,14 +147,6 @@ uint64 InitializePageEntries(uint64 PhysAddress, uint64 VirtAddress, uint64 Size
 
   uint64 Start = PageAlign(VirtAddress);
   uint64 End = (Start + Size);
-
-
-
-
-  Message(Warning, "start is %x:%xh, end is %x:%xh", (uint32)(Start>>32), (uint32)Start, (uint32)(End>>32), (uint32)End);
-
-
-
 
   uint16 InitialPmls[4] = {(Start >> 39) % 512, (Start >> 30) % 512, (Start >> 21) % 512, (Start >> 12) % 512};
   uint16 FinalPmls[4] = {(End >> 39) % 512, (End >> 30) % 512, (End >> 21) % 512, (End >> 12) % 512};
@@ -166,7 +158,7 @@ uint64 InitializePageEntries(uint64 PhysAddress, uint64 VirtAddress, uint64 Size
     // Is this filled out already? (PML4 -> array of PML3s)
     // If not, allocate a page for those PML3s.
 
-    uint64 Pml3_Address = (uint64)(pageAddress(Pml4[Pml4_Index]));
+    uintptr Pml3_Address = (uintptr)(pageAddress(Pml4[Pml4_Index]));
 
     if (Pml3_Address == 0) {
 
@@ -189,7 +181,7 @@ uint64 InitializePageEntries(uint64 PhysAddress, uint64 VirtAddress, uint64 Size
       // Is this filled out already? (PML3 -> array of 512 PML2s)
       // If not, allocate a page for those PML2s.
 
-      uint64 Pml2_Address = (uint64)(pageAddress(Pml3[Pml3_Index]));
+      uintptr Pml2_Address = (uintptr)(pageAddress(Pml3[Pml3_Index]));
 
       if (Pml2_Address == 0) {
 
@@ -213,19 +205,6 @@ uint64 InitializePageEntries(uint64 PhysAddress, uint64 VirtAddress, uint64 Size
 
         if (UseLargePages == true) {
 
-
-
-
-
-          uint64 DEBUGLinkedAddr = (uint64)(((uint64)Pml2_Index << 21) + ((uint64)Pml3_Index << 30) + ((uint64)Pml4_Index << 39));
-
-          Message(Warning, "linked %xh to %x:%xh with (%d,%d,%d,PS)", (uint32)PhysAddress, (uint32)(DEBUGLinkedAddr >> 32), (uint32)(DEBUGLinkedAddr),
-                  (uint32)Pml4_Index, (uint32)Pml3_Index, (uint32)Pml2_Index);
-
-
-
-
-
           Pml2[Pml2_Index] = makePageEntry(PhysAddress, (Flags | pageSize));
           PhysAddress += (4096 * 512);
 
@@ -235,7 +214,7 @@ uint64 InitializePageEntries(uint64 PhysAddress, uint64 VirtAddress, uint64 Size
 
         // Otherwise, repeat the same procedure we did last time
 
-        uint64 Pte_Address = (uint64)(pageAddress(Pml2[Pml2_Index]));
+        uintptr Pte_Address = (uintptr)(pageAddress(Pml2[Pml2_Index]));
 
         if (Pte_Address == 0) {
 
@@ -254,21 +233,6 @@ uint64 InitializePageEntries(uint64 PhysAddress, uint64 VirtAddress, uint64 Size
         uint64* Pte = (uint64*)Pte_Address;
 
         for (uint16 Pte_Index = Pte_Start; Pte_Index <= Pte_End; Pte_Index++) {
-
-
-
-
-
-
-          uint64 DEBUGLinkedAddr = (uint64)(((uint64)Pte_Index << 12) + ((uint64)Pml2_Index << 21) + ((uint64)Pml3_Index << 30) + ((uint64)Pml4_Index << 39));
-
-          Message(Warning, "linked %xh to %x:%xh with (%d,%d,%d,%d)", (uint32)PhysAddress, (uint32)(DEBUGLinkedAddr >> 32), (uint32)(DEBUGLinkedAddr),
-                  (uint32)Pml4_Index, (uint32)Pml3_Index, (uint32)Pml2_Index, (uint32)Pte_Index);
-
-
-
-
-
 
           Pte[Pte_Index] = makePageEntry(PhysAddress, Flags);
           PhysAddress += 4096;

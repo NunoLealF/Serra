@@ -92,11 +92,12 @@ JumpToHigherHalf:
 
   ; Now, we can finally jump to the entrypoint:
 
-  ;mov rsp, (0xFFFFFF8000000000 - 8)  (*we don't have a stack mapped yet!!!*)
-  ;mov rdi, rbx                       (*this^, but also, attribute noreturn = unnecessary)
-  ;push rbp
+  mov rsp, 0xFFFFFFFF80000000 ; (Still no idea what you're supposed to do here)
+  mov rdi, rbx
+  push rbp
 
-  call 0xFFFFFF8000000000
+  mov rax, 0xFFFFFFFF80000000
+  call rax
 
 
 ; -----------------------------------

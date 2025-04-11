@@ -20,14 +20,15 @@ OBJD = x86_64-elf-objdump
 # -funsigned-char: Use unsigned chars for characters.
 # -ffreestanding: This is a freestanding environment. Also, implies fno-builtin.
 # -std=c11: Use the regular C11 standard
+# -mcmodel=kernel: Assume the kernel runs in the last 2GiB of address space
 # -O2: Optimize the resulting file/binary for speed.
 # -mno-red-zone: (TODO - necessary for 64-bit)
 # -Wall: Enable all warnings.
 # -Wextra: Enable even more warnings. (Not sure why wall doesn't take care of this)
 # -Wpedantic: Be pedantic about the C standard / any possible mistakes
 
-LDFLAGS = -nostdlib -mno-red-zone
-CFLAGS = -std=c11 -funsigned-char -ffreestanding -mno-red-zone -O2 -Wall -Wextra -Wpedantic
+LDFLAGS = -nostdlib -mcmodel=kernel -mno-red-zone
+CFLAGS = -std=c11 -funsigned-char -ffreestanding -mcmodel=kernel -mno-red-zone -Os -Wall -Wextra -Wpedantic
 
 
 # The .PHONY directive is used on targets that don't output anything. For example, running 'make all' builds our
