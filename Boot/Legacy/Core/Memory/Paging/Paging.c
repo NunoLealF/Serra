@@ -3,11 +3,12 @@
 // For more information, please refer to the accompanying license agreement. <3
 
 #include "../../../Shared/Stdint.h"
+#include "../../Graphics/Graphics.h"
 #include "../Memory.h"
 
 // TODO - paging-related functions.
 
-// (In hindsight, this needs to be)
+// (In hindsight, this needs to be better documented)
 
 
 
@@ -70,8 +71,6 @@ static uint64 PageAlign(uint64 Offset) {
 
 */
 
-void __attribute__((noreturn)) Panic(char* String, uint32 Eip); // So the function can panic when necessary
-
 uint64 AllocateFromMmap(uint64 Start, uint32 Size, mmapEntry* UsableMmap, uint8 NumUsableMmapEntries) {
 
   // (First, let's find the mmap entry that corresponds to Start, or at the very
@@ -108,9 +107,14 @@ uint64 AllocateFromMmap(uint64 Start, uint32 Size, mmapEntry* UsableMmap, uint8 
     Start = PageAlign(Start);
 
     if ((Start + Size) < GetEndOfMmapEntry(UsableMmap[Entry])) {
+
+      Memset((void*)(uintptr)Start, '\0', Size); // Zero out the allocated space
       return (Start + Size);
+
     } else {
+
       Entry++;
+
     }
 
     // (If there isn't, then..)
@@ -140,6 +144,9 @@ uint64 AllocateFromMmap(uint64 Start, uint32 Size, mmapEntry* UsableMmap, uint8 
 // (TODO: Write documentation)
 // Returns offset. (It's assumed that PhysAddress and VirtAddress are page-aligned)
 
+// Also, just.. test the logic of this, to see if it works. I feel like this is
+// quite buggy, especially when initialpmls=finalpmls
+
 uint64 InitializePageEntries(uint64 PhysAddress, uint64 VirtAddress, uint64 Size, uint64* Pml4, uint64 Flags, bool UseLargePages, uint64 MmapOffset, mmapEntry* UsableMmap, uint8 NumUsableMmapEntries) {
 
   // (I don't know how to describe this but we're figuring out the
@@ -160,7 +167,7 @@ uint64 InitializePageEntries(uint64 PhysAddress, uint64 VirtAddress, uint64 Size
 
     uintptr Pml3_Address = (uintptr)(pageAddress(Pml4[Pml4_Index]));
 
-    if (Pml3_Address == 0) {
+    if (InitialPmls[0] != FinalPmls[0]) {
 
       MmapOffset = AllocateFromMmap(MmapOffset, 4096, UsableMmap, NumUsableMmapEntries);
       Pml3_Address = (MmapOffset - 4096);
@@ -178,17 +185,11 @@ uint64 InitializePageEntries(uint64 PhysAddress, uint64 VirtAddress, uint64 Size
 
     for (uint16 Pml3_Index = Pml3_Start; Pml3_Index <= Pml3_End; Pml3_Index++) {
 
-      // Is this filled out already? (PML3 -> array of 512 PML2s)
+      // Is this filled out already? (PML3 -> array of PML2s)
       // If not, allocate a page for those PML2s.
 
-      uintptr Pml2_Address = (uintptr)(pageAddress(Pml3[Pml3_Index]));
-
-      if (Pml2_Address == 0) {
-
-        MmapOffset = AllocateFromMmap(MmapOffset, 4096, UsableMmap, NumUsableMmapEntries);
-        Pml2_Address = (MmapOffset - 4096);
-
-      }
+      MmapOffset = AllocateFromMmap(MmapOffset, 4096, UsableMmap, NumUsableMmapEntries);
+      uintptr Pml2_Address = (uintptr)(MmapOffset - 4096);
 
       Pml3[Pml3_Index] = makePageEntry(Pml2_Address, Flags);
 
@@ -205,7 +206,7 @@ uint64 InitializePageEntries(uint64 PhysAddress, uint64 VirtAddress, uint64 Size
 
         if (UseLargePages == true) {
 
-          Pml2[Pml2_Index] = makePageEntry(PhysAddress, (Flags | pageSize));
+          Pml2[Pml2_Index] = makePageEntry(PhysAddress & (~0ULL << 21), (Flags | pageSize));
           PhysAddress += (4096 * 512);
 
           continue;
@@ -214,14 +215,8 @@ uint64 InitializePageEntries(uint64 PhysAddress, uint64 VirtAddress, uint64 Size
 
         // Otherwise, repeat the same procedure we did last time
 
-        uintptr Pte_Address = (uintptr)(pageAddress(Pml2[Pml2_Index]));
-
-        if (Pte_Address == 0) {
-
-          MmapOffset = AllocateFromMmap(MmapOffset, 4096, UsableMmap, NumUsableMmapEntries);
-          Pte_Address = (MmapOffset - 4096);
-
-        }
+        MmapOffset = AllocateFromMmap(MmapOffset, 4096, UsableMmap, NumUsableMmapEntries);
+        uintptr Pte_Address = (uintptr)(MmapOffset - 4096);
 
         Pml2[Pml2_Index] = makePageEntry(Pte_Address, Flags);
 

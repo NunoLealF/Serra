@@ -38,12 +38,10 @@ LongmodeStub:
   pop eax
 
   ; Store the address of our PML4 in the CR3 register (making sure to
-  ; exclude bits 0-11).
+  ; *clear* bits 0-11; preserving them can cause it to crash).
 
-  mov eax, cr3
   and edx, 0xFFFFF000
-  or eax, edx
-  mov cr3, eax
+  mov cr3, edx
 
   ; Get the current value of the EFER register, and set bit 8 (long mode)
 

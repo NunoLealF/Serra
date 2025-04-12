@@ -880,10 +880,7 @@ void Bootloader(void) {
 
 
 
-
-
-
-  Message(Kernel, "Identity-mapping first 4gb (debug); offset = %xh");
+  Message(Kernel, "Identity-mapping first 4gb (debug); offset = %xh", (uint32)Offset);
   Offset = InitializePageEntries(0, 0, 0xFFFFFFFF, Pml4_Data, IdmappedFlags, true, Offset, UsableMmap, NumUsableMmapEntries);
   Message(Ok, "Okay done");
 
@@ -999,6 +996,28 @@ void Bootloader(void) {
   Message(-1, "(TODO) Call LongmodeStub()");
 
 
+  // (DEBUG)
+  // Why doesn't this work!? (Or, better, it *does* work, but like.. why doesn't it
+  // not work aaagh.)
+
+  // (TODO: does this even work on real hardware? maybe, i hope)
+
+  uint64 DebugPml4 = Pml4_Data[511];
+
+  uint64* Pml3_Data = (uint64*)pageAddress(DebugPml4);
+  uint64 DebugPml3 = Pml3_Data[0];
+
+  uint64* Pml2_Data = (uint64*)pageAddress(DebugPml3);
+  uint64 DebugPml2 = Pml2_Data[0];
+
+  uint64* Pte_Data = (uint64*)pageAddress(DebugPml2);
+  uint64 DebugPte = Pte_Data[0];
+
+  Message(Kernel, "Debug pml4 = %x:%x, debug pml3 = %x:%x", (uint32)(DebugPml4 >> 32), (uint32)DebugPml4, (uint32)(DebugPml3 >> 32), (uint32)DebugPml3);
+  Message(Kernel, "Debug pml2 = %x:%x, debug pte = %x:%x", (uint32)(DebugPml2 >> 32), (uint32)DebugPml2, (uint32)(DebugPte >> 32), (uint32)DebugPte);
+
+
+
   // [For now, let's just leave things here]
 
   Debug = true;
@@ -1012,7 +1031,7 @@ void Bootloader(void) {
   Putchar('\n', 0);
 
   Printf("Hi, this is Serra! <3\n", 0x0F);
-  Printf("April %i %x\n", 0x3F, 11, 0x2025);
+  Printf("April %i %x\n", 0x3F, 12, 0x2025);
 
   LongmodeStub((uintptr)Teststring, Pml4);
 
