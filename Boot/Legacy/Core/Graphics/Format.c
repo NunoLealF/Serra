@@ -271,6 +271,12 @@ void vPrintf(const char* String, uint8 Color, va_list Arguments) {
           Print(va_arg(Arguments, const char*), Color);
           break;
 
+        // Unsigned binary integers (%b).
+
+        case 'b':
+          Print(Itoa(va_arg(Arguments, unsigned int), Buffer, 2), Color);
+          break;
+
         // Unsigned decimal integers (%d, %i).
 
         case 'd':
