@@ -884,17 +884,47 @@ void Bootloader(void) {
 
 
 
-  // (Identity-mapping first 4GiB)
-
-  Message(Kernel, "Identity-mapping first 4gb (debug); offset = %xh", (uint32)Offset);
-  Offset = InitializePageEntries(0, 0, 0xFFFFFFFF, Pml4_Data, IdmappedFlags, true, Offset, UsableMmap, NumUsableMmapEntries);
-  Message(Ok, "Okay done");
 
 
+  // Identity map woooo
 
-  // (Forget the map usable memory thing for now, it's pretty much useless)
+  Putchar('\n', 0);
+  Message(Kernel, "Preparing to map memory.");
 
 
+  // (Identity-map *everything* up to IdentityMapThreshold in memory)
+
+  #define IdentityMapThreshold 0x1000000 // (16 MiB)
+
+  Offset = InitializePageEntries(0, 0, IdentityMapThreshold, Pml4_Data, IdmappedFlags, true, Offset, UsableMmap, NumUsableMmapEntries);
+  Message(Ok, "Successfully identity mapped the first %d MiB of memory", (IdentityMapThreshold / 0x100000));
+
+
+  // (Identity-map everything else in the *usable* memory map, above the threshold)
+  // So, a reserved or missing area above it won't get mapped, but a free area will.
+
+  for (uint16 Entry = 0; Entry < NumUsableMmapEntries; Entry++) {
+
+    // Get variables
+
+    uint64 Start = UsableMmap[Entry].Base;
+    uint64 Size = UsableMmap[Entry].Limit;
+
+    // Align to 2MiB (huge page) boundaries; more specifically, align start *down*,
+    // but align size *up*
+
+    Start -= (Start % 0x200000);
+
+    if ((Size % 0x200000) != 0) {
+      Size += (0x200000 - (Size % 0x200000));
+    }
+
+    // Initialize page entries
+
+    Offset = InitializePageEntries(Start, Start, Size, Pml4_Data, IdmappedFlags, true, Offset, UsableMmap, NumUsableMmapEntries);
+    Message(Ok, "Successfully identity mapped %d MiB area starting at %x:%xh", (uint32)(Size / 0x100000), (uint32)(Start >> 32), (uint32)(Start & 0xFFFFFFFF));
+
+  }
 
 
 
