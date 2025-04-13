@@ -21,6 +21,10 @@ void __attribute__((noreturn)) Entrypoint(unsigned int InfoTable) {
 
   }
 
+  // TODO: Set up environment
+  // TODO: Set up basic IDT, panic handling, etc.
+  // TODO: Enable MMX, SSE, SSE2.. this should be done in the bootloader, though
+
   for(;;);
 
 }

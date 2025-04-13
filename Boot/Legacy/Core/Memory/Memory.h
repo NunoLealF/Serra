@@ -60,7 +60,7 @@
   #define pagePwt (1ULL << 3)
   #define pagePcd (1ULL << 4)
   #define pageAccessed (1ULL << 5)
-  #define pageAddress(Addr) (Addr & (~0ULL << 12)) // Depending on the page type, upper bits should be reserved
+  #define pageAddress(Addr) ((uint64)Addr & (~0ULL << 12)) // Depending on the page type, upper bits should be reserved
   #define pageXd (1ULL << 63)
 
   // (Page-sized flags)
@@ -74,10 +74,10 @@
 
   // (Functions from Paging/Paging.c)
 
-  #define makePageEntry(Addr, Flags) ((uint64)(pageAddress(Addr)) | (uint64)(Flags))
+  #define makePageEntry(Addr, Flags) ((uint64)pageAddress(Addr) | (uint64)Flags)
   #define ceilingDivide(Num, Divisor) ((Num + Divisor - 1) / Divisor)
 
-  uint64 AllocateFromMmap(uint64 Start, uint32 Size, mmapEntry* UsableMmap, uint8 NumUsableMmapEntries);
+  uint64 AllocateFromMmap(uint64 Start, uint32 Size, bool Clear, mmapEntry* UsableMmap, uint8 NumUsableMmapEntries);
   uint64 InitializePageEntries(uint64 PhysAddress, uint64 VirtAddress, uint64 Size, uint64* Pml4, uint64 Flags, bool UseLargePages, uint64 MmapOffset, mmapEntry* UsableMmap, uint8 NumUsableMmapEntries);
 
 #endif

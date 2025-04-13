@@ -823,7 +823,7 @@ void Bootloader(void) {
   // [2.1.k1] Allocate space for the kernel.
   // (Do not name this 'Kernel', GCC will override any Message(Kernel, ...) msgs lmao.)
 
-  uintptr KernelPtr = (uintptr)(AllocateFromMmap(Offset, (uint32)(KernelDirectory.Size), UsableMmap, NumUsableMmapEntries));
+  uintptr KernelPtr = (uintptr)(AllocateFromMmap(Offset, (uint32)(KernelDirectory.Size), false, UsableMmap, NumUsableMmapEntries));
 
   if (KernelPtr == 0) {
 
@@ -841,7 +841,7 @@ void Bootloader(void) {
   // [2.1.k2] Allocate space for the kernel *stack*.
 
   #define KernelStackSize 0x100000 // Must be a multiple of 4KiB
-  uintptr KernelStack = (uintptr)(AllocateFromMmap(Offset, KernelStackSize, UsableMmap, NumUsableMmapEntries));
+  uintptr KernelStack = (uintptr)(AllocateFromMmap(Offset, KernelStackSize, false, UsableMmap, NumUsableMmapEntries));
 
   if (KernelStack == 0) {
 
@@ -858,7 +858,7 @@ void Bootloader(void) {
 
   // [2.1.2] Allocate space for the 512 PML4 tables.
 
-  uintptr Pml4 = (uintptr)(AllocateFromMmap(Offset, (512 * 8), UsableMmap, NumUsableMmapEntries));
+  uintptr Pml4 = (uintptr)(AllocateFromMmap(Offset, (512 * 8), true, UsableMmap, NumUsableMmapEntries));
   uint64* Pml4_Data;
 
   if (Pml4 == 0) {
@@ -875,14 +875,26 @@ void Bootloader(void) {
   }
 
 
+
+
+
+
   #define UsableFlags (pagePresent | pageRw)
   #define IdmappedFlags (pagePresent | pageRw | pagePcd) // (for 2MiB pages, add pageSize)
 
 
 
+  // (Identity-mapping first 4GiB)
+
   Message(Kernel, "Identity-mapping first 4gb (debug); offset = %xh", (uint32)Offset);
   Offset = InitializePageEntries(0, 0, 0xFFFFFFFF, Pml4_Data, IdmappedFlags, true, Offset, UsableMmap, NumUsableMmapEntries);
   Message(Ok, "Okay done");
+
+
+
+  // (Forget the map usable memory thing for now, it's pretty much useless)
+
+
 
 
 
@@ -954,7 +966,7 @@ void Bootloader(void) {
     Message(Info, "ProgramHeader(%d) | Type %d | Flags %xh | Offset %xh", Index, (uint32)Header->Type, (uint32)Header->Flags, (uint32)Header->Offset);
     Message(Info, "ProgramHeader(%d) | Address %x:%xh, Size %d and %d bytes", Index, (uint32)(Header->VirtAddress >> 32), (uint32)Header->VirtAddress, (uint32)Header->Size, (uint32)Header->PaddedSize);
 
-    if (Header->Type = 0x01) {
+    if (Header->Type == 0x01) {
 
       uint64 PhysAddress = (uint64)(KernelPtr) + Header->Offset;
       Offset = InitializePageEntries(PhysAddress, Header->VirtAddress, Header->Size, Pml4_Data, UsableFlags, false, Offset, UsableMmap, NumUsableMmapEntries);
@@ -965,10 +977,9 @@ void Bootloader(void) {
 
   // Todo: there seems to be some alignment issues? but let me see if it works okay
 
-  Message(Kernel, "Mapping kernel stack");
-  Offset = InitializePageEntries((uint64)KernelStack, (0xFFFFFFFF80000000 - KernelStackSize), (KernelStackSize - 0x1000), Pml4_Data, UsableFlags, false, Offset, UsableMmap, NumUsableMmapEntries);
-  Message(Ok, "Okay done");
-
+  Message(Kernel, "Mapping kernel stack; offset = %xh", (uint32)Offset);
+  Offset = InitializePageEntries((uint64)KernelStack, (KernelHeader->Entrypoint - KernelStackSize), KernelStackSize, Pml4_Data, UsableFlags, false, Offset, UsableMmap, NumUsableMmapEntries);
+  Message(Ok, "Okay done; offset = %xh", (uint32)Offset);
 
   // [3.3 / 4.1 / idk] Remap as necessary
   // (Kernel will be in the last ([511], 512th) PML4, at FFFFFF.FF80000000-FFFFFF.FFFFFFFFFFh) -> KernelPtr
@@ -1031,7 +1042,7 @@ void Bootloader(void) {
   Putchar('\n', 0);
 
   Printf("Hi, this is Serra! <3\n", 0x0F);
-  Printf("April %i %x\n", 0x3F, 12, 0x2025);
+  Printf("April %i %x\n", 0x3F, 13, 0x2025);
 
   LongmodeStub((uintptr)Teststring, Pml4);
 
