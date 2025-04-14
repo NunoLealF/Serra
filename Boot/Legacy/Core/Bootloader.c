@@ -646,7 +646,7 @@ void Bootloader(void) {
   // (get a few initial variables)
 
   DriveNumber = InfoTable->DriveNumber;
-  bool Edd_Valid = InfoTable->Edd_Valid;
+  bool Edd_Enabled = InfoTable->Edd_Enabled;
 
   LogicalSectorSize = InfoTable->LogicalSectorSize;
   PhysicalSectorSize = InfoTable->PhysicalSectorSize;
@@ -1072,7 +1072,7 @@ void Bootloader(void) {
   Putchar('\n', 0);
 
   Printf("Hi, this is Serra! <3\n", 0x0F);
-  Printf("April %i %x\n", 0x3F, 13, 0x2025);
+  Printf("April %i %x\n", 0x3F, 14, 0x2025);
 
   LongmodeStub((uintptr)Teststring, Pml4);
 

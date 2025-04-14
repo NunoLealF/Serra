@@ -147,7 +147,7 @@ Core/Elf.o:
 
 Core/Stub.o:
 	@echo "Building $@"
-	@$(AS) Core/Stub.asm -f elf -o Core/Stub.o
+	@$(AS) -w-zext-reloc Core/Stub.asm -f elf -o Core/Stub.o
 
 Core/Cpu/Cpu.o:
 	@echo "Building $@"

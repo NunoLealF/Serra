@@ -126,31 +126,19 @@ void __attribute__((noreturn)) Bootloader(void) {
   // For now, we just want to collect some important data - specifically, we want to figure out
   // the current drive number (which is also saved in the bootsector, at a given offset):
 
-  DriveNumber = *(uint8*)(0x7E00 - 3);
-  bool DriveNumberIsValid = true;
+  // (Update: This actually used to check for an invalid drive number, but not
+  // only did it not work for floppy emulation (which some PCs use), it also
+  // doesn't make sense because *if we're here, then the bootsector used that
+  // drive number already* lol)
 
+  DriveNumber = *(uint8*)(0x7E00 - 3);
   uint16 Signature = *(uint16*)(0x7E00 - 2);
 
   if (Signature != 0xAA55) {
     Panic("Bootsector/VBR hasn't been loaded into memory.");
-  } else if (DriveNumber == 0x00) {
-    DriveNumberIsValid = false;
-  }
-
-  // If the drive number saved in our bootsector is somehow invalid, then we're going to want
-  // to just set it to the default 80h, and also show a warning.
-
-  if (DriveNumberIsValid == true) {
-
-    Message(Ok, "Successfully got the current drive number (%xh).", DriveNumber);
-
   } else {
-
-    Message(Fail, "Failed to get the current drive number; assuming it to be 80h.");
-    DriveNumber = 0x80;
-
+    Message(Ok, "Successfully got the current drive number (%xh).", DriveNumber);
   }
-
 
   // Alright; now, we want to focus on getting information from our current drive - how large
   // is it, how many bytes are in a sector, how should we load our data?
@@ -402,7 +390,7 @@ void __attribute__((noreturn)) Bootloader(void) {
   // (Fill out disk/EDD info)
 
   InfoTable->DriveNumber = DriveNumber;
-  InfoTable->Edd_Valid = DriveNumberIsValid;
+  InfoTable->Edd_Enabled = EDD_Enabled; // This should be whether EDD is enabled
 
   InfoTable->LogicalSectorSize = LogicalSectorSize;
   InfoTable->PhysicalSectorSize = PhysicalSectorSize;

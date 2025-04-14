@@ -33,7 +33,7 @@
     // [Disk/EDD]
 
     uint8 DriveNumber; // Same as SaveDL, or if Edd_Valid is false, 0x80
-    bool Edd_Valid; // Whether EDD functions work or not
+    bool Edd_Enabled; // Whether EDD functions work or not
 
     uint16 LogicalSectorSize; // FAT/BPB
     uint16 PhysicalSectorSize; // EDD/int13h
