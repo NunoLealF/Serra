@@ -6,48 +6,52 @@
 #include "../../Graphics/Graphics.h"
 #include "../Memory.h"
 
-// TODO - paging-related functions.
+/* static uint64 PageAlign()
 
-// (In hindsight, this needs to be better documented)
+   Inputs: uint64 Address - The address you want to page-align.
+   Outputs: uint64 - The newly page-aligned address.
 
+   The purpose of this function is to align a 64-bit address to the next
+   4KiB (1000h bytes). It does this by checking if the address is already
+   page-aligned, and if not, adding the remainder needed to do so.
 
+   Keep in mind that this function aligns *up*, so 1001h and 1FFFh will
+   both align to 2000h, for example.
 
+*/
 
-// (TODO: Write documentation)
-// 4KiB-align offset
+static uint64 PageAlign(uint64 Address) {
 
-static uint64 PageAlign(uint64 Offset) {
-
-  if ((Offset % 0x1000) != 0) {
-    Offset += (0x1000 - (Offset % 0x1000));
+  if ((Address % 0x1000) != 0) {
+    Address += (0x1000 - (Address % 0x1000));
   }
 
-  return Offset;
+  return Address;
 
 }
 
 
 
-// TODO: (Other functions, basically)
-
 /* uint64 AllocateFromMmap()
 
-   Inputs: uint64 Start - The address you want to start searching from.
+   Inputs: uint64 Start - The address you want to start searching from;
 
-           uint32 Size - The size of the memory block you want to allocate.
+           uint32 Size - The size of the memory block you want to allocate;
 
-           bool Clear - Whether the memory block should be cleared with 0s.
+           bool Clear - Whether the memory block should be zeroed out;
 
            mmapEntry* UsableMmap - An array of memory map entries that only
-           correspond to usable memory (the "usable memory map").
+           correspond to usable memory (the "usable memory map");
 
            uint8 NumUsableMmapEntries - The number of entries in UsableMmap.
 
    Outputs: uint64 - If successful, an address that corresponds to the end
-            of the newly allocated memory block; *otherwise, zero (0)*.
+            of the newly allocated (page-aligned) memory block; otherwise,
+            zero.
 
    The purpose of this function is to allocate a given amount of memory from
-   the system's memory map, using a simple bump allocator design.
+   the system's memory map, using a simple bump allocator design, and to
+   clear it if necessary.
 
    Essentially, this function looks for a free memory area in UsableMmap (that
    comes after Start), and either returns an address corresponding to the end
@@ -70,6 +74,10 @@ static uint64 PageAlign(uint64 Offset) {
    -> uint64 Start = UsableMmap[0].Base;
    -> uint64 MemoryBlockA = AllocateFromMmap(Start, 0xABCD, UsableMmap, NumEntries);
    -> uint64 MemoryBlockB = AllocateFromMmap(MemoryBlockA, 0xEFAB, UsableMmap, NumEntries);
+
+   Also, keep in mind that this function *always allocates on (4 KiB) page
+   boundaries*; this is pretty useful when you're setting up paging, but it
+   does mean that this function can end up wasting some space.
 
 */
 
@@ -142,17 +150,57 @@ uint64 AllocateFromMmap(uint64 Start, uint32 Size, bool Clear, mmapEntry* Usable
 
 
 
+/* uint64 InitializePageEntries()
 
+   Inputs: uint64 PhysAddress - The physical address you want to map *from*;
 
+           uint64 VirtAddress - The virtual address you want to map *to*;
 
+           uint64 Size - How many bytes you want to map;
 
-// (TODO: Write documentation)
-// Returns offset. (It's assumed that PhysAddress and VirtAddress are page-aligned)
+           uint64* Pml4 - A pointer to an array of PML4 entries (this is the
+           same pointer you're supposed to set CR3 to later on) - this
+           should *always* be zeroed out before first using this function;
 
-// Also, just.. test the logic of this, to see if it works. I feel like this is
-// quite buggy, especially when initialpmls=finalpmls
+           uint64 Flags - The flags you want to use on your pages;
 
-uint64 InitializePageEntries(uint64 PhysAddress, uint64 VirtAddress, uint64 Size, uint64* Pml4, uint64 Flags, bool UseLargePages, uint64 MmapOffset, mmapEntry* UsableMmap, uint8 NumUsableMmapEntries) {
+           bool UseLargePages - Whether you want to use large (2 MiB) pages
+           or not (4 KiB);
+
+           uint64 MmapOffset - Where in memory you want to start allocating
+           from (this can either be the start of usable memory, or the last
+           value returned by AllocFromUsableMmap(), whichever is greater);
+
+           mmapEntry* UsableMmap - A pointer to a table of usable memory map
+           entries (as outlined in struct mmapEntry{});
+
+           uint16 NumUsableMmapEntries - The number of entries in the
+           previous table (UsableMmap).
+
+   Outputs: uint64 - The updated memory map offset you should use after
+   calling this function (treat it like AllocFromUsableMmap()).
+
+   The purpose of this function is to map a memory block (located within the
+   physical address space) to another location in the virtual address space,
+   using the long mode paging model. It dynamically allocates memory as
+   needed (from UsableMmap, not the page being mapped), and can deal
+   with overlapping regions.
+
+   Keep in mind that, due to the way this function works, it's implicitly
+   assumed that *Pml4 only contains valid data, so always make sure to clear
+   it out before calling this function for the first time.
+
+   As an example, if you wanted to identity map the first 4 GiB of memory
+   using 2 MiB pages, you could do something like:
+
+   -> InitializePageEntries(0, 0, 4294967296, Pml4, (pagePresent | pageRw), true, Offset, Mmap, NumEntries);
+
+*/
+
+// TODO: Even though it isn't 100% necessary rn, I do want to mess with the
+// PAT later on so I can map framebuffers properly - add support for that?
+
+uint64 InitializePageEntries(uint64 PhysAddress, uint64 VirtAddress, uint64 Size, uint64* Pml4, uint64 Flags, bool UseLargePages, uint64 MmapOffset, mmapEntry* UsableMmap, uint16 NumUsableMmapEntries) {
 
   // First, let's see if the addresses themselves are page-aligned; if
   // not, panic (since this only happens when there's clearly something
@@ -176,7 +224,7 @@ uint64 InitializePageEntries(uint64 PhysAddress, uint64 VirtAddress, uint64 Size
   uint16 InitialPmls[4] = {(Start >> 39) % 512, (Start >> 30) % 512, (Start >> 21) % 512, (Start >> 12) % 512};
   uint16 FinalPmls[4] = {(End >> 39) % 512, (End >> 30) % 512, (End >> 21) % 512, (End >> 12) % 512};
 
-  // (Now, let's fill out the pages - starting with the PML4s)
+  // Finally, let's initialize those pages. Starting with the PML4s:
 
   for (uint16 Pml4_Index = InitialPmls[0]; Pml4_Index <= FinalPmls[0]; Pml4_Index++) {
 
@@ -194,7 +242,7 @@ uint64 InitializePageEntries(uint64 PhysAddress, uint64 VirtAddress, uint64 Size
 
     Pml4[Pml4_Index] = makePageEntry(Pml3_Address, Flags);
 
-    // (Fill out PML3s)
+    // Fill out PML3 entries.
 
     uint16 Pml3_Start = ((Pml4_Index == InitialPmls[0]) ? InitialPmls[1] : 0);
     uint16 Pml3_End = ((Pml4_Index == FinalPmls[0]) ? FinalPmls[1] : 511);
@@ -217,7 +265,7 @@ uint64 InitializePageEntries(uint64 PhysAddress, uint64 VirtAddress, uint64 Size
 
       Pml3[Pml3_Index] = makePageEntry(Pml2_Address, Flags);
 
-      // (Fill out PML2s)
+      // Fill out PML2 entries.
 
       uint16 Pml2_Start = ((Pml4_Index == InitialPmls[0] && Pml3_Index == InitialPmls[1]) ? InitialPmls[2] : 0);
       uint16 Pml2_End = ((Pml4_Index == FinalPmls[0] && Pml3_Index == FinalPmls[1]) ? FinalPmls[2] : 511);
@@ -250,7 +298,7 @@ uint64 InitializePageEntries(uint64 PhysAddress, uint64 VirtAddress, uint64 Size
 
         Pml2[Pml2_Index] = makePageEntry(Pte_Address, Flags);
 
-        // (Fill out page table entries)
+        // Fill out page table (PML1?) entries.
 
         uint16 Pte_Start = ((Pml4_Index == InitialPmls[0] && Pml3_Index == InitialPmls[1] && Pml2_Index == InitialPmls[2]) ? InitialPmls[3] : 0);
         uint16 Pte_End = ((Pml4_Index == FinalPmls[0] && Pml3_Index == FinalPmls[1] && Pml2_Index == FinalPmls[2]) ? FinalPmls[3] : 511);
@@ -270,9 +318,8 @@ uint64 InitializePageEntries(uint64 PhysAddress, uint64 VirtAddress, uint64 Size
 
   }
 
-  // Return the new offset
+  // Return the new offset.
 
   return MmapOffset;
-
 
 }

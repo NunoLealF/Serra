@@ -15,14 +15,12 @@
   bool Check_A20(void);
   void Wait_A20(void);
 
-
   // Standard memory functions; memset, memcpy, memmove.., from Memory.c
 
   void Memcpy(void* Destination, void* Source, uint32 Size);
   void Memmove(void* Destination, const void* Source, uint32 Size);
   void Memset(void* Buffer, uint8 Character, uint32 Size);
   void Memswap(void* BufferA, void* BufferB, uint32 Size);
-
 
   // Memory-map-related structures, from Mmap/Mmap.c.
 
@@ -78,6 +76,6 @@
   #define ceilingDivide(Num, Divisor) ((Num + Divisor - 1) / Divisor)
 
   uint64 AllocateFromMmap(uint64 Start, uint32 Size, bool Clear, mmapEntry* UsableMmap, uint8 NumUsableMmapEntries);
-  uint64 InitializePageEntries(uint64 PhysAddress, uint64 VirtAddress, uint64 Size, uint64* Pml4, uint64 Flags, bool UseLargePages, uint64 MmapOffset, mmapEntry* UsableMmap, uint8 NumUsableMmapEntries);
+  uint64 InitializePageEntries(uint64 PhysAddress, uint64 VirtAddress, uint64 Size, uint64* Pml4, uint64 Flags, bool UseLargePages, uint64 MmapOffset, mmapEntry* UsableMmap, uint16 NumUsableMmapEntries);
 
 #endif
