@@ -101,7 +101,7 @@ void RestoreState(void) {
    possible graphics mode (with text mode as a fallback);
 
    -> (8) Read the kernel (located in Boot/Serra/Kernel.elf) from
-   the FAT filesystem, reading ELF headers;
+   the current FAT filesystem, and process ELF headers;
 
    -> (9) Initialize paging, mapping the kernel to a higher-half,
    and identity-mapping everything else;
@@ -398,137 +398,120 @@ void Bootloader(void) {
   if (Rsdp == NULL) {
 
     AcpiIsSupported = false;
-    Message(Warning, "Unable to find ACPI RSDP");
+    Message(Warning, "ACPI appears to be unsupported (unable to find table).");
 
   } else {
 
     AcpiIsSupported = true;
-    Message(Ok, "Found ACPI tables.");
-    Message(Info, "RSDP is located at %xh, RSDT exists at %xh, XSDT *may* exist at %x:%xh",
-           (uint32)Rsdp, (uint32)(Rsdp->Rsdt), (uint32)((Rsdp->Xsdt) >> 32), (uint32)(Rsdp->Xsdt));
-    Message(Info, "ACPI revision is %d", Rsdp->Revision);
+    Message(Ok, "Successfully located ACPI tables.");
+
+    Message(Info, "ACPI RSDP table is located at %xh", (uint32)Rsdp);
+    Message(Info, "RSDT seems to be located at %xh, XSDT may be located at %x:%xh", (uint32)(Rsdp->Rsdt), (uint32)((Rsdp->Xsdt) >> 32), (uint32)(Rsdp->Xsdt));
 
   }
 
-  // (TODO TODO TODO: Rewrite the rest of this tomorrow, i'm kinda tired)
-  // Don't forget that smbios and acpi are in the same 'section' comment-wise
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  // [SMBIOS]
-  // F0000h to FFFFFh; this is pretty important, but it can be dealt with later on, for now
-  // I mostly just want to check to see if SMBIOS even exists.
-
-  Putchar('\n', 0);
-  Message(Kernel, "Preparing to get SMBIOS data");
-
-  // (get the table itself)
+  // Next, let's do the same, but for the SMBIOS tables:
 
   void* SmbiosEntryPoint = GetSmbiosEntryPointTable();
-  bool SmbiosIsSupported = true;
+  bool SmbiosIsSupported;
 
   if (SmbiosEntryPoint == NULL) {
+
     SmbiosIsSupported = false;
-  }
+    Message(Warning, "SMBIOS appears to be unsupported (unable to find table).");
 
-  // (show info)
-
-  if (SmbiosIsSupported == true) {
-    Message(Info, "SMBIOS appears to be supported (the entry point table is at %xh).", SmbiosEntryPoint);
   } else {
-    Message(Warning, "SMBIOS appears to be unsupported.");
+
+    SmbiosIsSupported = true;
+    Message(Ok, "Successfully located SMBIOS tables.");
+    Message(Info, "SMBIOS entry point table appears to be located at %xh", (uint32)SmbiosEntryPoint);
+
   }
 
 
 
-
-  // [VESA/VBE, and maybe EDID]
-  // https://pdos.csail.mit.edu/6.828/2012/readings/hardware/vbe3.pdf (important)
+  // [Check for VESA (VBE 2.0+) support, and obtain data if possible]
 
   Putchar('\n', 0);
   Message(Kernel, "Preparing to get VESA-related data.");
 
-  // (call it)
+  // Let's start by obtaining the VBE info block - this not only lets us
+  // see if VESA VBE is supported at all (by checking the return status),
+  // but it also lets us filter out older versions of VBE.
+
+  // (For context: this is necessary because not all systems support VBE,
+  // because VBE versions before 2.0 don't have support for linear
+  // framebuffers, and because VBE lets us deal with graphics modes.)
 
   volatile vbeInfoBlock VbeInfo;
   uint32 VbeReturnStatus = GetVbeInfoBlock(&VbeInfo);
 
-  // (check to see if it's supported - at least, VBE >= 2.0)
+  bool VbeIsSupported;
 
-  bool VbeIsSupported = true;
+  if ((VbeReturnStatus != 0x004F) || (VbeInfo.Version < 0x200)) {
 
-  if (VbeReturnStatus != 0x004F) {
     VbeIsSupported = false;
-  } else if (VbeInfo.Version < 0x200) {
-    VbeIsSupported = false;
-  }
+    Message(Warning, "VBE (2.0+) appears to be unsupported.");
 
-  // (show info on whether VBE is supported)
-
-  if (VbeIsSupported == true) {
-    Message(Ok, "VBE 2.0+ appears to be supported (the table itself is at %xh).", &VbeInfo);
   } else {
-    Message(Warning, "VBE 2.0+ appears to be unsupported.");
+
+    VbeIsSupported = true;
+    Message(Ok, "VBE (2.0+) appears to be supported.");
+    Message(Info, "The VBE info block table is located at %xh", &VbeInfo);
+
   }
 
-  // (check for EDID)
+  // Next, let's check for EDID - this is another protocol that works
+  // alongside VBE, but that lets us query the system for things like
+  // the supported display resolution.
+
+  // (VBE tells us which modes/resolutions the *graphics card* supports,
+  // but we still don't know which ones the monitor supports; that's
+  // where EDID comes in.)
 
   volatile edidInfoBlock EdidInfo;
 
-  bool EdidIsSupported = true;
   uint32 EdidReturnStatus = GetEdidInfoBlock(&EdidInfo, 0x00);
+  bool EdidIsSupported = false;
 
-  if (((EdidReturnStatus & 0xFF) != 0x4F) || (VbeIsSupported == false)) {
-    EdidIsSupported = false;
+  if (VbeIsSupported == true) {
+
+    if (((EdidReturnStatus & 0xFF) != 0x4F) || (VbeIsSupported == false)) {
+
+      EdidIsSupported = false;
+      Message(Warning, "EDID appears to be unsupported; using lowest video mode.");
+
+    } else {
+
+      EdidIsSupported = true;
+      Message(Ok, "EDID appears to be supported.");
+      Message(Info, "The EDID info block table is located at %xh", &EdidInfo);
+
+    }
+
   }
 
-  // (show info on whether EDID is supported)
-
-  if (EdidIsSupported == true) {
-    Message(Ok, "EDID appears to be supported (the table itself is at %xh).", &EdidInfo);
-  } else {
-    Message(Warning, "EDID appears to be unsupported; using lowest video mode.");
-  }
-
-  // (get preferred resolution)
+  // Based off of what EDID tells us, we can try to find the preferred
+  // resolution - either it's supported (in which case, we need to look
+  // at the timings), or it isn't (which means we can use 720*480).
 
   edidDetailedTiming PreferredTimings = EdidInfo.DetailedTimings[0];
-  uint16 PreferredResolution[2];
+  uint16 PreferredResolution[2] = {720, 480};
 
   if (EdidIsSupported == true) {
 
     PreferredResolution[0] = (PreferredTimings.Timings.HorizontalInfo_Low & 0xFF) | (PreferredTimings.Timings.HorizontalInfo_High & 0xF0) << 4;
     PreferredResolution[1] = (PreferredTimings.Timings.VerticalInfo_Low & 0xFF) | (PreferredTimings.Timings.VerticalInfo_High & 0xF0) << 4;
 
-  } else {
-
-    PreferredResolution[0] = 720;
-    PreferredResolution[1] = 480;
+    Message(Info, "Preferred resolution appears to be %d*%d (according to EDID)",
+           (uint32)PreferredResolution[0], (uint32)PreferredResolution[1]);
 
   }
 
-  // (show actual VBE/EDID info)
-  // TODO: Show more!!!
+  // Okay - now that we have all of that information, we can finally
+  // go ahead and try to find the best graphics mode for this system.
 
-  if (VbeIsSupported == true) {
-    Message(Info, "Preferred resolution is %d * %d.", PreferredResolution[0], PreferredResolution[1]);
-  }
-
-  // (get best mode)
-
-  // This should definitely be a function - okay, it is one now, but *I still haven't tested
-  // this super extensively, so do that first!!*
+  // (If VBE isn't supported, we can still use text mode as a fallback)
 
   uint16 BestVbeMode = 0xFFFF;
   volatile vbeModeInfoBlock BestVbeModeInfo;
@@ -538,66 +521,52 @@ void Bootloader(void) {
     BestVbeMode = FindBestVbeMode((uint16*)(convertFarPtr(VbeInfo.VideoModeListPtr)), PreferredResolution[0], PreferredResolution[1]);
     GetVbeModeInfo(&BestVbeModeInfo, BestVbeMode);
 
-    Message(Info, "Using mode %xh, with a %dx%d resolution and a %d-bit color depth.", BestVbeMode, BestVbeModeInfo.ModeInfo.X_Resolution, BestVbeModeInfo.ModeInfo.Y_Resolution, BestVbeModeInfo.ModeInfo.BitsPerPixel);
+    Message(Info, "Using mode %xh, with a %d*%d resolution and a %d-bit color depth", (uint32)BestVbeMode,
+            BestVbeModeInfo.ModeInfo.X_Resolution, BestVbeModeInfo.ModeInfo.Y_Resolution, BestVbeModeInfo.ModeInfo.BitsPerPixel);
 
   } else {
 
-    Message(Info, "Using VGA text mode (due to a lack of VBE support)");
+    Message(Info, "Using text mode as a fallback (due to the lack of VBE support)");
 
   }
 
 
 
-
-
-
-
-
-
-
-  // [PCI]
+  // [Obtain PCI-BIOS data]
 
   Putchar('\n', 0);
   Message(Kernel, "Preparing to get PCI-BIOS data");
 
-  // -> int 1Ah, ax = B101h [PCI-related; *may* be important later on]
-  // (get info)
+  // We only need to call GetPciBiosInfoTable(), which in turn calls
+  // the BIOS function (int 1Ah, ax B101h).
 
   pciBiosInfoTable PciBiosTable;
   uint32 PciBiosReturnStatus = GetPciBiosInfoTable(&PciBiosTable);
 
-  // (is it supported?)
-
-  bool PciBiosIsSupported = true;
+  bool PciBiosIsSupported;
 
   if ((PciBiosReturnStatus & 0xFF00) != 0) {
+
     PciBiosIsSupported = false;
-  }
-
-  // (show info)
-
-  if (PciBiosIsSupported == true) {
-
-    Message(Info, "Successfully obtained information using the PCI BIOS interrupt call.");
+    Message(Fail, "Failed to obtain information using the PCI-BIOS interrupt call.");
+    Message(Warning, "PCI BIOS may not be available on this system.");
 
   } else {
 
-    Message(Warning, "Failed to obtain information using the PCI BIOS interrupt call.");
-    Message(Info, "PCI BIOS may not be available on this system.");
+    PciBiosIsSupported = true;
+    Message(Info, "Successfully obtained information using the PCI-BIOS interrupt call.");
 
   }
 
 
-  // [Process the E820 memory map]
 
-  // (TODO 1: add this to its own function, i guess..? in Mmap.c)
-  // (TODO 2: also, add specific exceptions for areas under 1MiB, VESA video modes, etc.)
+  // [Process the system memory map into an usable memory map]
 
   Putchar('\n', 0);
-  Message(Kernel, "Preparing to process the system's memory map.");
+  Message(Kernel, "Preparing to process the system memory map.");
 
-  // The first step here is to just sort each entry according to its base address,
-  // like this (this is an O(n²) algorithm):
+  // The first step here is to just sort each entry according to
+  // its base address, like this:
 
   for (uint16 Threshold = 1; Threshold < NumMmapEntries; Threshold++) {
 
@@ -613,8 +582,23 @@ void Bootloader(void) {
 
   }
 
-  // Next, we just need to isolate all the usable entries, and deal with overlapping
-  // entries. (might be a good idea to put this in a function..)
+  // (Show system memory map entries)
+
+  Message(Ok, "Successfully sorted system memory map entries.");
+
+  for (uint8 Position = 0; Position < NumMmapEntries; Position++) {
+
+    uint64 Start = Mmap[Position].Base;
+    uint64 Size = Mmap[Position].Limit;
+    uint64 End = (Start + Size);
+
+    Message(Info, "Found type %d memory area from %x:%xh to %x:%xh (%d KiB)", (Mmap[Position].Type),
+            (uint32)(Start >> 32), (uint32)Start, (uint32)(End >> 32), (uint32)End, (uint32)(Size / 1024));
+
+  }
+
+  // Next, we just need to isolate all the usable entries, and deal
+  // with overlapping entries.
 
   uint8 UsableMmapBuffer[sizeof(mmapEntry) * NumUsableMmapEntries];
   mmapEntry* UsableMmap = (mmapEntry*)UsableMmapBuffer;
@@ -624,13 +608,13 @@ void Bootloader(void) {
 
   for (uint8 Position = 0; Position < NumMmapEntries; Position++) {
 
-    // Get the start and end position of this entry
+    // First, get the start and end position of this entry
 
     uint64 Start = Mmap[Position].Base;
     uint64 End = (Start + Mmap[Position].Limit);
 
-    // Next, update the minimum start, and skip over any entries that end before it
-    // (if it's a usable/'free' entry, then decrement the number of usable/'free' entries)
+    // Next, update the minimum start, and skip over any entries that
+    // end before it (decrementing NumUsableMmapEntries accordingly).
 
     if (Start < MinStart) {
       Start = MinStart;
@@ -646,8 +630,8 @@ void Bootloader(void) {
 
     }
 
-    // Finally, if the type is right, then let's go ahead and actually add the entry
-    // (if the type shows that it's usable)
+    // Finally, if the entry doesn't overlap with another entry
+    // *and* has the right type, we can add it to UsableMmap.
 
     if (Mmap[Position].Type == 1) {
 
@@ -657,8 +641,9 @@ void Bootloader(void) {
         Start = MinStart;
       }
 
-      // Update the end variable; for this, we only need to check for the next entry,
-      // as the list of entries is already sorted for us
+      // Update the end variable; for this, we only need to check
+      // for the next entry, as the list of entries is already
+      // sorted for us
 
       if (Position < (NumMmapEntries - 1)) {
 
@@ -668,7 +653,8 @@ void Bootloader(void) {
 
       }
 
-      // Finally, add the entry to the usable memory map area, and increment the position
+      // Finally, add the entry to the usable memory map area,
+      // and increment the position
 
       UsableMmap[UsablePosition].Base = Start;
       UsableMmap[UsablePosition].Limit = (End - Start);
@@ -679,38 +665,41 @@ void Bootloader(void) {
 
     }
 
-    // Update MinStart
-
     MinStart = End;
 
   }
 
-  // (Everything is done; we have the number of usable mmap entries in NumUsableMmapEntries)
+  // (Show usable memory map entries)
 
-  Message(Ok, "Successfully sorted the system memory map entries.");
+  Message(Ok, "Successfully processed usable memory map entries.");
 
   for (uint8 Position = 0; Position < NumUsableMmapEntries; Position++) {
 
-    // TODO: This doesn't accurately show 64-bit addresses (above 4GiB), or sizes above 4
-    // TiB, due to the limits of Itoa() (since our implementation only accepts 32-bit numbers)
+    uint64 Start = UsableMmap[Position].Base;
+    uint64 Size = UsableMmap[Position].Limit;
+    uint64 End = (Start + Size);
 
-    uint32 Base = (uint32)(UsableMmap[Position].Base & 0xFFFFFFFF);
-    uint32 Limit = (uint32)((UsableMmap[Position].Base + UsableMmap[Position].Limit) & 0xFFFFFFFF);
-
-    uint32 Size = (uint32)(UsableMmap[Position].Limit / 1024);
-
-    Message(Info, "Free memory area from %xh to %xh (%d KiB)", Base, Limit, Size);
+    Message(Info, "Found usable memory area from %x:%xh to %x:%xh (%d KiB)",
+            (uint32)(Start >> 32), (uint32)Start, (uint32)(End >> 32), (uint32)End, (uint32)(Size / 1024));
 
   }
 
 
 
+  // *TODO*: Rewrite the comments after this, it's 10 PM I haven't even made dinner yet man.
 
-  // [Disk and filesystem drivers (this is the last thing to do)]
+
+
+
+
+
+
+
+
+  // [Preparing disk and (FAT) filesystem drivers]
 
   Putchar('\n', 0);
   Message(Kernel, "Preparing to get EDD/FAT data");
-
 
   // (get a few initial variables)
 
