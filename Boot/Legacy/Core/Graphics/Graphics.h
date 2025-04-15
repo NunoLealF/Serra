@@ -79,7 +79,7 @@
     // (VBE 1.0 and higher)
 
     uint32 Signature; // This should just be 'VESA', or 'VBE2'? I'm not sure
-    uint16 Version; // Usually the high 8 bits are the overall version number, so, for example, VBE 1.1 is 1010h, and VBE 3.0 is 3000h
+    uint16 Version; // Usually the high 8 bits are the overall version number, so, for example, VBE 1.1 is 0110h, and VBE 3.0 is 0300h
 
     farPtr OemStringPtr; // Far pointer to a null-terminated string
     uint32 Capabilities; // This is a bitfield (defined in the VESA spec)
@@ -168,7 +168,7 @@
     struct __Vbe2Info {
 
       uint32 Framebuffer; // Physical address of the framebuffer (if flat memory and not window)
-      uint8 Reserved_Vbe2[6]; // Always set to 0
+      uint8 Reserved_Vbe2[6]; // The VBE 2 spec says this is used, while the VBE 3 spec says it isn't..?
 
     } __attribute__((packed)) Vbe2Info;
 
