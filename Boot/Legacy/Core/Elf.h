@@ -9,7 +9,7 @@
 
   typedef struct {
 
-    // (This part is called e_ident in the ELF documentation)
+    // (This part is called 'e_ident' in the ELF documentation)
 
     struct __Ident {
 

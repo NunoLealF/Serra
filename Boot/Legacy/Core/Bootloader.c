@@ -14,11 +14,12 @@
    Inputs: (none)
    Outputs: (none)
 
-   These two functions are called by Shared/Rm/RmWrapper.c, and they basically just save and
-   restore the state of the system (for example, they might restore the IDT, paging, etc.)
+   These two functions are called by Shared/Rm/RmWrapper.c (the real mode
+   wrapper), and their function is to save and restore the state of the
+   system as needed.
 
-   (TODO: actually comment this better, the specifics of what this is guaranteed to vary
-   quite a bit)
+   (In this case, they just disable interrupts, and then enable them /
+   reload the Interrupt Descriptor Table; nothing special, really.)
 
 */
 
@@ -27,7 +28,6 @@ descriptorTable IdtDescriptor;
 void SaveState(void) {
 
   __asm__ __volatile__ ("cli");
-
   return;
 
 }
@@ -42,31 +42,82 @@ void RestoreState(void) {
 }
 
 
-/* void __attribute__((noreturn)) Bootloader()
+/* void Bootloader()
 
-   Inputs:    (none)
-   Outputs:   (none)
+   Inputs: (none, except for InfoTable)
+   Outputs: (none)
 
-   This is our third-stage bootloader's main function. We jump here after Init().
+   This is the main function (and entrypoint) of our third-stage bootloader.
+   The second stage bootloader (located in Init/, instead of Core/) jumps
+   here after it finishes reading Boot/Bootx32.bin from disk.
 
-   TODO: Write a more concise description. (I feel like this is only really possible after actually
-   finishing this part, lol)
+   This stage of the bootloader occupies the space after 20000h in memory,
+   and its role is to initialize as much as possible, before eventually
+   loading and transferring control to the kernel (which is still part
+   of the boot manager).
+
+   At this point, the CPU is in 32-bit protected mode, with a stack set up at
+   20000h (growing downwards), and a regular GDT spanning the entire 32-bit
+   address space on both code and data segments. The IDT has not been
+   initialized yet, nor has the A20 line been enabled.
+
+   # The memory layout looks like this:
+
+   -> (0h to 7C00h) Unused, *contains IVT* (31 KiB)
+   -> (7C00h to 7E00h) First stage bootloader, contains BPB (0.5 KiB)
+
+   -> (7E00h to 9E00h) Second stage bootloader (8 KiB)
+   -> (9E00h to AE00h) Real mode wrapper and table (4 KiB)
+   -> (AE00h to B000h) *Info table* (0.5 KiB)
+
+   -> (B000h to 10000h) Unused, *contains IDT* (20 KiB)
+   -> (10000h to 20000h) *Stack space* (64 KiB)
+   -> (20000h onwards) Third stage bootloader (up to 384 KiB)
+
+   The previous stage of our bootloader left us with something called an
+   InfoTable, which is essentially a struct (defined in Shared/InfoTables.h)
+   that contains some important information: what drive number we're
+   booting off of, the status of the debug flag, etc.
+
+   # After reading from the InfoTable, this function does the following:
+
+   -> (1) Reinitialize the terminal table, based off of the values in
+   the InfoTable;
+
+   -> (2) Initialize and enable the IDT (Interrupt Descriptor Table),
+  as well as the 8259 PIC (which remaps IRQs);
+
+   -> (3) Enable the A20 line, if it hasn't been already;
+
+   -> (4) Obtain the system's memory map via the E820h BIOS function,
+   and refine it into a "usable" memory map;
+
+   -> (5) Obtain CPUID data, and check for PAE and long mode support;
+
+   -> (6) Look around for ACPI and SMBIOS tables, and obtain PCI-
+   -BIOS information;
+
+   -> (7) Check for VESA VBE support, and attempt to find the best
+   possible graphics mode (with text mode as a fallback);
+
+   -> (8) Read the kernel (located in Boot/Serra/Kernel.elf) from
+   the FAT filesystem, reading ELF headers;
+
+   -> (9) Initialize paging, mapping the kernel to a higher-half,
+   and identity-mapping everything else;
+
+   -> (10) Prepare the necessary environment to transfer control
+   to the kernel, and prepare info tables, before running the
+   kernel (via LongmodeStub()).
 
 */
 
-// 7C00h -> 7E00h: first stage bootloader, contains BPB, 0.5 KiB
-// 7E00h -> 9E00h: second stage bootloader, 8 KiB
-// 9E00h -> AC00h: real mode
-// AC00h -> AE00h: real mode table
-// AE00h -> B000h: info table
-// B000h -> B800h: interrupt descriptor table
-// B800h -> 10000h: (empty)
-// 10000h -> 20000h: stack, 64 KiB
-// 20000h -> 80000h: third stage bootloader, 384 KiB
-
 void Bootloader(void) {
 
-  // (Get info table - check if signature is correct)
+  // [Read from InfoTable]
+
+  // First, let's check to see if the signature is even valid (if not,
+  // just return to whichever function called us):
 
   bootloaderInfoTable* InfoTable = (bootloaderInfoTable*)(InfoTable_Location);
 
@@ -74,14 +125,10 @@ void Bootloader(void) {
     return;
   }
 
-  // (Get info table, update debug)
+  // If it is, then that means we have a valid InfoTable, so let's set
+  // the debug flag, and initialize the terminal table:
 
   Debug = InfoTable->System_Info.Debug;
-
-
-
-  // (Initialize terminal table..)
-
   Memcpy(&TerminalTable, &InfoTable->Terminal_Info, sizeof(InfoTable->Terminal_Info));
 
   Putchar('\n', 0);
@@ -89,36 +136,38 @@ void Bootloader(void) {
 
 
 
-  // (Prepare to initialize IDT and PIC)
+  // (Initialize the IDT, as well as the 8259 PIC)
 
   Putchar('\n', 0);
-  Message(Kernel, "Preparing to initialize the IDT.");
+  Message(Kernel, "Preparing to initialize the IDT and 8259 PIC.");
+
+  // First, let's initialize the IDT descriptor with the size and location
+  // of our Interrupt Descriptor Table:
 
   IdtDescriptor.Size = (2048 - 1);
   IdtDescriptor.Offset = IdtLocation;
 
-  // (PIC section)
+  // Second, let's set a mask for the PIC (Programmable Interrupt Controller),
+  // and initialize it as well:
 
-  Message(Kernel, "Initializing the 8259 PIC.");
+  MaskPic(0xFFFF); // Full mask, don't enable anything (set to FFFEh for timer, or FFFDh for a PS/2 keyboard)
+  InitPic(0x20, 0x28); // IRQ1 is at 20h-27h, IRQ2 is at 28h-2Fh
 
-  MaskPic(0xFFFF); // Full mask, don't enable anything (set to 0xFFFE for timer, or 0xFFFD for keyboard that doesn't really work)
-  InitPic(0x20, 0x28); // IRQ1 is at 0x20-0x27, IRQ2 is at 0x28-0x2F
-
-  // (Actually initialize the IDT)
+  // Finally, let's actually enable the IDT:
 
   MakeDefaultIdtEntries(&IdtDescriptor, 0x08, 0x0F, 0x00);
   LoadIdt(&IdtDescriptor);
 
   __asm__("sti");
-  Message(Ok, "Successfully initialized the IDT and PIC.");
+  Message(Ok, "Successfully initialized the IDT.");
 
 
 
+  // [Set up the A20 line]
 
-  // (Set up A20)
-
-  // This can only safely be done *after* initializing the IDT, because some methods aren't
-  // really safe without one present (and also, they enable interrupts with sti)
+  // This can only safely be done *after* initializing the IDT, because some
+  // methods aren't really safe without one present (plus, they enable
+  // interrupts with sti)
 
   Putchar('\n', 0);
   Message(Kernel, "Preparing to enable the A20 line");
@@ -129,22 +178,23 @@ void Bootloader(void) {
 
   if (Check_A20() == true) {
 
-    // If the output of the CheckA20 function is true, then that means that the A20 line has
-    // already been enabled.
+    // If the output of the CheckA20 function is true, then that means that
+    // the A20 line has already been enabled (either by the firmware
+    // itself, or by the BIOS function method in the bootsector).
 
     A20_EnabledByDefault = true;
     Message(Ok, "The A20 line has already been enabled.");
 
   } else {
 
-    // If the output of the CheckA20 function is false, then that means that the A20 line has not
-    // already been enabled.
+    // If the output of the CheckA20 function is false, then that means that
+    // the A20 line hasn't already been enabled by default.
 
-    // In this case, we want to try out two methods to enable the A20 line, the first of which
-    // involves the 8042 keyboard controller.
+    // In this case, we want to try out two methods to enable the A20 line.
+    // The first involves the 8042 keyboard controller:
 
     Putchar('\n', 0);
-    Message(Kernel, "Attempting to enable the A20 line using the 8042 keyboard method.");
+    Message(Kernel, "Attempting to enable the A20 line using the 8042 keyboard method");
 
     EnableKbd_A20();
     Wait_A20();
@@ -156,14 +206,16 @@ void Bootloader(void) {
 
     } else {
 
-      // If the first method didn't work, there's also a second method that works on some systems
-      // called 'fast A20'.
-      // This may crash the system, but we'll have to reset if we can't enable A20 anyways.
+      // If the first method didn't work, there's also a second method that
+      // works on some systems called 'fast A20'.
+
+      // This *could* crash the system, but we don't have much of a choice,
+      // since the A20 line is necessary anyways
 
       Message(Fail, "The A20 line was not successfully enabled.");
 
       Putchar('\n', 0);
-      Message(Kernel, "Attempting to enable the A20 line using the fast A20 method.");
+      Message(Kernel, "Attempting to enable the A20 line using the fast A20 method");
 
       EnableFast_A20();
       Wait_A20();
@@ -175,12 +227,9 @@ void Bootloader(void) {
 
       } else {
 
-        // At this point, we've exhausted all of the most common methods for enabling A20 (such
-        // as the aforementioned BIOS interrupt, the 8042 keyboard controller method, and the
-        // fast A20 method.
-
-        // As it's necessary for us to enable the A20 line, we'll need to crash the system /
-        // give out an error code if we get to this point.
+        // If we reach this point, we've exhausted all of the most common
+        // methods for enabling the A20 line, which is essential, so the
+        // only thing we can really do is give out an error code:
 
         Panic("Failed to enable the A20 line.", 0);
 
@@ -192,21 +241,24 @@ void Bootloader(void) {
 
 
 
-  // [Get the *raw* E820 memory map]
+  // [Get the 'raw' system memory map, using E820]
 
   Putchar('\n', 0);
   Message(Kernel, "Preparing to obtain the system's memory map, using E820");
 
-  // First, we need to prepare, and check if it even works; each entry is 24 bytes, and
-  // some systems can have a huge amount of entries, so we'll reserve space on the stack
-  // (128 entries should be enough)
+  // First, we need to prepare a couple things, and also check to see if
+  // it's even supported (NumMmapEntries != 0).
+
+  // Each (E820) memory map entry is 24 bytes long, and some systems can
+  // have a huge amount of entries, so we'll reserve space on the stack;
+  // 128 entries should hopefully be enough.
 
   #define MaxMmapEntries 128
 
   uint8 MmapBuffer[sizeof(mmapEntry) * MaxMmapEntries];
   mmapEntry* Mmap = (mmapEntry*)MmapBuffer;
 
-  // Now, let's actually go ahead and fill that
+  // Now, let's actually go ahead and fill MmapBuffer:
 
   uint8 NumMmapEntries = 0;
   uint8 NumUsableMmapEntries = 0;
@@ -215,17 +267,19 @@ void Bootloader(void) {
 
   do {
 
-    // Get the memory map entry, and save the continuation number in MmapContinuation
+    // Get the memory map entry, and save the 'continuation number'
 
     MmapContinuation = GetMmapEntry((void*)&Mmap[NumMmapEntries], sizeof(mmapEntry), MmapContinuation);
 
-    // Get the number of *usable* memory map entries
+    // Get the number of *usable* memory map entries (type 1 means free
+    // memory) - this will be useful later on, for UsableMmap
 
     if (Mmap[NumMmapEntries].Type == 1) {
       NumUsableMmapEntries++;
     }
 
-    // Increment the number of entries, and break if we've reached the mmap entry limit
+    // Increment the number of entries, and break if we've reached the
+    // memory map entry limit (MaxMmapEntries)
 
     NumMmapEntries++;
 
@@ -235,8 +289,8 @@ void Bootloader(void) {
 
   } while (MmapContinuation != 0);
 
-
-  // Show messages, if necessary
+  // Check status, and if we didn't find any entries (or otherwise just
+  // failed to obtain the system memory map), panic.
 
   if (NumMmapEntries > 0) {
 
@@ -254,13 +308,14 @@ void Bootloader(void) {
 
 
 
-
-  // [Get CPUID data]
+  // [Obtain CPUID data]
 
   Putchar('\n', 0);
   Message(Kernel, "Preparing to get data from CPUID");
 
-  // (First, let's see if it's even supported)
+  // First, let's see if CPUID is even supported - it's essentially
+  // required, but not all CPUs that support it have a volatile ID flag
+  // (although most do).
 
   if (SupportsCpuid() == true) {
     Message(Ok, "CPUID appears to be supported (the ID flag is volatile)");
@@ -268,7 +323,8 @@ void Bootloader(void) {
     Message(Warning, "CPUID appears to be unsupported; trying anyway");
   }
 
-  // (Next, let's get some important data from CPUID)
+  // Next, let's obtain a few tables from CPUID, and query it for the
+  // highest supported level as well.
 
   registerTable Cpuid_Info = GetCpuid(0x00000000, 0);
   registerTable Cpuid_Features = GetCpuid(0x00000001, 0);
@@ -280,8 +336,8 @@ void Bootloader(void) {
 
   Message(Ok, "Successfully obtained CPUID data.");
 
-  // (Show info; for now we're just collecting data, but it would definitely help to
-  // make this more complete tbh)
+  // Show some info to the user, including the vendor string (which is
+  // supplied in eax=00000000h, ecx=0h)
 
   char VendorString[16];
   GetVendorString(VendorString, Cpuid_Info);
@@ -289,8 +345,9 @@ void Bootloader(void) {
   Message(Info, "Highest supported (standard) CPUID level is %xh", Cpuid_HighestLevel);
   Message(Info, "CPU vendor ID is \'%s\'", VendorString);
 
-  // (This is also important - check for PAE, PSE and long mode support, so we know how to
-  // implement paging; also, *64-bit support is mandatory*)
+  // We also want to check for PAE (Page Address Extensions), PSE (Page Size
+  // Extensions) and long mode support; this ends up being necessary later
+  // on, so we need to filter out any CPUs that don't support that.
 
   bool SupportsPae = false;
   bool SupportsPse = false;
@@ -303,8 +360,9 @@ void Bootloader(void) {
   }
 
   if (Cpuid_Features.Edx & (1 << 6)) {
-    Message(Info, "PAE (Page Address Extension) appears to be supported");
     SupportsPae = true;
+  } else {
+    Message(Warning, "PAE (Page Address Extension) appears to be unsupported.");
   }
 
   if (Cpuid_ExtendedFeatures.Edx & (1 << 29)) {
@@ -314,51 +372,82 @@ void Bootloader(void) {
     Panic("64-bit mode appears to be unsupported.", 0);
   }
 
+  // Also check for PAT support - this isn't essential, but it can help
+  // with performance later on.
+
+  bool SupportsPat = false;
+
+  if (Cpuid_Features.Edx & (1 << 16)) {
+    Message(Info, "PAT appears to be supported");
+    SupportsPat = true;
+  }
 
 
 
-  // (...)
-
-  // Okay, so, for reference - a memory manager isn't really necessary at this stage
-
-  // (as for PCI, even if you ignore how it doesn't really belong, it's pretty complicated,
-  // and the documentation on it is garbage)
-
-  // The most I might do is implement (int 1Ah, ax B101h), since it might be useful for a few
-  // systems
-
-
-
-  // [ACPI]
+  // [Obtain ACPI and SMBIOS tables]
 
   Putchar('\n', 0);
-  Message(Kernel, "Preparing to get ACPI info");
+  Message(Kernel, "Preparing to obtain ACPI and SMBIOS tables");
 
-  // I think all that's actually needed for now is to just get the RSDP/XSDP, but other
-  // than that, I'm pretty sure nothing else is needed
+  // First, let's try to find the main ACPI tables (the RSDP and RSDT/XSDT):
 
-  // That still takes some work though
+  acpiRsdpTable* Rsdp = GetAcpiRsdpTable();
 
-  // (get table and check for ACPI support)
+  bool AcpiIsSupported;
 
-  acpiRsdpTable* AcpiRsdp = GetAcpiRsdpTable();
-  bool AcpiIsSupported = true;
+  if (Rsdp == NULL) {
 
-  if (AcpiRsdp == NULL) {
     AcpiIsSupported = false;
+    Message(Warning, "Unable to find ACPI RSDP");
+
+  } else {
+
+    AcpiIsSupported = true;
+    Message(Ok, "Found ACPI tables.");
+    Message(Info, "RSDP is located at %xh, RSDT exists at %xh, XSDT *may* exist at %x:%xh",
+           (uint32)Rsdp, (uint32)(Rsdp->Rsdt), (uint32)((Rsdp->Xsdt) >> 32), (uint32)(Rsdp->Xsdt));
+    Message(Info, "ACPI revision is %d", Rsdp->Revision);
+
+  }
+
+  // (TODO TODO TODO: Rewrite the rest of this tomorrow, i'm kinda tired)
+  // Don't forget that smbios and acpi are in the same 'section' comment-wise
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  // [SMBIOS]
+  // F0000h to FFFFFh; this is pretty important, but it can be dealt with later on, for now
+  // I mostly just want to check to see if SMBIOS even exists.
+
+  Putchar('\n', 0);
+  Message(Kernel, "Preparing to get SMBIOS data");
+
+  // (get the table itself)
+
+  void* SmbiosEntryPoint = GetSmbiosEntryPointTable();
+  bool SmbiosIsSupported = true;
+
+  if (SmbiosEntryPoint == NULL) {
+    SmbiosIsSupported = false;
   }
 
   // (show info)
 
-  if (AcpiIsSupported == true) {
-
-    Message(Ok, "RSDP exists at %xh", (uint32)AcpiRsdp);
-    Message(Info, "ACPI revision is %d, RSDT exists at %xh, XSDT may exist at %x:%xh", AcpiRsdp->Revision, AcpiRsdp->Rsdt, (uint32)(AcpiRsdp->Xsdt >> 32), (uint32)(AcpiRsdp->Xsdt & 0xFFFFFFFF));
-
+  if (SmbiosIsSupported == true) {
+    Message(Info, "SMBIOS appears to be supported (the entry point table is at %xh).", SmbiosEntryPoint);
   } else {
-
-    Message(Warning, "RSDP doesn't exist?");
-
+    Message(Warning, "SMBIOS appears to be unsupported.");
   }
 
 
@@ -460,29 +549,7 @@ void Bootloader(void) {
 
 
 
-  // [SMBIOS]
-  // F0000h to FFFFFh; this is pretty important, but it can be dealt with later on, for now
-  // I mostly just want to check to see if SMBIOS even exists.
 
-  Putchar('\n', 0);
-  Message(Kernel, "Preparing to get SMBIOS data");
-
-  // (get the table itself)
-
-  void* SmbiosEntryPoint = GetSmbiosEntryPointTable();
-  bool SmbiosIsSupported = true;
-
-  if (SmbiosEntryPoint == NULL) {
-    SmbiosIsSupported = false;
-  }
-
-  // (show info)
-
-  if (SmbiosIsSupported == true) {
-    Message(Info, "SMBIOS appears to be supported (the entry point table is at %xh).", SmbiosEntryPoint);
-  } else {
-    Message(Warning, "SMBIOS appears to be unsupported.");
-  }
 
 
 
