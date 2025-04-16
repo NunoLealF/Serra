@@ -228,7 +228,7 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   Putchar('\n', 0);
 
-  if (Bpb.BytesPerSector == 0) {
+  if (Bpb.BytesPerSector < 512) {
     Panic("Failed to detect a FAT partition.");
   } else {
     Message(Kernel, "Successfully detected a FAT partition.");

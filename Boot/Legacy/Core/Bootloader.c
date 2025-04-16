@@ -158,7 +158,7 @@ void Bootloader(void) {
   MakeDefaultIdtEntries(&IdtDescriptor, 0x08, 0x0F, 0x00);
   LoadIdt(&IdtDescriptor);
 
-  __asm__("sti");
+  __asm__ __volatile__ ("sti");
   Message(Ok, "Successfully initialized the IDT.");
 
 
@@ -241,6 +241,7 @@ void Bootloader(void) {
 
 
 
+
   // [Get the 'raw' system memory map, using E820]
 
   Putchar('\n', 0);
@@ -308,259 +309,8 @@ void Bootloader(void) {
 
 
 
-  // [Obtain CPUID data]
 
-  Putchar('\n', 0);
-  Message(Kernel, "Preparing to get data from CPUID");
-
-  // First, let's see if CPUID is even supported - it's essentially
-  // required, but not all CPUs that support it have a volatile ID flag
-  // (although most do).
-
-  if (SupportsCpuid() == true) {
-    Message(Ok, "CPUID appears to be supported (the ID flag is volatile)");
-  } else {
-    Message(Warning, "CPUID appears to be unsupported; trying anyway");
-  }
-
-  // Next, let's obtain a few tables from CPUID, and query it for the
-  // highest supported level as well.
-
-  registerTable Cpuid_Info = GetCpuid(0x00000000, 0);
-  registerTable Cpuid_Features = GetCpuid(0x00000001, 0);
-
-  registerTable Cpuid_ExtendedInfo = GetCpuid(0x80000000, 0);
-  registerTable Cpuid_ExtendedFeatures = GetCpuid(0x80000001, 0);
-
-  uint32 Cpuid_HighestLevel = Cpuid_Info.Eax;
-
-  Message(Ok, "Successfully obtained CPUID data.");
-
-  // Show some info to the user, including the vendor string (which is
-  // supplied in eax=00000000h, ecx=0h)
-
-  char VendorString[16];
-  GetVendorString(VendorString, Cpuid_Info);
-
-  Message(Info, "Highest supported (standard) CPUID level is %xh", Cpuid_HighestLevel);
-  Message(Info, "CPU vendor ID is \'%s\'", VendorString);
-
-  // We also want to check for PAE (Page Address Extensions), PSE (Page Size
-  // Extensions) and long mode support; this ends up being necessary later
-  // on, so we need to filter out any CPUs that don't support that.
-
-  bool SupportsPae = false;
-  bool SupportsPse = false;
-  bool SupportsLongMode = false;
-
-  if (Cpuid_Features.Edx & (1 << 3)) {
-    SupportsPse = true;
-  } else {
-    Panic("Non-4KiB pages appear to be unsupported.", 0);
-  }
-
-  if (Cpuid_Features.Edx & (1 << 6)) {
-    SupportsPae = true;
-  } else {
-    Message(Warning, "PAE (Page Address Extension) appears to be unsupported.");
-  }
-
-  if (Cpuid_ExtendedFeatures.Edx & (1 << 29)) {
-    Message(Info, "64-bit mode appears to be supported");
-    SupportsLongMode = true;
-  } else {
-    Panic("64-bit mode appears to be unsupported.", 0);
-  }
-
-  // Also check for PAT support - this isn't essential, but it can help
-  // with performance later on.
-
-  bool SupportsPat = false;
-
-  if (Cpuid_Features.Edx & (1 << 16)) {
-    Message(Info, "PAT appears to be supported");
-    SupportsPat = true;
-  }
-
-
-
-  // [Obtain ACPI and SMBIOS tables]
-
-  Putchar('\n', 0);
-  Message(Kernel, "Preparing to obtain ACPI and SMBIOS tables");
-
-  // First, let's try to find the main ACPI tables (the RSDP and RSDT/XSDT):
-
-  acpiRsdpTable* Rsdp = GetAcpiRsdpTable();
-
-  bool AcpiIsSupported;
-
-  if (Rsdp == NULL) {
-
-    AcpiIsSupported = false;
-    Message(Warning, "ACPI appears to be unsupported (unable to find table).");
-
-  } else {
-
-    AcpiIsSupported = true;
-    Message(Ok, "Successfully located ACPI tables.");
-
-    Message(Info, "ACPI RSDP table is located at %xh", (uint32)Rsdp);
-    Message(Info, "RSDT seems to be located at %xh, XSDT may be located at %x:%xh", (uint32)(Rsdp->Rsdt), (uint32)((Rsdp->Xsdt) >> 32), (uint32)(Rsdp->Xsdt));
-
-  }
-
-  // Next, let's do the same, but for the SMBIOS tables:
-
-  void* SmbiosEntryPoint = GetSmbiosEntryPointTable();
-  bool SmbiosIsSupported;
-
-  if (SmbiosEntryPoint == NULL) {
-
-    SmbiosIsSupported = false;
-    Message(Warning, "SMBIOS appears to be unsupported (unable to find table).");
-
-  } else {
-
-    SmbiosIsSupported = true;
-    Message(Ok, "Successfully located SMBIOS tables.");
-    Message(Info, "SMBIOS entry point table appears to be located at %xh", (uint32)SmbiosEntryPoint);
-
-  }
-
-
-
-  // [Check for VESA (VBE 2.0+) support, and obtain data if possible]
-
-  Putchar('\n', 0);
-  Message(Kernel, "Preparing to get VESA-related data.");
-
-  // Let's start by obtaining the VBE info block - this not only lets us
-  // see if VESA VBE is supported at all (by checking the return status),
-  // but it also lets us filter out older versions of VBE.
-
-  // (For context: this is necessary because not all systems support VBE,
-  // because VBE versions before 2.0 don't have support for linear
-  // framebuffers, and because VBE lets us deal with graphics modes.)
-
-  volatile vbeInfoBlock VbeInfo;
-  uint32 VbeReturnStatus = GetVbeInfoBlock(&VbeInfo);
-
-  bool VbeIsSupported;
-
-  if ((VbeReturnStatus != 0x004F) || (VbeInfo.Version < 0x200)) {
-
-    VbeIsSupported = false;
-    Message(Warning, "VBE (2.0+) appears to be unsupported.");
-
-  } else {
-
-    VbeIsSupported = true;
-    Message(Ok, "VBE (2.0+) appears to be supported.");
-    Message(Info, "The VBE info block table is located at %xh", &VbeInfo);
-
-  }
-
-  // Next, let's check for EDID - this is another protocol that works
-  // alongside VBE, but that lets us query the system for things like
-  // the supported display resolution.
-
-  // (VBE tells us which modes/resolutions the *graphics card* supports,
-  // but we still don't know which ones the monitor supports; that's
-  // where EDID comes in.)
-
-  volatile edidInfoBlock EdidInfo;
-
-  uint32 EdidReturnStatus = GetEdidInfoBlock(&EdidInfo, 0x00);
-  bool EdidIsSupported = false;
-
-  if (VbeIsSupported == true) {
-
-    if (((EdidReturnStatus & 0xFF) != 0x4F) || (VbeIsSupported == false)) {
-
-      EdidIsSupported = false;
-      Message(Warning, "EDID appears to be unsupported; using lowest video mode.");
-
-    } else {
-
-      EdidIsSupported = true;
-      Message(Ok, "EDID appears to be supported.");
-      Message(Info, "The EDID info block table is located at %xh", &EdidInfo);
-
-    }
-
-  }
-
-  // Based off of what EDID tells us, we can try to find the preferred
-  // resolution - either it's supported (in which case, we need to look
-  // at the timings), or it isn't (which means we can use 720*480).
-
-  edidDetailedTiming PreferredTimings = EdidInfo.DetailedTimings[0];
-  uint16 PreferredResolution[2] = {720, 480};
-
-  if (EdidIsSupported == true) {
-
-    PreferredResolution[0] = (PreferredTimings.Timings.HorizontalInfo_Low & 0xFF) | (PreferredTimings.Timings.HorizontalInfo_High & 0xF0) << 4;
-    PreferredResolution[1] = (PreferredTimings.Timings.VerticalInfo_Low & 0xFF) | (PreferredTimings.Timings.VerticalInfo_High & 0xF0) << 4;
-
-    Message(Info, "Preferred resolution appears to be %d*%d (according to EDID)",
-           (uint32)PreferredResolution[0], (uint32)PreferredResolution[1]);
-
-  }
-
-  // Okay - now that we have all of that information, we can finally
-  // go ahead and try to find the best graphics mode for this system.
-
-  // (If VBE isn't supported, we can still use text mode as a fallback)
-
-  uint16 BestVbeMode = 0xFFFF;
-  volatile vbeModeInfoBlock BestVbeModeInfo;
-
-  if (VbeIsSupported == true) {
-
-    BestVbeMode = FindBestVbeMode((uint16*)(convertFarPtr(VbeInfo.VideoModeListPtr)), PreferredResolution[0], PreferredResolution[1]);
-    GetVbeModeInfo(&BestVbeModeInfo, BestVbeMode);
-
-    Message(Info, "Using mode %xh, with a %d*%d resolution and a %d-bit color depth", (uint32)BestVbeMode,
-            BestVbeModeInfo.ModeInfo.X_Resolution, BestVbeModeInfo.ModeInfo.Y_Resolution, BestVbeModeInfo.ModeInfo.BitsPerPixel);
-
-  } else {
-
-    Message(Info, "Using text mode as a fallback (due to the lack of VBE support)");
-
-  }
-
-
-
-  // [Obtain PCI-BIOS data]
-
-  Putchar('\n', 0);
-  Message(Kernel, "Preparing to get PCI-BIOS data");
-
-  // We only need to call GetPciBiosInfoTable(), which in turn calls
-  // the BIOS function (int 1Ah, ax B101h).
-
-  pciBiosInfoTable PciBiosTable;
-  uint32 PciBiosReturnStatus = GetPciBiosInfoTable(&PciBiosTable);
-
-  bool PciBiosIsSupported;
-
-  if ((PciBiosReturnStatus & 0xFF00) != 0) {
-
-    PciBiosIsSupported = false;
-    Message(Fail, "Failed to obtain information using the PCI-BIOS interrupt call.");
-    Message(Warning, "PCI BIOS may not be available on this system.");
-
-  } else {
-
-    PciBiosIsSupported = true;
-    Message(Info, "Successfully obtained information using the PCI-BIOS interrupt call.");
-
-  }
-
-
-
-  // [Process the system memory map into an usable memory map]
+  // [Process the system memory map into a usable memory map]
 
   Putchar('\n', 0);
   Message(Kernel, "Preparing to process the system memory map.");
@@ -686,12 +436,259 @@ void Bootloader(void) {
 
 
 
-  // *TODO*: Rewrite the comments after this, it's 10 PM I haven't even made dinner yet man.
+
+  // [Obtain CPUID data]
+
+  Putchar('\n', 0);
+  Message(Kernel, "Preparing to get data from CPUID");
+
+  // First, let's see if CPUID is even supported - it's essentially
+  // required, but not all CPUs that support it have a volatile ID flag
+  // (although most do).
+
+  if (SupportsCpuid() == true) {
+    Message(Ok, "CPUID appears to be supported (the ID flag is volatile)");
+  } else {
+    Message(Warning, "CPUID appears to be unsupported; trying anyway");
+  }
+
+  // Next, let's obtain a few tables from CPUID, and query it for the
+  // highest supported level as well.
+
+  registerTable Cpuid_Info = GetCpuid(0x00000000, 0);
+  registerTable Cpuid_Features = GetCpuid(0x00000001, 0);
+
+  registerTable Cpuid_ExtendedInfo = GetCpuid(0x80000000, 0);
+  registerTable Cpuid_ExtendedFeatures = GetCpuid(0x80000001, 0);
+
+  uint32 Cpuid_HighestLevel = Cpuid_Info.Eax;
+
+  Message(Ok, "Successfully obtained CPUID data.");
+
+  // Show some info to the user, including the vendor string (which is
+  // supplied in eax=00000000h, ecx=0h)
+
+  char VendorString[16];
+  GetVendorString(VendorString, Cpuid_Info);
+
+  Message(Info, "Highest supported (standard) CPUID level is %xh", Cpuid_HighestLevel);
+  Message(Info, "CPU vendor ID is \'%s\'", VendorString);
+
+  // We also want to check for PAE (Page Address Extensions), PSE (Page Size
+  // Extensions) and long mode support; this ends up being necessary later
+  // on, so we need to filter out any CPUs that don't support that.
+
+  bool SupportsPae = false;
+  bool SupportsPse = false;
+  bool SupportsLongMode = false;
+
+  if (Cpuid_Features.Edx & (1 << 3)) {
+    SupportsPse = true;
+  } else {
+    Panic("Non-4KiB pages appear to be unsupported.", 0);
+  }
+
+  if (Cpuid_Features.Edx & (1 << 6)) {
+    SupportsPae = true;
+  } else {
+    Message(Warning, "PAE (Page Address Extension) appears to be unsupported.");
+  }
+
+  if (Cpuid_ExtendedFeatures.Edx & (1 << 29)) {
+    Message(Info, "64-bit mode appears to be supported");
+    SupportsLongMode = true;
+  } else {
+    Panic("64-bit mode appears to be unsupported.", 0);
+  }
+
+  // Also check for PAT support - this isn't essential, but it can help
+  // with performance later on.
+
+  bool SupportsPat = false;
+
+  if (Cpuid_Features.Edx & (1 << 16)) {
+    Message(Info, "PAT appears to be supported");
+    SupportsPat = true;
+  }
 
 
 
 
+  // [Check for VESA (VBE 2.0+) support, and obtain data if possible]
 
+  Putchar('\n', 0);
+  Message(Kernel, "Preparing to get VESA-related data.");
+
+  // Let's start by obtaining the VBE info block - this not only lets us
+  // see if VESA VBE is supported at all (by checking the return status),
+  // but it also lets us filter out older versions of VBE.
+
+  // (For context: this is necessary because not all systems support VBE,
+  // because VBE versions before 2.0 don't have support for linear
+  // framebuffers, and because VBE lets us deal with graphics modes.)
+
+  volatile vbeInfoBlock VbeInfo;
+  uint32 VbeReturnStatus = GetVbeInfoBlock(&VbeInfo);
+
+  bool SupportsVbe;
+
+  if ((VbeReturnStatus != 0x004F) || (VbeInfo.Version < 0x200)) {
+
+    SupportsVbe = false;
+    Message(Warning, "VBE (2.0+) appears to be unsupported.");
+
+  } else {
+
+    SupportsVbe = true;
+    Message(Ok, "VBE (2.0+) appears to be supported.");
+    Message(Info, "The VBE info block table is located at %xh", &VbeInfo);
+
+  }
+
+  // Next, let's check for EDID - this is another protocol that works
+  // alongside VBE, but that lets us query the system for things like
+  // the supported display resolution.
+
+  // (VBE tells us which modes/resolutions the *graphics card* supports,
+  // but we still don't know which ones the monitor supports; that's
+  // where EDID comes in.)
+
+  volatile edidInfoBlock EdidInfo;
+
+  uint32 EdidReturnStatus = GetEdidInfoBlock(&EdidInfo, 0x00);
+  bool SupportsEdid = false;
+
+  if (SupportsVbe == true) {
+
+    if (((EdidReturnStatus & 0xFF) != 0x4F) || (SupportsVbe == false)) {
+
+      SupportsEdid = false;
+      Message(Warning, "EDID appears to be unsupported; using lowest video mode.");
+
+    } else {
+
+      SupportsEdid = true;
+      Message(Ok, "EDID appears to be supported.");
+      Message(Info, "The EDID info block table is located at %xh", &EdidInfo);
+
+    }
+
+  }
+
+  // Based off of what EDID tells us, we can try to find the preferred
+  // resolution - either it's supported (in which case, we need to look
+  // at the timings), or it isn't (which means we can use 720*480).
+
+  edidDetailedTiming PreferredTimings = EdidInfo.DetailedTimings[0];
+  uint16 PreferredResolution[2] = {720, 480};
+
+  if (SupportsEdid == true) {
+
+    PreferredResolution[0] = (PreferredTimings.Timings.HorizontalInfo_Low & 0xFF) | (PreferredTimings.Timings.HorizontalInfo_High & 0xF0) << 4;
+    PreferredResolution[1] = (PreferredTimings.Timings.VerticalInfo_Low & 0xFF) | (PreferredTimings.Timings.VerticalInfo_High & 0xF0) << 4;
+
+    Message(Info, "Preferred resolution appears to be %d*%d (according to EDID)",
+           (uint32)PreferredResolution[0], (uint32)PreferredResolution[1]);
+
+  }
+
+  // Okay - now that we have all of that information, we can finally
+  // go ahead and try to find the best graphics mode for this system.
+
+  // (If VBE isn't supported, we can still use text mode as a fallback)
+
+  uint16 BestVbeMode = 0xFFFF;
+  volatile vbeModeInfoBlock BestVbeModeInfo;
+
+  if (SupportsVbe == true) {
+
+    BestVbeMode = FindBestVbeMode((uint16*)(convertFarPtr(VbeInfo.VideoModeListPtr)), PreferredResolution[0], PreferredResolution[1]);
+    GetVbeModeInfo(&BestVbeModeInfo, BestVbeMode);
+
+    Message(Info, "Using mode %xh, with a %d*%d resolution and a %d-bit color depth", (uint32)BestVbeMode,
+            BestVbeModeInfo.ModeInfo.X_Resolution, BestVbeModeInfo.ModeInfo.Y_Resolution, BestVbeModeInfo.ModeInfo.BitsPerPixel);
+
+  } else {
+
+    Message(Info, "Using text mode as a fallback (due to the lack of VBE support)");
+
+  }
+
+
+
+
+  // [Obtain ACPI and SMBIOS tables]
+
+  Putchar('\n', 0);
+  Message(Kernel, "Preparing to obtain ACPI and SMBIOS tables");
+
+  // First, let's try to find the main ACPI tables (the RSDP and RSDT/XSDT):
+
+  acpiRsdpTable* Rsdp = GetAcpiRsdpTable();
+
+  bool SupportsAcpi;
+
+  if (Rsdp == NULL) {
+
+    SupportsAcpi = false;
+    Message(Warning, "ACPI appears to be unsupported (unable to find table).");
+
+  } else {
+
+    SupportsAcpi = true;
+    Message(Ok, "Successfully located ACPI tables.");
+
+    Message(Info, "ACPI RSDP table is located at %xh", (uint32)Rsdp);
+    Message(Info, "RSDT seems to be located at %xh, XSDT may be located at %x:%xh", (uint32)(Rsdp->Rsdt), (uint32)((Rsdp->Xsdt) >> 32), (uint32)(Rsdp->Xsdt));
+
+  }
+
+  // Next, let's do the same, but for the SMBIOS tables:
+
+  void* SmbiosEntryPoint = GetSmbiosEntryPointTable();
+  bool SupportsSmbios;
+
+  if (SmbiosEntryPoint == NULL) {
+
+    SupportsSmbios = false;
+    Message(Warning, "SMBIOS appears to be unsupported (unable to find table).");
+
+  } else {
+
+    SupportsSmbios = true;
+    Message(Ok, "Successfully located SMBIOS tables.");
+    Message(Info, "SMBIOS entry point table appears to be located at %xh", (uint32)SmbiosEntryPoint);
+
+  }
+
+
+
+
+  // [Obtain PCI-BIOS data]
+
+  Putchar('\n', 0);
+  Message(Kernel, "Preparing to get PCI-BIOS data");
+
+  // We only need to call GetPciBiosInfoTable(), which in turn calls
+  // the BIOS function (int 1Ah, ax B101h).
+
+  pciBiosInfoTable PciBiosTable;
+  uint32 PciBiosReturnStatus = GetPciBiosInfoTable(&PciBiosTable);
+
+  bool SupportsPciBios;
+
+  if ((PciBiosReturnStatus & 0xFF00) != 0) {
+
+    SupportsPciBios = false;
+    Message(Fail, "Failed to obtain information using the PCI-BIOS interrupt call.");
+    Message(Warning, "PCI BIOS may not be available on this system.");
+
+  } else {
+
+    SupportsPciBios = true;
+    Message(Info, "Successfully obtained information using the PCI-BIOS interrupt call.");
+
+  }
 
 
 
@@ -701,7 +698,9 @@ void Bootloader(void) {
   Putchar('\n', 0);
   Message(Kernel, "Preparing to get EDD/FAT data");
 
-  // (get a few initial variables)
+  // First, let's read from the InfoTable to collect some information about
+  // the current system - the (int 13h) drive number, the filesystem type,
+  // the physical and logical sector size, etc.
 
   DriveNumber = InfoTable->DriveNumber;
   bool Edd_Enabled = InfoTable->Edd_Enabled;
@@ -713,7 +712,12 @@ void Bootloader(void) {
 
   Message(Info, "Successfully obtained drive/EDD-related information.");
 
-  // (get bpb)
+  // Next, let's find the BPB (BIOS Parameter Block); this will tell us
+  // more information about the filesystem.
+
+  // (For reference: FAT filesystems have a structure in the bootsector
+  // called a BIOS Parameter Block, and which is defined differently
+  // based on whether the filesystem is FAT16 or FAT32)
 
   #define Bpb_Address (&InfoTable->Bpb[0])
 
@@ -722,21 +726,18 @@ void Bootloader(void) {
   biosParameterBlock_Fat16 Extended_Bpb16 = *(biosParameterBlock_Fat16*)(Bpb_Address + 33);
   biosParameterBlock_Fat32 Extended_Bpb32 = *(biosParameterBlock_Fat32*)(Bpb_Address + 33);
 
-  // (sanity-check the BPB)
+  // (Just in case, let's do a sanity check)
 
-  if (Bpb.BytesPerSector == 0) {
+  if (Bpb.BytesPerSector < 512) {
     Panic("Failed to obtain the BPB.", 0);
   } else {
     Message(Info, "Successfully obtained the BPB from the bootloader's info table.");
   }
 
+  // Finally, now that we know where it is, we can start reading from the
+  // BPB. We'll collect some important information, such as:
 
-
-  // (now, let's focus on getting fs info)
-  // (now, let's focus on getting fs info)
-  // (now, let's focus on getting fs info)
-
-  // -> the total number of sectors within the partition, including reserved sectors
+  // -> The total number of sectors within the partition (incl. reserved)
 
   uint32 TotalNumSectors = Bpb.NumSectors;
 
@@ -744,7 +745,7 @@ void Bootloader(void) {
     TotalNumSectors = Bpb.NumSectors_Large;
   }
 
-  // -> the size of each FAT
+  // -> The size of each FAT (File Allocation Table), in sectors
 
   uint32 FatSize = Bpb.SectorsPerFat;
 
@@ -752,23 +753,19 @@ void Bootloader(void) {
     FatSize = Extended_Bpb32.SectorsPerFat;
   }
 
-  // -> the number of root sectors
+  // -> The number of root sectors in the partition
 
   uint32 NumRootSectors = ((Bpb.NumRootEntries * 32) + (LogicalSectorSize - 1)) / LogicalSectorSize;
 
-  // -> the position of the first data sector, relative to the start of the partition
+  // -> The offset of the first data sector within the partition
 
   uint32 DataSectorOffset = ((Bpb.NumFileAllocationTables * FatSize) + NumRootSectors) + Bpb.ReservedSectors;
 
-  // -> the number of data (non-reserved + non-FAT) sectors in the partition
+  // -> The number of data sectors within the partition
 
   uint32 NumDataSectors = (TotalNumSectors - DataSectorOffset);
 
-  // -> the number of clusters in the partition
-
-  uint32 NumClusters = (NumDataSectors / Bpb.SectorsPerCluster);
-
-  // -> the cluster limit
+  // -> The cluster limit (the last cluster that can be considered valid)
 
   uint32 ClusterLimit = 0xFFF6;
 
@@ -776,14 +773,8 @@ void Bootloader(void) {
     ClusterLimit = 0x0FFFFFF6;
   }
 
-
-
-
-  // (now, let's actually load things)
-  // (now, let's actually load things)
-  // (now, let's actually load things)
-
-  // -> first, we need to get the root cluster, along with the sector offset of that cluster
+  // -> The root cluster offset, and the root sector offset (this is where
+  // we should start looking for data from)
 
   uint32 RootCluster;
 
@@ -799,8 +790,25 @@ void Bootloader(void) {
     RootSectorOffset -= NumRootSectors;
   }
 
-  // -> next, we need to search for the Boot/ directory, starting from the root directory,
-  // like this:
+  // (Sanity check our values, and show progress)
+
+  if ((NumDataSectors == 0) || (RootSectorOffset == 0)) {
+
+    Panic("Failed to read data from the BPB.", 0);
+
+  } else {
+
+    Message(Ok, "Successfully read data from the BPB.");
+    Message(Info, "FAT%d Filesystem has %d sectors (%d root, %d data)", ((IsFat32 == true) ? 32: 16), TotalNumSectors, NumRootSectors, NumDataSectors);
+    Message(Info, "Root cluster offset is %d; cluster limit is %xh", RootCluster, ClusterLimit);
+
+  }
+
+  // Now that we've set that up, we can finally start looking for the kernel
+  // directory (Boot/Serra/Kernel.elf); we won't be loading it just yet, but
+  // we do need to know where it is.
+
+  // (Start by searching for Boot/ within the root directory)
 
   fatDirectory BootDirectory = FindDirectory(RootCluster, Bpb.SectorsPerCluster, Bpb.HiddenSectors, Bpb.ReservedSectors, RootSectorOffset, "BOOT    ", "   ", true, IsFat32);
   uint32 BootCluster = GetDirectoryCluster(BootDirectory);
@@ -809,7 +817,7 @@ void Bootloader(void) {
     Panic("Failed to locate Boot/.", 0);
   }
 
-  // -> Then, Boot/Serra:
+  // (Then, search for Serra/ within Boot/)
 
   fatDirectory SerraDirectory = FindDirectory(BootCluster, Bpb.SectorsPerCluster, Bpb.HiddenSectors, Bpb.ReservedSectors, DataSectorOffset, "SERRA   ", "   ", true, IsFat32);
   uint32 SerraCluster = GetDirectoryCluster(SerraDirectory);
@@ -818,7 +826,7 @@ void Bootloader(void) {
     Panic("Failed to locate Boot/Serra/.", 0);
   }
 
-  // -> Now, let's search for Boot/Serra/Kernel.elf.
+  // (Finally, look for Kernel.elf within Boot/Serra/)
 
   fatDirectory KernelDirectory = FindDirectory(SerraCluster, Bpb.SectorsPerCluster, Bpb.HiddenSectors, Bpb.ReservedSectors, DataSectorOffset, "KERNEL  ", "ELF", false, IsFat32);
   uint32 KernelCluster = GetDirectoryCluster(KernelDirectory);
@@ -831,39 +839,22 @@ void Bootloader(void) {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  // [2 - Basically just paging(TM)]
-
-
-
-  // [2.1] Allocate space for the 512 initial PML4 tables, and identity-map
-  // the first 512GiB to 00h.low (the 1st PML4).
+  // [Allocate space for the kernel and any initial page tables]
 
   Putchar('\n', 0);
-  Message(Kernel, "Allocating space for the initial (identity-mapped) page tables.");
+  Message(Kernel, "Preparing to allocate space for the kernel and initial page tables.");
 
-  // [2.1.1] Find a suitable starting point; although 1MiB is a common starting
-  // point, it might not work everywhere, so we scan the usable mmap first.
+  // First, we need to find a suitable starting point. The stack isn't large
+  // enough for our page tables, so we need to find a new way to allocate
+  // memory, which in this case, is AllocateFromMmap().
+
+  // That function essentially works as a bump allocator, which means that
+  // it only 'allocates' by returning the *next* contiguous block of memory
+  // (within the usable memory map) that fits the criteria.
+
+  // That means that we need a starting point - which we call 'Offset' - in
+  // order to actually use the function; in this case, we're just looking
+  // for the earliest possible point after 1 MiB (100000h).
 
   uint64 Offset = 0x100000;
 
@@ -878,8 +869,9 @@ void Bootloader(void) {
 
   }
 
-  // [2.1.k1] Allocate space for the kernel.
-  // (Do not name this 'Kernel', GCC will override any Message(Kernel, ...) msgs lmao.)
+  // Now that we've defined Offset, we can start allocating space from our
+  // usable memory map. We'll start off by allocating space for the kernel
+  // executable:
 
   uintptr KernelPtr = (uintptr)(AllocateFromMmap(Offset, (uint32)(KernelDirectory.Size), false, UsableMmap, NumUsableMmapEntries));
 
@@ -892,11 +884,11 @@ void Bootloader(void) {
     Offset = KernelPtr;
     KernelPtr -= KernelDirectory.Size;
 
-    Message(Ok, "Allocated kernel between %xh and %xh (in pmem)", (uint32)KernelPtr, (uint32)Offset);
+    Message(Ok, "Allocated kernel space between %xh and %xh (in pmem).", KernelPtr, (uint32)Offset);
 
   }
 
-  // [2.1.k2] Allocate space for the kernel *stack*.
+  // Next, let's also allocate some space for the kernel stack:
 
   #define KernelStackSize 0x100000 // Must be a multiple of 4KiB
   uintptr KernelStack = (uintptr)(AllocateFromMmap(Offset, KernelStackSize, false, UsableMmap, NumUsableMmapEntries));
@@ -910,11 +902,16 @@ void Bootloader(void) {
     Offset = KernelStack;
     KernelStack -= KernelStackSize;
 
-    Message(Ok, "Allocated kernel stack between %xh and %xh (in pmem)", (uint32)(KernelStack), (uint32)(Offset));
+    Message(Ok, "Allocated kernel stack space between %xh and %xh (in pmem).", KernelStack, (uint32)(Offset));
 
   }
 
-  // [2.1.2] Allocate space for the 512 PML4 tables.
+  // Finally, let's allocate space for the PML4 tables; this will be useful
+  // when we enable paging later on.
+
+  // (Keep in mind that AllocateFromMmap() *always* returns an offset on
+  // a page boundary (meaning that our PML4 is page-aligned), and that in
+  // this case, it's also zeroed out.)
 
   uintptr Pml4 = (uintptr)(AllocateFromMmap(Offset, (512 * 8), true, UsableMmap, NumUsableMmapEntries));
   uint64* Pml4_Data;
@@ -928,38 +925,50 @@ void Bootloader(void) {
     Offset = Pml4;
     Pml4 -= (512 * 8); Pml4_Data = (uint64*)Pml4;
 
-    Message(Ok, "Allocated PML4 space between %xh and %xh", (uint32)(Pml4), (uint32)(Offset));
+    Message(Ok, "Allocated PML4 space between %xh and %xh (in pmem).", Pml4, (uint32)(Offset));
 
   }
 
 
 
 
-
-
-  #define UsableFlags (pagePresent | pageRw)
-  #define IdmappedFlags (pagePresent | pageRw | pagePcd) // (for 2MiB pages, add pageSize)
-
-
-
-
-
-  // Identity map woooo
+  // [Identity-mapping 'low' (below IdentityMapThreshold) and usable memory]
 
   Putchar('\n', 0);
-  Message(Kernel, "Preparing to map memory.");
+  Message(Kernel, "Preparing to identity map low and usable memory.");
 
+  #define UsableFlags (pagePresent | pageRw)
+  #define IdmappedFlags (UsableFlags | pagePcd) // (Add pageSize for 2MiB pages)
 
-  // (Identity-map *everything* up to IdentityMapThreshold in memory)
+  // In order to enable long mode - and eventually load our kernel - we
+  // first need to enable paging, which is a CPU feature that introduces
+  // the virtual address space.
 
-  #define IdentityMapThreshold 0x1000000 // (16 MiB)
+  // In that environment, you can essentially map any physical memory
+  // location to any virtual memory location - for example, our kernel is
+  // always loaded at FFFFFFFF80000000h, no matter where it resides
+  // within physical memory.
+
+  // However, this also introduces a problem: not everything in memory can
+  // tolerate suddenly changing location. In fact, when we enable paging,
+  // the CPU *immediately* switches to virtual addressing, without even
+  // changing the instruction pointer.
+
+  // Because of that, we need to map *some* pages to the same virtual
+  // address as their physical address - this is called *identity mapping*,
+  // and it's necessary for anything that can't change address.
+
+  // For now, we'll start by identity mapping everything up to
+  // IdentityMapThreshold (1000000h, or 16 MiB):
+
+  #define IdentityMapThreshold 0x1000000 // (16 MiB; must be a multiple of 2 MiB)
 
   Offset = InitializePageEntries(0, 0, IdentityMapThreshold, Pml4_Data, IdmappedFlags, true, Offset, UsableMmap, NumUsableMmapEntries);
   Message(Ok, "Successfully identity mapped the first %d MiB of memory", (IdentityMapThreshold / 0x100000));
 
-
-  // (Identity-map everything else in the *usable* memory map, above the threshold)
-  // So, a reserved or missing area above it won't get mapped, but a free area will.
+  // Additionally, we'll also identity map everything in the usable memory
+  // map - this is so the kernel can use it later, and to avoid any crashes
+  // if we do allocate something above IdentityMapThreshold.
 
   for (uint16 Entry = 0; Entry < NumUsableMmapEntries; Entry++) {
 
@@ -968,8 +977,8 @@ void Bootloader(void) {
     uint64 Start = UsableMmap[Entry].Base;
     uint64 Size = UsableMmap[Entry].Limit;
 
-    // Align to 2MiB (huge page) boundaries; more specifically, align start *down*,
-    // but align size *up*
+    // Align to 2MiB (huge page) boundaries; more specifically, align
+    // Start *down*, but align Size *up*
 
     Start -= (Start % 0x200000);
 
@@ -980,14 +989,30 @@ void Bootloader(void) {
     // Initialize page entries
 
     Offset = InitializePageEntries(Start, Start, Size, Pml4_Data, IdmappedFlags, true, Offset, UsableMmap, NumUsableMmapEntries);
-    Message(Ok, "Successfully identity mapped %d MiB area starting at %x:%xh", (uint32)(Size / 0x100000), (uint32)(Start >> 32), (uint32)(Start & 0xFFFFFFFF));
+    Message(Ok, "Successfully identity mapped %d MiB area starting at %x:%xh", (uint32)(Size / 0x100000), (uint32)(Start >> 32), (uint32)Start);
 
   }
 
+  // Also, if PAT is supported, add support for write-combining by updating
+  // its MSR (the default value is usually 0007040600070406h, where PAT4
+  // is 00h (uncached) instead of 01h (write-combining)).
 
-  // (Identity-map VBE framebuffer, if necessary)
+  if (SupportsPat == true) {
 
-  if (VbeIsSupported == true) {
+    #define PatMsrValue 0x0007040601070406
+
+    WriteToMsr(patMsr, PatMsrValue);
+    Message(Ok, "Updated the PAT MSR to %x%xh.", (uint32)(PatMsrValue >> 32), (uint32)PatMsrValue);
+
+  }
+
+  // Finally, we'll also identity map the VBE framebuffer, since it isn't
+  // located within usable memory but needs to be mapped anyway.
+
+  // (TODO: should this be *identity* mapped, or mapped somewhere like
+  // FFFFE00000000000h? TODO TODO TODO TODO still need to think abt this)
+
+  if (SupportsVbe == true) {
 
     // Get address and size
 
@@ -1008,9 +1033,12 @@ void Bootloader(void) {
       Size += (0x200000 - (Size % 0x200000));
     }
 
-    // Initialize page entries
+    // Initialize page entries. If PAT is enabled, we enable the PAT bit,
+    // so that the framebuffer can be mapped as write-combining.
 
-    Offset = InitializePageEntries(Address, Address, Size, Pml4_Data, IdmappedFlags, true, Offset, UsableMmap, NumUsableMmapEntries);
+    uint64 FramebufferFlags = (UsableFlags | ((SupportsPat == true) ? pdePat : 0));
+
+    Offset = InitializePageEntries(Address, Address, Size, Pml4_Data, FramebufferFlags, true, Offset, UsableMmap, NumUsableMmapEntries);
     Message(Ok, "Successfully identity mapped %d MiB framebuffer starting at 0:%xh", (Size / 0x100000), Address);
 
   }
@@ -1018,6 +1046,10 @@ void Bootloader(void) {
 
 
 
+
+
+
+  // TODO: Finish commenting/rewriting the rest of this, I guess
 
   // [3.1] Okay; now, let's actually *load* the kernel into memory.
 
@@ -1138,12 +1170,11 @@ void Bootloader(void) {
   Putchar('\n', 0);
 
   Printf("Hi, this is Serra! <3\n", 0x0F);
-  Printf("April %i %x\n", 0x3F, 15, 0x2025);
+  Printf("April %i %x\n", 0x3F, 16, 0x2025);
 
   // When the time comes...
-  // if (VbeIsSupported == true) SetVbeMode(BestVbeMode, false, true, true, NULL);
+  //if (SupportsVbe == true) SetVbeMode(BestVbeMode, false, true, true, NULL);
   LongmodeStub((uintptr)Teststring, Pml4);
-
 
   for(;;);
 

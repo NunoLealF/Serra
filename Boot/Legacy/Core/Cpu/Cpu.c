@@ -344,3 +344,32 @@ uint32 GetPciBiosInfoTable(pciBiosInfoTable* PciBiosTable) {
   return Table->Eax;
 
 }
+
+
+/* void WriteToMsr()
+
+   Inputs: uint32 Msr - The MSR number you want to write to.
+           uint64 Value - The value you want to update the MSR with.
+
+   Outputs: (none, except new value in MSR)
+
+   This function essentially serves as a wrapper around the wrmsr instruction,
+   which updates an MSR (Model Specific Register); more specifically, Msr is
+   loaded into [ecx], and Value into [edx:eax].
+
+*/
+
+void WriteToMsr(uint32 Msr, uint64 Value) {
+
+  // Execute the wrmsr instruction ([ecx] and [edx:eax] input)
+
+  uint32 Edx = (uint32)(Value >> 32);
+  uint32 Eax = (uint32)(Value);
+
+  __asm__ __volatile__ ("wrmsr" :: "a"(Eax), "c"(Msr), "d"(Edx));
+
+  // Now that we've done that, return
+
+  return;
+
+}

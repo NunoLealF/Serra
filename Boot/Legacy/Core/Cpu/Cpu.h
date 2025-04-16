@@ -50,7 +50,7 @@
   } __attribute__((packed)) pciBiosInfoTable;
 
 
-  // (Functions from Cpu.c)
+  // (Functions and definitions from Cpu.c)
 
   uint32 ReadEflags(void);
   void ChangeEflags(uint8 Bit, bool Set);
@@ -62,5 +62,9 @@
   acpiRsdpTable* GetAcpiRsdpTable(void);
   void* GetSmbiosEntryPointTable(void);
   uint32 GetPciBiosInfoTable(pciBiosInfoTable* PciBiosTable);
+
+  #define patMsr 0x277
+  #define longModeMsr 0xC0000080
+  void WriteToMsr(uint32 Msr, uint64 Value);
 
 #endif
