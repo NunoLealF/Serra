@@ -78,25 +78,25 @@ runkvm: RunKvm
 
 # [...]
 
-# Mix all of the different stages together (8192 sectors, so, a 4MiB img)
+# Mix all of the different stages together (32768 sectors, so, a 16 MiB img)
 
 Legacy.bin:
 
 	@echo "Building $@"
-	@dd if=/dev/zero of=Legacy.bin bs=512 count=8192 status=none
+	@dd if=/dev/zero of=Legacy.bin bs=512 count=32768 status=none
 
 	@dd if=Boot/Legacy/Bootsector/Bootsector.bin of=Legacy.bin conv=notrunc bs=512 count=1 seek=0 status=none
-	@dd if=Boot/Legacy/Init/Init.bin of=Legacy.bin conv=notrunc bs=512 count=16 seek=8 status=none
-	@dd if=Boot/Legacy/Shared/Rm/Rm.bin of=Legacy.bin conv=notrunc bs=512 count=8 seek=24 status=none
+	@dd if=Boot/Legacy/Init/Init.bin of=Legacy.bin conv=notrunc bs=512 count=16 seek=16 status=none
+	@dd if=Boot/Legacy/Shared/Rm/Rm.bin of=Legacy.bin conv=notrunc bs=512 count=8 seek=32 status=none
 
 # (This formats it as a valid FAT16 filesystem while keeping the non-BPB part of the bootsector;
 # that being said, *it's a temporary solution*, since we'll eventually need to merge the
 # legacy and EFI code).
 
-# Specifically, this sets a cluster size of 1 sector, keeps the current bootsector except for
-# the BPB, and sets the number of reserved sectors to 32.
+# Specifically, this sets a cluster size of 4 sectors, keeps the current bootsector except for
+# the BPB, and sets the number of reserved sectors to 64.
 
-	@mformat -i Legacy.bin -c 1 -k -R 32 ::
+	@mformat -i Legacy.bin -c 4 -k -R 64 ::
 
 # (Add the 3rd stage bootloader; it's assumed that the actual bootloader will be in
 # Boot/Legacy/Boot/Bootx32.bin, with the kernel/common stage coming later on.)

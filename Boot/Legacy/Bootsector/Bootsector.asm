@@ -275,7 +275,7 @@ DiskAddressPacket:
   DiskAddressPacket.Reserved: db 0 ; (This area is reserved)
   DiskAddressPacket.NumSectors: dw 24 ; We want to load 24 sectors into memory.
   DiskAddressPacket.Location: dd 7E00h ; And we also want to load those at 7E00h.
-  DiskAddressPacket.Offset: dq 8 ; Additionally, we want to start loading from LBA 8 (this value may be changed).
+  DiskAddressPacket.Offset: dq 16 ; Additionally, we want to start loading from LBA 16 (this value may be changed).
 
 ; -----------------------------------
 

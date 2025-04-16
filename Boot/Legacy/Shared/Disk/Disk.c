@@ -457,16 +457,31 @@ bool ReadFile(void* Address, fatDirectory Entry, uint8 SectorsPerCluster, uint32
     // We'll only be reading one (logical) sector at a time, in order to conserve memory
     // space, as the cluster size can sometimes be bigger than the stack size
 
+    // We'll only be reading up to SectorReadLimit sectors at a time, in order to
+    // conserve memory space, as the cluster size can sometimes be bigger than the
+    // stack size.
+
+    #define SectorReadLimit 4
     uint32 ClusterOffset = ((ClusterNum - 2) * SectorsPerCluster);
 
     // For every sector in the current cluster..
 
-    for (unsigned int SectorNum = 0; SectorNum < SectorsPerCluster; SectorNum++) {
+    uint32 SectorNum = 0;
+
+    while (SectorNum < SectorsPerCluster) {
+
+      // How many sectors should we read?
+
+      uint8 SectorsToRead = SectorReadLimit;
+
+      if ((SectorsPerCluster - SectorNum) < SectorReadLimit) {
+        SectorsToRead = (SectorsPerCluster - SectorNum);
+      }
 
       // Read from the disk, and see if it failed
 
-      realModeTable* Table = ReadLogicalSector(1, (uint32)((int)Address + Offset), (PartitionOffset + DataOffset + ClusterOffset + SectorNum));
-      Offset += LogicalSectorSize;
+      realModeTable* Table = ReadLogicalSector(SectorsToRead, (uint32)((int)Address + Offset), (PartitionOffset + DataOffset + ClusterOffset + SectorNum));
+      Offset += (LogicalSectorSize * SectorsToRead);
 
       if (hasFlag(Table->Eflags, CarryFlag)) {
         return false;
@@ -478,6 +493,10 @@ bool ReadFile(void* Address, fatDirectory Entry, uint8 SectorsPerCluster, uint32
       if (Offset >= Size) {
         return true;
       }
+
+      // Update accordingly.
+
+      SectorNum += SectorsToRead;
 
     }
 

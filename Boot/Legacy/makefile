@@ -49,7 +49,7 @@ CFLAGS = -std=c11 -ffunction-sections -funsigned-char -ffreestanding -Os -Wall -
 
 All: Clean Compile
 
-Compile: Bootsector/Bootsector.bin Init/Init.bin Shared/Rm/Rm.bin Core/Serra.bin Bootx32.bin
+Compile: Bootsector/Bootsector.bin Init/Init.bin Shared/Rm/Rm.bin Core/Core.bin Bootx32.bin
 
 Clean:
 	@echo "\033[0;2m""Cleaning leftover files (*.o, *.elf, *.bin).." "\033[0m"
@@ -91,7 +91,7 @@ Dump:
 	@$(OBJD) -S Core/Serra.elf
 
 Dumpbin:
-	@$(OBJD) -Mintel,i686 -b binary -m i386 --adjust-vma=0x7E00 -D Legacy.bin
+	@$(OBJD) -Mintel,i686 -b binary -m i386 --adjust-vma=0x7E00 -D Init/Init.bin
 
 # Lowercase names
 
@@ -224,10 +224,10 @@ Init/Init.bin: Init/Bootloader.o Init/Memory/Memory.o Init/Graphics/Exceptions.o
 	@$(CC) -T Init/Linker.ld $(LDFLAGS) -o Init/Init.elf -ffreestanding -nolibc -nostdlib -lgcc $^
 	@$(OBJC) -O binary Init/Init.elf Init/Init.bin
 
-Core/Serra.bin: Core/Bootloader.o Core/Elf.o Core/Stub.o Core/Cpu/Cpu.o Core/Memory/Memory.o Core/Memory/A20/A20.o Core/Memory/A20/A20_Wrapper.o Core/Memory/Mmap/Mmap.o Core/Memory/Paging/Paging.o Core/Graphics/Exceptions.o Core/Graphics/Format.o Core/Graphics/Graphics.o Core/Graphics/Vbe.o Core/Int/Idt.o Core/Int/Irq.o Core/Int/Isr.o Shared/Rm/RmWrapper.o Shared/Disk/Disk.o
+Core/Core.bin: Core/Bootloader.o Core/Elf.o Core/Stub.o Core/Cpu/Cpu.o Core/Memory/Memory.o Core/Memory/A20/A20.o Core/Memory/A20/A20_Wrapper.o Core/Memory/Mmap/Mmap.o Core/Memory/Paging/Paging.o Core/Graphics/Exceptions.o Core/Graphics/Format.o Core/Graphics/Graphics.o Core/Graphics/Vbe.o Core/Int/Idt.o Core/Int/Irq.o Core/Int/Isr.o Shared/Rm/RmWrapper.o Shared/Disk/Disk.o
 	@echo "Building $@"
-	@$(CC) -T Core/Linker.ld $(LDFLAGS) -o Core/Serra.elf -ffreestanding -nolibc -nostdlib -lgcc $^
-	@$(OBJC) -O binary Core/Serra.elf Core/Serra.bin
+	@$(CC) -T Core/Linker.ld $(LDFLAGS) -o Core/Core.elf -ffreestanding -nolibc -nostdlib -lgcc $^
+	@$(OBJC) -O binary Core/Core.elf Core/Core.bin
 
-Bootx32.bin: Core/Serra.bin
-	@cp Core/Serra.bin Bootx32.bin
+Bootx32.bin: Core/Core.bin
+	@cp Core/Core.bin Bootx32.bin
