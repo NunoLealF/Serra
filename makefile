@@ -30,13 +30,14 @@ Compile:
 	@echo "\n\033[0;1m""Compiling [Common]""\033[0m\n"
 	@$(MAKE) -C Common compile
 
-	@echo "\n\033[0;1m""Assembling [Legacy.bin]""\033[0m\n"
-	@$(MAKE) Legacy.bin
+	@echo "\n\033[0;1m""Assembling [Legacy.img]""\033[0m\n"
+	@$(MAKE) Legacy.img
 
 Clean:
 
-	@echo "\n\033[0;1m""Cleaning leftover files (*.o, *.elf, *.bin).." "\033[0m"
+	@echo "\n\033[0;1m""Cleaning leftover files (*.bin, *.img, *.iso).." "\033[0m"
 	rm -f *.bin
+	rm -f *.img
 	rm -f *.iso
 
 	@echo "\n\033[0;1m""Cleaning [Boot/Legacy]""\033[0m\n"
@@ -50,19 +51,19 @@ Clean:
 
 Run:
 	@echo "\n\033[0;1m""Launching QEMU (legacy mode).." "\033[0m"
-	$(QEMU) $(QFLAGS) -drive file=Legacy.bin,format=raw
+	$(QEMU) $(QFLAGS) -drive file=Legacy.img,format=raw
 
 RunGdb:
 	@echo "\n\033[0;1m""Launching QEMU (legacy mode) with GDB.." "\033[0m"
-	$(QEMU) $(QFLAGS) -s -S -drive file=Legacy.bin,format=raw
+	$(QEMU) $(QFLAGS) -s -S -drive file=Legacy.img,format=raw
 
 RunInt:
 	@echo "\n\033[0;1m""Launching QEMU (legacy mode) with -d int.." "\033[0m"
-	@$(QEMU) $(QFLAGS) -drive file=Legacy.bin,format=raw -d int
+	@$(QEMU) $(QFLAGS) -drive file=Legacy.img,format=raw -d int
 
 RunKvm:
 	@echo "\n\033[0;1m""Launching QEMU (legacy mode) with KVM.." "\033[0m"
-	$(QEMU) $(QFLAGS) -drive file=Legacy.bin,format=raw -enable-kvm
+	$(QEMU) $(QFLAGS) -drive file=Legacy.img,format=raw -enable-kvm
 
 # Lowercase names
 
@@ -78,33 +79,33 @@ runkvm: RunKvm
 
 # [...]
 
-# Mix all of the different stages together (32768 sectors, so, a 16 MiB img)
+# Mix all of the different stages together (73728 sectors, so, a 36 MiB img)
 
-Legacy.bin:
+Legacy.img:
 
 	@echo "Building $@"
-	@dd if=/dev/zero of=Legacy.bin bs=512 count=32768 status=none
+	@dd if=/dev/zero of=Legacy.img bs=512 count=73728 status=none
 
-	@dd if=Boot/Legacy/Bootsector/Bootsector.bin of=Legacy.bin conv=notrunc bs=512 count=1 seek=0 status=none
-	@dd if=Boot/Legacy/Init/Init.bin of=Legacy.bin conv=notrunc bs=512 count=16 seek=16 status=none
-	@dd if=Boot/Legacy/Shared/Rm/Rm.bin of=Legacy.bin conv=notrunc bs=512 count=8 seek=32 status=none
+	@dd if=Boot/Legacy/Bootsector/Bootsector.bin of=Legacy.img conv=notrunc bs=512 count=1 seek=0 status=none
+	@dd if=Boot/Legacy/Init/Init.bin of=Legacy.img conv=notrunc bs=512 count=16 seek=16 status=none
+	@dd if=Boot/Legacy/Shared/Rm/Rm.bin of=Legacy.img conv=notrunc bs=512 count=8 seek=32 status=none
 
 # (This formats it as a valid FAT16 filesystem while keeping the non-BPB part of the bootsector;
 # that being said, *it's a temporary solution*, since we'll eventually need to merge the
 # legacy and EFI code).
 
-# Specifically, this sets a cluster size of 4 sectors, keeps the current bootsector except for
-# the BPB, and sets the number of reserved sectors to 64.
+# Specifically, this sets a cluster size of 16 sectors, keeps the current bootsector (except
+# for the BPB, and sets the number of reserved sectors to 64.
 
-	@mformat -i Legacy.bin -c 4 -k -R 64 ::
+	@mformat -i Legacy.img -c 16 -k -R 64 ::
 
 # (Add the 3rd stage bootloader; it's assumed that the actual bootloader will be in
 # Boot/Legacy/Boot/Bootx32.bin, with the kernel/common stage coming later on.)
 
-	@mmd -i Legacy.bin ::/Boot
-	@mcopy -i Legacy.bin Boot/Legacy/Bootx32.bin ::/Boot/
+	@mmd -i Legacy.img ::/Boot
+	@mcopy -i Legacy.img Boot/Legacy/Bootx32.bin ::/Boot/
 
 # (Add the actual kernel files)
 
-	@mmd -i Legacy.bin ::/Boot/Serra
-	@mcopy -i Legacy.bin Common/Kernel/Kernel.elf ::/Boot/Serra/
+	@mmd -i Legacy.img ::/Boot/Serra
+	@mcopy -i Legacy.img Common/Kernel/Kernel.elf ::/Boot/Serra/

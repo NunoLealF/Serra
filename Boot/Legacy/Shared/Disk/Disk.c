@@ -454,15 +454,14 @@ bool ReadFile(void* Address, fatDirectory Entry, uint8 SectorsPerCluster, uint32
 
   while (!ExceedsLimit(ClusterNum, Limit)) {
 
-    // We'll only be reading one (logical) sector at a time, in order to conserve memory
-    // space, as the cluster size can sometimes be bigger than the stack size
-
     // We'll only be reading up to SectorReadLimit sectors at a time, in order to
     // conserve memory space, as the cluster size can sometimes be bigger than the
     // stack size.
 
-    #define SectorReadLimit 4
+    // (In this case, SectorReadLimit = (0.5 * stack size) / (logical sector size))
+
     uint32 ClusterOffset = ((ClusterNum - 2) * SectorsPerCluster);
+    uint8 SectorReadLimit = (32768 / LogicalSectorSize);
 
     // For every sector in the current cluster..
 
