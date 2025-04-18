@@ -88,7 +88,7 @@ Clean:
 # (...)
 
 Dump:
-	@$(OBJD) -S Core/Serra.elf
+	@$(OBJD) -S Core/Core.elf
 
 Dumpbin:
 	@$(OBJD) -Mintel,i686 -b binary -m i386 --adjust-vma=0x7E00 -D Init/Init.bin

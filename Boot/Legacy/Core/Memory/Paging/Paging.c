@@ -6,7 +6,7 @@
 #include "../../Graphics/Graphics.h"
 #include "../Memory.h"
 
-/* static uint64 PageAlign()
+/* uint64 PageAlign()
 
    Inputs: uint64 Address - The address you want to page-align.
    Outputs: uint64 - The newly page-aligned address.
@@ -20,7 +20,7 @@
 
 */
 
-static uint64 PageAlign(uint64 Address) {
+uint64 PageAlign(uint64 Address) {
 
   if ((Address % 0x1000) != 0) {
     Address += (0x1000 - (Address % 0x1000));
@@ -167,6 +167,8 @@ uint64 AllocateFromMmap(uint64 Start, uint32 Size, bool Clear, mmapEntry* Usable
            bool UseLargePages - Whether you want to use large (2 MiB) pages
            or not (4 KiB);
 
+           bool UsePat - Whether you want to enable the PAT bit;
+
            uint64 MmapOffset - Where in memory you want to start allocating
            from (this can either be the start of usable memory, or the last
            value returned by AllocFromUsableMmap(), whichever is greater);
@@ -197,10 +199,7 @@ uint64 AllocateFromMmap(uint64 Start, uint32 Size, bool Clear, mmapEntry* Usable
 
 */
 
-// TODO: Even though it isn't 100% necessary rn, I do want to mess with the
-// PAT later on so I can map framebuffers properly - add support for that?
-
-uint64 InitializePageEntries(uint64 PhysAddress, uint64 VirtAddress, uint64 Size, uint64* Pml4, uint64 Flags, bool UseLargePages, uint64 MmapOffset, mmapEntry* UsableMmap, uint16 NumUsableMmapEntries) {
+uint64 InitializePageEntries(uint64 PhysAddress, uint64 VirtAddress, uint64 Size, uint64* Pml4, uint64 Flags, bool UseLargePages, bool UsePat, uint64 MmapOffset, mmapEntry* UsableMmap, uint16 NumUsableMmapEntries) {
 
   // First, let's see if the addresses themselves are page-aligned; if
   // not, panic (since this only happens when there's clearly something
@@ -278,7 +277,7 @@ uint64 InitializePageEntries(uint64 PhysAddress, uint64 VirtAddress, uint64 Size
 
         if (UseLargePages == true) {
 
-          Pml2[Pml2_Index] = makePageEntry(PhysAddress, (Flags | pageSize));
+          Pml2[Pml2_Index] = makePageEntry(PhysAddress, (Flags | pageSize | ((UsePat == true) ? pdePat : 0)));
           PhysAddress += (4096 * 512);
 
           continue;
@@ -307,7 +306,7 @@ uint64 InitializePageEntries(uint64 PhysAddress, uint64 VirtAddress, uint64 Size
 
         for (uint16 Pte_Index = Pte_Start; Pte_Index <= Pte_End; Pte_Index++) {
 
-          Pte[Pte_Index] = makePageEntry(PhysAddress, Flags);
+          Pte[Pte_Index] = makePageEntry(PhysAddress, (Flags | ((UsePat == true) ? ptePat : 0)));
           PhysAddress += 4096;
 
         }

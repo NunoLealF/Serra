@@ -873,7 +873,7 @@ void Bootloader(void) {
   // usable memory map. We'll start off by allocating space for the kernel
   // executable:
 
-  uintptr KernelPtr = (uintptr)(AllocateFromMmap(Offset, (uint32)(KernelDirectory.Size), false, UsableMmap, NumUsableMmapEntries));
+  uintptr KernelPtr = (uintptr)(AllocateFromMmap(Offset, PageAlign(KernelDirectory.Size), false, UsableMmap, NumUsableMmapEntries));
 
   if (KernelPtr == 0) {
 
@@ -882,7 +882,7 @@ void Bootloader(void) {
   } else {
 
     Offset = KernelPtr;
-    KernelPtr -= KernelDirectory.Size;
+    KernelPtr -= PageAlign(KernelDirectory.Size);
 
     Message(Ok, "Allocated kernel space between %xh and %xh (in pmem).", KernelPtr, (uint32)Offset);
 
@@ -963,7 +963,7 @@ void Bootloader(void) {
 
   #define IdentityMapThreshold 0x1000000 // (16 MiB; must be a multiple of 2 MiB)
 
-  Offset = InitializePageEntries(0, 0, IdentityMapThreshold, Pml4_Data, IdmappedFlags, true, Offset, UsableMmap, NumUsableMmapEntries);
+  Offset = InitializePageEntries(0, 0, IdentityMapThreshold, Pml4_Data, IdmappedFlags, true, false, Offset, UsableMmap, NumUsableMmapEntries);
   Message(Ok, "Successfully identity mapped the first %d MiB of memory", (IdentityMapThreshold / 0x100000));
 
   // Additionally, we'll also identity map everything in the usable memory
@@ -988,7 +988,7 @@ void Bootloader(void) {
 
     // Initialize page entries
 
-    Offset = InitializePageEntries(Start, Start, Size, Pml4_Data, IdmappedFlags, true, Offset, UsableMmap, NumUsableMmapEntries);
+    Offset = InitializePageEntries(Start, Start, Size, Pml4_Data, IdmappedFlags, true, false, Offset, UsableMmap, NumUsableMmapEntries);
     Message(Ok, "Successfully identity mapped %d MiB area starting at %x:%xh", (uint32)(Size / 0x100000), (uint32)(Start >> 32), (uint32)Start);
 
   }
@@ -1006,11 +1006,12 @@ void Bootloader(void) {
 
   }
 
-  // Finally, we'll also identity map the VBE framebuffer, since it isn't
-  // located within usable memory but needs to be mapped anyway.
+  // Finally, if VBE is supported, then we also have to map the
+  // framebuffer, since it generally isn't located within usable memory.
 
-  // (TODO: should this be *identity* mapped, or mapped somewhere like
-  // FFFFE00000000000h? TODO TODO TODO TODO still need to think abt this)
+  // (If PAT is supported, we also map it as *write-combining*; in theory,
+  // this should help improve performance, since it essentially works as
+  // a form of double buffering.)
 
   if (SupportsVbe == true) {
 
@@ -1036,25 +1037,21 @@ void Bootloader(void) {
     // Initialize page entries. If PAT is enabled, we enable the PAT bit,
     // so that the framebuffer can be mapped as write-combining.
 
-    uint64 FramebufferFlags = (UsableFlags | ((SupportsPat == true) ? pdePat : 0));
-
-    Offset = InitializePageEntries(Address, Address, Size, Pml4_Data, FramebufferFlags, true, Offset, UsableMmap, NumUsableMmapEntries);
+    Offset = InitializePageEntries(Address, Address, Size, Pml4_Data, UsableFlags, true, true, Offset, UsableMmap, NumUsableMmapEntries);
     Message(Ok, "Successfully identity mapped %d MiB framebuffer starting at 0:%xh", (Size / 0x100000), Address);
 
   }
 
 
 
-
-
-
-
-  // TODO: Finish commenting/rewriting the rest of this, I guess
-
-  // [3.1] Okay; now, let's actually *load* the kernel into memory.
+  // [Loading and running the kernel]
 
   Putchar('\n', 0);
-  Message(Kernel, "Preparing to load and execute the kernel.");
+  Message(Kernel, "Preparing to load and run the kernel.");
+
+  // First, let's read the kernel file from disk. We already obtained the
+  // directory earlier (KernelDirectory), and allocated space for it in
+  // memory (KernelPtr), so all that's left is to call ReadFile().
 
   bool ReadFileSuccessful = ReadFile((void*)KernelPtr, KernelDirectory, Bpb.SectorsPerCluster, Bpb.HiddenSectors, Bpb.ReservedSectors, DataSectorOffset, IsFat32);
 
@@ -1063,6 +1060,19 @@ void Bootloader(void) {
   } else {
     Panic("Failed to read Boot/Serra/Kernel.elf from disk.", 0);
   }
+
+
+
+
+
+
+  // *TODO*: Comment this properly.
+  // (Also, note for future self - just *don't* use anything
+  // compression-related, it's somehow slower than int 13h lmao)
+
+
+
+
 
 
   // [3.2] Actually read the ELF file
@@ -1119,7 +1129,7 @@ void Bootloader(void) {
     if (Header->Type == 0x01) {
 
       uint64 PhysAddress = (uint64)(KernelPtr) + Header->Offset;
-      Offset = InitializePageEntries(PhysAddress, Header->VirtAddress, Header->Size, Pml4_Data, UsableFlags, false, Offset, UsableMmap, NumUsableMmapEntries);
+      Offset = InitializePageEntries(PhysAddress, Header->VirtAddress, Header->Size, Pml4_Data, UsableFlags, false, false, Offset, UsableMmap, NumUsableMmapEntries);
 
     }
 
@@ -1128,7 +1138,7 @@ void Bootloader(void) {
   // Todo: there seems to be some alignment issues? but let me see if it works okay
 
   Message(Kernel, "Mapping kernel stack; offset = %xh", (uint32)Offset);
-  Offset = InitializePageEntries((uint64)KernelStack, (KernelHeader->Entrypoint - KernelStackSize), KernelStackSize, Pml4_Data, UsableFlags, false, Offset, UsableMmap, NumUsableMmapEntries);
+  Offset = InitializePageEntries((uint64)KernelStack, (KernelHeader->Entrypoint - KernelStackSize), KernelStackSize, Pml4_Data, UsableFlags, false, false, Offset, UsableMmap, NumUsableMmapEntries);
   Message(Ok, "Okay done; offset = %xh", (uint32)Offset);
 
   // [3.3 / 4.1 / idk] Remap as necessary
@@ -1170,7 +1180,7 @@ void Bootloader(void) {
   Putchar('\n', 0);
 
   Printf("Hi, this is Serra! <3\n", 0x0F);
-  Printf("April %i %x\n", 0x3F, 16, 0x2025);
+  Printf("April %i %x\n", 0x3F, 18, 0x2025);
 
   // When the time comes...
   //if (SupportsVbe == true) SetVbeMode(BestVbeMode, false, true, true, NULL);

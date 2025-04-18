@@ -75,7 +75,8 @@
   #define makePageEntry(Addr, Flags) ((uint64)pageAddress(Addr) | (uint64)Flags)
   #define ceilingDivide(Num, Divisor) ((Num + Divisor - 1) / Divisor)
 
+  uint64 PageAlign(uint64 Address);
   uint64 AllocateFromMmap(uint64 Start, uint32 Size, bool Clear, mmapEntry* UsableMmap, uint8 NumUsableMmapEntries);
-  uint64 InitializePageEntries(uint64 PhysAddress, uint64 VirtAddress, uint64 Size, uint64* Pml4, uint64 Flags, bool UseLargePages, uint64 MmapOffset, mmapEntry* UsableMmap, uint16 NumUsableMmapEntries);
+  uint64 InitializePageEntries(uint64 PhysAddress, uint64 VirtAddress, uint64 Size, uint64* Pml4, uint64 Flags, bool UseLargePages, bool UsePat, uint64 MmapOffset, mmapEntry* UsableMmap, uint16 NumUsableMmapEntries);
 
 #endif
