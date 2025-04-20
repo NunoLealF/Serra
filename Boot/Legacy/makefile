@@ -76,11 +76,12 @@ Clean:
 	@-rm -f Core/Memory/Mmap/*.o
 	@-rm -f Core/Memory/Paging/*.o
 
+	@-rm -f Shared/Disk/*.o
+	@-rm -f Shared/Memory/*.o
 	@-rm -f Shared/Rm/*.o
 	@-rm -f Shared/Rm/*.elf
 	@-rm -f Shared/Rm/*.bin
 
-	@-rm -f Shared/Disk/*.o
 
 	@-rm -f *.bin
 
@@ -118,10 +119,6 @@ Init/Bootloader.o:
 	@echo "Building $@"
 	@$(CC) $(CFLAGS) -c Init/Bootloader.c -o Init/Bootloader.o
 
-Init/Memory/Memory.o:
-	@echo "Building $@"
-	@$(CC) $(CFLAGS) -c Init/Memory/Memory.c -o Init/Memory/Memory.o
-
 Init/Graphics/Exceptions.o:
 	@echo "Building $@"
 	@$(CC) $(CFLAGS) -c Init/Graphics/Exceptions.c -o Init/Graphics/Exceptions.o
@@ -152,10 +149,6 @@ Core/Stub.o:
 Core/Cpu/Cpu.o:
 	@echo "Building $@"
 	@$(CC) $(CFLAGS) -Wno-array-bounds -c Core/Cpu/Cpu.c -o Core/Cpu/Cpu.o
-
-Core/Memory/Memory.o:
-	@echo "Building $@"
-	@$(CC) $(CFLAGS) -c Core/Memory/Memory.c -o Core/Memory/Memory.o
 
 Core/Memory/A20/A20.o:
 	@echo "Building $@"
@@ -204,6 +197,14 @@ Core/Int/Isr.o:
 
 # (Shared code, Legacy/Shared)
 
+Shared/Disk/Disk.o:
+	@echo "Building $@"
+	@$(CC) $(CFLAGS) -c Shared/Disk/Disk.c -o Shared/Disk/Disk.o
+
+Shared/Memory/Memory.o:
+	@echo "Building $@"
+	@$(CC) $(CFLAGS) -c Shared/Memory/Memory.c -o Shared/Memory/Memory.o
+
 Shared/Rm/Rm.bin:
 	@echo "Building $@"
 	@$(AS) Shared/Rm/Rm.asm -f bin -o Shared/Rm/Rm.bin
@@ -212,19 +213,14 @@ Shared/Rm/RmWrapper.o:
 	@echo "Building $@"
 	@$(CC) $(CFLAGS) -c Shared/Rm/RmWrapper.c -o Shared/Rm/RmWrapper.o
 
-Shared/Disk/Disk.o:
-	@echo "Building $@"
-	@$(CC) $(CFLAGS) -c Shared/Disk/Disk.c -o Shared/Disk/Disk.o
-
-
 # Link the stages into .bin
 
-Init/Init.bin: Init/Bootloader.o Init/Memory/Memory.o Init/Graphics/Exceptions.o Init/Graphics/Format.o Init/Graphics/Graphics.o Shared/Rm/RmWrapper.o Shared/Disk/Disk.o
+Init/Init.bin: Init/Bootloader.o Init/Graphics/Exceptions.o Init/Graphics/Format.o Init/Graphics/Graphics.o Shared/Disk/Disk.o Shared/Memory/Memory.o Shared/Rm/RmWrapper.o
 	@echo "Building $@"
 	@$(CC) -T Init/Linker.ld $(LDFLAGS) -o Init/Init.elf -ffreestanding -nolibc -nostdlib -lgcc $^
 	@$(OBJC) -O binary Init/Init.elf Init/Init.bin
 
-Core/Core.bin: Core/Bootloader.o Core/Elf.o Core/Stub.o Core/Cpu/Cpu.o Core/Memory/Memory.o Core/Memory/A20/A20.o Core/Memory/A20/A20_Wrapper.o Core/Memory/Mmap/Mmap.o Core/Memory/Paging/Paging.o Core/Graphics/Exceptions.o Core/Graphics/Format.o Core/Graphics/Graphics.o Core/Graphics/Vbe.o Core/Int/Idt.o Core/Int/Irq.o Core/Int/Isr.o Shared/Rm/RmWrapper.o Shared/Disk/Disk.o
+Core/Core.bin: Core/Bootloader.o Core/Elf.o Core/Stub.o Core/Cpu/Cpu.o Core/Memory/A20/A20.o Core/Memory/A20/A20_Wrapper.o Core/Memory/Mmap/Mmap.o Core/Memory/Paging/Paging.o Core/Graphics/Exceptions.o Core/Graphics/Format.o Core/Graphics/Graphics.o Core/Graphics/Vbe.o Core/Int/Idt.o Core/Int/Irq.o Core/Int/Isr.o Shared/Disk/Disk.o Shared/Memory/Memory.o Shared/Rm/RmWrapper.o
 	@echo "Building $@"
 	@$(CC) -T Core/Linker.ld $(LDFLAGS) -o Core/Core.elf -ffreestanding -nolibc -nostdlib -lgcc $^
 	@$(OBJC) -O binary Core/Core.elf Core/Core.bin

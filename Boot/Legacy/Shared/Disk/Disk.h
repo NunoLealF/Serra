@@ -2,8 +2,8 @@
 // This file is part of the Serra project, which is released under the MIT license.
 // For more information, please refer to the accompanying license agreement. <3
 
-#ifndef SERRA_DISK_H
-#define SERRA_DISK_H
+#ifndef SERRA_SHARED_DISK_H
+#define SERRA_SHARED_DISK_H
 
   // EDD (Enhanced Disk Drive)-related data structures. (Used in multiple files, defined here)
 
