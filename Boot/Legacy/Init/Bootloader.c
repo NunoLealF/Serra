@@ -135,7 +135,7 @@ void __attribute__((noreturn)) Bootloader(void) {
   uint16 Signature = *(uint16*)(0x7E00 - 2);
 
   if (Signature != 0xAA55) {
-    Panic("Bootsector/VBR hasn't been loaded into memory.");
+    Panic("Bootsector/VBR hasn't been loaded into memory.", 0);
   } else {
     Message(Ok, "Successfully got the current drive number (%xh).", DriveNumber);
   }
@@ -198,15 +198,17 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   if (EDD_Enabled == false) {
 
+    #define SanityCheckValue 0xE621
+
     uint16* SanityCheck = (uint16*)(0xAE00);
-    *SanityCheck = 0xE621;
+    *SanityCheck = SanityCheckValue;
 
     Table = ReadSector(1, 0xAE00, 0);
 
     if (hasFlag(Table->Eflags, CarryFlag) == true) {
-      Panic("Unable to successfully load data from the drive.");
-    } else if (*SanityCheck == 0xE621) {
-      Panic("Unable to successfully load data from the drive.");
+      Panic("Unable to successfully load data from the drive.", 0);
+    } else if (*SanityCheck == SanityCheckValue) {
+      Panic("Unable to successfully load data from the drive.", 0);
     }
 
   }
@@ -229,7 +231,7 @@ void __attribute__((noreturn)) Bootloader(void) {
   Putchar('\n', 0);
 
   if (Bpb.BytesPerSector < 512) {
-    Panic("Failed to detect a FAT partition.");
+    Panic("Failed to detect a FAT partition.", 0);
   } else {
     Message(Boot, "Successfully detected a FAT partition.");
   }
@@ -292,7 +294,7 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   if (NumClusters < 4085) {
 
-    Panic("FAT partitions with less than 4085 clusters are not supported."); // FAT12 isn't supported
+    Panic("FAT partitions with less than 4085 clusters are not supported.", 0); // FAT12 isn't supported
 
   } else if (NumClusters > 65524) {
 
@@ -333,7 +335,7 @@ void __attribute__((noreturn)) Bootloader(void) {
   uint32 BootCluster = GetDirectoryCluster(BootDirectory);
 
   if (ExceedsLimit(BootCluster, ClusterLimit)) {
-    Panic("Failed to locate Boot/.");
+    Panic("Failed to locate Boot/.", 0);
   }
 
   // (After that, we need to search for a file called 'Bootx32.bin' from within the Boot/ folder,
@@ -343,7 +345,7 @@ void __attribute__((noreturn)) Bootloader(void) {
   uint32 BootloaderCluster = GetDirectoryCluster(BootloaderDirectory);
 
   if (ExceedsLimit(BootloaderCluster, ClusterLimit)) {
-    Panic("Failed to locate Boot/Bootx32.bin.");
+    Panic("Failed to locate Boot/Bootx32.bin.", 0);
   } else {
     Message(Ok, "Located Boot/Bootx32.bin.");
   }
@@ -362,7 +364,7 @@ void __attribute__((noreturn)) Bootloader(void) {
   if (ReadFileSuccessful == true) {
     Message(Ok, "Successfully read Boot/Bootx32.bin to %xh.", Bootloader_Address);
   } else {
-    Panic("Failed to read Boot/Bootx32.bin from disk.");
+    Panic("Failed to read Boot/Bootx32.bin from disk.", 0);
   }
 
 
@@ -414,7 +416,7 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   __asm__ __volatile__ ("call *%0" : : "r"(Bootloader_Address));
 
-  Panic("Failed to load the third-stage bootloader.");
+  Panic("Failed to load the third-stage bootloader.", 0);
   for(;;);
 
 }

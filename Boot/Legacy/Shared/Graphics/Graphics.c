@@ -2,14 +2,14 @@
 // This file is part of the Serra project, which is released under the MIT license.
 // For more information, please refer to the accompanying license agreement. <3
 
-#include "../../Shared/Stdint.h"
-#include "../../Shared/Memory/Memory.h"
+#include "../Stdint.h"
+#include "../Memory/Memory.h"
 #include "Graphics.h"
 
 // Global variables. (The Debug flag inhibits all messages if set to false)
 
 terminalDataStruct TerminalTable;
-volatile bool Debug;
+bool Debug;
 
 /* void InitializeTerminal()
 

@@ -5,74 +5,12 @@
 #ifndef SERRA_GRAPHICS_H
 #define SERRA_GRAPHICS_H
 
-  // Exception/info message functions and data structures. (Exceptions.c)
+  // Functions and data structures, from the (shared) Graphics folder
 
-  typedef enum {
-
-    Info = 0,
-
-    Boot = 1,
-    Ok = 2,
-    Fail = 3,
-    Warning = 4,
-
-    Error = 5
-
-  } messageType;
-
-  void Message(messageType Type, char* String, ...);
-  void __attribute__((noreturn)) Panic(char* String, uint32 Eip);
+  #include "../../Shared/Graphics/Graphics.h"
 
 
-  // Formatting and string-related functions. (Format.c)
-
-  int Strlen(const char* String);
-  bool Strcmp(const char* StringA, const char* StringB);
-  char* Strrev(char* String);
-  char* Itoa(uint32 Number, char* Buffer, uint8 Base);
-
-
-  // The terminalDataStruct type, TerminalTable{}, and the debug (show non-important
-  // messages) flag. (Graphics.c)
-
-  typedef volatile struct {
-
-    // General info
-
-    uint16 PosX;
-    uint16 PosY;
-    uint32 Framebuffer;
-
-    // Mode info
-
-    uint16 LimitX;
-    uint16 LimitY;
-
-  } __attribute__((packed)) terminalDataStruct;
-
-  extern terminalDataStruct TerminalTable;
-  extern volatile bool Debug;
-
-
-  // Functions that directly interact with the TerminalTable{} structure. (Graphics.c)
-
-  void InitializeTerminal(uint16 LimitX, uint16 LimitY, uint32 Framebuffer);
-  void ClearTerminal(void);
-
-
-  // Functions that print data to the terminal. (Graphics.c)
-
-  void Putchar(const char Character, uint8 Color);
-  void Print(const char* String, uint8 Color);
-
-
-  // Functions that print data to the terminal. (Format.c)
-
-  void Printf(const char* String, uint8 Color, ...);
-  void vPrintf(const char* String, uint8 Color, va_list Arguments);
-
-
-  // VBE-related data structures. (Vbe.c)
+  // VBE-related data structures, from Vbe.c
 
   typedef struct {
 
@@ -103,7 +41,6 @@
     uint8 OemData[256]; // Reserved by the OEM; VBE 2.x+ *only*
 
   } __attribute__((packed)) vbeInfoBlock;
-
 
   typedef struct {
 
@@ -204,7 +141,7 @@
   } __attribute__((packed)) vbeModeInfoBlock;
 
 
-  // EDID-related data structures. (Vbe.c)
+  // EDID-related data structures, from Vbe.c
 
   typedef struct {
 
@@ -239,7 +176,6 @@
 
   } __attribute__((packed)) edidDetailedTiming;
 
-
   typedef struct {
 
     uint64 Signature; // This should be 00FFFFFFFFFFFF00h
@@ -263,7 +199,7 @@
   } __attribute__((packed)) edidInfoBlock;
 
 
-  // VBE- and EDID-related functions. (Vbe.c)
+  // VBE- and EDID-related functions, from Vbe.c
 
   uint32 GetVbeInfoBlock(vbeInfoBlock* Buffer);
   uint32 GetVbeModeInfo(vbeModeInfoBlock* Buffer, uint16 ModeNumber);
@@ -272,6 +208,5 @@
   uint32 GetEdidInfoBlock(edidInfoBlock* Buffer, uint16 ControllerNum);
 
   uint16 FindBestVbeMode(uint16* VbeModeList, uint16 PreferredX_Resolution, uint16 PreferredY_Resolution);
-
-
+  
 #endif

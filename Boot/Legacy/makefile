@@ -61,9 +61,6 @@ Clean:
 	@-rm -f Init/*.elf
 	@-rm -f Init/*.bin
 
-	@-rm -f Init/Memory/*.o
-	@-rm -f Init/Graphics/*.o
-
 	@-rm -f Core/*.o
 	@-rm -f Core/*.elf
 	@-rm -f Core/*.bin
@@ -71,15 +68,14 @@ Clean:
 	@-rm -f Core/Cpu/*.o
 	@-rm -f Core/Graphics/*.o
 	@-rm -f Core/Int/*.o
-	@-rm -f Core/Memory/*.o
 	@-rm -f Core/Memory/A20/*.o
 	@-rm -f Core/Memory/Mmap/*.o
 	@-rm -f Core/Memory/Paging/*.o
 
 	@-rm -f Shared/Disk/*.o
+	@-rm -f Shared/Graphics/*.o
 	@-rm -f Shared/Memory/*.o
 	@-rm -f Shared/Rm/*.o
-	@-rm -f Shared/Rm/*.elf
 	@-rm -f Shared/Rm/*.bin
 
 
@@ -118,18 +114,6 @@ Bootsector/Bootsector.bin:
 Init/Bootloader.o:
 	@echo "Building $@"
 	@$(CC) $(CFLAGS) -c Init/Bootloader.c -o Init/Bootloader.o
-
-Init/Graphics/Exceptions.o:
-	@echo "Building $@"
-	@$(CC) $(CFLAGS) -c Init/Graphics/Exceptions.c -o Init/Graphics/Exceptions.o
-
-Init/Graphics/Format.o:
-	@echo "Building $@"
-	@$(CC) $(CFLAGS) -c Init/Graphics/Format.c -o Init/Graphics/Format.o
-
-Init/Graphics/Graphics.o:
-	@echo "Building $@"
-	@$(CC) $(CFLAGS) -c Init/Graphics/Graphics.c -o Init/Graphics/Graphics.o
 
 
 # (Third-stage bootloader, Legacy/Core)
@@ -174,10 +158,6 @@ Core/Graphics/Format.o:
 	@echo "Building $@"
 	@$(CC) $(CFLAGS) -c Core/Graphics/Format.c -o Core/Graphics/Format.o
 
-Core/Graphics/Graphics.o:
-	@echo "Building $@"
-	@$(CC) $(CFLAGS) -c Core/Graphics/Graphics.c -o Core/Graphics/Graphics.o
-
 Core/Graphics/Vbe.o:
 	@echo "Building $@"
 	@$(CC) $(CFLAGS) -c Core/Graphics/Vbe.c -o Core/Graphics/Vbe.o
@@ -201,6 +181,18 @@ Shared/Disk/Disk.o:
 	@echo "Building $@"
 	@$(CC) $(CFLAGS) -c Shared/Disk/Disk.c -o Shared/Disk/Disk.o
 
+Shared/Graphics/Exceptions.o:
+	@echo "Building $@"
+	@$(CC) $(CFLAGS) -c Shared/Graphics/Exceptions.c -o Shared/Graphics/Exceptions.o
+
+Shared/Graphics/Format.o:
+	@echo "Building $@"
+	@$(CC) $(CFLAGS) -c Shared/Graphics/Format.c -o Shared/Graphics/Format.o
+
+Shared/Graphics/Graphics.o:
+	@echo "Building $@"
+	@$(CC) $(CFLAGS) -c Shared/Graphics/Graphics.c -o Shared/Graphics/Graphics.o
+
 Shared/Memory/Memory.o:
 	@echo "Building $@"
 	@$(CC) $(CFLAGS) -c Shared/Memory/Memory.c -o Shared/Memory/Memory.o
@@ -215,12 +207,12 @@ Shared/Rm/RmWrapper.o:
 
 # Link the stages into .bin
 
-Init/Init.bin: Init/Bootloader.o Init/Graphics/Exceptions.o Init/Graphics/Format.o Init/Graphics/Graphics.o Shared/Disk/Disk.o Shared/Memory/Memory.o Shared/Rm/RmWrapper.o
+Init/Init.bin: Init/Bootloader.o Shared/Disk/Disk.o Shared/Graphics/Exceptions.o Shared/Graphics/Format.o Shared/Graphics/Graphics.o Shared/Memory/Memory.o Shared/Rm/RmWrapper.o
 	@echo "Building $@"
 	@$(CC) -T Init/Linker.ld $(LDFLAGS) -o Init/Init.elf -ffreestanding -nolibc -nostdlib -lgcc $^
 	@$(OBJC) -O binary Init/Init.elf Init/Init.bin
 
-Core/Core.bin: Core/Bootloader.o Core/Elf.o Core/Stub.o Core/Cpu/Cpu.o Core/Memory/A20/A20.o Core/Memory/A20/A20_Wrapper.o Core/Memory/Mmap/Mmap.o Core/Memory/Paging/Paging.o Core/Graphics/Exceptions.o Core/Graphics/Format.o Core/Graphics/Graphics.o Core/Graphics/Vbe.o Core/Int/Idt.o Core/Int/Irq.o Core/Int/Isr.o Shared/Disk/Disk.o Shared/Memory/Memory.o Shared/Rm/RmWrapper.o
+Core/Core.bin: Core/Bootloader.o Core/Elf.o Core/Stub.o Core/Cpu/Cpu.o Core/Memory/A20/A20.o Core/Memory/A20/A20_Wrapper.o Core/Memory/Mmap/Mmap.o Core/Memory/Paging/Paging.o Core/Graphics/Vbe.o Core/Int/Idt.o Core/Int/Irq.o Core/Int/Isr.o Shared/Disk/Disk.o Shared/Graphics/Exceptions.o Shared/Graphics/Format.o Shared/Graphics/Graphics.o Shared/Memory/Memory.o Shared/Rm/RmWrapper.o
 	@echo "Building $@"
 	@$(CC) -T Core/Linker.ld $(LDFLAGS) -o Core/Core.elf -ffreestanding -nolibc -nostdlib -lgcc $^
 	@$(OBJC) -O binary Core/Core.elf Core/Core.bin
