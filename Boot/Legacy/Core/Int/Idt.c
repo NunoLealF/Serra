@@ -327,7 +327,6 @@ void IsrAbort(uint8 Vector, uint32 Eip) {
 
   Putchar('\n', 0);
   Message(Warning, "An exception has occured.");
-
   Panic(Exceptions[Vector], Eip);
 
 }
@@ -358,8 +357,7 @@ void IsrLog(uint8 Vector) {
   // one did.
 
   Putchar('\n', 0);
-  Message(Kernel, "An interrupt has occured.");
-
+  Message(Boot, "An interrupt has occured.");
   Message(Info, Exceptions[Vector]);
 
 }

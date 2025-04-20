@@ -114,7 +114,7 @@ void RestoreState(void) {
 
 void Bootloader(void) {
 
-  // [Read from InfoTable]
+  // [Read from the bootloader info table]
 
   // First, let's check to see if the signature is even valid (if not,
   // just return to whichever function called us):
@@ -132,14 +132,15 @@ void Bootloader(void) {
   Memcpy(&TerminalTable, &InfoTable->Terminal_Info, sizeof(InfoTable->Terminal_Info));
 
   Putchar('\n', 0);
-  Message(Kernel, "Successfully entered the third-stage bootloader.");
+  Message(Boot, "Successfully entered the third-stage bootloader.");
+
 
 
 
   // (Initialize the IDT, as well as the 8259 PIC)
 
   Putchar('\n', 0);
-  Message(Kernel, "Preparing to initialize the IDT and 8259 PIC.");
+  Message(Boot, "Preparing to initialize the IDT and 8259 PIC.");
 
   // First, let's initialize the IDT descriptor with the size and location
   // of our Interrupt Descriptor Table:
@@ -170,7 +171,7 @@ void Bootloader(void) {
   // interrupts with sti)
 
   Putchar('\n', 0);
-  Message(Kernel, "Preparing to enable the A20 line");
+  Message(Boot, "Preparing to enable the A20 line");
 
   bool A20_EnabledByDefault = false;
   bool A20_EnabledByKbd = false;
@@ -194,7 +195,7 @@ void Bootloader(void) {
     // The first involves the 8042 keyboard controller:
 
     Putchar('\n', 0);
-    Message(Kernel, "Attempting to enable the A20 line using the 8042 keyboard method");
+    Message(Boot, "Attempting to enable the A20 line using the 8042 keyboard method");
 
     EnableKbd_A20();
     Wait_A20();
@@ -215,7 +216,7 @@ void Bootloader(void) {
       Message(Fail, "The A20 line was not successfully enabled.");
 
       Putchar('\n', 0);
-      Message(Kernel, "Attempting to enable the A20 line using the fast A20 method");
+      Message(Boot, "Attempting to enable the A20 line using the fast A20 method");
 
       EnableFast_A20();
       Wait_A20();
@@ -245,7 +246,7 @@ void Bootloader(void) {
   // [Get the 'raw' system memory map, using E820]
 
   Putchar('\n', 0);
-  Message(Kernel, "Preparing to obtain the system's memory map, using E820");
+  Message(Boot, "Preparing to obtain the system's memory map, using E820");
 
   // First, we need to prepare a couple things, and also check to see if
   // it's even supported (NumMmapEntries != 0).
@@ -313,7 +314,7 @@ void Bootloader(void) {
   // [Process the system memory map into a usable memory map]
 
   Putchar('\n', 0);
-  Message(Kernel, "Preparing to process the system memory map.");
+  Message(Boot, "Preparing to process the system memory map.");
 
   // The first step here is to just sort each entry according to
   // its base address, like this:
@@ -440,7 +441,7 @@ void Bootloader(void) {
   // [Obtain CPUID data]
 
   Putchar('\n', 0);
-  Message(Kernel, "Preparing to get data from CPUID");
+  Message(Boot, "Preparing to get data from CPUID");
 
   // First, let's see if CPUID is even supported - it's essentially
   // required, but not all CPUs that support it have a volatile ID flag
@@ -517,7 +518,7 @@ void Bootloader(void) {
   // [Check for VESA (VBE 2.0+) support, and obtain data if possible]
 
   Putchar('\n', 0);
-  Message(Kernel, "Preparing to get VESA-related data.");
+  Message(Boot, "Preparing to get VESA-related data.");
 
   // Let's start by obtaining the VBE info block - this not only lets us
   // see if VESA VBE is supported at all (by checking the return status),
@@ -620,7 +621,7 @@ void Bootloader(void) {
   // [Obtain ACPI and SMBIOS tables]
 
   Putchar('\n', 0);
-  Message(Kernel, "Preparing to obtain ACPI and SMBIOS tables");
+  Message(Boot, "Preparing to obtain ACPI and SMBIOS tables");
 
   // First, let's try to find the main ACPI tables (the RSDP and RSDT/XSDT):
 
@@ -667,7 +668,7 @@ void Bootloader(void) {
   // [Obtain PCI-BIOS data]
 
   Putchar('\n', 0);
-  Message(Kernel, "Preparing to get PCI-BIOS data");
+  Message(Boot, "Preparing to get PCI-BIOS data");
 
   // We only need to call GetPciBiosInfoTable(), which in turn calls
   // the BIOS function (int 1Ah, ax B101h).
@@ -696,7 +697,7 @@ void Bootloader(void) {
   // [Preparing disk and (FAT) filesystem drivers]
 
   Putchar('\n', 0);
-  Message(Kernel, "Preparing to get EDD/FAT data");
+  Message(Boot, "Preparing to get EDD/FAT data");
 
   // First, let's read from the InfoTable to collect some information about
   // the current system - the (int 13h) drive number, the filesystem type,
@@ -842,7 +843,7 @@ void Bootloader(void) {
   // [Allocate space for the kernel and any initial page tables]
 
   Putchar('\n', 0);
-  Message(Kernel, "Preparing to allocate space for the kernel and initial page tables.");
+  Message(Boot, "Preparing to allocate space for the kernel and initial page tables.");
 
   // First, we need to find a suitable starting point. The stack isn't large
   // enough for our page tables, so we need to find a new way to allocate
@@ -934,7 +935,7 @@ void Bootloader(void) {
   // [Identity-mapping 'low' (below IdentityMapThreshold) and usable memory]
 
   Putchar('\n', 0);
-  Message(Kernel, "Preparing to identity map low and usable memory.");
+  Message(Boot, "Preparing to identity map low and usable memory.");
 
   #define UsableFlags (pagePresent | pageRw)
   #define IdmappedFlags (UsableFlags | pagePcd) // (Add pageSize for 2MiB pages)
@@ -1045,7 +1046,7 @@ void Bootloader(void) {
   // [Loading the kernel]
 
   Putchar('\n', 0);
-  Message(Kernel, "Preparing to load the kernel.");
+  Message(Boot, "Preparing to load the kernel.");
 
   // First, let's read the kernel file from disk. We already obtained the
   // directory earlier (KernelDirectory), and allocated space for it in
@@ -1221,7 +1222,7 @@ void Bootloader(void) {
   // (TODO: everything)
 
   Putchar('\n', 0);
-  Message(Kernel, "Preparing the kernel environment.");
+  Message(Boot, "Preparing the kernel environment.");
 
   Message(-1, "(TODO) Set up infotables, resolution, etc.");
 
@@ -1231,7 +1232,7 @@ void Bootloader(void) {
   // (TODO: Infotables)
 
   Putchar('\n', 0);
-  Message(Kernel, "Transferring control to the kernel.");
+  Message(Boot, "Transferring control to the kernel.");
 
 
 

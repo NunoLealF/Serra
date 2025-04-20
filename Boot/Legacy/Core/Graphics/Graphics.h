@@ -11,7 +11,7 @@
 
     Info = 0,
 
-    Kernel = 1,
+    Boot = 1,
     Ok = 2,
     Fail = 3,
     Warning = 4,

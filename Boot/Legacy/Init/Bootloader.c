@@ -114,7 +114,7 @@ void __attribute__((noreturn)) Bootloader(void) {
   InitializeTerminal(80, 25, 0xB8000);
   ClearTerminal();
 
-  Message(Kernel, "Successfully entered the second-stage bootloader.");
+  Message(Boot, "Successfully entered the second-stage bootloader.");
 
   Putchar('\n', 0);
 
@@ -165,7 +165,7 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   Table->Int = 0x13;
 
-  Message(Kernel, "Preparing to get EDD/drive information.");
+  Message(Boot, "Preparing to get EDD/drive information.");
   RealMode();
 
   // (Any errors? If not, then carry on; otherwise, keep moving on with 'standard' values that
@@ -231,7 +231,7 @@ void __attribute__((noreturn)) Bootloader(void) {
   if (Bpb.BytesPerSector < 512) {
     Panic("Failed to detect a FAT partition.");
   } else {
-    Message(Kernel, "Successfully detected a FAT partition.");
+    Message(Boot, "Successfully detected a FAT partition.");
   }
 
 
@@ -308,7 +308,7 @@ void __attribute__((noreturn)) Bootloader(void) {
   // partition!
 
   Putchar('\n', 0);
-  Message(Kernel, "Preparing to jump to the next stage of the bootloader.");
+  Message(Boot, "Preparing to jump to the next stage of the bootloader.");
 
   // (First, we need to get the root cluster, along with the sector offset of that cluster)
 

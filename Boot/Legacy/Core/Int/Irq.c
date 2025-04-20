@@ -128,8 +128,7 @@ void IrqHandler(uint8 Vector, uint8 Port) {
   // We take our message from the Irqs[] array.
 
   Putchar('\n', 0);
-  Message(Kernel, "An IRQ has occured.");
-
+  Message(Boot, "An IRQ has occured.");
   Message(Info, Irqs[Vector]);
 
   // If necessary, read from a specific port, using the Inb() function.

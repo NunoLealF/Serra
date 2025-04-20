@@ -8,7 +8,7 @@
 
 /* void Message()
 
-   Inputs: messageType{} Type - The message type/classification (Kernel, Ok, Warning, etc.);
+   Inputs: messageType{} Type - The message type/classification (Boot, Ok, Warning, etc.);
            char* String - The content of the message, as a single string.
            (...) - Any additional (variadic) arguments that we want to display on the screen.
 
@@ -49,7 +49,7 @@ void Message(messageType Type, char* String, ...) {
   }
 
   // Show the message type / 'classification level' to the user, enclosed by square
-  // brackets (for example, [Kernel], [Ok], etc).
+  // brackets (for example, [Boot], [Ok], etc).
 
   Print("[", 0x0F);
 
@@ -59,7 +59,7 @@ void Message(messageType Type, char* String, ...) {
       Print("Info", 0x07);
       break;
 
-    case Kernel:
+    case Boot:
       Print("Boot", 0x0B);
       break;
 
