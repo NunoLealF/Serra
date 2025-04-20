@@ -5,6 +5,7 @@
 [BITS 32]
 
 SECTION .text
+EXTERN KernelEntrypoint
 GLOBAL LongmodeStub
 
 ; It's assumed that this stub will behave as a regular 32-bit function
@@ -88,13 +89,17 @@ JumpToHigherHalf:
   mov gs, ax
   mov ss, ax
 
-  ; Now, we can finally jump to the entrypoint:
+  ; (Set up the stack)
 
-  mov rsp, 0xFFFFFFFF80000000 ; (Still no idea what you're supposed to do here)
+  mov rsp, [KernelEntrypoint]
+  sub rsp, 1024
+
   mov rdi, rbx
   push rbp
 
-  mov rax, 0xFFFFFFFF80000000
+  ; Now, we can finally jump to the entrypoint:
+
+  mov rax, [KernelEntrypoint]
   call rax
 
 

@@ -6,7 +6,7 @@
 #include "Bootloader.h"
 
 #ifndef __i686__
-#error "This code is supposed to be compiled with an i686-elf cross-compiler."
+  #error "This code must be compiled with an i686-elf cross-compiler"
 #endif
 
 /* void SaveState(), RestoreState()
@@ -873,36 +873,35 @@ void Bootloader(void) {
   // usable memory map. We'll start off by allocating space for the kernel
   // executable:
 
-  uintptr KernelPtr = (uintptr)(AllocateFromMmap(Offset, PageAlign(KernelDirectory.Size), false, UsableMmap, NumUsableMmapEntries));
+  uintptr KernelArea = (uintptr)(AllocateFromMmap(Offset, PageAlign(KernelDirectory.Size), false, UsableMmap, NumUsableMmapEntries));
 
-  if (KernelPtr == 0) {
+  if (KernelArea == 0) {
 
     Panic("Unable to allocate enough space for the kernel.", 0);
 
   } else {
 
-    Offset = KernelPtr;
-    KernelPtr -= PageAlign(KernelDirectory.Size);
+    Offset = KernelArea;
+    KernelArea -= PageAlign(KernelDirectory.Size);
 
-    Message(Ok, "Allocated kernel space between %xh and %xh (in pmem).", KernelPtr, (uint32)Offset);
+    Message(Ok, "Allocated kernel space between %xh and %xh (in pmem).", KernelArea, (uint32)Offset);
 
   }
 
-  // Next, let's also allocate some space for the kernel stack:
+  // Next, we should also allocate some space for the kernel stack:
 
-  #define KernelStackSize 0x100000 // Must be a multiple of 4KiB
-  uintptr KernelStack = (uintptr)(AllocateFromMmap(Offset, KernelStackSize, false, UsableMmap, NumUsableMmapEntries));
+  uintptr KernelStackArea = (uintptr)(AllocateFromMmap(Offset, KernelStackSize, false, UsableMmap, NumUsableMmapEntries));
 
-  if (KernelStack == 0) {
+  if (KernelStackArea == 0) {
 
     Panic("Unable to allocate enough space for the kernel stack.", 0);
 
   } else {
 
-    Offset = KernelStack;
-    KernelStack -= KernelStackSize;
+    Offset = KernelStackArea;
+    KernelStackArea -= KernelStackSize;
 
-    Message(Ok, "Allocated kernel stack space between %xh and %xh (in pmem).", KernelStack, (uint32)(Offset));
+    Message(Ok, "Allocated kernel stack space between %xh and %xh (in pmem).", KernelStackArea, (uint32)(Offset));
 
   }
 
@@ -997,13 +996,11 @@ void Bootloader(void) {
   // its MSR (the default value is usually 0007040600070406h, where PAT4
   // is 00h (uncached) instead of 01h (write-combining)).
 
+  #define PatMsrValue 0x0007040601070406
+
   if (SupportsPat == true) {
-
-    #define PatMsrValue 0x0007040601070406
-
     WriteToMsr(patMsr, PatMsrValue);
-    Message(Ok, "Updated the PAT MSR to %x%xh.", (uint32)(PatMsrValue >> 32), (uint32)PatMsrValue);
-
+    Message(Ok, "Updated the PAT MSR to %x:%xh.", (uint32)(PatMsrValue >> 32), (uint32)PatMsrValue);
   }
 
   // Finally, if VBE is supported, then we also have to map the
@@ -1044,45 +1041,34 @@ void Bootloader(void) {
 
 
 
-  // [Loading and running the kernel]
+
+  // [Loading the kernel]
 
   Putchar('\n', 0);
-  Message(Kernel, "Preparing to load and run the kernel.");
+  Message(Kernel, "Preparing to load the kernel.");
 
   // First, let's read the kernel file from disk. We already obtained the
   // directory earlier (KernelDirectory), and allocated space for it in
-  // memory (KernelPtr), so all that's left is to call ReadFile().
+  // memory (KernelArea), so all that's left is to call ReadFile().
 
-  bool ReadFileSuccessful = ReadFile((void*)KernelPtr, KernelDirectory, Bpb.SectorsPerCluster, Bpb.HiddenSectors, Bpb.ReservedSectors, DataSectorOffset, IsFat32);
+  bool ReadFileSuccessful = ReadFile((void*)KernelArea, KernelDirectory, Bpb.SectorsPerCluster, Bpb.HiddenSectors, Bpb.ReservedSectors, DataSectorOffset, IsFat32);
 
   if (ReadFileSuccessful == true) {
-    Message(Ok, "Successfully loaded Boot/Serra/Kernel.elf to %xh.", (uint32)KernelPtr);
+    Message(Ok, "Successfully loaded Boot/Serra/Kernel.elf to %xh.", (uint32)KernelArea);
   } else {
     Panic("Failed to read Boot/Serra/Kernel.elf from disk.", 0);
   }
 
+  // Okay - now that we've loaded it, we can start by reading the kernel's
+  // ELF headers. Unlike earlier stages, our kernel is stored as an ELF
+  // executable, *not* as a raw binary, so it requires some processing
+  // before we can actually run it.
 
+  // (For context: the ELF headers tell us a lot of useful information,
+  // such as where to load the kernel, and are always located at the
+  // very beginning of the file.)
 
-
-
-
-  // *TODO*: Comment this properly.
-  // (Also, note for future self - just *don't* use anything
-  // compression-related, it's somehow slower than int 13h lmao)
-
-
-
-
-
-
-  // [3.2] Actually read the ELF file
-  // (TODO: implement a proper ELF driver, lol.)
-
-
-  // [3.2.1] Check to see if it's a valid ELF file, and show some
-  // basic debug information.
-
-  elfHeader* KernelHeader = (elfHeader*)KernelPtr;
+  elfHeader* KernelHeader = (elfHeader*)KernelArea;
 
   if (KernelHeader->Ident.MagicNumber != 0x464C457F) {
     Panic("Kernel does not appear to be an actual ELF file.", 0);
@@ -1090,6 +1076,8 @@ void Bootloader(void) {
     Panic("Kernel does not appear to be 64-bit.", 0);
   } else if ((KernelHeader->ProgramHeaderOffset == 0) || (KernelHeader->NumProgramHeaders == 0)) {
     Panic("ELF header does not appear to have any program headers.", 0);
+  } else if (KernelHeader->Entrypoint < MinKernelArea) {
+    Panic("Kernel entrypoint appears to start below kernel area.", 0);
   } else if (KernelHeader->Version < 1) {
     Message(Warning, "ELF header version appears to be invalid (%d)", (uint32)KernelHeader->Version);
   } else if (KernelHeader->Entrypoint == 0) {
@@ -1100,87 +1088,168 @@ void Bootloader(void) {
     Message(Ok, "Kernel appears to be a valid ELF executable.");
   }
 
-  Message(Info, "File type: %d, machine type: %xh, version: %d, entry: %x:%xh",
-                (uint32)KernelHeader->FileType, (uint32)KernelHeader->MachineType, (uint32)KernelHeader->Version,
-                (uint32)(KernelHeader->Entrypoint >> 32), (uint32)(KernelHeader->Entrypoint & 0xFFFFFFFF));
+  KernelEntrypoint = KernelHeader->Entrypoint;
 
-  Message(Info, "Real physical address (start of file) at %xh", (uint32)KernelPtr);
+  // (Additionally, show some extra debug information)
 
-  Message(Info, "%d program header(s) at +%xh, %d section header(s) at +%xh",
-                (uint32)(KernelHeader->NumProgramHeaders), (uint32)(KernelHeader->ProgramHeaderOffset & 0xFFFFFFFF),
-                (uint32)(KernelHeader->NumSectionHeaders), (uint32)(KernelHeader->SectionHeaderOffset & 0xFFFFFFFF));
+  Message(Info, "KernelHeader() | File type %xh | Machine type %xh | Header version %d",
+         (uint32)KernelHeader->FileType, (uint32)KernelHeader->MachineType, KernelHeader->Version);
 
+  Message(Info, "Physical address (start of file) at %xh", (uint32)KernelArea);
+  Message(Info, "Virtual address (entrypoint) at %x:%xh", (uint32)(KernelEntrypoint >> 32), (uint32)KernelEntrypoint);
 
+  Message(Info, "Found %d program header(s) at +%xh.", (uint32)KernelHeader->NumProgramHeaders, (uint32)KernelHeader->ProgramHeaderOffset);
+  Message(Info, "Found %d section header(s) at +%xh.", (uint32)KernelHeader->NumSectionHeaders, (uint32)KernelHeader->SectionHeaderOffset);
 
+  // Next, let's read the kernel's program headers, and also map them if
+  // necessary. This is where the executable sections of our kernel are,
+  // and since they're already in memory, all we need to do is map them.
 
-  // [3.2.2] Read program headers.. may be best to put this off until necessary though
-  // (like, until we have a function that automatically maps this stuff, better not to)
-
-  Putchar('\n', 0);
-  Message(-1, "(TODO) Read program headers");
+  bool KernelHasHeaderAtEntrypoint = false;
 
   for (uint32 Index = 0; Index < KernelHeader->NumProgramHeaders; Index++) {
 
-    elfProgramHeader* Header = GetProgramHeader(KernelPtr, KernelHeader, Index);
+    // (Obtain program header)
 
-    Message(Info, "ProgramHeader(%d) | Type %d | Flags %xh | Offset %xh", Index, (uint32)Header->Type, (uint32)Header->Flags, (uint32)Header->Offset);
-    Message(Info, "ProgramHeader(%d) | Address %x:%xh, Size %d and %d bytes", Index, (uint32)(Header->VirtAddress >> 32), (uint32)Header->VirtAddress, (uint32)Header->Size, (uint32)Header->PaddedSize);
+    elfProgramHeader* ProgramHeader = GetProgramHeader(KernelArea, KernelHeader, Index);
 
-    if (Header->Type == 0x01) {
+    uint64 PhysicalAddress = (KernelArea + ProgramHeader->Offset);
+    uint64 VirtualAddress = ProgramHeader->VirtAddress;
 
-      uint64 PhysAddress = (uint64)(KernelPtr) + Header->Offset;
-      Offset = InitializePageEntries(PhysAddress, Header->VirtAddress, Header->Size, Pml4_Data, UsableFlags, false, false, Offset, UsableMmap, NumUsableMmapEntries);
+    uint64 PaddedSize = PageAlign(ProgramHeader->PaddedSize);
+    uint64 Size = PageAlign(ProgramHeader->Size);
+
+    // (Show information)
+
+    Message(Info, "ProgramHeader(%d) | Type %d | Flags %xh | Offset %xh",
+            Index, ProgramHeader->Type, ProgramHeader->Flags, ProgramHeader->Offset);
+
+    Message(Info, "ProgramHeader(%d) | Address %x:%xh | Size %d/%d",
+            Index, (uint32)(VirtualAddress >> 32), (uint32)VirtualAddress, (uint32)Size, (uint32)PaddedSize);
+
+    // (If possible, map it as well.)
+
+    if (ProgramHeader->Type > 0) {
+
+      // Check to see if program header has a valid size, and if not,
+      // either correct it or just skip entirely
+
+      if ((Size == 0) && (PaddedSize == 0)) {
+
+        Message(Fail, "Program header has invalid size.", 0);
+        continue;
+
+      } else if (PaddedSize == 0) {
+
+        PaddedSize = Size;
+
+      } else if (Size == 0) {
+
+        Size = PaddedSize;
+
+      }
+
+      // Make sure that nothing starts below the kernel area, and that
+      // there's at least *something* at the entrypoint address.
+
+      if (VirtualAddress < MinKernelArea) {
+        Panic("Kernel program header appears to start below kernel area.", 0);
+      } else if (VirtualAddress == KernelEntrypoint) {
+        KernelHasHeaderAtEntrypoint = true;
+      }
+
+      // Map everything up to Size, and if necessary, allocate extra
+      // space for everything up to PaddedSize as well.
+
+      Offset = InitializePageEntries(PhysicalAddress, VirtualAddress, Size, Pml4_Data, UsableFlags, false, false, Offset, UsableMmap, NumUsableMmapEntries);
+
+      Message(Ok, "Mapped %d page(s) for ProgramHeader(%d) to %x:%xh.",
+             (uint32)(Size / 0x1000), Index, (uint32)(VirtualAddress >> 32), (uint32)VirtualAddress);
+
+      // If the memory size (PaddedSize) exceeds the size on the file
+      // itself (Size), map that as well.
+
+      if (PaddedSize > Size) {
+
+        uint64 ExtraSize = (PaddedSize - Size);
+        uint64 ExtraSpace = AllocateFromMmap(Offset, ExtraSize, true, UsableMmap, NumUsableMmapEntries);
+
+        if (ExtraSpace == 0) {
+
+          Panic("Failed to allocate extra space for program header.", 0);
+
+        } else {
+
+          Offset = ExtraSpace;
+          ExtraSpace -= ExtraSize;
+
+        }
+
+        Offset = InitializePageEntries(ExtraSpace, (VirtualAddress + Size), ExtraSize, Pml4_Data, UsableFlags, false, false, Offset, UsableMmap, NumUsableMmapEntries);
+
+        Message(Ok, "Allocated and mapped %d extra pages for ProgramHeader(%d) to %x:%xh",
+               (uint32)(ExtraSize / 0x1000), Index, (uint32)(ExtraSpace >> 32), (uint32)ExtraSpace);
+
+      }
 
     }
 
   }
 
-  // Todo: there seems to be some alignment issues? but let me see if it works okay
+  // (Do none of the program headers match the entrypoint?)
 
-  Message(Kernel, "Mapping kernel stack; offset = %xh", (uint32)Offset);
-  Offset = InitializePageEntries((uint64)KernelStack, (KernelHeader->Entrypoint - KernelStackSize), KernelStackSize, Pml4_Data, UsableFlags, false, false, Offset, UsableMmap, NumUsableMmapEntries);
-  Message(Ok, "Okay done; offset = %xh", (uint32)Offset);
+  if (KernelHasHeaderAtEntrypoint == false) {
+    Panic("Kernel doesn't appear to have any program header at the given entrypoint", 0);
+  }
 
-  // [3.3 / 4.1 / idk] Remap as necessary
-  // (Kernel will be in the last ([511], 512th) PML4, at FFFFFF.FF80000000-FFFFFF.FFFFFFFFFFh) -> KernelPtr
-  // (Kernel stack will be in the second-to-last ([510], 511th) PML4, at FFFFFF.FF00000000-FFFFFF.FF7FFFFFFFh) -> KernelStack
+  // Now that we've successfully mapped the kernel, we can move onto
+  // the next part - mapping the kernel *stack*.
+
+  // We already allocated space for it earlier on, and it's assumed
+  // to be right below the kernel area, so we can just do this:
+
+  uint64 KernelStack = (KernelEntrypoint - KernelStackSize);
+  Offset = InitializePageEntries(KernelStackArea, KernelStack, KernelStackSize, Pml4_Data, UsableFlags, false, false, Offset, UsableMmap, NumUsableMmapEntries);
+
+  Message(Ok, "Successfully mapped kernel stack (%d pages) to %x:%xh.",
+         (KernelStackSize / 0x1000), (uint32)(KernelStack >> 32), (uint32)KernelStack);
+
+
+
+
+  // [Prepare kernel environment]
+  // (TODO: everything)
 
   Putchar('\n', 0);
-  Message(Kernel, "Preparing to transfer control to the kernel.");
-
-  Message(-1, "(TODO) Remap kernel+stack as necessary");
-
-
-
-
-
-
-
-
-
-  // [4.2] Prepare info tables, set resolution, etc. etc.
+  Message(Kernel, "Preparing the kernel environment.");
 
   Message(-1, "(TODO) Set up infotables, resolution, etc.");
 
-  // [4.3] Call Lmstub
-
-  Message(-1, "(TODO) Call LongmodeStub()");
 
 
+  // [Transferring control to the kernel]
+  // (TODO: Infotables)
 
-  // [For now, let's just leave things here]
+  Putchar('\n', 0);
+  Message(Kernel, "Transferring control to the kernel.");
+
+
+
 
   Debug = true;
-
-
   char* Teststring = "This is also Serra! <3                                                          "
-                     "(long mode kernel edition)                                                      ";
+                    "(long mode kernel edition)                                                      ";
+
+  Message(Info, "Calling LongmodeStub(%xh, %xh) at %xh", (uintptr)Teststring, Pml4, (uintptr)&LongmodeStub);
+
 
 
   Putchar('\n', 0);
 
   Printf("Hi, this is Serra! <3\n", 0x0F);
-  Printf("April %i %x\n", 0x3F, 18, 0x2025);
+  Printf("April %i %x\n", 0x3F, 20, 0x2025);
+
+
 
   // When the time comes...
   //if (SupportsVbe == true) SetVbeMode(BestVbeMode, false, true, true, NULL);

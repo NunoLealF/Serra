@@ -6,7 +6,7 @@
 #include "Bootloader.h"
 
 #ifndef __i686__
-#error "This code is supposed to be compiled with an i686-elf cross-compiler."
+  #error "This code must be compiled with an i686-elf cross-compiler"
 #endif
 
 

@@ -22,4 +22,11 @@
   void Bootloader(void);
   void LongmodeStub(uintptr InfoTable, uintptr Pml4);
 
+  // Global variables used throughout the bootloader.
+
+  #define MinKernelArea 0xFFFFF00000000000 // (At least F0.low)
+  #define KernelStackSize 0x100000 // (Must be a multiple of 4KiB)
+
+  uint64 KernelEntrypoint;
+
 #endif
