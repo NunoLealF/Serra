@@ -3,7 +3,7 @@
 // For more information, please refer to the accompanying license agreement. <3
 
 #include "../../Shared/Stdint.h"
-#include "../Memory/Memory.h"
+#include "../../Shared/Memory/Memory.h"
 #include "Graphics.h"
 
 /* int Strlen()

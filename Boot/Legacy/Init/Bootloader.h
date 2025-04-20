@@ -7,11 +7,12 @@
 
   // Import other headers...
 
-  #include "../Shared/InfoTables.h"
+  #include "../Shared/Memory/Memory.h"
   #include "../Shared/Rm/Rm.h"
+  
   #include "../Shared/Disk/Disk.h"
+  #include "../Shared/InfoTables.h"
 
-  #include "Memory/Memory.h"
   #include "Graphics/Graphics.h"
 
   // Declare functions in Bootloader.c
