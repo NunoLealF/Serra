@@ -15,7 +15,7 @@ QFLAGS = -cpu qemu64 -m 128
 # it skips it (for example, for the target 'example.o', if it sees example.o is already there, it skips compiling it),
 # and this can cause problems for targets that don't output anything. These are called 'phony targets'.
 
-.PHONY: All Compile Clean Run RunGdb RunInt RunKvm all compile clean run rungdb runint runkvm
+.PHONY: All Compile Clean Run RunBochs RunGdb RunInt RunKvm all compile clean run rungdb runint runkvm
 
 # Names ->>
 # (By the way, it's assumed that you're on Linux, or at least some sort of Unix-like system)
@@ -47,11 +47,15 @@ Clean:
 	@$(MAKE) -C Common clean
 
 
-# Running with QEMU -->
+# Running with QEMU (or Bochs, with runbochs) -->
 
 Run:
 	@echo "\n\033[0;1m""Launching QEMU (legacy mode).." "\033[0m"
 	$(QEMU) $(QFLAGS) -drive file=Legacy.img,format=raw
+
+RunBochs:
+	@echo "\n\033[0;1m""Launching Bochs (with automatic configuration file).." "\033[0m"
+	@bochs -q
 
 RunGdb:
 	@echo "\n\033[0;1m""Launching QEMU (legacy mode) with GDB.." "\033[0m"
@@ -71,6 +75,7 @@ all: All
 clean: Clean
 compile: Compile
 run: Run
+runbochs: RunBochs
 rungdb: RunGdb
 runint: RunInt
 runkvm: RunKvm
