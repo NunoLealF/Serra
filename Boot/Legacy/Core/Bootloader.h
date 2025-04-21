@@ -7,7 +7,7 @@
 
   // Import other headers..
 
-  #include "../Shared/InfoTables.h"
+  #include "../Shared/InfoTable.h"
   #include "../Shared/Rm/Rm.h"
   #include "../Shared/Disk/Disk.h"
 

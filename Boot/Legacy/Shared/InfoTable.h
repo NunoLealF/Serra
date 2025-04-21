@@ -2,8 +2,8 @@
 // This file is part of the Serra project, which is released under the MIT license.
 // For more information, please refer to the accompanying license agreement. <3
 
-#ifndef SERRA_INFOTABLES_H
-#define SERRA_INFOTABLES_H
+#ifndef SERRA_BOOT_INFOTABLE_H
+#define SERRA_BOOT_INFOTABLE_H
 
   // This table will be passed from the second-stage bootloader onto the third-stage
   // bootloader; it's supposed to be placed at AE00h, and because of that, it has a maximum size

@@ -11,8 +11,8 @@
   #include "../Shared/Rm/Rm.h"
 
   #include "../Shared/Disk/Disk.h"
-  #include "../Shared/InfoTables.h"
-  
+  #include "../Shared/InfoTable.h"
+
   #include "../Shared/Graphics/Graphics.h"
 
   // Declare functions in Bootloader.c
