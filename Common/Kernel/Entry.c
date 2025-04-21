@@ -2,11 +2,12 @@
 // This file is part of the Serra project, which is released under the MIT license.
 // For more information, please refer to the accompanying license agreement. <3
 
-// #include <blablabla.h>
-
 #if !defined(__amd64__) || !defined(__x86_64__)
   #error "This code must be compiled with an x86_64-elf cross-compiler"
 #endif
+
+#include "Stdint.h"
+#include "../InfoTable.h"
 
 void __attribute__((noreturn)) Entrypoint(unsigned int InfoTable) {
 

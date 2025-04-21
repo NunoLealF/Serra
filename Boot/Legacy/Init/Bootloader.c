@@ -32,7 +32,7 @@ void RestoreState(void) {
 }
 
 
-/* void __attribute__((noreturn)) Init()
+/* [[noreturn]] void Init()
 
    Inputs:    (none)
    Outputs:   (none)
@@ -51,7 +51,7 @@ void RestoreState(void) {
 
 */
 
-void __attribute__((noreturn)) Init(void) {
+[[noreturn]] void Init(void) {
 
   // Set up registers (DS, ES, FS, GS, and SS)
   // We'll be setting these up with the data segment (10h in our GDT).

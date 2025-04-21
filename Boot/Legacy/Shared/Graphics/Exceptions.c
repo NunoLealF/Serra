@@ -97,7 +97,7 @@ void Message(messageType Type, char* String, ...) {
 }
 
 
-/* void __attribute__((noreturn)) Panic()
+/* [[noreturn]] void Panic()
 
    Inputs: char* String - The error/panic message to be displayed to the user.
            uint32 Eip - The instruction pointer of what caused the error (if not applicable,
@@ -115,7 +115,7 @@ void Message(messageType Type, char* String, ...) {
 
 */
 
-void __attribute__((noreturn)) Panic(char* String, uint32 Eip) {
+[[noreturn]] void Panic(char* String, uint32 Eip) {
 
   // Just in case, we want to disable interrupts, as they could interrupt the process
 

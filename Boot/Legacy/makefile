@@ -20,7 +20,7 @@ QEMU = qemu-system-x86_64
 # -ffunction-sections: Split up every function into a separate section in the object file.
 # (You want to place the main function in the beginning, so this is needed.)
 # -ffreestanding: This is a freestanding environment. Also, implies fno-builtin.
-# -std=c11: Use the regular C11 standard
+# -std=c23: Use the regular C23 standard
 # -Os: Optimize the resulting file/binary for space. [Warning, do *not* use O3]
 # -Wall: Enable all warnings.
 # -Wextra: Enable even more warnings. (Not sure why wall doesn't take care of this)
@@ -32,7 +32,7 @@ QEMU = qemu-system-x86_64
 # -m 128: Limit the virtual machine to 128 MiB of RAM
 
 LDFLAGS = -Wl,--no-warn-rwx-segments
-CFLAGS = -std=c11 -ffunction-sections -funsigned-char -ffreestanding -Os -Wall -Wextra -Wpedantic -Wno-discarded-qualifiers
+CFLAGS = -std=c23 -ffunction-sections -funsigned-char -ffreestanding -Os -Wall -Wextra -Wpedantic -Wno-discarded-qualifiers
 
 
 # The .PHONY directive is used on targets that don't output anything. For example, running 'make all' builds our
