@@ -481,9 +481,9 @@ void Bootloader(void) {
   // Extensions) and long mode support; this ends up being necessary later
   // on, so we need to filter out any CPUs that don't support that.
 
-  bool SupportsPae = false;
-  bool SupportsPse = false;
-  bool SupportsLongMode = false;
+  [[maybe_unused]] bool SupportsPae = false;
+  [[maybe_unused]] bool SupportsPse = false;
+  [[maybe_unused]] bool SupportsLongMode = false;
 
   if (Cpuid_Features.Edx & (1 << 3)) {
     SupportsPse = true;
@@ -628,7 +628,6 @@ void Bootloader(void) {
   // First, let's try to find the main ACPI tables (the RSDP and RSDT/XSDT):
 
   acpiRsdpTable* Rsdp = GetAcpiRsdpTable();
-
   bool SupportsAcpi;
 
   if (Rsdp == NULL) {
@@ -726,8 +725,8 @@ void Bootloader(void) {
 
   biosParameterBlock Bpb = *(biosParameterBlock*)(Bpb_Address);
 
-  biosParameterBlock_Fat16 Extended_Bpb16 = *(biosParameterBlock_Fat16*)(Bpb_Address + 33);
-  biosParameterBlock_Fat32 Extended_Bpb32 = *(biosParameterBlock_Fat32*)(Bpb_Address + 33);
+  [[maybe_unused]] biosParameterBlock_Fat16 Extended_Bpb16 = *(biosParameterBlock_Fat16*)(Bpb_Address + 33);
+  [[maybe_unused]] biosParameterBlock_Fat32 Extended_Bpb32 = *(biosParameterBlock_Fat32*)(Bpb_Address + 33);
 
   // (Just in case, let's do a sanity check)
 
@@ -1221,42 +1220,172 @@ void Bootloader(void) {
 
 
   // [Prepare kernel environment]
-  // (TODO: everything)
 
   Putchar('\n', 0);
   Message(Boot, "Preparing the kernel environment.");
 
-  Message(-1, "(TODO) Set up infotables, resolution, etc.");
+  // Let's set up the info table. We'll need to do this (TODO TODO TODO)
+
+  KernelInfoTable KernelInfo;
+  KernelBiosInfoTable KernelBiosInfo;
+
+  // (Table)
+
+  KernelInfo.Signature = 0x7577757E7577757E;
+  KernelInfo.Version = KernelInfoTableVersion;
+  KernelInfo.Size = sizeof(KernelInfoTable);
+
+  // (System)
+
+  if (A20_EnabledByDefault == true) {
+    KernelInfo.System.A20Method = ByDefault;
+  } else if (A20_EnabledByKbd == true) {
+    KernelInfo.System.A20Method = ByKeyboard;
+  } else if (A20_EnabledByFast == true) {
+    KernelInfo.System.A20Method = ByFast;
+  } else {
+    KernelInfo.System.A20Method = ByUnknown;
+  }
+
+  KernelInfo.System.CpuidHighestStdLevel = Cpuid_HighestStandardLevel;
+  KernelInfo.System.CpuidHighestExtLevel = Cpuid_HighestExtendedLevel;
+
+  KernelInfo.System.PatSupported = SupportsPat;
+  KernelInfo.System.PatMsr = ((SupportsPat == true) ? PatMsrValue : 0);
+
+  // (Memory)
+
+  KernelInfo.Memory.NumUsableMmapEntries = NumUsableMmapEntries;
+  KernelInfo.Memory.UsableMemoryMap.Address = (uintptr)UsableMmap;
+
+  KernelInfo.Memory.PreserveOffset = Offset;
+
+  // (Fs/disk)
+
+  KernelInfo.FsDisk.DiskAccessMethod = ((Edd_Enabled == false) ? Int13 : Int13WithEdd);
+  KernelInfo.FsDisk.DriveNumber = DriveNumber;
+
+  KernelInfo.FsDisk.Bpb.Address = (uintptr)Bpb_Address;
+  KernelInfo.FsDisk.LogicalBytesPerSector = LogicalSectorSize;
+  KernelInfo.FsDisk.PhysicalBytesPerSector = PhysicalSectorSize;
+
+  KernelInfo.FsDisk.PartitionOffset = 0; // (TODO TODO TODO TODO)
+
+  // (Kernel)
+
+  KernelInfo.Kernel.Debug = Debug;
+  KernelInfo.Kernel.ElfHeader.Address = (uintptr)KernelHeader;
+
+  KernelInfo.Kernel.UsableArea = MinUsableArea;
+  KernelInfo.Kernel.ModuleArea = MinModuleArea;
+  KernelInfo.Kernel.KernelArea = MinKernelArea;
+
+  // (Graphics)
+
+  KernelInfo.Graphics.Type = ((SupportsVbe == true) ? Vesa : Vga);
+
+  if (SupportsVbe == true) {
+
+    KernelInfo.Graphics.Vesa.VbeInfoBlock.Address = (uintptr)&VbeInfo;
+    KernelInfo.Graphics.Vesa.VbeModeInfo.Address = (uintptr)&BestVbeModeInfo;
+    KernelInfo.Graphics.Vesa.CurrentVbeMode = BestVbeMode;
+
+    KernelInfo.Graphics.Vesa.EdidIsSupported = SupportsEdid;
+    KernelInfo.Graphics.Vesa.EdidInfo.Address = (uintptr)((SupportsEdid == true) ? &EdidInfo : 0);
+
+  }
+
+  KernelInfo.Graphics.Vga.PosX = TerminalTable.PosX;
+  KernelInfo.Graphics.Vga.PosY = TerminalTable.PosY;
+
+  KernelInfo.Graphics.Vga.LimitX = TerminalTable.LimitX;
+  KernelInfo.Graphics.Vga.LimitY = TerminalTable.LimitY;
+
+  KernelInfo.Graphics.Vga.Framebuffer.Address = (uintptr)TerminalTable.Framebuffer;
+
+  // (Firmware -> BIOS)
+
+  KernelInfo.Firmware.BiosInfo.Address = (uintptr)&KernelBiosInfo;
+  KernelInfo.Firmware.EfiInfo.Address = 0;
+
+  Message(Ok, "Successfully filled out kernel info table.");
+
+  // (Firmware -> BIOS -> ACPI)
+
+  KernelBiosInfo.AcpiSupported = SupportsAcpi;
+
+  if (SupportsAcpi == true) {
+
+    KernelBiosInfo.AcpiRsdp.Address = (uintptr)Rsdp;
+    KernelBiosInfo.AcpiSdt.Address = (uintptr)((Rsdp->Rsdt != 0) ? Rsdp->Rsdt : Rsdp->Xsdt);
+
+  } else {
+
+    KernelBiosInfo.AcpiRsdp.Address = 0;
+    KernelBiosInfo.AcpiSdt.Address = 0;
+
+  }
+
+  // (Firmware -> BIOS -> PCI-BIOS)
+
+  KernelBiosInfo.PciBiosSupported = SupportsPciBios;
+  KernelBiosInfo.PciBiosTable.Address = (uintptr)&PciBiosTable;
+
+  // (Firmware -> BIOS -> SMBIOS)
+
+  KernelBiosInfo.SmbiosSupported = SupportsSmbios;
+  KernelBiosInfo.SmbiosTable.Address = (uintptr)((SupportsSmbios == true) ? SmbiosEntryPoint : 0);
+
+  // (Firmware -> BIOS -> E820 mmap)
+
+  KernelBiosInfo.NumMmapEntries = NumMmapEntries;
+  KernelBiosInfo.MemoryMap.Address = (uintptr)Mmap;
+
+  // (Firmware -> BIOS -> Real mode wrapper)
+
+  KernelBiosInfo.RmWrapper.Address = 0x9E00;
+
+  Message(Ok, "Successfully filled out kernel BIOS info table.");
+
+  // (Checksum)
+
+  uint8* RawKernelInfo = (uint8*)(&KernelInfo);
+
+  for (uint16 Index = 0; Index < sizeof(KernelInfoTable); Index++) {
+    KernelInfo.Checksum += RawKernelInfo[Index];
+  }
+
+  Message(Ok, "Successfully calculated kernel info table checksum (%xh).", KernelInfo.Checksum);
+
 
 
 
   // [Transferring control to the kernel]
-  // (TODO: Infotables)
 
   Putchar('\n', 0);
   Message(Boot, "Transferring control to the kernel.");
+  Message(Info, "Preparing to call LongmodeStub(%xh, %xh) at %xh", &KernelInfo, Pml4, &LongmodeStub);
 
+  if (SupportsVbe == true) {
 
+    Message(Info, "Setting VBE mode %xh.", BestVbeMode);
+    //SetVbeMode(BestVbeMode, false, true, true, NULL);
 
+  }
+
+  /*
 
   Debug = true;
-  char* Teststring = "This is also Serra! <3                                                          "
-                    "(long mode kernel edition)                                                      ";
-
-  Message(Info, "Calling LongmodeStub(%xh, %xh) at %xh", (uintptr)Teststring, Pml4, (uintptr)&LongmodeStub);
-
-
 
   Putchar('\n', 0);
 
   Printf("Hi, this is Serra! <3\n", 0x0F);
   Printf("April %i %x\n", 0x3F, 21, 0x2025);
 
+  */
 
-
-  // When the time comes...
-  //if (SupportsVbe == true) SetVbeMode(BestVbeMode, false, true, true, NULL);
-  LongmodeStub((uintptr)Teststring, Pml4);
+  Message(-1, "TODO: Set up MMX/SSE/etc., and don't forget to test this well.");
+  LongmodeStub((uintptr)&KernelInfo, Pml4);
 
   for(;;);
 

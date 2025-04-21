@@ -36,9 +36,13 @@
     bool SmbiosSupported;
     universalPtr SmbiosTable;
 
+    // (E820 mmap)
+
+    uint16 NumMmapEntries;
+    universalPtr MemoryMap;
+
     // (Pointers to important things)
 
-    universalPtr Ebda;
     universalPtr RmWrapper; // Real mode wrapper from earlier
 
   } __attribute__((packed)) KernelBiosInfoTable;
@@ -110,7 +114,7 @@
 
       // (System mmap is provided by BIOS or UEFI).
 
-      uint16 NumUsableMemoryMapEntries; // Number of usable mmap entries.
+      uint16 NumUsableMmapEntries; // Number of usable mmap entries.
       universalPtr UsableMemoryMap; // Pointer to the usable memory map
 
       uint64 PreserveOffset; // same as Offset, really
@@ -124,7 +128,7 @@
       diskAccessMethodEnum DiskAccessMethod; // What method *can* we use for the disk?
       uint8 DriveNumber; // If we used the BIOS, set the int13h drive number
 
-      uint64 BpbAddress; // Address of the BPB
+      universalPtr Bpb; // Address of the BPB
       uint16 PhysicalBytesPerSector; // On the boot disk
       uint16 LogicalBytesPerSector; // On the boot fs
 

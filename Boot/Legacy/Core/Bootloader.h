@@ -26,6 +26,8 @@
 
   #include "../../../Common/InfoTable.h"
 
+  #define MinUsableArea 0xFFFF800000000000
+  #define MinModuleArea 0xFFFFE00000000000
   #define MinKernelArea 0xFFFFF00000000000 // (At least F0.low)
   #define KernelStackSize 0x100000 // (Must be a multiple of 4KiB)
 

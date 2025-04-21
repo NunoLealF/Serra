@@ -55,7 +55,7 @@ Clean:
 	@-rm -f Kernel/*.bin
 
 Dump:
-	@$(OBJD) -S Kernel.elf
+	@$(OBJD) -S Kernel/Kernel.elf
 
 
 # Lowercase names
