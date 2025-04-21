@@ -5,135 +5,205 @@
 #ifndef SERRA_KERNEL_INFOTABLE_H
 #define SERRA_KERNEL_INFOTABLE_H
 
-  // ...
+  // Generic defines
 
   #define getInfoTableVersion(Major, Minor) ((Major * 0x100) + Minor)
   #define KernelInfoTableVersion getInfoTableVersion(1, 0)
 
+  // Basically, you fill in Address in 32-bit mode, and you can use it
+  // normally in 64-bit mode with the void*.
 
-  // ...
+  typedef union __universalPtr {
 
-  typedef enum : uint8 {
+    uint64 Address;
+    void* Ptr;
 
-    Unknown = 0,
-    EnabledByDefault = 1,
-    EnabledByKbd = 2,
-    EnabledByFast = 3
+  } universalPtr;
 
-  } A20_MethodType;
+  // (BIOS table)
 
   typedef struct {
 
-    A20_MethodType A20_Method;
+    // (Features, tables, etc.)
 
-    // Highest standard CPUID level
-    // Highest extended CPUID level
+    bool AcpiSupported; // Is ACPI supported?
+    universalPtr AcpiRsdp; // If so, ptr to rsdp
+    universalPtr AcpiSdt; // RSDT *or* XSDT, but always the right one
 
-    // PAT supported
-    // If so, current MSR value
+    bool PciBiosSupported; // Is PCI-BIOS supported?
+    universalPtr PciBiosTable;
 
-    // etc.
+    bool SmbiosSupported;
+    universalPtr SmbiosTable;
 
-  } __attribute__((packed)) SystemTable_x86;
+    // (Pointers to important things)
 
+    universalPtr Ebda;
+    universalPtr RmWrapper; // Real mode wrapper from earlier
 
-  // ...
+  } __attribute__((packed)) KernelBiosInfoTable;
 
-  typedef enum : uint16 {
+  // (EFI table)
 
-    x86 = 0x03,
-    Amd64 = 0x3E
+  typedef struct {
 
-  } ArchType;
+  } __attribute__((packed)) KernelEfiInfoTable;
+
+  // (Main kernel info table)
+
+  typedef enum : uint8 {
+
+    ByUnknown = 0,
+    ByDefault = 1,
+    ByKeyboard = 2,
+    ByFast = 3
+
+  } a20Enum;
+
+  typedef enum : uint8 {
+
+    Int13 = 0,
+    Int13WithEdd = 1,
+    Efi = 2,
+    AtaPio = 3,
+    Ahci = 4,
+    Nvme = 5,
+    Usb = 6,
+    Other = 7
+
+  } diskAccessMethodEnum;
+
+  typedef enum : uint8 {
+
+    None = 0,
+    Vga = 1, // (VGA text mode.)
+    Vesa = 2,
+    Gop = 3
+
+  } graphicsTypeEnum;
 
   typedef struct {
 
     // (Table section)
 
-    uint64 Signature;
-    uint32 Version;
-    uint32 Size;
+    uint64 Signature; // Must be 7577757E7577757Eh.
+    uint32 Version; // Must match KernelInfoTableVersion.
+    uint32 Size; // Must match sizeof(KernelInfoTable).
 
-    // (System section)
+    // (System section - x64-specific, of course)
 
     struct __System {
 
-      ArchType Architecture;
-      uint64 SystemTable; // Pointer to system table; refer to SystemTable_x86
+      a20Enum A20Method; // What method was used to enable the A20 line?
+
+      uint32 CpuidHighestStdLevel; // Highest standard CPUID level
+      uint32 CpuidHighestExtLevel; // Highest extended CPUID level
+
+      bool PatSupported; // Is PAT supported?
+      uint64 PatMsr; // The value of the PAT MSR, if it's supported.. or 0
 
     } __attribute__((packed)) System;
 
     // (System-independent sections | Memory)
+
+    struct __Memory {
+
+      // (System mmap is provided by BIOS or UEFI).
+
+      uint16 NumUsableMemoryMapEntries; // Number of usable mmap entries.
+      universalPtr UsableMemoryMap; // Pointer to the usable memory map
+
+      uint64 PreserveOffset; // same as Offset, really
+
+    } __attribute__((packed)) Memory;
+
     // (System-independent sections | Filesystem and disk)
+
+    struct __FsDisk {
+
+      diskAccessMethodEnum DiskAccessMethod; // What method *can* we use for the disk?
+      uint8 DriveNumber; // If we used the BIOS, set the int13h drive number
+
+      uint64 BpbAddress; // Address of the BPB
+      uint16 PhysicalBytesPerSector; // On the boot disk
+      uint16 LogicalBytesPerSector; // On the boot fs
+
+      uint64 PartitionOffset; // Offset of the current partition, in LBA
+
+    } __attribute__((packed)) FsDisk;
+
     // (System-independent sections | Kernel environment)
+
+    struct __Kernel {
+
+      bool Debug; // Debug flag.
+      universalPtr ElfHeader; // Pointer to the kernel elf header
+
+      uint64 UsableArea; // Start of usable mem segment (usually 80h.low)
+      uint64 ModuleArea; // Start of driver/module segment (usually E0h.low)
+      uint64 KernelArea; // Start of kernel segment (usually F0h.low)
+
+    } __attribute__((packed)) Kernel;
+
     // (System-independent sections | Graphics)
+
+    struct __Graphics {
+
+      graphicsTypeEnum Type; // What type of graphics?
+
+      struct __Vga {
+
+        uint16 PosX;
+        uint16 PosY;
+
+        uint16 LimitX;
+        uint16 LimitY;
+
+        universalPtr Framebuffer;
+
+      } __attribute__((packed)) Vga;
+
+      struct __Vesa {
+
+        universalPtr VbeInfoBlock; // VBE info block
+        universalPtr VbeModeInfo; // VBE mode info block (of the current mode)
+        uint16 CurrentVbeMode; // Current mode number.
+
+        bool EdidIsSupported; // Is EDID supported?
+        universalPtr EdidInfo; // EDID info block, if supported.
+
+      } __attribute__((packed)) Vesa;
+
+      struct __Gop {
+
+        // (TODO: Everything)
+
+      } __attribute__((packed)) Gop;
+
+    } __attribute__((packed)) Graphics;
 
     // (Firmware and external sections)
 
-    // (Other)
+    struct __Firmware {
+
+      bool IsEfi; // False for BIOS, true for EFI.
+
+      union {
+        uint64 Address;
+        KernelBiosInfoTable* Table;
+      } BiosInfo;
+
+      union {
+        uint64 Address;
+        KernelEfiInfoTable* Table;
+      } EfiInfo;
+
+    } __attribute__((packed)) Firmware;
+
+    // (Checksum)
 
     uint16 Checksum;
 
   } __attribute__((packed)) KernelInfoTable;
-
-  /*
-  # Infotable structure
-
-  ## Table sections
-  - Signature (`7577757Eh`)
-  - Internal table version (can vary, return if not supported)
-  - Table size (in bytes)
-
-  ## System-independent sections
-  ### System environment
-  - System flags (what architecture are we in?)
-  - Pointer to **x86-64 info table**
-  - - A20 enable method
-  - - CPUID data, and highest level
-  - - PAT supported, and if so, current MSR value
-  - - `...`
-  ### Memory
-  - Pointer to the (current) top-level page table
-  - System-provided memory map (pointer, number of entries)
-  - **Filtered/"usable" memory map** (pointer, number of entries)
-  - Offset; preserve everything before, use anything after.
-  ### Filesystem and disk
-  - Method used to access disk
-  - - Drive number, if available?
-  - Physical and logical bytes per sector
-  - Partition type (FAT16, FAT32)
-  - Pointer (copy of?) to **BPB table**
-  - Initial partition offset, as LBA
-  ### Kernel environment
-  - Debug flag
-  - Pointer to the **kernel ELF header**
-  - Pointer to the **start of usable space (80h.low)**
-  - Pointer to the **start of driver/module space (E0h.low)**
-  - Pointer to the **start of kernel space (F0h.low)**
-  ### Graphics
-  - What type of graphics (none, text, graphics)
-  - Pointer to **text info table (like Terminal_Info)**
-  - - Current position, limit, location/buffer, *model*
-  - Pointer to **graphics info table**
-  - - `...`
-
-  ## Firmware/external sections
-  - Firmware flags? (What type was used, etc.)
-  - Pointer to **(x86) BIOS info table**
-  - - ACPI supported, and if so, pointer to **RSDP and *valid* *SDT**
-  - - PCI-BIOS supported, and if so, pointer to table
-  - - SMBIOS supported, and if so, pointer to table
-  - - Pointer to **real mode wrapper**
-  - - Pointer to the **EBDA table**
-  - - `...`
-  - Pointer to **(x86) UEFI info table**
-  - - Something that lets you access the interfaces
-  - - - Pointer to the EFI system table, maybe?
-  - - `...`
-
-  ## Other
-  - A checksum of some sort?
-  - `...`
-  */
 
 #endif

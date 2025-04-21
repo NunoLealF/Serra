@@ -462,7 +462,8 @@ void Bootloader(void) {
   registerTable Cpuid_ExtendedInfo = GetCpuid(0x80000000, 0);
   registerTable Cpuid_ExtendedFeatures = GetCpuid(0x80000001, 0);
 
-  uint32 Cpuid_HighestLevel = Cpuid_Info.Eax;
+  uint32 Cpuid_HighestStandardLevel = Cpuid_Info.Eax;
+  uint32 Cpuid_HighestExtendedLevel = Cpuid_ExtendedInfo.Eax;
 
   Message(Ok, "Successfully obtained CPUID data.");
 
@@ -472,7 +473,8 @@ void Bootloader(void) {
   char VendorString[16];
   GetVendorString(VendorString, Cpuid_Info);
 
-  Message(Info, "Highest supported (standard) CPUID level is %xh", Cpuid_HighestLevel);
+  Message(Info, "Highest supported (standard) CPUID level is %xh", Cpuid_HighestStandardLevel);
+  Message(Info, "Highest supported (extended) CPUID level is %xh", Cpuid_HighestExtendedLevel);
   Message(Info, "CPU vendor ID is \'%s\'", VendorString);
 
   // We also want to check for PAE (Page Address Extensions), PSE (Page Size
