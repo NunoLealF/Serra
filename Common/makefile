@@ -19,16 +19,17 @@ OBJD = x86_64-elf-objdump
 # [Compiler flags]
 # -funsigned-char: Use unsigned chars for characters.
 # -ffreestanding: This is a freestanding environment. Also, implies fno-builtin.
-# -std=c23: Use the regular C23 standard.
+# -std=c2x: Use the regular C2x/C23 standard.
 # -mcmodel=kernel: Assume the kernel runs in the last 2GiB of address space
+# -mmmx, -msse, -msse2: Make sure to *enable* MMX, SSE and SSE2 instructions.
 # -mno-red-zone: Disable the System V ABI 'red zone'; this is necessary for now.
-# -O2: Optimize the resulting file/binary for speed.
+# -O3: Optimize the resulting file/binary for speed.
 # -Wall: Enable all warnings.
 # -Wextra: Enable even more warnings. (Not sure why wall doesn't take care of this)
 # -Wpedantic: Be pedantic about the C standard / any possible mistakes
 
 LDFLAGS = -nostdlib -mcmodel=kernel -mno-red-zone
-CFLAGS = -std=c23 -funsigned-char -ffreestanding -mcmodel=kernel -mno-red-zone -O2 -Wall -Wextra -Wpedantic
+CFLAGS = -std=c2x -funsigned-char -ffreestanding -mcmodel=kernel -mmmx -msse -msse2 -mno-red-zone -O3 -Wall -Wextra -Wpedantic
 
 
 # The .PHONY directive is used on targets that don't output anything. For example, running 'make all' builds our
@@ -71,7 +72,7 @@ dump: Dump
 
 Kernel/Entry.o:
 	@echo "Building $@"
-	@$(CC) $(CFLAGS) -mno-mmx -mno-sse -mno-sse2 -ffunction-sections -c Kernel/Entry.c -o Kernel/Entry.o
+	@$(CC) $(CFLAGS) -ffunction-sections -c Kernel/Entry.c -o Kernel/Entry.o
 
 # Link everything into one .elf file
 

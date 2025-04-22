@@ -5,6 +5,7 @@
 #include "../../Shared/Stdint.h"
 #include "../../Shared/Rm/Rm.h"
 #include "../Memory/Memory.h"
+#include "../Graphics/Graphics.h"
 #include "Cpu.h"
 
 /* uint32 ReadEflags()
@@ -371,5 +372,59 @@ void WriteToMsr(uint32 Msr, uint64 Value) {
   // Now that we've done that, return
 
   return;
+
+}
+
+
+// WriteToControlRegister() - write to control register (CR-n, CR0-8)
+
+void WriteToControlRegister(uint8 Register, uint32 Value) {
+
+  // Depending on the register type, either write value (if possible), or
+  // show a warning (CR1, CR2, etc. aren't accessible, for example).
+
+  if (Register == 0) {
+    __asm__ __volatile__ ("mov %0, %%cr0" :: "r"(Value));
+  } else if (Register == 3) {
+    __asm__ __volatile__ ("mov %0, %%cr3" :: "r"(Value));
+  } else if (Register == 4) {
+    __asm__ __volatile__ ("mov %0, %%cr4" :: "r"(Value));
+  } else if (Register == 8) {
+    __asm__ __volatile__ ("mov %0, %%cr8" :: "r"(Value));
+  } else {
+    Message(Warning, "Attempted to write to unusable control register (CR%d).", Register);
+  }
+
+  // Return.
+
+  return;
+
+}
+
+
+// ReadFromControlRegister() - read a control register (CR0-8)
+
+uint32 ReadFromControlRegister(uint8 Register) {
+
+  // Depending on the register type, either read value (if possible), or
+  // show a warning (CR1 and CR5-7 aren't accessible, for example).
+
+  uint32 Value = 0;
+
+  if (Register == 0) {
+    __asm__ __volatile__ ("mov %%cr0, %0" : "=r"(Value));
+  } else if (Register == 2) {
+    __asm__ __volatile__ ("mov %%cr2, %0" : "=r"(Value));
+  } else if (Register == 3) {
+    __asm__ __volatile__ ("mov %%cr3, %0" : "=r"(Value));
+  } else if (Register == 4) {
+    __asm__ __volatile__ ("mov %%cr4, %0" : "=r"(Value));
+  } else if (Register == 8) {
+    __asm__ __volatile__ ("mov %%cr8, %0" : "=r"(Value));
+  } else {
+    Message(Warning, "Attempted to read from an unusable control register (CR%d)", Register);
+  }
+
+  return Value;
 
 }

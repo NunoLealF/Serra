@@ -517,6 +517,51 @@ void Bootloader(void) {
 
 
 
+  // [Enabling CPU features - x87, MMX, SSE]
+
+  // In order to achieve the best performance in 64-bit mode - and also
+  // avoid any issues - we'll first want to enable a few important CPU
+  // features.
+
+  // These are the x87 FPU (Floating Point Unit), as well as MMX and SSE,
+  // which are both SIMD (single instruction, multiple data) feature sets.
+
+  // These instructions provide *really* fast ways of moving around lots of
+  // data (as well as a few other amenities), and they're supported by all
+  // x64 processors, but not necessarily *enabled*.
+
+  Putchar('\n', 0);
+  Message(Boot, "Preparing to enable CPU features (x87, MMX/3DNow! and SSE).");
+
+  // First, we'll want to enable the x87 FPU, which (in turn) should enable
+  // MMX and 3DNow! operations as well. We do this by clearing and setting
+  // a few bits in CR0:
+
+  uint32 Cr0 = ReadFromControlRegister(0);
+
+  Cr0 = setBit(Cr0, 1); // Set CR0.MP (1 << 1)
+  Cr0 = clearBit(Cr0, 2); // Clear CR0.EM (1 << 2)
+  Cr0 = clearBit(Cr0, 3); // Clear CR0.TS (1 << 3)
+  Cr0 = setBit(Cr0, 4); // Set CR0.ET (1 << 4)
+  Cr0 = setBit(Cr0, 5); // Set CR0.NE (1 << 5)
+
+  WriteToControlRegister(0, Cr0);
+  Message(Ok, "Successfully enabled the x87 FPU (CR0 = %xh).", Cr0);
+
+  // Next, we also want to enable SSE, which is a lot simpler - we just need
+  // to set bits 9 (OSFXSR) and 10 (OSXMMEXCPT) of CR4:
+
+  uint32 Cr4 = ReadFromControlRegister(4);
+
+  Cr4 = setBit(Cr4, 9); // Set CR4.OSFXSR (1 << 9)
+  Cr4 = setBit(Cr4, 10); // Set CR4.OSXMMEXCPT (1 << 10)
+
+  WriteToControlRegister(4, Cr4);
+  Message(Ok, "Successfully enabled SSE features (CR4 = %xh).", Cr4);
+
+
+
+
   // [Check for VESA (VBE 2.0+) support, and obtain data if possible]
 
   Putchar('\n', 0);
@@ -1368,23 +1413,11 @@ void Bootloader(void) {
 
   if (SupportsVbe == true) {
 
-    Message(Info, "Setting VBE mode %xh.", BestVbeMode);
+    //Message(Info, "Setting VBE mode %xh.", BestVbeMode);
     //SetVbeMode(BestVbeMode, false, true, true, NULL);
 
   }
 
-  /*
-
-  Debug = true;
-
-  Putchar('\n', 0);
-
-  Printf("Hi, this is Serra! <3\n", 0x0F);
-  Printf("April %i %x\n", 0x3F, 21, 0x2025);
-
-  */
-
-  Message(-1, "TODO: Set up MMX/SSE/etc., and don't forget to test this well.");
   LongmodeStub((uintptr)&KernelInfo, Pml4);
 
   for(;;);

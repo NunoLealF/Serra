@@ -67,4 +67,12 @@
   #define longModeMsr 0xC0000080
   void WriteToMsr(uint32 Msr, uint64 Value);
 
+  void WriteToControlRegister(uint8 Register, uint32 Value);
+  uint32 ReadFromControlRegister(uint8 Register);
+
+  // Macros, for use with bitwise operations.
+
+  #define clearBit(Value, Bit) (Value & (typeof(Value))(~(1ULL << Bit)))
+  #define setBit(Value, Bit) (Value | (typeof(Value))((1ULL << Bit)))
+
 #endif

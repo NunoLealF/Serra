@@ -19,11 +19,11 @@ void Entrypoint(uintptr InfoTablePtr) {
 
   unsigned short* Thing = (unsigned short*)(InfoTable->Graphics.Vga.Framebuffer.Address);
   char* Thing2 = "Hi, this is kernel mode Serra! <3";
-  char* Thing3 = "April 21 2025";
+  char* Thing3 = "April 22 2025";
 
   int Position = 0;
 
-  for (int a = 0; a < (80*3); a++) {
+  for (int a = 0; a < (80*2); a++) {
     Thing[a] = 0;
   }
 
@@ -41,7 +41,6 @@ void Entrypoint(uintptr InfoTablePtr) {
 
   // TODO: Set up environment
   // TODO: Set up basic IDT, panic handling, etc.
-  // TODO: Enable MMX, SSE, SSE2.. this should be done in the bootloader, though
 
   for(;;);
 
