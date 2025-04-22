@@ -1334,6 +1334,7 @@ void Bootloader(void) {
     KernelInfo.Graphics.Vesa.VbeInfoBlock.Address = (uintptr)&VbeInfo;
     KernelInfo.Graphics.Vesa.VbeModeInfo.Address = (uintptr)&BestVbeModeInfo;
     KernelInfo.Graphics.Vesa.CurrentVbeMode = BestVbeMode;
+    KernelInfo.Graphics.Vesa.Framebuffer = BestVbeModeInfo.Vbe2Info.Framebuffer;
 
     KernelInfo.Graphics.Vesa.EdidIsSupported = SupportsEdid;
     KernelInfo.Graphics.Vesa.EdidInfo.Address = (uintptr)((SupportsEdid == true) ? &EdidInfo : 0);
@@ -1413,8 +1414,8 @@ void Bootloader(void) {
 
   if (SupportsVbe == true) {
 
-    //Message(Info, "Setting VBE mode %xh.", BestVbeMode);
-    //SetVbeMode(BestVbeMode, false, true, true, NULL);
+    Message(Info, "Setting VBE mode %xh.", BestVbeMode);
+    SetVbeMode(BestVbeMode, false, true, true, NULL);
 
   }
 

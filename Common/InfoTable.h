@@ -173,6 +173,8 @@
         universalPtr VbeModeInfo; // VBE mode info block (of the current mode)
         uint16 CurrentVbeMode; // Current mode number.
 
+        uint64 Framebuffer; // ...
+
         bool EdidIsSupported; // Is EDID supported?
         universalPtr EdidInfo; // EDID info block, if supported.
 
