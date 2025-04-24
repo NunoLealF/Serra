@@ -8,7 +8,7 @@
   // Generic defines
 
   #define getInfoTableVersion(Major, Minor) ((Major * 0x100) + Minor)
-  #define KernelInfoTableVersion getInfoTableVersion(1, 0)
+  #define KernelInfoTableVersion getInfoTableVersion(0, 1)
 
   // Basically, you fill in Address in 32-bit mode, and you can use it
   // normally in 64-bit mode with the void*.
@@ -24,22 +24,10 @@
 
   typedef struct {
 
-    // (Features, tables, etc.)
-
-    bool AcpiSupported; // Is ACPI supported?
-    universalPtr AcpiRsdp; // If so, ptr to rsdp
-    universalPtr AcpiSdt; // RSDT *or* XSDT, but always the right one
+    // (Pointers to BIOS-specific stuff)
 
     bool PciBiosSupported; // Is PCI-BIOS supported?
     universalPtr PciBiosTable;
-
-    bool SmbiosSupported;
-    universalPtr SmbiosTable;
-
-    // (E820 mmap)
-
-    uint16 NumMmapEntries;
-    universalPtr MemoryMap;
 
     // (Pointers to important things)
 
@@ -51,11 +39,21 @@
 
   typedef struct {
 
+    // (Pointer to EFI image handle)
+
+    universalPtr EfiImageHandle;
+
+    // (Pointers to tables)
+
+    universalPtr EfiSystemTable;
+    universalPtr EfiBootServices;
+    universalPtr EfiRuntimeServices;
+
   } __attribute__((packed)) KernelEfiInfoTable;
 
   // (Main kernel info table)
 
-  typedef enum : uint8 {
+  typedef enum __a20Enum : uint8 {
 
     ByUnknown = 0,
     ByDefault = 1,
@@ -64,7 +62,7 @@
 
   } a20Enum;
 
-  typedef enum : uint8 {
+  typedef enum __diskAccessMethodEnum : uint8 {
 
     Int13 = 0,
     Int13WithEdd = 1,
@@ -77,14 +75,23 @@
 
   } diskAccessMethodEnum;
 
-  typedef enum : uint8 {
+  typedef enum __graphicsTypeEnum : uint8 {
 
-    None = 0,
-    Vga = 1, // (VGA text mode.)
-    Vesa = 2,
-    Gop = 3
+    None = 0, // None known
+    VgaText = 1, // VGA text mode
+    EfiText = 2, // EFI text output protocol
+    Vesa = 3,  // VESA graphics mode
+    Gop = 4 // EFI graphics output protocol
 
   } graphicsTypeEnum;
+
+  typedef enum __mmapTypeEnum : uint8 {
+
+    Unknown = 0, // Unknown
+    BiosMmap = 1, // (int 15h / eax E820h), normal for BIOS
+    EfiMmap = 2 // From GetMemoryMap()
+
+  } mmapTypeEnum;
 
   typedef struct {
 
@@ -100,11 +107,24 @@
 
       a20Enum A20Method; // What method was used to enable the A20 line?
 
+      bool AcpiSupported; // Is ACPI supported?
+      universalPtr AcpiRsdp; // If so, pointer to RSDP
+
+      uint64 Cr0; // Value of the CR0 control register
+      uint64 Cr3; // Value of the CR3 control register
+      uint64 Cr4; // Value of the CR4 control register
+      uint64 Efer; // Value of the EFER model-specific register (MSR)
+
       uint32 CpuidHighestStdLevel; // Highest standard CPUID level
       uint32 CpuidHighestExtLevel; // Highest extended CPUID level
 
       bool PatSupported; // Is PAT supported?
       uint64 PatMsr; // The value of the PAT MSR, if it's supported.. or 0
+
+      universalPtr Pml4; // Location of the PML4
+
+      bool SmbiosSupported; // Is SMBIOS supported?
+      universalPtr SmbiosTable; // If so, here's a pointer
 
     } __attribute__((packed)) System;
 
@@ -112,7 +132,14 @@
 
     struct __Memory {
 
-      // (System mmap is provided by BIOS or UEFI).
+      mmapTypeEnum Type; // What type of mmap are we dealing with here?
+
+      // (System mmap, provided by BIOS or UEFI; format can vary)
+
+      uint16 NumMmapEntries;
+      universalPtr MemoryMap;
+
+      // (Usable mmap, provided by BIOS or UEFI; format can vary)
 
       uint16 NumUsableMmapEntries; // Number of usable mmap entries.
       universalPtr UsableMemoryMap; // Pointer to the usable memory map
@@ -142,6 +169,7 @@
 
       bool Debug; // Debug flag.
       universalPtr ElfHeader; // Pointer to the kernel elf header
+      uint64 Entrypoint; // Kernel entrypoint *and* initial stack ptr
 
       uint64 UsableArea; // Start of usable mem segment (usually 80h.low)
       uint64 ModuleArea; // Start of driver/module segment (usually E0h.low)
@@ -155,7 +183,7 @@
 
       graphicsTypeEnum Type; // What type of graphics?
 
-      struct __Vga {
+      struct __VgaText {
 
         uint16 PosX;
         uint16 PosY;
@@ -165,7 +193,7 @@
 
         universalPtr Framebuffer;
 
-      } __attribute__((packed)) Vga;
+      } __attribute__((packed)) VgaText;
 
       struct __Vesa {
 
@@ -179,6 +207,12 @@
         universalPtr EdidInfo; // EDID info block, if supported.
 
       } __attribute__((packed)) Vesa;
+
+      struct __EfiText {
+
+        // (TODO: everything)
+
+      } __attribute__((packed)) EfiText;
 
       struct __Gop {
 

@@ -65,7 +65,9 @@
 
   #define patMsr 0x277
   #define longModeMsr 0xC0000080
+  
   void WriteToMsr(uint32 Msr, uint64 Value);
+  uint64 ReadFromMsr(uint32 Msr);
 
   void WriteToControlRegister(uint8 Register, uint32 Value);
   uint32 ReadFromControlRegister(uint8 Register);

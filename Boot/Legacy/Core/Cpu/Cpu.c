@@ -376,6 +376,31 @@ void WriteToMsr(uint32 Msr, uint64 Value) {
 }
 
 
+/* uint64 ReadFromMsr()
+
+   Inputs: uint32 Msr - The MSR number you want to read from.
+   Outputs: uint64 - The value of that MSR.
+
+   This function serves as a wrapper around the rdmsr instruction, which
+   reads from an MSR (Model Specific Register); more specifically, Msr is
+   loaded into [ecx], and the return value comes from [edx:eax].
+
+*/
+
+uint64 ReadFromMsr(uint32 Msr) {
+
+  // Execute the rdmsr instruction ([ecx] input, [edx:eax] output)
+
+  uint32 Eax, Edx;
+  __asm__ __volatile__ ("rdmsr" : "=a"(Eax), "=d"(Edx) : "c"(Msr));
+
+  // Assemble that into a proper value, and return
+
+  uint64 Value = ((uint64)Edx << 32) + Eax;
+  return Value;
+
+}
+
 // WriteToControlRegister() - write to control register (CR-n, CR0-8)
 
 void WriteToControlRegister(uint8 Register, uint32 Value) {

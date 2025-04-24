@@ -134,6 +134,30 @@ void Bootloader(void) {
   Putchar('\n', 0);
   Message(Boot, "Successfully entered the third-stage bootloader.");
 
+  // Finally, let's initialize the kernel info table; this will be useful
+  // later on.
+
+  KernelInfoTable KernelInfo;
+  KernelBiosInfoTable KernelBiosInfo;
+
+  KernelInfo.Signature = 0x7577757E7577757E;
+  KernelInfo.Version = KernelInfoTableVersion;
+  KernelInfo.Size = sizeof(KernelInfoTable);
+
+  KernelInfo.Kernel.Debug = Debug;
+
+  // (Copy contents of TerminalTable)
+
+  KernelInfo.Graphics.Type = VgaText; // Will be updated later on if we find VESA support
+
+  KernelInfo.Graphics.VgaText.PosX = TerminalTable.PosX;
+  KernelInfo.Graphics.VgaText.LimitX = TerminalTable.LimitX;
+
+  KernelInfo.Graphics.VgaText.PosY = TerminalTable.PosY;
+  KernelInfo.Graphics.VgaText.LimitY = TerminalTable.LimitY;
+
+  KernelInfo.Graphics.VgaText.Framebuffer.Address = (uintptr)TerminalTable.Framebuffer;
+
 
 
 
@@ -172,10 +196,7 @@ void Bootloader(void) {
 
   Putchar('\n', 0);
   Message(Boot, "Preparing to enable the A20 line");
-
-  bool A20_EnabledByDefault = false;
-  bool A20_EnabledByKbd = false;
-  bool A20_EnabledByFast = false;
+  KernelInfo.System.A20Method = ByUnknown;
 
   if (Check_A20() == true) {
 
@@ -183,7 +204,7 @@ void Bootloader(void) {
     // the A20 line has already been enabled (either by the firmware
     // itself, or by the BIOS function method in the bootsector).
 
-    A20_EnabledByDefault = true;
+    KernelInfo.System.A20Method = ByDefault;
     Message(Ok, "The A20 line has already been enabled.");
 
   } else {
@@ -202,7 +223,7 @@ void Bootloader(void) {
 
     if (Check_A20() == true) {
 
-      A20_EnabledByKbd = true;
+      KernelInfo.System.A20Method = ByKeyboard;
       Message(Ok, "The A20 line has successfully been enabled.");
 
     } else {
@@ -223,7 +244,7 @@ void Bootloader(void) {
 
       if (Check_A20() == true) {
 
-        A20_EnabledByFast = true;
+        KernelInfo.System.A20Method = ByFast;
         Message(Ok, "The A20 line has successfully been enabled.");
 
       } else {
@@ -307,6 +328,13 @@ void Bootloader(void) {
     Panic("Failed to obtain the system's memory map.", 0);
 
   }
+
+  // (Write to info table)
+
+  KernelInfo.Memory.Type = BiosMmap;
+
+  KernelInfo.Memory.NumMmapEntries = NumMmapEntries;
+  KernelInfo.Memory.MemoryMap.Address = (uintptr)Mmap;
 
 
 
@@ -435,6 +463,11 @@ void Bootloader(void) {
 
   }
 
+  // (Commit to info table)
+
+  KernelInfo.Memory.NumUsableMmapEntries = NumUsableMmapEntries;
+  KernelInfo.Memory.UsableMemoryMap.Address = (uintptr)UsableMmap;
+
 
 
 
@@ -462,8 +495,8 @@ void Bootloader(void) {
   registerTable Cpuid_ExtendedInfo = GetCpuid(0x80000000, 0);
   registerTable Cpuid_ExtendedFeatures = GetCpuid(0x80000001, 0);
 
-  uint32 Cpuid_HighestStandardLevel = Cpuid_Info.Eax;
-  uint32 Cpuid_HighestExtendedLevel = Cpuid_ExtendedInfo.Eax;
+  KernelInfo.System.CpuidHighestStdLevel = Cpuid_Info.Eax;
+  KernelInfo.System.CpuidHighestExtLevel = Cpuid_ExtendedInfo.Eax;
 
   Message(Ok, "Successfully obtained CPUID data.");
 
@@ -473,8 +506,8 @@ void Bootloader(void) {
   char VendorString[16];
   GetVendorString(VendorString, Cpuid_Info);
 
-  Message(Info, "Highest supported (standard) CPUID level is %xh", Cpuid_HighestStandardLevel);
-  Message(Info, "Highest supported (extended) CPUID level is %xh", Cpuid_HighestExtendedLevel);
+  Message(Info, "Highest supported (standard) CPUID level is %xh", KernelInfo.System.CpuidHighestStdLevel);
+  Message(Info, "Highest supported (extended) CPUID level is %xh", KernelInfo.System.CpuidHighestExtLevel);
   Message(Info, "CPU vendor ID is \'%s\'", VendorString);
 
   // We also want to check for PAE (Page Address Extensions), PSE (Page Size
@@ -507,11 +540,11 @@ void Bootloader(void) {
   // Also check for PAT support - this isn't essential, but it can help
   // with performance later on.
 
-  bool SupportsPat = false;
+  KernelInfo.System.PatSupported = false;
 
   if (Cpuid_Features.Edx & (1 << 16)) {
     Message(Info, "PAT appears to be supported");
-    SupportsPat = true;
+    KernelInfo.System.PatSupported = true;
   }
 
 
@@ -533,7 +566,15 @@ void Bootloader(void) {
   Putchar('\n', 0);
   Message(Boot, "Preparing to enable CPU features (x87, MMX/3DNow! and SSE).");
 
-  // First, we'll want to enable the x87 FPU, which (in turn) should enable
+  // First, we'll want to save the state of the current control registers:
+
+  KernelInfo.System.Cr0 = ReadFromControlRegister(0);
+  KernelInfo.System.Cr3 = ReadFromControlRegister(3);
+  KernelInfo.System.Cr4 = ReadFromControlRegister(4);
+
+  KernelInfo.System.Efer = ReadFromMsr(0xC0000080);
+
+  // Second, we'll want to enable the x87 FPU, which (in turn) should enable
   // MMX and 3DNow! operations as well. We do this by clearing and setting
   // a few bits in CR0:
 
@@ -662,6 +703,22 @@ void Bootloader(void) {
 
   }
 
+  // (Finally, let's store that information in the info table)
+
+  if (SupportsVbe == true) {
+
+    KernelInfo.Graphics.Type = Vesa;
+
+    KernelInfo.Graphics.Vesa.VbeInfoBlock.Address = (uintptr)&VbeInfo;
+    KernelInfo.Graphics.Vesa.VbeModeInfo.Address = (uintptr)&BestVbeModeInfo;
+    KernelInfo.Graphics.Vesa.CurrentVbeMode = BestVbeMode;
+    KernelInfo.Graphics.Vesa.Framebuffer = BestVbeModeInfo.Vbe2Info.Framebuffer;
+
+    KernelInfo.Graphics.Vesa.EdidIsSupported = SupportsEdid;
+    KernelInfo.Graphics.Vesa.EdidInfo.Address = (uintptr)((SupportsEdid == true) ? &EdidInfo : 0);
+
+  }
+
 
 
 
@@ -684,11 +741,12 @@ void Bootloader(void) {
 
     SupportsAcpi = true;
     Message(Ok, "Successfully located ACPI tables.");
-
     Message(Info, "ACPI RSDP table is located at %xh", (uint32)Rsdp);
-    Message(Info, "RSDT seems to be located at %xh, XSDT may be located at %x:%xh", (uint32)(Rsdp->Rsdt), (uint32)((Rsdp->Xsdt) >> 32), (uint32)(Rsdp->Xsdt));
 
   }
+
+  KernelInfo.System.AcpiSupported = SupportsAcpi;
+  KernelInfo.System.AcpiRsdp.Address = (uintptr)Rsdp;
 
   // Next, let's do the same, but for the SMBIOS tables:
 
@@ -707,6 +765,11 @@ void Bootloader(void) {
     Message(Info, "SMBIOS entry point table appears to be located at %xh", (uint32)SmbiosEntryPoint);
 
   }
+
+  // (Save that in info table)
+
+  KernelInfo.System.SmbiosSupported = SupportsSmbios;
+  KernelInfo.System.SmbiosTable.Address = (uintptr)((SupportsSmbios == true) ? SmbiosEntryPoint : 0);
 
 
 
@@ -737,6 +800,12 @@ void Bootloader(void) {
 
   }
 
+  // (Save that in the info table as well)
+
+  KernelBiosInfo.PciBiosSupported = SupportsPciBios;
+  KernelBiosInfo.PciBiosTable.Address = ((SupportsPciBios == true) ? (uintptr)&PciBiosTable : 0);
+
+
 
 
 
@@ -759,6 +828,14 @@ void Bootloader(void) {
 
   Message(Info, "Successfully obtained drive/EDD-related information.");
 
+  // (Commit information to the info table)
+
+  KernelInfo.FsDisk.DiskAccessMethod = ((Edd_Enabled == false) ? Int13 : Int13WithEdd);
+  KernelInfo.FsDisk.DriveNumber = DriveNumber;
+
+  KernelInfo.FsDisk.LogicalBytesPerSector = LogicalSectorSize;
+  KernelInfo.FsDisk.PhysicalBytesPerSector = PhysicalSectorSize;
+
   // Next, let's find the BPB (BIOS Parameter Block); this will tell us
   // more information about the filesystem.
 
@@ -769,6 +846,7 @@ void Bootloader(void) {
   #define Bpb_Address (&InfoTable->Bpb[0])
 
   biosParameterBlock Bpb = *(biosParameterBlock*)(Bpb_Address);
+  KernelInfo.FsDisk.Bpb.Address = (uintptr)Bpb_Address;
 
   [[maybe_unused]] biosParameterBlock_Fat16 Extended_Bpb16 = *(biosParameterBlock_Fat16*)(Bpb_Address + 33);
   [[maybe_unused]] biosParameterBlock_Fat32 Extended_Bpb32 = *(biosParameterBlock_Fat32*)(Bpb_Address + 33);
@@ -1045,9 +1123,13 @@ void Bootloader(void) {
 
   #define PatMsrValue 0x0007040601070406
 
-  if (SupportsPat == true) {
+  if (KernelInfo.System.PatSupported == true) {
+
     WriteToMsr(patMsr, PatMsrValue);
+    KernelInfo.System.PatMsr = PatMsrValue;
+
     Message(Ok, "Updated the PAT MSR to %x:%xh.", (uint32)(PatMsrValue >> 32), (uint32)PatMsrValue);
+
   }
 
   // Finally, if VBE is supported, then we also have to map the
@@ -1135,6 +1217,10 @@ void Bootloader(void) {
     Message(Ok, "Kernel appears to be a valid ELF executable.");
   }
 
+  // (Define a few variables / set up info table)
+
+  KernelInfo.Kernel.ElfHeader.Address = (uintptr)KernelHeader;
+  KernelInfo.Kernel.Entrypoint = KernelHeader->Entrypoint;
   KernelEntrypoint = KernelHeader->Entrypoint;
 
   // (Additionally, show some extra debug information)
@@ -1271,55 +1357,19 @@ void Bootloader(void) {
 
   // Let's set up the info table. We'll need to do this (TODO TODO TODO)
 
-  KernelInfoTable KernelInfo;
-  KernelBiosInfoTable KernelBiosInfo;
-
   // (Table)
-
-  KernelInfo.Signature = 0x7577757E7577757E;
-  KernelInfo.Version = KernelInfoTableVersion;
-  KernelInfo.Size = sizeof(KernelInfoTable);
 
   // (System)
 
-  if (A20_EnabledByDefault == true) {
-    KernelInfo.System.A20Method = ByDefault;
-  } else if (A20_EnabledByKbd == true) {
-    KernelInfo.System.A20Method = ByKeyboard;
-  } else if (A20_EnabledByFast == true) {
-    KernelInfo.System.A20Method = ByFast;
-  } else {
-    KernelInfo.System.A20Method = ByUnknown;
-  }
-
-  KernelInfo.System.CpuidHighestStdLevel = Cpuid_HighestStandardLevel;
-  KernelInfo.System.CpuidHighestExtLevel = Cpuid_HighestExtendedLevel;
-
-  KernelInfo.System.PatSupported = SupportsPat;
-  KernelInfo.System.PatMsr = ((SupportsPat == true) ? PatMsrValue : 0);
-
   // (Memory)
-
-  KernelInfo.Memory.NumUsableMmapEntries = NumUsableMmapEntries;
-  KernelInfo.Memory.UsableMemoryMap.Address = (uintptr)UsableMmap;
 
   KernelInfo.Memory.PreserveOffset = Offset;
 
   // (Fs/disk)
 
-  KernelInfo.FsDisk.DiskAccessMethod = ((Edd_Enabled == false) ? Int13 : Int13WithEdd);
-  KernelInfo.FsDisk.DriveNumber = DriveNumber;
-
-  KernelInfo.FsDisk.Bpb.Address = (uintptr)Bpb_Address;
-  KernelInfo.FsDisk.LogicalBytesPerSector = LogicalSectorSize;
-  KernelInfo.FsDisk.PhysicalBytesPerSector = PhysicalSectorSize;
-
   KernelInfo.FsDisk.PartitionOffset = 0; // (TODO TODO TODO TODO)
 
   // (Kernel)
-
-  KernelInfo.Kernel.Debug = Debug;
-  KernelInfo.Kernel.ElfHeader.Address = (uintptr)KernelHeader;
 
   KernelInfo.Kernel.UsableArea = MinUsableArea;
   KernelInfo.Kernel.ModuleArea = MinModuleArea;
@@ -1327,65 +1377,12 @@ void Bootloader(void) {
 
   // (Graphics)
 
-  KernelInfo.Graphics.Type = ((SupportsVbe == true) ? Vesa : Vga);
-
-  if (SupportsVbe == true) {
-
-    KernelInfo.Graphics.Vesa.VbeInfoBlock.Address = (uintptr)&VbeInfo;
-    KernelInfo.Graphics.Vesa.VbeModeInfo.Address = (uintptr)&BestVbeModeInfo;
-    KernelInfo.Graphics.Vesa.CurrentVbeMode = BestVbeMode;
-    KernelInfo.Graphics.Vesa.Framebuffer = BestVbeModeInfo.Vbe2Info.Framebuffer;
-
-    KernelInfo.Graphics.Vesa.EdidIsSupported = SupportsEdid;
-    KernelInfo.Graphics.Vesa.EdidInfo.Address = (uintptr)((SupportsEdid == true) ? &EdidInfo : 0);
-
-  }
-
-  KernelInfo.Graphics.Vga.PosX = TerminalTable.PosX;
-  KernelInfo.Graphics.Vga.PosY = TerminalTable.PosY;
-
-  KernelInfo.Graphics.Vga.LimitX = TerminalTable.LimitX;
-  KernelInfo.Graphics.Vga.LimitY = TerminalTable.LimitY;
-
-  KernelInfo.Graphics.Vga.Framebuffer.Address = (uintptr)TerminalTable.Framebuffer;
-
   // (Firmware -> BIOS)
 
   KernelInfo.Firmware.BiosInfo.Address = (uintptr)&KernelBiosInfo;
   KernelInfo.Firmware.EfiInfo.Address = 0;
 
   Message(Ok, "Successfully filled out kernel info table.");
-
-  // (Firmware -> BIOS -> ACPI)
-
-  KernelBiosInfo.AcpiSupported = SupportsAcpi;
-
-  if (SupportsAcpi == true) {
-
-    KernelBiosInfo.AcpiRsdp.Address = (uintptr)Rsdp;
-    KernelBiosInfo.AcpiSdt.Address = (uintptr)((Rsdp->Rsdt != 0) ? Rsdp->Rsdt : Rsdp->Xsdt);
-
-  } else {
-
-    KernelBiosInfo.AcpiRsdp.Address = 0;
-    KernelBiosInfo.AcpiSdt.Address = 0;
-
-  }
-
-  // (Firmware -> BIOS -> PCI-BIOS)
-
-  KernelBiosInfo.PciBiosSupported = SupportsPciBios;
-  KernelBiosInfo.PciBiosTable.Address = (uintptr)&PciBiosTable;
-
-  // (Firmware -> BIOS -> SMBIOS)
-
-  KernelBiosInfo.SmbiosSupported = SupportsSmbios;
-  KernelBiosInfo.SmbiosTable.Address = (uintptr)((SupportsSmbios == true) ? SmbiosEntryPoint : 0);
-
-  // (Firmware -> BIOS -> E820 mmap)
-
-  KernelBiosInfo.NumMmapEntries = NumMmapEntries;
-  KernelBiosInfo.MemoryMap.Address = (uintptr)Mmap;
 
   // (Firmware -> BIOS -> Real mode wrapper)
 
@@ -1414,8 +1411,8 @@ void Bootloader(void) {
 
   if (SupportsVbe == true) {
 
-    Message(Info, "Setting VBE mode %xh.", BestVbeMode);
-    SetVbeMode(BestVbeMode, false, true, true, NULL);
+    //Message(Info, "Setting VBE mode %xh.", BestVbeMode);
+    //SetVbeMode(BestVbeMode, false, true, true, NULL);
 
   }
 

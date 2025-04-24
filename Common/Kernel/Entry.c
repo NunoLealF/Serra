@@ -17,13 +17,13 @@ void Entrypoint(uintptr InfoTablePtr) {
 
   // Let's test this out
 
-  unsigned short* Thing = (unsigned short*)(InfoTable->Graphics.Vga.Framebuffer.Address);
+  unsigned short* Thing = (unsigned short*)(InfoTable->Graphics.VgaText.Framebuffer.Address);
   char* Thing2 = "Hi, this is kernel mode Serra! <3";
-  char* Thing3 = "April 22 2025";
+  char* Thing3 = "April 24 2025";
 
   int Position = 0;
 
-  for (int a = 0; a < (80*2); a++) {
+  for (int a = 0; a < (80*4); a++) {
     Thing[a] = 0;
   }
 
@@ -40,6 +40,11 @@ void Entrypoint(uintptr InfoTablePtr) {
   }
 
   // TODO: Set up environment
+
+  // (0) Make it so that the stub can eventually return.
+  // (1) Check for problems - is SSE not enabled, sanity-check things, etc.
+  // (2) Set up
+
   // TODO: Set up basic IDT, panic handling, etc.
 
   for(;;);
