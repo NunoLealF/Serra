@@ -5,7 +5,9 @@
 [BITS 32]
 
 SECTION .text
+
 EXTERN KernelEntrypoint
+EXTERN KernelStack
 GLOBAL LongmodeStub
 
 ; It's assumed that this stub will behave as a regular 32-bit function
@@ -91,8 +93,8 @@ JumpToHigherHalf:
 
   ; (Set up the stack)
 
-  mov rsp, [KernelEntrypoint]
-  sub rsp, 1024
+  mov rsp, [KernelStack]
+  sub rsp, 128
 
   mov rdi, rbx
   push rbp

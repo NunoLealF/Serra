@@ -25,8 +25,9 @@
   // Kernel-related definitions.
 
   #include "../../../Common/InfoTable.h"
-  
+
   #define KernelStackSize 0x100000 // (Must be a multiple of 4KiB)
   uint64 KernelEntrypoint;
+  uint64 KernelStack;
 
 #endif

@@ -1281,6 +1281,12 @@ void Bootloader(void) {
 
   }
 
+  // (Set up stack)
+
+  KernelStack = (KernelStackArea + KernelStackSize);
+  KernelInfo.Kernel.Stack.Address = KernelStack;
+
+  Message(Ok, "Set up kernel stack (%d KiB) at %xh.", (KernelStackSize / 1024), (uint32)KernelStack);
 
 
 
