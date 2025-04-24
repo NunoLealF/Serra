@@ -168,8 +168,9 @@
     struct __Kernel {
 
       bool Debug; // Debug flag.
+
       universalPtr ElfHeader; // Pointer to the kernel elf header
-      uint64 Entrypoint; // Kernel entrypoint *and* initial stack ptr
+      universalPtr Entrypoint; // Kernel entrypoint *and* initial stack ptr
 
     } __attribute__((packed)) Kernel;
 
@@ -187,7 +188,7 @@
         uint16 LimitX;
         uint16 LimitY;
 
-        universalPtr Framebuffer;
+        uint32 Framebuffer;
 
       } __attribute__((packed)) VgaText;
 

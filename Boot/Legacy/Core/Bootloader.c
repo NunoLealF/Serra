@@ -156,7 +156,7 @@ void Bootloader(void) {
   KernelInfo.Graphics.VgaText.PosY = TerminalTable.PosY;
   KernelInfo.Graphics.VgaText.LimitY = TerminalTable.LimitY;
 
-  KernelInfo.Graphics.VgaText.Framebuffer.Address = (uintptr)TerminalTable.Framebuffer;
+  KernelInfo.Graphics.VgaText.Framebuffer = TerminalTable.Framebuffer;
 
 
 
@@ -1203,8 +1203,12 @@ void Bootloader(void) {
     Panic("Kernel does not appear to be an actual ELF file.", 0);
   } else if ((KernelHeader->Ident.Class != 2) || (KernelHeader->MachineType != 0x3E)) {
     Panic("Kernel does not appear to be 64-bit.", 0);
+  } else if ((KernelHeader->SectionHeaderOffset == 0) || (KernelHeader->NumSectionHeaders == 0)) {
+    Panic("Kernel does not appear to have any ELF section headers.", 0);
+  } else if (KernelHeader->StringSectionIndex == 0) {
+    Panic("Kernel does not appear to have a proper string table section.", 0);
   } else if ((KernelHeader->ProgramHeaderOffset == 0) || (KernelHeader->NumProgramHeaders == 0)) {
-    Panic("ELF header does not appear to have any program headers.", 0);
+    Message(Warning, "Kernel does not appear to have any ELF program headers.");
   } else if (KernelHeader->Version < 1) {
     Message(Warning, "ELF header version appears to be invalid (%d)", (uint32)KernelHeader->Version);
   } else if (KernelHeader->FileType != 2) {
@@ -1216,8 +1220,6 @@ void Bootloader(void) {
   // (Define a few variables / set up info table)
 
   KernelInfo.Kernel.ElfHeader.Address = (uintptr)KernelHeader;
-  KernelInfo.Kernel.Entrypoint = (KernelHeader->Entrypoint + KernelArea);
-  KernelEntrypoint = (KernelHeader->Entrypoint + KernelArea);
 
   // (Additionally, show some extra debug information)
 
@@ -1230,8 +1232,15 @@ void Bootloader(void) {
   Message(Info, "Found %d program header(s) at +%xh.", (uint32)KernelHeader->NumProgramHeaders, (uint32)KernelHeader->ProgramHeaderOffset);
   Message(Info, "Found %d section header(s) at +%xh.", (uint32)KernelHeader->NumSectionHeaders, (uint32)KernelHeader->SectionHeaderOffset);
 
-  // When we find the offset of the .text section, we can calculate the
-  // real entrypoint and jump there.
+  // Next, let's search through the section headers and try to find the
+  // .text section within our executable.
+
+  // Our ELF header already told us how many section headers there are,
+  // and we know they're structured (see elfSectionHeader{} in Elf.h),
+  // so all that's left is to find the correct section.
+
+  // In order to do so, we need to go through the ELF string section
+  // for each section header, like this:
 
   elfSectionHeader* KernelStringHeader = GetSectionHeader(KernelArea, KernelHeader, KernelHeader->StringSectionIndex);
   elfSectionHeader* KernelTextHeader = NULL;
@@ -1250,129 +1259,41 @@ void Bootloader(void) {
 
   }
 
+  // Finally, now that we know where our kernel has our .text header,
+  // we can calculate the actual entrypoint address.
+
+  // Our kernel executable is linked as a position-independent ELF file
+  // with a defined entrypoint, that corresponds to an offset within
+  // the .text section; so, in order to calculate it, we need to sum:
+
+  // =((address we loaded to) + (offset of .text section) + (entrypoint))
+
   if (KernelTextHeader == NULL) {
+
     Panic("Unable to find .text section of kernel.", 0);
+
   } else {
-    KernelInfo.Kernel.Entrypoint = (KernelArea + KernelTextHeader->Offset + KernelHeader->Entrypoint);
-    KernelEntrypoint = KernelInfo.Kernel.Entrypoint;
-  }
 
-  // Next, let's read the kernel's program headers, and also map them if
-  // necessary. This is where the executable sections of our kernel are,
-  // and since they're already in memory, all we need to do is map them.
+    KernelEntrypoint = (KernelArea + KernelTextHeader->Offset + KernelHeader->Entrypoint);
+    KernelInfo.Kernel.Entrypoint.Address = KernelEntrypoint;
 
-  /*
-
-  bool KernelHasHeaderAtEntrypoint = false;
-
-  for (uint32 Index = 0; Index < KernelHeader->NumProgramHeaders; Index++) {
-
-    // (Obtain program header)
-
-    elfProgramHeader* ProgramHeader = GetProgramHeader(KernelArea, KernelHeader, Index);
-
-    uint64 PhysicalAddress = (KernelArea + ProgramHeader->Offset);
-    uint64 VirtualAddress = ProgramHeader->VirtAddress;
-
-    uint64 PaddedSize = PageAlign(ProgramHeader->PaddedSize);
-    uint64 Size = PageAlign(ProgramHeader->Size);
-
-    // (Show information)
-
-    Message(Info, "ProgramHeader(%d) | Type %d | Flags %xh | Offset %xh",
-            Index, ProgramHeader->Type, ProgramHeader->Flags, ProgramHeader->Offset);
-
-    Message(Info, "ProgramHeader(%d) | Address %x:%xh | Size %d/%d",
-            Index, (uint32)(VirtualAddress >> 32), (uint32)VirtualAddress, (uint32)Size, (uint32)PaddedSize);
-
-    // (If possible, map it as well.)
-
-    if (ProgramHeader->Type > 0) {
-
-      // Check to see if program header has a valid size, and if not,
-      // either correct it or just skip entirely
-
-      if ((Size == 0) && (PaddedSize == 0)) {
-
-        Message(Fail, "Program header has invalid size.", 0);
-        continue;
-
-      } else if (PaddedSize == 0) {
-
-        PaddedSize = Size;
-
-      } else if (Size == 0) {
-
-        Size = PaddedSize;
-
-      }
-
-      // Make sure that nothing starts below the kernel area, and that
-      // there's at least *something* at the entrypoint address.
-
-      if (VirtualAddress < MinKernelArea) {
-        Panic("Kernel program header appears to start below kernel area.", 0);
-      } else if (VirtualAddress == KernelEntrypoint) {
-        KernelHasHeaderAtEntrypoint = true;
-      }
-
-      // Map everything up to Size, and if necessary, allocate extra
-      // space for everything up to PaddedSize as well.
-
-      Offset = InitializePageEntries(PhysicalAddress, VirtualAddress, Size, Pml4_Data, UsableFlags, false, false, Offset, UsableMmap, NumUsableMmapEntries);
-
-      Message(Ok, "Mapped %d page(s) for ProgramHeader(%d) to %x:%xh.",
-             (uint32)(Size / 0x1000), Index, (uint32)(VirtualAddress >> 32), (uint32)VirtualAddress);
-
-      // If the memory size (PaddedSize) exceeds the size on the file
-      // itself (Size), map that as well.
-
-      if (PaddedSize > Size) {
-
-        uint64 ExtraSize = (PaddedSize - Size);
-        uint64 ExtraSpace = AllocateFromMmap(Offset, ExtraSize, true, UsableMmap, NumUsableMmapEntries);
-
-        if (ExtraSpace == 0) {
-
-          Panic("Failed to allocate extra space for program header.", 0);
-
-        } else {
-
-          Offset = ExtraSpace;
-          ExtraSpace -= ExtraSize;
-
-        }
-
-        Offset = InitializePageEntries(ExtraSpace, (VirtualAddress + Size), ExtraSize, Pml4_Data, UsableFlags, false, false, Offset, UsableMmap, NumUsableMmapEntries);
-
-        Message(Ok, "Allocated and mapped %d extra pages for ProgramHeader(%d) to %x:%xh",
-               (uint32)(ExtraSize / 0x1000), Index, (uint32)(ExtraSpace >> 32), (uint32)ExtraSpace);
-
-      }
-
-    }
+    Message(Ok, "Successfully found actual kernel entrypoint at %xh.", (uint32)KernelEntrypoint);
 
   }
 
-  // (Do none of the program headers match the entrypoint?)
 
-  if (KernelHasHeaderAtEntrypoint == false) {
-    Panic("Kernel doesn't appear to have any program header at the given entrypoint", 0);
-  }
 
-  // Now that we've successfully mapped the kernel, we can move onto
-  // the next part - mapping the kernel *stack*.
 
-  // We already allocated space for it earlier on, and it's assumed
-  // to be right below the kernel area, so we can just do this:
+  // [TEST - Inform bios about 64 bit?]
 
-  uint64 KernelStack = (KernelEntrypoint - KernelStackSize);
-  Offset = InitializePageEntries(KernelStackArea, KernelStack, KernelStackSize, Pml4_Data, UsableFlags, false, false, Offset, UsableMmap, NumUsableMmapEntries);
+  realModeTable* Table = InitializeRealModeTable();
 
-  Message(Ok, "Successfully mapped kernel stack (%d pages) to %x:%xh.",
-         (KernelStackSize / 0x1000), (uint32)(KernelStack >> 32), (uint32)KernelStack);
+  Table->Eax = 0xEC00; // AX = EC00h.
+  Table->Ebx = 3; // Both modes will be used (3h); 2h = long-mode only.
 
-  */
+  Table->Int = 0x15;
+  RealMode();
+
 
 
 
