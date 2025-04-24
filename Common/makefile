@@ -15,12 +15,13 @@ OBJD = x86_64-elf-objdump
 # [Linker flags]
 # -nostdlib: Don't use or link any standard libraries (except for libgcc).
 # -mno-red-zone: Disable the System V ABI 'red zone'; this is necessary for now.
+# -static-pie: Make a *static* position-independent executable (that can relocate itself)
 
 # [Compiler flags]
 # -funsigned-char: Use unsigned chars for characters.
 # -ffreestanding: This is a freestanding environment. Also, implies fno-builtin.
+# -fpie: Compile our code into a position-independent executable.
 # -std=c2x: Use the regular C2x/C23 standard.
-# -mcmodel=kernel: Assume the kernel runs in the last 2GiB of address space
 # -mmmx, -msse, -msse2: Make sure to *enable* MMX, SSE and SSE2 instructions.
 # -mno-red-zone: Disable the System V ABI 'red zone'; this is necessary for now.
 # -O3: Optimize the resulting file/binary for speed.
@@ -28,8 +29,8 @@ OBJD = x86_64-elf-objdump
 # -Wextra: Enable even more warnings. (Not sure why wall doesn't take care of this)
 # -Wpedantic: Be pedantic about the C standard / any possible mistakes
 
-LDFLAGS = -nostdlib -mcmodel=kernel -mno-red-zone
-CFLAGS = -std=c2x -funsigned-char -ffreestanding -mcmodel=kernel -mmmx -msse -msse2 -mno-red-zone -O3 -Wall -Wextra -Wpedantic
+LDFLAGS = -nostdlib -mno-red-zone -static-pie
+CFLAGS = -std=c2x -funsigned-char -ffreestanding -fpie -mmmx -msse -msse2 -mno-red-zone -O3 -Wall -Wextra -Wpedantic
 
 
 # The .PHONY directive is used on targets that don't output anything. For example, running 'make all' builds our

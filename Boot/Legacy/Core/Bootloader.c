@@ -1205,12 +1205,8 @@ void Bootloader(void) {
     Panic("Kernel does not appear to be 64-bit.", 0);
   } else if ((KernelHeader->ProgramHeaderOffset == 0) || (KernelHeader->NumProgramHeaders == 0)) {
     Panic("ELF header does not appear to have any program headers.", 0);
-  } else if (KernelHeader->Entrypoint < MinKernelArea) {
-    Panic("Kernel entrypoint appears to start below kernel area.", 0);
   } else if (KernelHeader->Version < 1) {
     Message(Warning, "ELF header version appears to be invalid (%d)", (uint32)KernelHeader->Version);
-  } else if (KernelHeader->Entrypoint == 0) {
-    Message(Warning, "ELF header does not have an entrypoint");
   } else if (KernelHeader->FileType != 2) {
     Message(Warning, "ELF header appears to have a non-executable file type (%d)", (uint32)KernelHeader->FileType);
   } else {
@@ -1220,8 +1216,8 @@ void Bootloader(void) {
   // (Define a few variables / set up info table)
 
   KernelInfo.Kernel.ElfHeader.Address = (uintptr)KernelHeader;
-  KernelInfo.Kernel.Entrypoint = KernelHeader->Entrypoint;
-  KernelEntrypoint = KernelHeader->Entrypoint;
+  KernelInfo.Kernel.Entrypoint = (KernelHeader->Entrypoint + KernelArea);
+  KernelEntrypoint = (KernelHeader->Entrypoint + KernelArea);
 
   // (Additionally, show some extra debug information)
 
@@ -1234,9 +1230,38 @@ void Bootloader(void) {
   Message(Info, "Found %d program header(s) at +%xh.", (uint32)KernelHeader->NumProgramHeaders, (uint32)KernelHeader->ProgramHeaderOffset);
   Message(Info, "Found %d section header(s) at +%xh.", (uint32)KernelHeader->NumSectionHeaders, (uint32)KernelHeader->SectionHeaderOffset);
 
+  // When we find the offset of the .text section, we can calculate the
+  // real entrypoint and jump there.
+
+  elfSectionHeader* KernelStringHeader = GetSectionHeader(KernelArea, KernelHeader, KernelHeader->StringSectionIndex);
+  elfSectionHeader* KernelTextHeader = NULL;
+
+  for (uint16 Index = 0; Index < KernelHeader->NumSectionHeaders; Index++) {
+
+    elfSectionHeader* SectionHeader = GetSectionHeader(KernelArea, KernelHeader, Index);
+    const char* SectionString = GetElfSectionString(KernelArea, KernelStringHeader, SectionHeader->NameOffset);
+
+    if (Strcmp(".text", SectionString) == true) {
+
+      KernelTextHeader = SectionHeader;
+      break;
+
+    }
+
+  }
+
+  if (KernelTextHeader == NULL) {
+    Panic("Unable to find .text section of kernel.", 0);
+  } else {
+    KernelInfo.Kernel.Entrypoint = (KernelArea + KernelTextHeader->Offset + KernelHeader->Entrypoint);
+    KernelEntrypoint = KernelInfo.Kernel.Entrypoint;
+  }
+
   // Next, let's read the kernel's program headers, and also map them if
   // necessary. This is where the executable sections of our kernel are,
   // and since they're already in memory, all we need to do is map them.
+
+  /*
 
   bool KernelHasHeaderAtEntrypoint = false;
 
@@ -1347,6 +1372,8 @@ void Bootloader(void) {
   Message(Ok, "Successfully mapped kernel stack (%d pages) to %x:%xh.",
          (KernelStackSize / 0x1000), (uint32)(KernelStack >> 32), (uint32)KernelStack);
 
+  */
+
 
 
 
@@ -1370,10 +1397,6 @@ void Bootloader(void) {
   KernelInfo.FsDisk.PartitionOffset = 0; // (TODO TODO TODO TODO)
 
   // (Kernel)
-
-  KernelInfo.Kernel.UsableArea = MinUsableArea;
-  KernelInfo.Kernel.ModuleArea = MinModuleArea;
-  KernelInfo.Kernel.KernelArea = MinKernelArea;
 
   // (Graphics)
 

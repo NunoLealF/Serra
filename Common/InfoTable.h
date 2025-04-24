@@ -171,10 +171,6 @@
       universalPtr ElfHeader; // Pointer to the kernel elf header
       uint64 Entrypoint; // Kernel entrypoint *and* initial stack ptr
 
-      uint64 UsableArea; // Start of usable mem segment (usually 80h.low)
-      uint64 ModuleArea; // Start of driver/module segment (usually E0h.low)
-      uint64 KernelArea; // Start of kernel segment (usually F0h.low)
-
     } __attribute__((packed)) Kernel;
 
     // (System-independent sections | Graphics)

@@ -7,7 +7,7 @@ ENTRY(Entrypoint) /* The entrypoint of our kernel. */
 SECTIONS
 {
 
-  . = 0xFFFFFFFF80000000; /* Tell our linker that our code will start at -2GiB (for -mcmodel=kernel). */
+  . = 0; /* This is mandatory for the position-independent code to work */
 
   .text : ALIGN(4K)
 	{
