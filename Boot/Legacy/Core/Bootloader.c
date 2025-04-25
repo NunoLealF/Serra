@@ -136,8 +136,8 @@ void S3Bootloader(void) {
   // Finally, let's initialize the kernel info table; this will be useful
   // later on.
 
-  kernelInfoTable KernelInfo;
-  kernelBiosInfoTable KernelBiosInfo;
+  kernelInfoTable KernelInfo = {0};
+  kernelBiosInfoTable KernelBiosInfo = {0};
 
   KernelInfo.Signature = 0x7577757E7577757E;
   KernelInfo.Version = KernelInfoTableVersion;
@@ -615,7 +615,7 @@ void S3Bootloader(void) {
   // because VBE versions before 2.0 don't have support for linear
   // framebuffers, and because VBE lets us deal with graphics modes.)
 
-  volatile vbeInfoBlock VbeInfo;
+  volatile vbeInfoBlock VbeInfo = {0};
   uint32 VbeReturnStatus = GetVbeInfoBlock(&VbeInfo);
 
   bool SupportsVbe;
@@ -641,7 +641,7 @@ void S3Bootloader(void) {
   // but we still don't know which ones the monitor supports; that's
   // where EDID comes in.)
 
-  volatile edidInfoBlock EdidInfo;
+  volatile edidInfoBlock EdidInfo = {0};
 
   uint32 EdidReturnStatus = GetEdidInfoBlock(&EdidInfo, 0x00);
   bool SupportsEdid = false;
@@ -686,7 +686,7 @@ void S3Bootloader(void) {
   // (If VBE isn't supported, we can still use text mode as a fallback)
 
   uint16 BestVbeMode = 0xFFFF;
-  volatile vbeModeInfoBlock BestVbeModeInfo;
+  volatile vbeModeInfoBlock BestVbeModeInfo = {0};
 
   if (SupportsVbe == true) {
 
