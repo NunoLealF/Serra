@@ -200,11 +200,12 @@ uint32 GetFatEntry(uint32 ClusterNum, uint32 PartitionOffset, uint32 FatOffset, 
   }
 
   uint32 ClusterEntry;
+  uintptr ClusterEntryPtr = (uintptr)&Buffer[EntryOffset];
 
   if (IsFat32 == false) {
-    ClusterEntry = *(uint16*)(&Buffer[EntryOffset]);
+    ClusterEntry = *(uint16*)ClusterEntryPtr;
   } else {
-    ClusterEntry = *(uint32*)(&Buffer[EntryOffset]);
+    ClusterEntry = *(uint32*)ClusterEntryPtr;
   }
 
   return ClusterEntry;
@@ -214,10 +215,10 @@ uint32 GetFatEntry(uint32 ClusterNum, uint32 PartitionOffset, uint32 FatOffset, 
 
 /* static bool FatNameIsEqual()
 
-   Inputs: int8 EntryName[8] - The name specified in the entry we want to compare.
-           int8 EntryExtension[3] - The extension specified in the entry we want to compare.
-           char Name[8] - The name we want to compare the entry to.
-           char Extension[3] - The extension we want to compare the entry to.
+   Inputs: const char EntryName[8] - The name specified in the entry we want to compare.
+           const char EntryExtension[3] - The extension specified in the entry we want to compare.
+           const char Name[8] - The name we want to compare the entry to.
+           const char Extension[3] - The extension we want to compare the entry to.
            bool IsFolder - Whether the entry we're trying to find is a folder or not.
 
    Outputs: bool - Whether the entry matches the name and extension we're looking for.
@@ -228,7 +229,7 @@ uint32 GetFatEntry(uint32 ClusterNum, uint32 PartitionOffset, uint32 FatOffset, 
 
 */
 
-static bool FatNameIsEqual(int8 EntryName[8], int8 EntryExtension[3], char Name[8], char Extension[3], bool IsFolder) {
+static bool FatNameIsEqual(const char EntryName[8], const char EntryExtension[3], const char Name[8], const char Extension[3], bool IsFolder) {
 
   // Compare the name..
 
@@ -388,7 +389,7 @@ fatDirectory FindDirectory(uint32 ClusterNum, uint8 SectorsPerCluster, uint32 Pa
   // all we need to do is to return an empty directory entry, with the highest possible limit,
   // to indicate that we didn't really find anything.
 
-  fatDirectory NullEntry;
+  fatDirectory NullEntry = {0};
 
   NullEntry.ClusterNum_Low = 0xFFFF;
   NullEntry.ClusterNum_High = 0xFFFF;

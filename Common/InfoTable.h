@@ -209,12 +209,14 @@
       struct __EfiText {
 
         // (TODO: everything)
+        char PLACEHOLDER;
 
       } __attribute__((packed)) EfiText;
 
       struct __Gop {
 
-        // (TODO: Everything)
+        // (TODO: everything)
+        char PLACEHOLDER;
 
       } __attribute__((packed)) Gop;
 

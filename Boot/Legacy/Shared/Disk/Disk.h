@@ -109,8 +109,8 @@
 
   typedef struct {
 
-    int8 Name[8]; // This should be in uppercase, and padded with spaces;
-    int8 Extension[3]; // Same restrictions as above.
+    const char Name[8]; // This should be in uppercase, and padded with spaces;
+    const char Extension[3]; // Same restrictions as above.
 
     uint8 Attributes;
     uint8 Reserved; // Reserved for use by other operating systems.

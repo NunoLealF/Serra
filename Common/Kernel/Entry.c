@@ -27,9 +27,11 @@ void Entrypoint(uintptr InfoTablePtr) {
 
   */
 
-  unsigned short* Thing = (unsigned short*)(InfoTable->Graphics.VgaText.Framebuffer);
+  uintptr ThingAddr = (uintptr)InfoTable->Graphics.VgaText.Framebuffer;
+
+  uint16* Thing = (uint16*)ThingAddr;
   char* Thing2 = "Hi, this is kernel mode Serra! <3";
-  char* Thing3 = "April 24 2025";
+  char* Thing3 = "April 25 2025";
 
   int Position = 0;
 

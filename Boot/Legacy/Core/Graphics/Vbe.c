@@ -9,7 +9,9 @@
 
 /* uint32 GetVbeInfoBlock()
 
-   Inputs: vbeInfoBlock* Buffer - A pointer to the buffer you want to store the info block in.
+   Inputs: volatile vbeInfoBlock* Buffer - A pointer to the buffer you want to store the info
+           block in.
+
    Outputs: uint32 - The return value of the VBE function (the value in eax).
 
    This function uses the VBE BIOS function (int 10h, ah = 4Fh, al = 00h) to get the VBE info
@@ -28,7 +30,7 @@
 
 */
 
-uint32 GetVbeInfoBlock(vbeInfoBlock* Buffer) {
+uint32 GetVbeInfoBlock(volatile vbeInfoBlock* Buffer) {
 
   // Prepare the info block itself
 
@@ -62,8 +64,8 @@ uint32 GetVbeInfoBlock(vbeInfoBlock* Buffer) {
 
 /* uint32 GetVbeModeInfo()
 
-   Inputs: vbeModeInfoBlock* Buffer - A pointer to the buffer you want to store the mode info
-           block in.
+   Inputs: volatile vbeModeInfoBlock* Buffer - A pointer to the buffer you want to store the
+           mode info block in.
 
            uint16 ModeNumber - The mode number of the VBE mode you want to get information from.
 
@@ -79,7 +81,7 @@ uint32 GetVbeInfoBlock(vbeInfoBlock* Buffer) {
 
 */
 
-uint32 GetVbeModeInfo(vbeModeInfoBlock* Buffer, uint16 ModeNumber) {
+uint32 GetVbeModeInfo(volatile vbeModeInfoBlock* Buffer, uint16 ModeNumber) {
 
   // Prepare the info block itself
 
@@ -173,8 +175,8 @@ uint32 SetVbeMode(uint16 ModeNumber, bool UseCrtc, bool UseLinearModel, bool Cle
 
 /* uint32 GetEdidInfoBlock()
 
-   Inputs: edidInfoBlock* Buffer - A pointer to the buffer you want to store the EDID info
-           block in.
+   Inputs: volatile edidInfoBlock* Buffer - A pointer to the buffer you want to store the
+           EDID info block in.
 
            uint16 ControllerNum - The EDID controller number (where 00h is the default, and
            available virtually everywhere that this function is supported)
@@ -192,7 +194,7 @@ uint32 SetVbeMode(uint16 ModeNumber, bool UseCrtc, bool UseLinearModel, bool Cle
 
 */
 
-uint32 GetEdidInfoBlock(edidInfoBlock* Buffer, uint16 ControllerNum) {
+uint32 GetEdidInfoBlock(volatile edidInfoBlock* Buffer, uint16 ControllerNum) {
 
   // Prepare the BIOS interrupt (int 10h, ah = 4Fh, al = 15h, bl = 01h, cx = ControllerNum,
   // dx = (the EDID block number), es:di = Buffer)
