@@ -19,7 +19,7 @@
 
   // Declare functions in Bootloader.c and Stub.asm
 
-  void Bootloader(void);
+  void S3Bootloader(void);
   void LongmodeStub(uintptr InfoTable, uintptr Pml4);
 
   // Kernel-related definitions.

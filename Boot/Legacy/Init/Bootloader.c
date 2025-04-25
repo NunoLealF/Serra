@@ -39,7 +39,7 @@ void RestoreState(void) {
 
    Initializes the segment registers (in this case, DS, ES, FS, GS, and SS) with the data selector
    (10h) as set in our GDT, sets the stack location to 20000h (where it'll have 64KiB of space),
-   and then jumps to our Bootloader() function.
+   and then jumps to our S2Bootloader() function.
 
    This function is defined by our linker to be at 7E00h in memory, which is where our first-stage
    bootloader (our MBR) jumps to after loading our second-stage bootloader into memory and enabling
@@ -67,19 +67,19 @@ void RestoreState(void) {
 
   __asm__ __volatile__ ("mov $0x20000, %esp");
 
-  // Jump to our Bootloader() function.
+  // Jump to our second-stage bootloader's main function.
 
-  Bootloader();
+  S2Bootloader();
 
 }
 
 
-/* [[noreturn]] void Bootloader()
+/* [[noreturn]] void S2Bootloader()
 
    Inputs:    (none)
    Outputs:   (none)
 
-   This is our second-stage bootloader's main function. We jump here after Init(),
+   This is our *second-stage* bootloader's main function. We jump here after Init(),
    which initializes the segment registers.
 
    This stage of the bootloader occupies the space between 7E00h and 9E00h in memory, and
@@ -88,7 +88,7 @@ void RestoreState(void) {
 
 */
 
-[[noreturn]] void Bootloader(void) {
+[[noreturn]] void S2Bootloader(void) {
 
   // We've finally made it to our second-stage bootloader; we're in 32-bit x86 protected
   // mode with the stack at 20000h in memory, and our bootloader between 7E00h and 9E00h in

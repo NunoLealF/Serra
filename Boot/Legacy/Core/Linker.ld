@@ -2,7 +2,7 @@
 /* This file is part of the Serra project, which is released under the MIT license. */
 /* For more information, please refer to the accompanying license agreement. <3 */
 
-ENTRY(Bootloader) /* The first function that should be called in our third-stage bootloader. */
+ENTRY(S3Bootloader) /* The first function that should be called in our third-stage bootloader. */
 
 SECTIONS
 {
@@ -11,7 +11,7 @@ SECTIONS
 
   .text :
   {
-    *(.text.Bootloader) /* The start of our third stage bootloader should be the Bootloader() function. */
+    *(.text.S3Bootloader) /* The start of our third stage bootloader should be the S3Bootloader() function. */
     *(.text*) /* The rest of our third stage bootloader (excluding non-text/code segments). */
   }
 

@@ -12,7 +12,7 @@ OBJD = x86_64-w64-mingw32-objdump
 
 
 # [Linker flags]
-# -e Bootloader: Our function entrypoint should be the Bootloader function.
+# -e Bootloader: Our function entrypoint should be the SEfiBootloader function.
 # -nostdlib: Don't use or link any standard libraries (except for libgcc).
 # -static-pie: Make a *static* position-independent executable (that can relocate itself)
 # -Wl,--subsystem,10: Set the subsystem type in the PE header to 10 (UEFI executable).
@@ -27,7 +27,7 @@ OBJD = x86_64-w64-mingw32-objdump
 # -Wextra: Enable even more warnings. (Not sure why wall doesn't take care of this)
 # -Wpedantic: Be pedantic about the C standard / any possible mistakes
 
-LDFLAGS = -e Bootloader -nostdlib -static-pie -Wl,--subsystem,10
+LDFLAGS = -e SEfiBootloader -nostdlib -static-pie -Wl,--subsystem,10
 CFLAGS = -ffreestanding -fpie -maccumulate-outgoing-args -O0 -std=c2x -Wall -Wextra -Wpedantic
 
 

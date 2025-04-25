@@ -18,6 +18,6 @@
   // Declare functions in Bootloader.c
 
   [[noreturn]] void Init(void);
-  [[noreturn]] void Bootloader(void);
+  [[noreturn]] void S2Bootloader(void);
 
 #endif

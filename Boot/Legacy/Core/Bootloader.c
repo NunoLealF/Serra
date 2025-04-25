@@ -42,12 +42,12 @@ void RestoreState(void) {
 }
 
 
-/* void Bootloader()
+/* void S3Bootloader()
 
    Inputs: (none, except for InfoTable)
    Outputs: (none)
 
-   This is the main function (and entrypoint) of our third-stage bootloader.
+   This is the main function (and entrypoint) of our *third-stage* bootloader.
    The second stage bootloader (located in Init/, instead of Core/) jumps
    here after it finishes reading Boot/Bootx32.bin from disk.
 
@@ -111,7 +111,7 @@ void RestoreState(void) {
 
 */
 
-void Bootloader(void) {
+void S3Bootloader(void) {
 
   // [Read from the bootloader info table]
 
