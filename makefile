@@ -3,11 +3,12 @@
 # For more information, please refer to the accompanying license agreement. <3
 
 # You'll need an i686-elf-gcc (32-bit) and x86_64-w64-mingw32-gcc (64-bit)
-# toolchain, along with mtools and nasm, as well as qemu if you want to emulate
-# it.
+# toolchain, along with mtools and nasm, as well as qemu if you want to
+# emulate it (and ovmf to emulate for EFI).
 
 QEMU = qemu-system-x86_64
 QFLAGS = -cpu qemu64 -m 128
+OVMFDIR = /usr/share/OVMF
 
 # The .PHONY directive is used on targets that don't output anything. For example, running 'make all' builds our
 # bootloader, but it doesn't output any specific files; it just goes through a lot of targets; the target that builds
@@ -15,7 +16,7 @@ QFLAGS = -cpu qemu64 -m 128
 # it skips it (for example, for the target 'example.o', if it sees example.o is already there, it skips compiling it),
 # and this can cause problems for targets that don't output anything. These are called 'phony targets'.
 
-.PHONY: All Compile Clean Run RunBochs RunGdb RunInt RunKvm all compile clean run rungdb runint runkvm
+.PHONY: All Compile Clean Run RunBochs RunEfi RunGdb RunInt RunKvm all compile clean run runbochs runefi rungdb runint runkvm
 
 # Names ->>
 # (By the way, it's assumed that you're on Linux, or at least some sort of Unix-like system)
@@ -57,6 +58,10 @@ RunBochs:
 	@echo "\n\033[0;1m""Launching Bochs (with automatic configuration file).." "\033[0m"
 	@bochs -q
 
+RunEfi:
+	@echo "\n\033[0;1m""Launching QEMU (EFI mode).." "\033[0m"
+	$(QEMU) $(QFLAGS) -bios $(OVMFDIR)/OVMF_CODE.fd -net none -drive file=Legacy.img,format=raw
+
 RunGdb:
 	@echo "\n\033[0;1m""Launching QEMU (legacy mode) with GDB.." "\033[0m"
 	$(QEMU) $(QFLAGS) -s -S -drive file=Legacy.img,format=raw
@@ -76,6 +81,7 @@ clean: Clean
 compile: Compile
 run: Run
 runbochs: RunBochs
+runefi: RunEfi
 rungdb: RunGdb
 runint: RunInt
 runkvm: RunKvm
