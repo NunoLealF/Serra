@@ -2,7 +2,7 @@
 /* This file is part of the Serra project, which is released under the MIT license. */
 /* For more information, please refer to the accompanying license agreement. <3 */
 
-ENTRY(Init) /* The first function that should be called in our second-stage bootloader. */
+ENTRY(S2Init) /* The first function that should be called in our second-stage bootloader. */
 
 SECTIONS
 {
@@ -11,7 +11,7 @@ SECTIONS
 
   .text :
   {
-    *(.text.Init) /* The start of our second stage bootloader should be the Init() function. */
+    *(.text.S2Init) /* The start of our second stage bootloader should be the S2Init() function. */
     *(.text*) /* The rest of our second stage bootloader (excluding non-text/code segments). */
   }
 

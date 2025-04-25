@@ -32,7 +32,7 @@ void RestoreState(void) {
 }
 
 
-/* [[noreturn]] void Init()
+/* [[noreturn]] void S2Init()
 
    Inputs:    (none)
    Outputs:   (none)
@@ -51,7 +51,7 @@ void RestoreState(void) {
 
 */
 
-[[noreturn]] void Init(void) {
+[[noreturn]] void S2Init(void) {
 
   // Set up registers (DS, ES, FS, GS, and SS)
   // We'll be setting these up with the data segment (10h in our GDT).
@@ -79,7 +79,7 @@ void RestoreState(void) {
    Inputs:    (none)
    Outputs:   (none)
 
-   This is our *second-stage* bootloader's main function. We jump here after Init(),
+   This is our *second-stage* bootloader's main function. We jump here after S2Init(),
    which initializes the segment registers.
 
    This stage of the bootloader occupies the space between 7E00h and 9E00h in memory, and

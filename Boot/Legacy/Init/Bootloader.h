@@ -17,7 +17,7 @@
 
   // Declare functions in Bootloader.c
 
-  [[noreturn]] void Init(void);
+  [[noreturn]] void S2Init(void);
   [[noreturn]] void S2Bootloader(void);
 
 #endif
