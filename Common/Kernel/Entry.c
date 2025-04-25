@@ -13,7 +13,7 @@ void Entrypoint(uintptr InfoTablePtr) {
 
   // Aaaaaa
 
-  KernelInfoTable* InfoTable = (KernelInfoTable*)InfoTablePtr;
+  kernelInfoTable* InfoTable = (kernelInfoTable*)InfoTablePtr;
 
   // Let's test this out
 

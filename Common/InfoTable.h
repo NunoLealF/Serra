@@ -22,7 +22,7 @@
 
   // (BIOS table)
 
-  typedef struct {
+  typedef struct __kernelBiosInfoTable {
 
     // (Pointers to BIOS-specific stuff)
 
@@ -33,11 +33,11 @@
 
     universalPtr RmWrapper; // Real mode wrapper from earlier
 
-  } __attribute__((packed)) KernelBiosInfoTable;
+  } __attribute__((packed)) kernelBiosInfoTable;
 
   // (EFI table)
 
-  typedef struct {
+  typedef struct __kernelEfiInfoTable {
 
     // (Pointer to EFI image handle)
 
@@ -49,7 +49,7 @@
     universalPtr EfiBootServices;
     universalPtr EfiRuntimeServices;
 
-  } __attribute__((packed)) KernelEfiInfoTable;
+  } __attribute__((packed)) kernelEfiInfoTable;
 
   // (Main kernel info table)
 
@@ -93,7 +93,7 @@
 
   } mmapTypeEnum;
 
-  typedef struct {
+  typedef struct __kernelInfoTable {
 
     // (Table section)
 
@@ -230,12 +230,12 @@
 
       union {
         uint64 Address;
-        KernelBiosInfoTable* Table;
+        kernelBiosInfoTable* Table;
       } BiosInfo;
 
       union {
         uint64 Address;
-        KernelEfiInfoTable* Table;
+        kernelEfiInfoTable* Table;
       } EfiInfo;
 
     } __attribute__((packed)) Firmware;
@@ -244,6 +244,6 @@
 
     uint16 Checksum;
 
-  } __attribute__((packed)) KernelInfoTable;
+  } __attribute__((packed)) kernelInfoTable;
 
 #endif

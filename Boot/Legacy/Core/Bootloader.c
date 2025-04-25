@@ -136,12 +136,12 @@ void Bootloader(void) {
   // Finally, let's initialize the kernel info table; this will be useful
   // later on.
 
-  KernelInfoTable KernelInfo;
-  KernelBiosInfoTable KernelBiosInfo;
+  kernelInfoTable KernelInfo;
+  kernelBiosInfoTable KernelBiosInfo;
 
   KernelInfo.Signature = 0x7577757E7577757E;
   KernelInfo.Version = KernelInfoTableVersion;
-  KernelInfo.Size = sizeof(KernelInfoTable);
+  KernelInfo.Size = sizeof(kernelInfoTable);
 
   KernelInfo.Kernel.Debug = Debug;
 
@@ -1343,7 +1343,7 @@ void Bootloader(void) {
 
   uint8* RawKernelInfo = (uint8*)(&KernelInfo);
 
-  for (uint16 Index = 0; Index < sizeof(KernelInfoTable); Index++) {
+  for (uint16 Index = 0; Index < sizeof(kernelInfoTable); Index++) {
     KernelInfo.Checksum += RawKernelInfo[Index];
   }
 
