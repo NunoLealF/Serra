@@ -2,9 +2,13 @@
 # This file is part of the Serra project, which is released under the MIT license.
 # For more information, please refer to the accompanying license agreement. <3
 
-# You'll need an i686-elf-gcc (32-bit) and x86_64-w64-mingw32-gcc (64-bit)
-# toolchain, along with mtools and nasm, as well as qemu if you want to
-# emulate it (and ovmf to emulate for EFI).
+# You'll need the following toolchains (with full C23 support):
+# -> An i686-elf-gcc (or other i686 ELF) toolchain;
+# -> An x86_64-elf-gcc (or other x64 ELF) toolchain;
+# -> An x86_64-w64-mingw32-gcc (or other x64 PE) toolchain.
+
+# Additionally, you'll also need mtools and nasm, as well as
+# a 64-bit version of QEMU if you want to emulate it.
 
 QEMU = qemu-system-x86_64
 QFLAGS = -cpu qemu64 -m 128
@@ -25,6 +29,9 @@ All: Clean Compile
 
 Compile:
 
+	@echo "\n\033[0;1m""Compiling [Boot/Efi]""\033[0m\n"
+	@$(MAKE) -C Boot/Efi compile
+
 	@echo "\n\033[0;1m""Compiling [Boot/Legacy]""\033[0m\n"
 	@$(MAKE) -C Boot/Legacy compile
 
@@ -40,6 +47,9 @@ Clean:
 	rm -f *.bin
 	rm -f *.img
 	rm -f *.iso
+
+	@echo "\n\033[0;1m""Cleaning [Boot/Efi]""\033[0m\n"
+	@$(MAKE) -C Boot/Efi clean
 
 	@echo "\n\033[0;1m""Cleaning [Boot/Legacy]""\033[0m\n"
 	@$(MAKE) -C Boot/Legacy clean
@@ -115,6 +125,12 @@ Legacy.img:
 
 	@mmd -i Legacy.img ::/Boot
 	@mcopy -i Legacy.img Boot/Legacy/Bootx32.bin ::/Boot/
+
+# (Add the EFI bootloader)
+
+	@mmd -i Legacy.img ::/Efi
+	@mmd -i Legacy.img ::/Efi/Boot
+	@mcopy -i Legacy.img Boot/Efi/Bootx64.efi ::/Efi/Boot/
 
 # (Add the actual kernel files)
 
