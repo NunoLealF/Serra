@@ -8,7 +8,7 @@
   // Real mode register table - initialize at (9E00h + E00h) = AC00h.
   // See more info in RmWrapper.c
 
-  typedef struct {
+  typedef struct __realModeTable {
 
     // General purpose registers.
 

@@ -7,7 +7,7 @@
 
   // EDD (Enhanced Disk Drive)-related data structures. (Used in multiple files, defined here)
 
-  typedef struct {
+  typedef struct __eddDriveParameters {
 
     // [EDD 1.x]
 
@@ -31,7 +31,7 @@
 
   } __attribute__((packed)) eddDriveParameters;
 
-  typedef volatile struct {
+  typedef volatile struct __eddDiskAddressPacket {
 
     uint8 Size;
     uint8 Reserved;
@@ -48,7 +48,7 @@
 
   // BPB (BIOS Parameter Block)-related data structures. (Used in multiple files, defined here)
 
-  typedef struct {
+  typedef struct __biosParameterBlock {
 
     uint8 Identifier[8]; // OEM identifier
 
@@ -70,7 +70,7 @@
 
   } __attribute__((packed)) biosParameterBlock;
 
-  typedef struct {
+  typedef struct __biosParameterBlock_Fat16 {
 
     uint8 DriveNumber; // The drive number of the current media/drive (VERY UNRELIABLE, DON'T TRUST UNLESS NECESSARY)
     uint8 NtFlags; // Flags, reserved for use by some operating systems
@@ -82,7 +82,7 @@
 
   } __attribute__((packed)) biosParameterBlock_Fat16;
 
-  typedef struct {
+  typedef struct __biosParameterBlock_Fat32 {
 
     uint32 SectorsPerFat; // The number of sectors per FAT (replaces the FAT16 entry in the BPB)
     uint16 Flags; // Just.. flags (I need a proper copy of the FAT32 spec)
@@ -107,7 +107,7 @@
 
   // FAT-related data structures. (Used in multiple files, defined here)
 
-  typedef struct {
+  typedef struct __fatDirectory {
 
     const char Name[8]; // This should be in uppercase, and padded with spaces;
     const char Extension[3]; // Same restrictions as above.

@@ -74,7 +74,7 @@ void RestoreState(void) {
 }
 
 
-/* void __attribute__((noreturn)) Bootloader()
+/* [[noreturn]] void Bootloader()
 
    Inputs:    (none)
    Outputs:   (none)
@@ -88,7 +88,7 @@ void RestoreState(void) {
 
 */
 
-void __attribute__((noreturn)) Bootloader(void) {
+[[noreturn]] void Bootloader(void) {
 
   // We've finally made it to our second-stage bootloader; we're in 32-bit x86 protected
   // mode with the stack at 20000h in memory, and our bootloader between 7E00h and 9E00h in
@@ -147,10 +147,10 @@ void __attribute__((noreturn)) Bootloader(void) {
   // return a table (as in eddDriveParameters) in the address at [ds:si], for the drive in
   // the dl register.
 
-  eddDriveParameters EDD_Parameters;
+  eddDriveParameters EddParameters;
 
-  Memset((void*)&EDD_Parameters, sizeof(eddDriveParameters), 0);
-  EDD_Parameters.Size = sizeof(eddDriveParameters);
+  Memset((void*)&EddParameters, sizeof(eddDriveParameters), 0);
+  EddParameters.Size = sizeof(eddDriveParameters);
 
   // (In order to actually call a BIOS function from protected mode, we'll use the real-mode
   // functions at Shared/Rm/ to do our work for us)
@@ -160,8 +160,8 @@ void __attribute__((noreturn)) Bootloader(void) {
   Table->Eax = (0x48 << 8);
   Table->Edx = DriveNumber;
 
-  Table->Ds = (uint16)((int)(&EDD_Parameters) >> 4);
-  Table->Si = (uint16)((int)(&EDD_Parameters) & 0x0F);
+  Table->Ds = (uint16)((int)(&EddParameters) >> 4);
+  Table->Si = (uint16)((int)(&EddParameters) & 0x0F);
 
   Table->Int = 0x13;
 
@@ -171,15 +171,15 @@ void __attribute__((noreturn)) Bootloader(void) {
   // (Any errors? If not, then carry on; otherwise, keep moving on with 'standard' values that
   // just hopelessly assume you have a big enough drive (and a valid BPB))
 
-  bool EDD_Enabled = true;
+  bool EddEnabled = true;
 
   if (hasFlag(Table->Eflags, CarryFlag)) {
-    EDD_Enabled = false;
+    EddEnabled = false;
   } else if (Table->Eax != (0x48 << 8)) {
-    EDD_Enabled = false;
+    EddEnabled = false;
   }
 
-  if (EDD_Enabled == true) {
+  if (EddEnabled == true) {
 
     Message(Ok, "Successfully obtained EDD/drive data.");
 
@@ -187,16 +187,16 @@ void __attribute__((noreturn)) Bootloader(void) {
 
     Message(Warning, "Unable to get EDD data - relying on defaults from now on.");
 
-    EDD_Parameters.Size = 0x1A;
-    EDD_Parameters.Flags = 0xFFFF;
-    EDD_Parameters.BytesPerSector = 512;
+    EddParameters.Size = 0x1A;
+    EddParameters.Flags = 0xFFFF;
+    EddParameters.BytesPerSector = 512;
 
   }
 
-  // (Finally, if EDD_Enabled is false, then let's just do a quick sanity check to see if the
+  // (Finally, if EddEnabled is false, then let's just do a quick sanity check to see if the
   // disk read function is even working)
 
-  if (EDD_Enabled == false) {
+  if (EddEnabled == false) {
 
     #define SanityCheckValue 0xE621
 
@@ -221,12 +221,12 @@ void __attribute__((noreturn)) Bootloader(void) {
   // which is a table in our bootsector (which is already in memory, from 7C00h to 7E00h),
   // like this:
 
-  #define Bpb_Address 0x7C00
+  #define BpbAddress 0x7C00
 
-  biosParameterBlock Bpb = *(biosParameterBlock*)(Bpb_Address + 3);
+  biosParameterBlock Bpb = *(biosParameterBlock*)(BpbAddress + 3);
 
-  // biosParameterBlock_Fat16 Extended_Bpb16 = *(biosParameterBlock_Fat16*)(Bpb_Address + 36);
-  biosParameterBlock_Fat32 Extended_Bpb32 = *(biosParameterBlock_Fat32*)(Bpb_Address + 36);
+  [[maybe_unused]] biosParameterBlock_Fat16 ExtendedBpb_16 = *(biosParameterBlock_Fat16*)(BpbAddress + 36);
+  [[maybe_unused]] biosParameterBlock_Fat32 ExtendedBpb_32 = *(biosParameterBlock_Fat32*)(BpbAddress + 36);
 
   Putchar('\n', 0);
 
@@ -241,7 +241,7 @@ void __attribute__((noreturn)) Bootloader(void) {
   // as used by BIOS functions), and the logical sector size (as specified in the BPB).
 
   LogicalSectorSize = Bpb.BytesPerSector;
-  PhysicalSectorSize = EDD_Parameters.BytesPerSector;
+  PhysicalSectorSize = EddParameters.BytesPerSector;
 
 
   // After that, we'll want to actually start *reading* from the BPB.
@@ -263,7 +263,7 @@ void __attribute__((noreturn)) Bootloader(void) {
   uint32 FatSize = Bpb.SectorsPerFat;
 
   if (FatSize == 0) {
-    FatSize = Extended_Bpb32.SectorsPerFat;
+    FatSize = ExtendedBpb_32.SectorsPerFat;
   }
 
   // (The number of root sectors (if the filesystem is FAT32, then this is always zero))
@@ -319,7 +319,7 @@ void __attribute__((noreturn)) Bootloader(void) {
   if (PartitionIsFat32 == false) {
     RootCluster = 2;
   } else {
-    RootCluster = Extended_Bpb32.RootCluster;
+    RootCluster = ExtendedBpb_32.RootCluster;
   }
 
   uint32 RootSectorOffset = DataSectorOffset;
@@ -357,12 +357,12 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   // (Our third-stage bootloader will occupy the space from 20000h onwards)
 
-  #define Bootloader_Address 0x20000
+  #define BootloaderAddress 0x20000
 
-  bool ReadFileSuccessful = ReadFile((void*)Bootloader_Address, BootloaderDirectory, Bpb.SectorsPerCluster, Bpb.HiddenSectors, Bpb.ReservedSectors, DataSectorOffset, PartitionIsFat32);
+  bool ReadFileSuccessful = ReadFile((void*)BootloaderAddress, BootloaderDirectory, Bpb.SectorsPerCluster, Bpb.HiddenSectors, Bpb.ReservedSectors, DataSectorOffset, PartitionIsFat32);
 
   if (ReadFileSuccessful == true) {
-    Message(Ok, "Successfully read Boot/Bootx32.bin to %xh.", Bootloader_Address);
+    Message(Ok, "Successfully read Boot/Bootx32.bin to %xh.", BootloaderAddress);
   } else {
     Panic("Failed to read Boot/Bootx32.bin from disk.", 0);
   }
@@ -376,7 +376,7 @@ void __attribute__((noreturn)) Bootloader(void) {
   // First, we need to create and fill out the table, like this (see Shared/InfoTables.h
   // for more details):
 
-  bootloaderInfoTable* InfoTable = (bootloaderInfoTable*)(InfoTable_Location);
+  bootloaderInfoTable* InfoTable = (bootloaderInfoTable*)(InfoTableLocation);
 
   // (Fill out table info)
 
@@ -387,26 +387,26 @@ void __attribute__((noreturn)) Bootloader(void) {
 
   // (Fill out system info)
 
-  InfoTable->System_Info.Debug = Debug;
+  InfoTable->SystemInfo.Debug = Debug;
 
   // (Fill out disk/EDD info)
 
   InfoTable->DriveNumber = DriveNumber;
-  InfoTable->Edd_Enabled = EDD_Enabled; // This should be whether EDD is enabled
+  InfoTable->EddEnabled = EddEnabled; // This should be whether EDD is enabled
 
   InfoTable->LogicalSectorSize = LogicalSectorSize;
   InfoTable->PhysicalSectorSize = PhysicalSectorSize;
 
-  Memcpy(&InfoTable->Edd_Info, &EDD_Parameters, sizeof(InfoTable->Edd_Info));
+  Memcpy(&InfoTable->EddInfo, &EddParameters, sizeof(InfoTable->EddInfo));
 
   // (Fill out filesystem/BPB info)
 
-  InfoTable->Bpb_IsFat32 = PartitionIsFat32;
-  Memcpy(&InfoTable->Bpb, (void*)(Bpb_Address + 3), sizeof(InfoTable->Bpb));
+  InfoTable->BpbIsFat32 = PartitionIsFat32;
+  Memcpy(&InfoTable->Bpb, (void*)(BpbAddress + 3), sizeof(InfoTable->Bpb));
 
   // (Fill out terminal info)
 
-  Memcpy(&InfoTable->Terminal_Info, &TerminalTable, sizeof(InfoTable->Terminal_Info));
+  Memcpy(&InfoTable->TerminalInfo, &TerminalTable, sizeof(InfoTable->TerminalInfo));
 
 
   // And now, all that's left to do is to jump to the next stage (using inline assembly).
@@ -414,7 +414,7 @@ void __attribute__((noreturn)) Bootloader(void) {
   // (In the event that the function returns for some reason, we'll just print out an error
   // and halt)
 
-  __asm__ __volatile__ ("call *%0" : : "r"(Bootloader_Address));
+  __asm__ __volatile__ ("call *%0" : : "r"(BootloaderAddress));
 
   Panic("Failed to load the third-stage bootloader.", 0);
   for(;;);

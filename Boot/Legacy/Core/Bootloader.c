@@ -103,8 +103,7 @@ void RestoreState(void) {
    -> (8) Read the kernel (located in Boot/Serra/Kernel.elf) from
    the current FAT filesystem, and process ELF headers;
 
-   -> (9) Initialize paging, mapping the kernel to a higher-half,
-   and identity-mapping everything else;
+   -> (9) Initialize paging (more specifically, identity-mapping);
 
    -> (10) Prepare the necessary environment to transfer control
    to the kernel, and prepare info tables, before running the
@@ -119,7 +118,7 @@ void Bootloader(void) {
   // First, let's check to see if the signature is even valid (if not,
   // just return to whichever function called us):
 
-  bootloaderInfoTable* InfoTable = (bootloaderInfoTable*)(InfoTable_Location);
+  bootloaderInfoTable* InfoTable = (bootloaderInfoTable*)(InfoTableLocation);
 
   if (InfoTable->Signature != 0x65363231) {
     return;
@@ -128,8 +127,8 @@ void Bootloader(void) {
   // If it is, then that means we have a valid InfoTable, so let's set
   // the debug flag, and initialize the terminal table:
 
-  Debug = InfoTable->System_Info.Debug;
-  Memcpy(&TerminalTable, &InfoTable->Terminal_Info, sizeof(InfoTable->Terminal_Info));
+  Debug = InfoTable->SystemInfo.Debug;
+  Memcpy(&TerminalTable, &InfoTable->TerminalInfo, sizeof(InfoTable->TerminalInfo));
 
   Putchar('\n', 0);
   Message(Boot, "Successfully entered the third-stage bootloader.");
@@ -148,7 +147,7 @@ void Bootloader(void) {
 
   // (Copy contents of TerminalTable)
 
-  KernelInfo.Graphics.Type = VgaText; // Will be updated later on if we find VESA support
+  KernelInfo.Graphics.Type = VgaText; // Automatically updated if we find VESA support
 
   KernelInfo.Graphics.VgaText.PosX = TerminalTable.PosX;
   KernelInfo.Graphics.VgaText.LimitX = TerminalTable.LimitX;
@@ -198,7 +197,7 @@ void Bootloader(void) {
   Message(Boot, "Preparing to enable the A20 line");
   KernelInfo.System.A20Method = ByUnknown;
 
-  if (Check_A20() == true) {
+  if (CheckA20() == true) {
 
     // If the output of the CheckA20 function is true, then that means that
     // the A20 line has already been enabled (either by the firmware
@@ -218,10 +217,10 @@ void Bootloader(void) {
     Putchar('\n', 0);
     Message(Boot, "Attempting to enable the A20 line using the 8042 keyboard method");
 
-    EnableKbd_A20();
-    Wait_A20();
+    EnableA20ByKbd();
+    WaitA20();
 
-    if (Check_A20() == true) {
+    if (CheckA20() == true) {
 
       KernelInfo.System.A20Method = ByKeyboard;
       Message(Ok, "The A20 line has successfully been enabled.");
@@ -239,10 +238,10 @@ void Bootloader(void) {
       Putchar('\n', 0);
       Message(Boot, "Attempting to enable the A20 line using the fast A20 method");
 
-      EnableFast_A20();
-      Wait_A20();
+      EnableA20ByFast();
+      WaitA20();
 
-      if (Check_A20() == true) {
+      if (CheckA20() == true) {
 
         KernelInfo.System.A20Method = ByFast;
         Message(Ok, "The A20 line has successfully been enabled.");
@@ -819,18 +818,18 @@ void Bootloader(void) {
   // the physical and logical sector size, etc.
 
   DriveNumber = InfoTable->DriveNumber;
-  bool Edd_Enabled = InfoTable->Edd_Enabled;
+  bool EddEnabled = InfoTable->EddEnabled;
 
   LogicalSectorSize = InfoTable->LogicalSectorSize;
   PhysicalSectorSize = InfoTable->PhysicalSectorSize;
 
-  bool IsFat32 = InfoTable->Bpb_IsFat32;
+  bool IsFat32 = InfoTable->BpbIsFat32;
 
   Message(Info, "Successfully obtained drive/EDD-related information.");
 
   // (Commit information to the info table)
 
-  KernelInfo.FsDisk.DiskAccessMethod = ((Edd_Enabled == false) ? Int13 : Int13WithEdd);
+  KernelInfo.FsDisk.DiskAccessMethod = ((EddEnabled == false) ? Int13 : Int13WithEdd);
   KernelInfo.FsDisk.DriveNumber = DriveNumber;
 
   KernelInfo.FsDisk.LogicalBytesPerSector = LogicalSectorSize;
@@ -843,13 +842,13 @@ void Bootloader(void) {
   // called a BIOS Parameter Block, and which is defined differently
   // based on whether the filesystem is FAT16 or FAT32)
 
-  #define Bpb_Address (&InfoTable->Bpb[0])
+  #define BpbAddress (&InfoTable->Bpb[0])
 
-  biosParameterBlock Bpb = *(biosParameterBlock*)(Bpb_Address);
-  KernelInfo.FsDisk.Bpb.Address = (uintptr)Bpb_Address;
+  biosParameterBlock Bpb = *(biosParameterBlock*)(BpbAddress);
+  KernelInfo.FsDisk.Bpb.Address = (uintptr)BpbAddress;
 
-  [[maybe_unused]] biosParameterBlock_Fat16 Extended_Bpb16 = *(biosParameterBlock_Fat16*)(Bpb_Address + 33);
-  [[maybe_unused]] biosParameterBlock_Fat32 Extended_Bpb32 = *(biosParameterBlock_Fat32*)(Bpb_Address + 33);
+  [[maybe_unused]] biosParameterBlock_Fat16 ExtendedBpb_16 = *(biosParameterBlock_Fat16*)(BpbAddress + 33);
+  [[maybe_unused]] biosParameterBlock_Fat32 ExtendedBpb_32 = *(biosParameterBlock_Fat32*)(BpbAddress + 33);
 
   // (Just in case, let's do a sanity check)
 
@@ -875,7 +874,7 @@ void Bootloader(void) {
   uint32 FatSize = Bpb.SectorsPerFat;
 
   if (FatSize == 0) {
-    FatSize = Extended_Bpb32.SectorsPerFat;
+    FatSize = ExtendedBpb_32.SectorsPerFat;
   }
 
   // -> The number of root sectors in the partition
@@ -906,7 +905,7 @@ void Bootloader(void) {
   if (IsFat32 == false) {
     RootCluster = 2;
   } else {
-    RootCluster = Extended_Bpb32.RootCluster;
+    RootCluster = ExtendedBpb_32.RootCluster;
   }
 
   uint32 RootSectorOffset = DataSectorOffset;

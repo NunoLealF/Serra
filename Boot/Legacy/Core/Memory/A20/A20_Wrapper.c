@@ -5,7 +5,7 @@
 #include "../../../Shared/Stdint.h"
 #include "../Memory.h"
 
-/* bool Check_A20()
+/* bool CheckA20()
 
    Inputs:    (None, but reserves value in a20TestAddress)
    Outputs:   bool - Whether the A20 line is enabled (true) or disabled (false)
@@ -26,7 +26,7 @@
 
 */
 
-bool Check_A20(void) {
+bool CheckA20(void) {
 
   // Values like 00000000h or FFFFFFFFh might be already present on both memory addresses, so we
   // use a unique 'magic number' to do the comparison.
@@ -53,7 +53,7 @@ bool Check_A20(void) {
 }
 
 
-/* void Wait_A20()
+/* void WaitA20()
 
    Inputs:    (None)
    Outputs:   (None)
@@ -66,7 +66,7 @@ bool Check_A20(void) {
 
 */
 
-void Wait_A20(void) {
+void WaitA20(void) {
 
   for (int i = 0; i < 4096; i++) {
     __asm__("nop");

@@ -11,9 +11,9 @@
 
   // [VERSION 1]
 
-  #define InfoTable_Location 0xAE00
+  #define InfoTableLocation 0xAE00
 
-  typedef struct {
+  typedef struct __bootloaderInfoTable {
 
     // [Table-related info]
 
@@ -24,23 +24,21 @@
 
     // [System-related]
 
-    struct __System_Info {
+    struct __SystemInfo {
 
       bool Debug;
 
-    } __attribute__((packed)) System_Info;
+    } __attribute__((packed)) SystemInfo;
 
     // [Disk/EDD]
 
     uint8 DriveNumber; // Same as SaveDL, or if Edd_Valid is false, 0x80
-    bool Edd_Enabled; // Whether EDD functions work or not
+    bool EddEnabled; // Whether EDD functions work or not
 
     uint16 LogicalSectorSize; // FAT/BPB
     uint16 PhysicalSectorSize; // EDD/int13h
 
-    struct __Edd_Info {
-
-      // [EDD 1.x]
+    struct __EddInfo {
 
       uint16 Size;
       uint16 Flags;
@@ -52,20 +50,16 @@
       uint64 NumSectors;
       uint16 BytesPerSector;
 
-      // [EDD 2.x and 3.x]
-
-      uint8 Edd_ExtraData[40];
-
-    } __attribute__((packed)) Edd_Info;
+    } __attribute__((packed)) EddInfo;
 
     // [Filesystem and BPB]
 
-    bool Bpb_IsFat32;
+    bool BpbIsFat32;
     uint8 Bpb[120]; // Regular+extended BPB (usually starts at 7C00h + 3!)
 
     // [Terminal]
 
-    struct __Terminal_Info {
+    struct __TerminalInfo {
 
       uint16 PosX;
       uint16 PosY;
@@ -74,7 +68,7 @@
       uint16 LimitX;
       uint16 LimitY;
 
-    } __attribute__((packed)) Terminal_Info;
+    } __attribute__((packed)) TerminalInfo;
 
   } __attribute__((packed)) bootloaderInfoTable;
 

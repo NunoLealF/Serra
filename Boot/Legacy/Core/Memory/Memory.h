@@ -9,11 +9,11 @@
 
   #define A20_TestAddress 0xF000
 
-  extern void EnableKbd_A20(void);
-  extern void EnableFast_A20(void);
+  extern void EnableA20ByKbd(void);
+  extern void EnableA20ByFast(void);
 
-  bool Check_A20(void);
-  void Wait_A20(void);
+  bool CheckA20(void);
+  void WaitA20(void);
 
   // Standard memory functions from the (shared) Memory folder
 
@@ -21,7 +21,7 @@
 
   // Memory-map-related structures, from Mmap/Mmap.c.
 
-  typedef struct {
+  typedef struct __mmapEntry {
 
     uint64 Base;
     uint64 Limit;

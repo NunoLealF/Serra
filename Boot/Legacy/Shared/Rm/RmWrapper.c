@@ -42,38 +42,45 @@
 
 */
 
-typedef struct {
+// (This is the *same* table in Rm.h, so in order to avoid causing
+// any conflicts, we just do this.)
 
-  // General purpose registers.
+#ifndef SERRA_SHARED_REALMODE_H
 
-  volatile uint32 Eax;
-  volatile uint32 Ebx;
-  volatile uint32 Ecx;
-  volatile uint32 Edx;
+  typedef struct __realModeTable {
 
-  // Segment registers.
+    // General purpose registers.
 
-  volatile uint16 Ds;
-  volatile uint16 Es;
+    volatile uint32 Eax;
+    volatile uint32 Ebx;
+    volatile uint32 Ecx;
+    volatile uint32 Edx;
 
-  // Increment/decrement registers.
+    // Segment registers.
 
-  volatile uint16 Si;
-  volatile uint16 Di;
+    volatile uint16 Ds;
+    volatile uint16 Es;
 
-  // Base pointer register.
+    // Increment/decrement registers.
 
-  volatile uint16 Bp;
+    volatile uint16 Si;
+    volatile uint16 Di;
 
-  // Eflags register (output-only).
+    // Base pointer register.
 
-  const volatile uint32 Eflags;
+    volatile uint16 Bp;
 
-  // Interrupt that should be called (input-only).
+    // Eflags register (output-only).
 
-  uint8 Int;
+    const volatile uint32 Eflags;
 
-} __attribute__((packed)) realModeTable;
+    // Interrupt that should be called (input-only).
+
+    uint8 Int;
+
+  } __attribute__((packed)) realModeTable;
+
+#endif
 
 
 // Functions that save and restore the state of the system, to use within RealMode(); these

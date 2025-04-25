@@ -5,8 +5,8 @@
 # We want to be able to call these functions (except for KbdInWait and KbdOutWait) from the rest of
 # our bootloader, so we use .globl to turn them into global functions.
 
-.globl EnableKbd_A20
-.globl EnableFast_A20
+.globl EnableA20ByKbd
+.globl EnableA20ByFast
 
 
 #  void KbdInWait(), void KbdOutWait()
@@ -35,7 +35,7 @@ KbdOutWait:
   ret
 
 
-#  void EnableKbd_A20()
+#  void EnableA20ByKbd()
 #
 #  Inputs:   (None)
 #  Outputs:  (None)
@@ -51,7 +51,7 @@ KbdOutWait:
 #  Finally, we tell the system we want to set our newly-edited CCB as the current CCB, and we bring
 #  the current system state back to normal (enabling the two PS/2 ports, enabling interrupts, etc).
 
-EnableKbd_A20:
+EnableA20ByKbd:
 
   # As we'll be using the C calling convention, push everything to the stack as
   # to not damage the state of the program afterwards.
@@ -131,7 +131,7 @@ EnableKbd_A20:
   ret
 
 
-#  void EnableFastA20()
+#  void EnableA20ByFast()
 #
 #  Inputs:   (None)
 #  Outputs:  (None)
@@ -145,7 +145,7 @@ EnableKbd_A20:
 #  it's probably fine tbh.
 #
 
-EnableFast_A20:
+EnableA20ByFast:
 
   # As we'll be using the C calling convention, push everything to the stack as
   # to not damage the state of the program afterwards.

@@ -17,7 +17,7 @@
 
   // Declare functions in Bootloader.c
 
-  void __attribute__((noreturn)) Init(void);
-  void __attribute__((noreturn)) Bootloader(void);
+  [[noreturn]] void Init(void);
+  [[noreturn]] void Bootloader(void);
 
 #endif

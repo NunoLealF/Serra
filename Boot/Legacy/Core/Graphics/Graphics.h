@@ -12,7 +12,7 @@
 
   // VBE-related data structures, from Vbe.c
 
-  typedef struct {
+  typedef struct __vbeInfoBlock {
 
     // (VBE 1.0 and higher)
 
@@ -42,7 +42,7 @@
 
   } __attribute__((packed)) vbeInfoBlock;
 
-  typedef struct {
+  typedef struct __vbeModeInfoBlock {
 
     // (VBE 1.0 and higher)
 
@@ -143,7 +143,7 @@
 
   // EDID-related data structures, from Vbe.c
 
-  typedef struct {
+  typedef struct __edidDetailedTiming {
 
     struct __Timings {
 
@@ -176,7 +176,7 @@
 
   } __attribute__((packed)) edidDetailedTiming;
 
-  typedef struct {
+  typedef struct __edidInfoBlock {
 
     uint64 Signature; // This should be 00FFFFFFFFFFFF00h
 
