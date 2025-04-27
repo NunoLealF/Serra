@@ -19,6 +19,8 @@
 
 efiStatus efiAbi SEfiBootloader([[maybe_unused]] efiHandle ImageHandle, efiSystemTable* SystemTable) {
 
+  // (Check signatures. If below EFI 1.1 or 2.0, go back..?)
+
   // Print something - we temporarily set the attribute (color code pretty much,
   // works *just* like VGA) to 0x0F instead of 0x07
 
@@ -26,28 +28,35 @@ efiStatus efiAbi SEfiBootloader([[maybe_unused]] efiHandle ImageHandle, efiSyste
 
   SystemTable->ConOut->SetAttribute(SystemTable->ConOut, 0x0F);
   SystemTable->ConOut->OutputString(SystemTable->ConOut, u"[SEfiBootloader] Hi sigmas <3 \n\r");
-  SystemTable->ConOut->SetAttribute(SystemTable->ConOut, 0x0B);
+  SystemTable->ConOut->SetAttribute(SystemTable->ConOut, 0x07);
 
-  // Wait for 5 seconds, printing the number each second
-  // (For some reason O3 causes this to display "12222"?? lol what)
+  // Try to find gop
 
-  char16* String = u"1";
+  efiGraphicsOutputProtocol* GopInterface;
+  efiUuid GopUuid = efiGraphicsOutputProtocol_Uuid;
 
-  for (int i = 0; i < 5; i++) {
+  efiStatus Status = SystemTable->BootServices->LocateProtocol(&GopUuid, NULL, (void**)(&GopInterface));
 
-    SystemTable->ConOut->OutputString(SystemTable->ConOut, String);
-    String[0]++;
+  if (isSuccess(Status)) {
 
-    SystemTable->BootServices->RaiseTpl(TplHighLevel);
-    SystemTable->BootServices->Stall(1000000);
-    SystemTable->BootServices->RestoreTpl(TplApplication);
+    SystemTable->ConOut->SetAttribute(SystemTable->ConOut, 0x0A);
+    SystemTable->ConOut->OutputString(SystemTable->ConOut, u"Yay, we found GOP\n\r");
+
+  } else {
+
+    SystemTable->ConOut->SetAttribute(SystemTable->ConOut, 0x0C);
+    SystemTable->ConOut->OutputString(SystemTable->ConOut, u"Couldn't find GOP :(\n\r");
 
   }
 
-  // Go to the next line, set attribute back to normal and then return.
+  // Halt, switch to regular text color, then return.
+
+  for (uint64 i = 0; i < 5000000000; i++) {
+    __asm__ __volatile__ ("nop");
+  }
 
   SystemTable->ConOut->SetAttribute(SystemTable->ConOut, 0x07);
-  SystemTable->ConOut->OutputString(SystemTable->ConOut, u"\n\r");
+  SystemTable->ConOut->OutputString(SystemTable->ConOut, u"Okay, finished halting\n\r");
 
   return EfiSuccess;
 

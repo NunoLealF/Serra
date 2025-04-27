@@ -2,12 +2,23 @@
 // This file is part of the Serra project, which is released under the MIT license.
 // For more information, please refer to the accompanying license agreement. <3
 
+// [Note] This header file is meant to provide a minimal implementation of UEFI
+// for use within an x86-64 bootloader; as such, it doesn't implement anything
+// beyond what would be needed for one, nor does it make an attempt to represent
+// a standard or complete implementation of any UEFI specification.
+
 #ifndef SERRA_EFI_H
 #define SERRA_EFI_H
 
-  // (Miscellaneous definitions)
+  // (Platform-specific definitions)
 
-  #define efiAbi __attribute__((ms_abi)) // EFI uses the Microsoft/Windows ABI, not the System-V/Unix convention, so we have to specify that
+  // EFI uses the Microsoft ABI for C, *not* the System V ABI (which is used
+  // by Linux, macOS, Unix, etc.), so we have to manually specify that.
+
+  #define efiAbi __attribute__((ms_abi))
+
+
+  // (Miscellaneous macros and definitions)
 
   #define calculateRevision(Major, Minor) ((Major << 16) | Minor)
   #define errorBit (1ULL << 63)
@@ -22,15 +33,18 @@
 
   typedef uint64 efiPhysicalAddress;
   typedef uint64 efiVirtualAddress;
-  typedef uint64 efiNotImplemented; // sizeof(uint64*) is still sizeof(void*), so it's okay
+  typedef uint64 efiNotImplemented; // sizeof(uint64*) is still sizeof(void*), so this is okay
 
   typedef struct __efiUuid {
-    uint64 Data[2];
+
+    uint32 Uuid_A;
+    uint16 Uuid_B[2];
+    uint8 Uuid_C[8];
+
   } efiUuid;
 
 
-
-  // (TPL (Task Priority Level) enum definition)
+  // (Enums, and other types with a limited set of definitions)
 
   typedef enum __efiTpl : uint64 {
 
@@ -40,10 +54,6 @@
     TplHighLevel = 31
 
   } efiTpl;
-
-
-
-  // (EFI Status enum definition)
 
   typedef enum __efiStatus : uint64 {
 
@@ -100,194 +110,9 @@
   } efiStatus;
 
 
+  // (Necessary table and protocol definitions)
 
-  // (EFI Table Header)
-
-  typedef struct __efiTableHeader {
-
-    uint64 Signature; // Should be equal to the given signature.
-    uint32 Revision;
-    uint32 Size;
-
-    uint32 Crc32;
-    uint32 Reserved;
-
-  } efiTableHeader;
-
-
-
-  // (Simple Text Output Protocol)
-
-  typedef efiStatus (efiAbi *efiClearScreen) (efiProtocol This);
-  typedef efiStatus (efiAbi *efiSetAttribute) (efiProtocol This, uint64 Attribute);
-  typedef efiStatus (efiAbi *efiOutputString) (efiProtocol This, char16* String);
-
-  #define efiSimpleTextOutputProtocol_Uuid {0x11D269C7387477C2, 0x3B7269C9A000398E}
-
-  typedef struct __efiSimpleTextOutputProtocol {
-
-    efiNotImplemented Reset;
-
-    efiOutputString OutputString;
-    efiNotImplemented TestString;
-
-    efiNotImplemented QueryMode;
-    efiNotImplemented SetMode;
-    efiSetAttribute SetAttribute;
-
-    efiClearScreen ClearScreen;
-    efiNotImplemented SetCursor;
-    efiNotImplemented EnableCursor;
-
-    efiNotImplemented* Mode;
-
-  } efiSimpleTextOutputProtocol;
-
-
-
-  // (Simple Text Input Protocol)
-
-  #define efiSimpleTextInputProtocol_Uuid {0x11D269C7387477C1, 0x3B7269C9A000398E}
-
-  typedef struct __efiSimpleTextInputProtocol {
-
-    efiNotImplemented Reset;
-    efiNotImplemented ReadKeyStroke;
-
-    efiEvent WaitForKey;
-
-  } efiSimpleTextInputProtocol;
-
-
-
-  // (Boot Services table)
-
-  typedef efiTpl (efiAbi *efiRaiseTpl) (efiTpl NewTpl);
-  typedef void (efiAbi *efiRestoreTpl) (efiTpl OldTpl);
-  typedef efiStatus (efiAbi *efiStall) (uint64 Microseconds);
-
-  #define efiBootServicesSignature 0x56524553544F4F42
-
-  typedef struct __efiBootServices {
-
-    // Table header
-
-    efiTableHeader Hdr;
-
-    // TPL-related functions
-
-    efiRaiseTpl RaiseTpl;
-    efiRestoreTpl RestoreTpl;
-
-    // Memory-related functions
-
-    efiNotImplemented AllocatePages;
-    efiNotImplemented FreePages;
-
-    efiNotImplemented GetMemoryMap;
-
-    efiNotImplemented AllocatePool;
-    efiNotImplemented FreePool;
-
-    // Timing-related functions
-
-    efiNotImplemented CreateEvent;
-    efiNotImplemented SetTimer;
-    efiNotImplemented WaitForEvent;
-    efiNotImplemented SignalEvent;
-    efiNotImplemented CloseEvent;
-    efiNotImplemented CheckEvent;
-
-    // Protocol/handler-related functions
-
-    efiNotImplemented InstallProtocolInterface;
-    efiNotImplemented ReinstallProtocolInterface;
-    efiNotImplemented UninstallProtocolInterface;
-    efiNotImplemented HandleProtocol;
-    void* Reserved2;
-
-    efiNotImplemented RegisterProtocolNotify;
-    efiNotImplemented LocateHandle;
-    efiNotImplemented LocateDevicePath;
-    efiNotImplemented InstallConfigurationTable;
-
-    // Image-related functions
-
-    efiNotImplemented LoadImage;
-    efiNotImplemented StartImage;
-    efiNotImplemented Exit;
-    efiNotImplemented UnloadImage;
-
-    efiNotImplemented ExitBootServices;
-
-    // Miscellaneous functions
-
-    efiNotImplemented GetNextMonotonicCount;
-    efiStall Stall;
-    efiNotImplemented SetWatchdogTimer;
-
-    // Driver-related functions
-
-    efiNotImplemented ConnectController;
-    efiNotImplemented DisconnectController;
-
-    // Protocol-related functions
-
-    efiNotImplemented OpenProtocol;
-    efiNotImplemented CloseProtocol;
-    efiNotImplemented OpenProtocolInformation;
-
-    efiNotImplemented ProtocolsPerHandle;
-    efiNotImplemented LocateHandleBuffer;
-    efiNotImplemented LocateProtocol;
-
-    efiNotImplemented InstallMultipleProtocolInterfaces;
-    efiNotImplemented UninstallMultipleProtocolInterfaces;
-
-    // CRC-related functions
-
-    efiNotImplemented CalculateCrc32;
-
-    // More miscellaneous functions
-
-    efiNotImplemented CopyMem;
-    efiNotImplemented SetMem;
-    efiNotImplemented CreateEventEx;
-
-  } efiBootServices;
-
-
-
-  // (System Table)
-
-  #define efiSystemTableSignature 0x5453595320494249
-
-  typedef struct __efiSystemTable {
-
-    // Table header.
-
-    efiTableHeader Hdr;
-
-    // Everything else
-
-    char16* FirmwareVendor;
-    uint32 FirmwareRevision;
-
-    efiHandle ConsoleInHandle;
-    efiSimpleTextInputProtocol* ConIn;
-
-    efiHandle ConsoleOutHandle;
-    efiSimpleTextOutputProtocol* ConOut;
-
-    efiHandle StandardErrorHandle;
-    efiSimpleTextOutputProtocol* Stderr;
-
-    efiNotImplemented* RuntimeServices; // efiRuntimeServices*
-    efiBootServices* BootServices;
-
-    uint64 NumberOfTableEntries;
-    efiNotImplemented* ConfigurationTable; // efiConfigurationTable*
-
-  } efiSystemTable;
+  #include "Protocols.h"
+  #include "Tables.h"
 
 #endif
