@@ -21,14 +21,14 @@ OBJD = x86_64-w64-mingw32-objdump
 # -ffreestanding: This is a freestanding environment. Also, implies fno-builtin.
 # -fpie: Compile our code into a position-independent executable.
 # -maccumulate-outgoing-args: Necessary for the EFI/Microsoft ABI on GCC.
-# -std=c23: Use the regular C23 standard (GCC 14+, Clang 20+)
+# -std=c2x: Use the regular C23 standard (GCC 13+, Clang 16+)
 # -O3: Optimize the resulting file/binary for *speed*.
 # -Wall: Enable all warnings.
 # -Wextra: Enable even more warnings. (Not sure why wall doesn't take care of this)
 # -Wpedantic: Be pedantic about the C standard / any possible mistakes
 
 LDFLAGS = -e SEfiBootloader -nostdlib -static-pie -Wl,--subsystem,10
-CFLAGS = -std=c23 -ffreestanding -fpie -maccumulate-outgoing-args -O3 -Wall -Wextra -Wpedantic
+CFLAGS = -std=c2x -ffreestanding -fpie -maccumulate-outgoing-args -O3 -Wall -Wextra -Wpedantic
 
 
 # The .PHONY directive is used on targets that don't output anything. For example, running 'make all' builds our

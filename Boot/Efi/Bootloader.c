@@ -29,6 +29,7 @@ efiStatus efiAbi SEfiBootloader([[maybe_unused]] efiHandle ImageHandle, efiSyste
   SystemTable->ConOut->SetAttribute(SystemTable->ConOut, 0x0B);
 
   // Wait for 5 seconds, printing the number each second
+  // (For some reason O3 causes this to display "12222"?? lol what)
 
   char16* String = u"1";
 

@@ -12,7 +12,7 @@
 
 QEMU = qemu-system-x86_64
 QFLAGS = -cpu qemu64 -m 128
-OVMFDIR = /usr/share/OVMF
+OVMFDIR = /usr/share/OVMF/OVMF_CODE_4M.fd
 
 # The .PHONY directive is used on targets that don't output anything. For example, running 'make all' builds our
 # bootloader, but it doesn't output any specific files; it just goes through a lot of targets; the target that builds
@@ -70,7 +70,7 @@ RunBochs:
 
 RunEfi:
 	@echo "\n\033[0;1m""Launching QEMU (EFI mode).." "\033[0m"
-	$(QEMU) $(QFLAGS) -bios $(OVMFDIR)/OVMF_CODE.fd -net none -drive file=Legacy.img,format=raw
+	$(QEMU) $(QFLAGS) -drive if=pflash,format=raw,unit=0,file=$(OVMFDIR) -net none -drive file=Legacy.img,format=raw
 
 RunGdb:
 	@echo "\n\033[0;1m""Launching QEMU (legacy mode) with GDB.." "\033[0m"
