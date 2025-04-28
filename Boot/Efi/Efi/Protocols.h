@@ -61,13 +61,14 @@
 
   // (Simple Text Output Protocol-related definitions)
 
+  typedef efiStatus (efiAbi *efiReset) (efiProtocol This, bool ExtendedVerification);
   typedef efiStatus (efiAbi *efiClearScreen) (efiProtocol This);
   typedef efiStatus (efiAbi *efiSetAttribute) (efiProtocol This, uint64 Attribute);
   typedef efiStatus (efiAbi *efiOutputString) (efiProtocol This, char16* String);
 
   typedef struct __efiSimpleTextOutputProtocol {
 
-    efiNotImplemented Reset;
+    efiReset Reset;
 
     efiOutputString OutputString;
     efiNotImplemented TestString;
@@ -87,10 +88,12 @@
 
   // (Simple Text Input Protocol-related definitions)
 
+  typedef efiStatus (efiAbi *efiReadKeyStroke) (efiProtocol This, efiInputKey* Key);
+
   typedef struct __efiSimpleTextInputProtocol {
 
-    efiNotImplemented Reset;
-    efiNotImplemented ReadKeyStroke;
+    efiReset Reset;
+    efiReadKeyStroke ReadKeyStroke;
 
     efiEvent WaitForKey;
 

@@ -41,13 +41,13 @@
 
     // (Pointer to EFI image handle)
 
-    universalPtr EfiImageHandle;
+    universalPtr ImageHandle;
 
     // (Pointers to tables)
 
-    universalPtr EfiSystemTable;
-    universalPtr EfiBootServices;
-    universalPtr EfiRuntimeServices;
+    universalPtr SystemTable;
+    universalPtr BootServices;
+    universalPtr RuntimeServices;
 
   } __attribute__((packed)) kernelEfiInfoTable;
 

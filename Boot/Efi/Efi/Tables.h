@@ -185,7 +185,7 @@
 
     // (Boot and runtime services)
 
-    efiNotImplemented* RuntimeServices; // efiRuntimeServices*
+    efiRuntimeServices* RuntimeServices; 
     efiBootServices* BootServices;
 
     // (Configuration table)
