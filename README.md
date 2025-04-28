@@ -59,19 +59,20 @@ running `make all`.
 
 <details>
 
-  <summary> Building and running the boot manager
+  <summary>Building and running the boot manager</summary>
 
-  - **Building the boot manager**
-  - - `make clean`: Clean all leftover files (.o, .bin, .elf, .img, etc.);
-  - - `make compile`: Compile any remaining files;
-  - - **`make all`: Build everything**;
-  - **Running the boot manager**
-  - - **`make run`: Run with QEMU**;
-  - - `make runbochs`: Run with Bochs;
-  - - **`make runefi`: Run EFI with QEMU**;
-  - - `make rungdb`: Run with QEMU using the GDB debugger;
-  - - `make runkvm`: Run with QEMU using the KVM emulation layer;
-  - - `make runint`: Run with QEMU showing exceptions.
+  ### Building the boot manager
+  - `make clean`: Clean all leftover files (.o, .bin, .elf, .img, etc.);
+  - `make compile`: Compile any remaining files;
+  - **`make all`: Build everything**;
+
+  ### Running the boot manager
+  - **`make run`: Run with QEMU**;
+  - `make runbochs`: Run with Bochs;
+  - **`make runefi`: Run EFI with QEMU**;
+  - `make rungdb`: Run with QEMU using the GDB debugger;
+  - `make runkvm`: Run with QEMU using the KVM emulation layer;
+  - `make runint`: Run with QEMU showing exceptions.
 
 </details>
 
