@@ -28,13 +28,12 @@ my goal is to have it ready by **early June**.
 ## Build process
 
 > [!IMPORTANT]
-> You will need to do this on Linux.
+> You'll need to do this on Linux (or an environment like WSL); other operating systems aren't supported.
 
 In order to build Serra, you will need the following tools:
+> This project uses the C23 standard, which is fairly new, so *please* make sure you're using the latest version.
 
-- Assemblers and (cross) compilers
-- - > [!CAUTION]
-- - > This project uses the C23 standard, which is fairly new, so *please* make sure you're using the latest version.
+- **Assemblers and (cross) compilers**
 - - `nasm`, or any other compatible **x86** assembler;
 - - `i686-elf-gcc`, or any other **x86 native ELF** compiler;
 - - - This will be used to build `Boot/Legacy`, and ***must** have partial C23 support (GCC 13+, Clang 16+)*.
@@ -44,11 +43,11 @@ In order to build Serra, you will need the following tools:
 - - - This will be used to build `Boot/Efi`, and ***must** have partial C23 support (GCC 13+, Clang 16+)*;
 - - - On Ubuntu 24.04+, you can use `sudo apt install binutils-mingw-w64 gcc-mingw-w64`.
 
-- Build tools
+- **Build tools**
 - - `make` (GNU make), for the build system itself;
 - - `dd` and `mtools`, to compile the final disk image.
 
-- Other utilities *(optional)*
+- **Other utilities *(optional)***
 - - `qemu` or `bochs`, to run the final disk image;
 - - `gdb`, to debug the boot manager;
 - - `ovmf`, to use as UEFI firmware.
@@ -58,17 +57,23 @@ to make your own cross compilers ([this guide](https://wiki.osdev.org/GCC_Cross-
 is pretty useful), but once everything is done, it should be as easy as
 running `make all`.
 
-To build and run the boot manager, you can use the following:
+<details>
 
-- `make clean`: Clean all leftover files (.o, .bin, .elf, .img, etc.);
-- `make compile`: Compile any remaining files;
-- **`make all`: Build everything**;
-- **`make run`: Run with QEMU**;
-- `make runbochs`: Run with Bochs;
-- **`make runefi`: Run EFI with QEMU**;
-- `make rungdb`: Run with QEMU using the GDB debugger;
-- `make runkvm`: Run with QEMU using the KVM emulation layer;
-- `make runint`: Run with QEMU showing exceptions;
+  <summary> Building and running the boot manager
+
+  - **Building the boot manager**
+  - - `make clean`: Clean all leftover files (.o, .bin, .elf, .img, etc.);
+  - - `make compile`: Compile any remaining files;
+  - - **`make all`: Build everything**;
+  - **Running the boot manager**
+  - - **`make run`: Run with QEMU**;
+  - - `make runbochs`: Run with Bochs;
+  - - **`make runefi`: Run EFI with QEMU**;
+  - - `make rungdb`: Run with QEMU using the GDB debugger;
+  - - `make runkvm`: Run with QEMU using the KVM emulation layer;
+  - - `make runint`: Run with QEMU showing exceptions.
+
+</details>
 
 &nbsp;
 
@@ -95,9 +100,5 @@ To build and run the boot manager, you can use the following:
 
 This project has been released under the [MIT license](https://choosealicense.com/licenses/mit/).
 For more information, please refer to the accompanying license agreement. <3
-
-<sub>(Disclaimer: this project is not affiliated with MIT)</sub>
-
-&nbsp;
 
 *(last updated on April 28th 2025)*
