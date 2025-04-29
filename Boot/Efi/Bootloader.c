@@ -10,6 +10,20 @@
 #endif
 
 
+/* efiSystemTable* gST, efiBootServices* gBS, efiRuntimeServices* gRT
+
+   Definitions: (Efi/Efi.h, Efi/Tables.h)
+
+   These are global EFI tables; they're initialized here, and can be used
+   by any function that includes the Efi/Efi.h header file.
+
+*/
+
+efiSystemTable* gST;
+efiBootServices* gBS;
+efiRuntimeServices* gRT;
+
+
 /* efiStatus (efiAbi SEfiBootloader)()
 
    Inputs: efiHandle ImageHandle - The firmware-provided image handle.
@@ -23,17 +37,13 @@
 
 */
 
-// TODO: Add some sort of debug mechanism (symbol, maybe? config file??)
-// (The Legacy bootloader just uses a variable in Bootsector.asm but that's
-// obviously not portable lol.)
-
 efiStatus (efiAbi SEfiBootloader) (efiHandle ImageHandle, efiSystemTable* SystemTable) {
 
   // First and foremost, we need to check to see if the tables our firmware
   // gave us are even valid. We can do this by checking their signature
   // and size, like this:
 
-  // (Prepare kernel info table; unrelated to everything else)
+  // (Before everything, prepare a few global variables)
 
   KernelInfoTable.Firmware.IsEfi = true;
   KernelInfoTable.Firmware.EfiInfo.Address = (uint64)(&EfiInfoTable);
@@ -52,6 +62,7 @@ efiStatus (efiAbi SEfiBootloader) (efiHandle ImageHandle, efiSystemTable* System
   }
 
   EfiInfoTable.SystemTable.Ptr = SystemTable;
+  gST = SystemTable;
 
   // (Check the EFI Boot Services table)
 
@@ -64,6 +75,8 @@ efiStatus (efiAbi SEfiBootloader) (efiHandle ImageHandle, efiSystemTable* System
   }
 
   EfiInfoTable.BootServices.Ptr = SystemTable->BootServices;
+  gBS = gST->BootServices;
+
 
   // (Check the EFI Runtime Services table)
 
@@ -76,6 +89,7 @@ efiStatus (efiAbi SEfiBootloader) (efiHandle ImageHandle, efiSystemTable* System
   }
 
   EfiInfoTable.RuntimeServices.Ptr = SystemTable->RuntimeServices;
+  gRT = gST->RuntimeServices;
 
 
 
@@ -88,14 +102,14 @@ efiStatus (efiAbi SEfiBootloader) (efiHandle ImageHandle, efiSystemTable* System
   SupportsConIn = true;
   efiInputKey PhantomKey;
 
-  if (SystemTable->ConsoleInHandle == NULL) {
+  if (gST->ConsoleInHandle == NULL) {
     SupportsConIn = false;
-  } else if (SystemTable->ConIn == NULL) {
+  } else if (gST->ConIn == NULL) {
     SupportsConIn = false;
-  } else if (SystemTable->ConIn->ReadKeyStroke(SystemTable->ConIn, &PhantomKey) == EfiUnsupported) {
+  } else if (gST->ConIn->ReadKeyStroke(gST->ConIn, &PhantomKey) == EfiUnsupported) {
     SupportsConIn = false;
   } else {
-    SystemTable->ConIn->Reset(SystemTable->ConIn, true);
+    gST->ConIn->Reset(gST->ConIn, true);
   }
 
   // (Check for ConOut / efiSimpleTextOutputProtocol)
@@ -103,38 +117,34 @@ efiStatus (efiAbi SEfiBootloader) (efiHandle ImageHandle, efiSystemTable* System
   SupportsConOut = true;
   char16* PhantomString = u" ";
 
-  if (SystemTable->ConsoleOutHandle == NULL) {
+  if (gST->ConsoleOutHandle == NULL) {
     SupportsConOut = false;
-  } else if (SystemTable->ConOut == NULL) {
+  } else if (gST->ConOut == NULL) {
     SupportsConOut = false;
-  } else if (SystemTable->ConOut->OutputString(SystemTable->ConOut, PhantomString) == EfiUnsupported) {
+  } else if (gST->ConOut->Mode == NULL) {
+    SupportsConOut = false;
+  } else if (gST->ConOut->OutputString(gST->ConOut, PhantomString) == EfiUnsupported) {
     SupportsConOut = false;
   } else {
-    SystemTable->ConOut->Reset(SystemTable->ConOut, true);
+    gST->ConOut->Reset(gST->ConOut, true);
   }
 
 
+  // (TODO: Try enabling GOP)
 
-  // (TODO: Test enabling GOP, and come up with a text mode graphics function;
-  // in theory i can mostly just copy what's in Boot/Legacy/Shared/ tbf)
+  Message(Boot, u"Successfully booted into EFI application; this is purposefully long just to see if scrolling works it probably should I think.");
+  Message(Warning, u"This should display *even* if Debug == false.");
 
-  // For now this just displays a message.
+  // (TODO: Add memory-related functions, get the mmap, etc.)
 
-  if (SupportsConOut == true) {
+  Print(u"\n\r", 0);
+  Message(-1, u"TODO: Add memory-related functions, find mmap, etc.");
 
-    SystemTable->ConOut->ClearScreen(SystemTable->ConOut);
+  // (TODO: Wait until user strikes a key, then return.)
 
-    SystemTable->ConOut->SetAttribute(SystemTable->ConOut, 0x0B);
-    SystemTable->ConOut->OutputString(SystemTable->ConOut, u"You're at.. SEfiBootloader()\n\r");
-    SystemTable->ConOut->SetAttribute(SystemTable->ConOut, 0x07);
-    SystemTable->ConOut->OutputString(SystemTable->ConOut, u"TODO: You don't want to rely on this method forever, so make a proper function \n\r");
-
-  }
-
-  // Halt for a little while, and then return.
-
-  for (uint64 i = 0; i < 5000000000; i++) {
-    __asm__ __volatile__ ("nop");
+  if (SupportsConIn == true) {
+    Message(Warning, u"Press any key to return.");
+    while (gST->ConIn->ReadKeyStroke(gST->ConIn, &PhantomKey) == EfiNotReady);
   }
 
   return EfiSuccess;

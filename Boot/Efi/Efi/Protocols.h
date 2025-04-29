@@ -66,6 +66,20 @@
   typedef efiStatus (efiAbi *efiSetAttribute) (efiProtocol This, uint64 Attribute);
   typedef efiStatus (efiAbi *efiOutputString) (efiProtocol This, char16* String);
 
+  typedef struct __efiSimpleTextOutputMode {
+
+    int32 MaxMode;
+
+    int32 Mode;
+    int32 Attribute;
+
+    int32 CursorColumn;
+    int32 CursorRow;
+
+    bool CursorVisible;
+
+  } efiSimpleTextOutputMode;
+
   typedef struct __efiSimpleTextOutputProtocol {
 
     efiReset Reset;
@@ -81,7 +95,7 @@
     efiNotImplemented SetCursor;
     efiNotImplemented EnableCursor;
 
-    efiNotImplemented* Mode;
+    efiSimpleTextOutputMode* Mode;
 
   } efiSimpleTextOutputProtocol;
 

@@ -39,7 +39,9 @@ void Message(messageType Type, char* String, ...) {
   switch (Type) {
 
     case Fail:
+      [[fallthrough]];
     case Warning:
+      [[fallthrough]];
     case Error:
       Debug = true;
 

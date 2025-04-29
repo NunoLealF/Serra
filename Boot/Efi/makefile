@@ -53,6 +53,8 @@ Clean:
 	@-rm -f *.o
 	@-rm -f *.efi
 
+	@-rm -f Graphics/*.o
+
 Dump:
 	@$(OBJD) -S Bootx64.efi
 
@@ -72,8 +74,21 @@ Bootloader.o:
 	@echo "Building $@"
 	@$(CC) $(CFLAGS) -ffunction-sections -c Bootloader.c -o Bootloader.o
 
-# [Link everything into one .efi (PE executable) file]
+Graphics/Exceptions.o:
+	@echo "Building $@"
+	@$(CC) $(CFLAGS) -c Graphics/Exceptions.c -o Graphics/Exceptions.o
 
-Bootx64.efi: Bootloader.o
+Graphics/Format.o:
+	@echo "Building $@"
+	@$(CC) $(CFLAGS) -c Graphics/Format.c -o Graphics/Format.o
+
+Graphics/Graphics.o:
+	@echo "Building $@"
+	@$(CC) $(CFLAGS) -c Graphics/Graphics.c -o Graphics/Graphics.o
+
+
+# [Link everything into one .EFI file]
+
+Bootx64.efi: Bootloader.o Graphics/Exceptions.o Graphics/Format.o Graphics/Graphics.o
 	@echo "Building $@"
 	@$(CC) $(LDFLAGS) -o Bootx64.efi -ffreestanding -nolibc -nostdlib -lgcc $^

@@ -17,7 +17,6 @@
 
   #define efiAbi __attribute__((ms_abi))
 
-
   // (Miscellaneous macros and definitions)
 
   #define calculateRevision(Major, Minor) ((Major << 16) | Minor)
@@ -121,5 +120,15 @@
 
   #include "Protocols.h"
   #include "Tables.h"
+
+  // (Global variables - these *must* be available for all functions to
+  // use, and must be set by the bootloader as early as possible.)
+
+  // If you're wondering; gST is a global efiSystemTable, gBS is a global
+  // efiBootServices table, etc.
+
+  extern efiSystemTable* gST;
+  extern efiBootServices* gBS;
+  extern efiRuntimeServices* gRT;
 
 #endif
