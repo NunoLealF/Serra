@@ -57,8 +57,8 @@ efiStatus (efiAbi SEfiBootloader) (efiHandle ImageHandle, efiSystemTable* System
     return EfiInvalidParameter;
   } else if (SystemTable->Hdr.Size < sizeof(efiSystemTable)) {
     return EfiInvalidParameter;
-  } else if (SystemTable->Hdr.Revision < calculateRevision(2, 0)) {
-    return EfiUnsupported; // We don't support anything below UEFI 2.0
+  } else if (SystemTable->Hdr.Revision < calculateRevision(1, 1)) {
+    return EfiUnsupported; // We don't support anything below EFI 1.1
   }
 
   EfiInfoTable.SystemTable.Ptr = SystemTable;
@@ -76,7 +76,6 @@ efiStatus (efiAbi SEfiBootloader) (efiHandle ImageHandle, efiSystemTable* System
 
   EfiInfoTable.BootServices.Ptr = SystemTable->BootServices;
   gBS = gST->BootServices;
-
 
   // (Check the EFI Runtime Services table)
 
@@ -129,22 +128,75 @@ efiStatus (efiAbi SEfiBootloader) (efiHandle ImageHandle, efiSystemTable* System
     gST->ConOut->Reset(gST->ConOut, true);
   }
 
-  // (TODO: Switch to the best possible *text* mode, if conout is enabled.)
 
-  Message(-1, u"Switch to the best possible text mode, TODO");
 
-  // This works really similarly to how GOP does it; in fact QueryMode()
-  // actually just returns columns and rows, so you could do that lol; just
-  // make sure it's at least 80 and 25 (and then check by a*b)
+  // Now that we know whether we can use EFI's text mode (by checking
+  // SupportsConOut), we want to automatically switch to the best
+  // text mode available.
+
+  int32 ConOutMode = 0;
+  uint32 ConOutResolution[2] = {0};
+
+  if (SupportsConOut == true) {
+
+    // EFI mode numbers run between 0 and (MaxMode - 1), so, we first
+    // need to look for MaxMode
+
+    int32 MaxMode = gST->ConOut->Mode->MaxMode;
+
+    for (int32 Mode = 0; Mode < MaxMode; Mode++) {
+
+      // Query mode information; we want to filter for modes that are
+      // at least 80*25 characters, and with the largest overall area.
+
+      uint64 Columns, Rows;
+
+      if (gST->ConOut->QueryMode(gST->ConOut, Mode, &Columns, &Rows) == EfiSuccess) {
+
+        if ((Columns >= 80) && (Rows >= 25)) {
+
+          // If this text mode is larger than 80*25 characters and has
+          // a larger overall area, then select it as our best mode.
+
+          if ((Columns * Rows) >= (ConOutResolution[0] * ConOutResolution[1])) {
+
+            ConOutMode = Mode;
+
+            ConOutResolution[0] = Columns;
+            ConOutResolution[1] = Rows;
+
+          }
+
+        }
+
+      }
+
+    }
+
+    // Now that we know the best text mode to use, let's switch
+    // to it!
+
+    gST->ConOut->SetMode(gST->ConOut, ConOutMode);
+
+  }
+
+  // (Now that we've set up the console, show a few initial messages)
 
   Message(Boot, u"Successfully initialized the console.");
 
+  Message(Info, u"This system's EFI revision is %d.%d", (uint16)(gST->Hdr.Revision >> 16), (uint16)(gST->Hdr.Revision));
+  Message(Info, u"Using text mode %d, with a %d*%d character resolution", ConOutMode, ConOutResolution[0], ConOutResolution[1]);
 
 
-  // (Check for GOP)
+
+  // Next, we also want to check for graphics mode support, since not all
+  // systems support EFI text mode.
+
+  // Thankfully, this is actually pretty easy; we just need to check for
+  // the existence of the Graphics Output Protocol (GOP), like this:
 
   Print(u"\n\r", 0);
-  Message(Boot, u"Checking for GOP (Graphics Output Protocol) support.");
+  Message(Boot, u"Checking for UEFI GOP (Graphics Output Protocol) support.");
 
   efiGraphicsOutputProtocol* GopProtocol;
   efiUuid GopUuid = efiGraphicsOutputProtocol_Uuid;
@@ -160,82 +212,79 @@ efiStatus (efiAbi SEfiBootloader) (efiHandle ImageHandle, efiSystemTable* System
 
   } else {
 
-    // If regular text mode isn't supported either, then just return.
+    // (If we didn't find one, that's fine, as long as text mode is
+    // supported; otherwise, return)
 
-    if (SupportsConOut == false) {
-      return EfiUnsupported;
+    if (SupportsConOut == true) {
+      Message(Warning, u"Unable to initialize Graphics Output Protocol; keeping EFI text mode.");
     } else {
-      Message(Warning, u"Unable to initialize Graphics Output Protocol; using EFI text mode.");
+      return EfiUnsupported;
     }
 
   }
+
+  // (Update the graphics type in the kernel info table)
 
   KernelInfoTable.Graphics.Type = ((SupportsGop == true) ? Gop : EfiText);
 
 
 
-  // (Find the best text or graphics mode)
+  // If the firmware *does* support GOP, then the next thing we want
+  // to do is try to find the best graphics mode (that fits our
+  // criteria, at least).
 
   uint32 GopMode = 0;
+
+  uint8 GopColorDepth = 0;
+  uint32 GopResolution[2] = {0};
 
   if (SupportsGop == true) {
 
     Print(u"\n\r", 0);
-    Message(Boot, u"Attempting to find the best video mode.");
+    Message(Boot, u"Attempting to find the best graphics mode.");
 
-    // TODO: Find graphics mode.
-
-    // First, we need to find the max mode (mode numbers are contiguous, so
-    // you can query modes 0 through (MaxMode-1))
+    // Just like with EFI text mode, GOP graphics modes also run between
+    // 0 and (MaxMode - 1), so we first need to look for that.
 
     uint32 MaxMode = GopProtocol->Mode->MaxMode;
 
-    // We want to find the mode with the highest resolution *and* color
-    // depth, where (at least 640*480) > (better color) > (better resolution);
-
-    // [additionally, ignore anything == PixelBltOnly]
-
-    uint8 ColorDepth = 0;
-
-    uint32 HorizontalResolution = 0;
-    uint32 VerticalResolution = 0;
+    // Now that we know the mode limit, we can manually go through
+    // each mode and try to find the best one, if possible.
 
     for (uint32 Mode = 0; Mode < MaxMode; Mode++) {
-
-      // Do the thing
 
       efiGraphicsOutputModeInformation* ModeInfo;
       uint64 Size;
 
       if (GopProtocol->QueryMode(GopProtocol, Mode, &Size, &ModeInfo) == EfiSuccess) {
 
+        // If the pixel format is PixelBltOnly, then that means it's
+        // not a linear framebuffer, so make sure it's not that
+
         if (ModeInfo->PixelFormat < PixelBltOnly) {
 
-          // If the color depth is too low (under 16-bits), skip.
+          // (Check and verify color depth - must be at least 16 bpp)
 
-          // (Check color depth)
-
-          uint8 ModeColorDepth = 24;
+          uint8 ColorDepth = 24;
 
           if (ModeInfo->PixelFormat == PixelBitMask) {
 
-            ModeColorDepth = 32;
-
             // For each bit set in the reserved mask, decrement ModeColorDepth
+            // This is essentially just (32 - popcount(ReservedMask))
+
+            ColorDepth = 32;
 
             for (int Bit = 0; Bit < 32; Bit++) {
 
               if ((ModeInfo->PixelBitmask.ReservedMask & (1 << Bit)) != 0) {
-                ModeColorDepth--;
+                ColorDepth--;
               }
 
             }
 
           }
 
-          // (Verify color depth)
-
-          if (ModeColorDepth < 16) {
+          if (ColorDepth < 16) {
 
             Message(Warning, u"Skipping GOP mode %d (color depth is too low)");
             continue;
@@ -245,26 +294,24 @@ efiStatus (efiAbi SEfiBootloader) (efiHandle ImageHandle, efiSystemTable* System
           // Now that we know the color depth isn't too low, we check for
           // the following things, in order:
 
-          // -> Whether this mode's resolution is at least 640 by 480;
-          // -> Whether this mode's color depth is above or equal to the current maximum;
-          // -> Whether this mode's resolution is above or equal to the current maximum;
+          // (1) Whether this mode's resolution is at least 640 by 480;
+          // (2) Whether this mode's color depth is above the current maximum;
+          // (3) Whether this mode's width is above or equal to the current maximum;
 
           if ((ModeInfo->HorizontalResolution >= 640) && (ModeInfo->VerticalResolution >= 480)) {
 
-            if (ModeColorDepth >= ColorDepth) {
+            if (ColorDepth >= GopColorDepth) {
 
-              uint64 CombinedResolution = ((uint64)HorizontalResolution * (uint64)VerticalResolution);
-              uint64 ModeCombinedResolution = ((uint64)ModeInfo->HorizontalResolution * (uint64)ModeInfo->VerticalResolution);
+              // In this case, we actually want to filter modes by their
+              // horizontal resolution, not necessarily their area
 
-              if (ModeCombinedResolution >= CombinedResolution) {
-
-                // If we found a better mode, then let's go
+              if (ModeInfo->HorizontalResolution >= GopResolution[0]) {
 
                 GopMode = Mode;
 
-                ColorDepth = ModeColorDepth;
-                HorizontalResolution = ModeInfo->HorizontalResolution;
-                VerticalResolution = ModeInfo->VerticalResolution;
+                GopColorDepth = ColorDepth;
+                GopResolution[0] = ModeInfo->HorizontalResolution;
+                GopResolution[1] = ModeInfo->VerticalResolution;
 
               }
 
@@ -283,14 +330,16 @@ efiStatus (efiAbi SEfiBootloader) (efiHandle ImageHandle, efiSystemTable* System
 
     }
 
-    // Show the mode
+    // (Show the mode number, as well as the resolution / color depth)
 
     Message(Ok, u"Found GOP mode %d, with a %d*%d resolution and %d-bit color depth.",
-            GopMode, HorizontalResolution, VerticalResolution, ColorDepth);
+            GopMode, GopResolution[0], GopResolution[1], GopColorDepth);
 
   }
 
 
+
+  // -------------------------------------------------------------------------------------------------------------------------
 
   // (TODO: Add memory-related functions, get the mmap, etc.)
 

@@ -78,6 +78,8 @@
   typedef efiStatus (efiAbi *efiClearScreen) (efiProtocol This);
   typedef efiStatus (efiAbi *efiSetAttribute) (efiProtocol This, uint64 Attribute);
   typedef efiStatus (efiAbi *efiOutputString) (efiProtocol This, char16* String);
+  typedef efiStatus (efiAbi *efiTextQueryMode) (efiProtocol This, uint64 ModeNumber, uint64* Columns, uint64* Rows);
+  typedef efiStatus (efiAbi *efiTextSetMode) (efiProtocol This, uint64 ModeNumber);
 
   typedef struct __efiSimpleTextOutputMode {
 
@@ -100,8 +102,8 @@
     efiOutputString OutputString;
     efiNotImplemented TestString;
 
-    efiNotImplemented QueryMode;
-    efiNotImplemented SetMode;
+    efiTextQueryMode QueryMode;
+    efiTextSetMode SetMode;
     efiSetAttribute SetAttribute;
 
     efiClearScreen ClearScreen;
