@@ -212,7 +212,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
     // supported; otherwise, return)
 
     if (SupportsConOut == true) {
-      Message(Warning, u"Unable to initialize Graphics Output Protocol; keeping EFI text mode.");
+      Message(Warning, u"Unable to initialize GOP; keeping EFI text mode.");
     } else {
       return EfiUnsupported;
     }
@@ -346,7 +346,6 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
   // (TODO: Wait until user strikes a key, then return.)
 
-  Print(u"\n\r", 0);
   if (SupportsConIn == true) {
     Message(Warning, u"Press any key to return.");
     while (gST->ConIn->ReadKeyStroke(gST->ConIn, &PhantomKey) == EfiNotReady);

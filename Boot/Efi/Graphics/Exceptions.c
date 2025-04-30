@@ -65,12 +65,12 @@ void Message(messageType Type, char16* String, ...) {
   // Show the message type / 'classification level' to the user, enclosed
   // by square brackets (for example, [Boot], [Ok], etc).
 
-  Print(u"[", 0x0F);
+  Print(u"[", 0x07);
 
   switch (Type) {
 
     case Info:
-      Print(u"Info", 0x07);
+      Print(u"Info", 0x0F);
       break;
 
     case Boot:
@@ -98,7 +98,7 @@ void Message(messageType Type, char16* String, ...) {
 
   }
 
-  Print(u"] ", 0x0F);
+  Print(u"] ", 0x07);
 
   // Show the given message to the user, restore the value of Debug, and call
   // va_end().
