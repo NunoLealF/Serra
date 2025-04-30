@@ -13,7 +13,7 @@
 
   // Declare functions and global variables in Bootloader.c
 
-  efiStatus (efiAbi SEfiBootloader) ([[maybe_unused]] efiHandle ImageHandle, efiSystemTable* SystemTable);
+  efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTable);
 
   kernelEfiInfoTable EfiInfoTable;
   kernelInfoTable KernelInfoTable;

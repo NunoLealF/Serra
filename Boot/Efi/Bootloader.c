@@ -5,17 +5,13 @@
 #include "Stdint.h"
 #include "Bootloader.h"
 
-#if !defined(__amd64__) || !defined(__x86_64__)
-  #error "This code must be compiled with an x86_64-elf cross-compiler"
-#endif
-
-
 /* efiSystemTable* gST, efiBootServices* gBS, efiRuntimeServices* gRT
 
    Definitions: (Efi/Efi.h, Efi/Tables.h)
 
-   These are global EFI tables; they're initialized here, and can be used
-   by any function that includes the Efi/Efi.h header file.
+   These are global pointers to their respective EFI tables; they're
+   declared here, initialized in SEfiBootloader(), and can be used
+   by *any* function that uses the Efi/Efi.h header.
 
 */
 
@@ -24,20 +20,20 @@ efiBootServices* gBS;
 efiRuntimeServices* gRT;
 
 
-/* efiStatus (efiAbi SEfiBootloader)()
+/* efiStatus efiAbi SEfiBootloader()
 
    Inputs: efiHandle ImageHandle - The firmware-provided image handle.
 
            efiSystemTable* SystemTable - A pointer to the firmware-provided
            system table.
 
-   Outputs: (TODO: Either !EfiSuccess, or uses KernelInfoTable)
+   Outputs: ???
 
-   [TODO] I can't write a proper description until this is done
+   TODO - ...
 
 */
 
-efiStatus (efiAbi SEfiBootloader) (efiHandle ImageHandle, efiSystemTable* SystemTable) {
+efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTable) {
 
   // First and foremost, we need to check to see if the tables our firmware
   // gave us are even valid. We can do this by checking their signature

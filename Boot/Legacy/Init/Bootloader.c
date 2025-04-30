@@ -5,11 +5,6 @@
 #include "../Shared/Stdint.h"
 #include "Bootloader.h"
 
-#ifndef __i686__
-  #error "This code must be compiled with an i686-elf cross-compiler"
-#endif
-
-
 /* void SaveState(), RestoreState()
 
    Inputs: (none)

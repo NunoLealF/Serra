@@ -4,6 +4,10 @@
 
 // (32-bit Stdint.h; do not use with 16- or 64-bit code.)
 
+#ifndef __i686__
+  #error "This code must be compiled with an i686-elf cross-compiler"
+#endif
+
 #ifndef SERRA_STDINT_H
 #define SERRA_STDINT_H
 

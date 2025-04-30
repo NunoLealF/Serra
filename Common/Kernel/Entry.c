@@ -5,15 +5,18 @@
 #include "Stdint.h"
 #include "../InfoTable.h"
 
-#if !defined(__amd64__) || !defined(__x86_64__)
-  #error "This code must be compiled with an x86_64-elf cross-compiler"
-#endif
+/* void Entrypoint()
 
-void Entrypoint(uintptr InfoTablePtr) {
+   Inputs: kernelInfoTable* InfoTable - A pointer to the bootloader-provided kernel
+           info table.
 
-  // Aaaaaa
+   Outputs: (None)
 
-  kernelInfoTable* InfoTable = (kernelInfoTable*)InfoTablePtr;
+   TODO - ...
+
+*/
+
+void Entrypoint(kernelInfoTable* InfoTable) {
 
   // Let's test this out
 

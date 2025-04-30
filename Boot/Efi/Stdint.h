@@ -4,6 +4,10 @@
 
 // (64-bit Stdint.h; do not use with 16- or 32-bit code; made for mingw/EFI.)
 
+#if !defined(__amd64__) || !defined(__x86_64__)
+  #error "This code must be compiled with an x86_64-elf cross-compiler"
+#endif
+
 #ifndef SERRA_STDINT_H
 #define SERRA_STDINT_H
 
