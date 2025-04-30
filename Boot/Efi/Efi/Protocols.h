@@ -43,7 +43,20 @@
 
   } efiGraphicsOutputModeInformation;
 
-  typedef efiStatus (efiAbi *efiQueryMode) (efiProtocol This, uint32 ModeNumber, uint64* SizeOfInfo, void** EfiTable);
+  typedef struct __efiGraphicsOutputProtocolMode {
+
+    uint32 MaxMode;
+    uint32 Mode;
+
+    efiGraphicsOutputModeInformation* Info;
+    uint64 SizeOfInfo;
+
+    efiPhysicalAddress FramebufferBase;
+    uint64 FramebufferSize;
+
+  } efiGraphicsOutputProtocolMode;
+
+  typedef efiStatus (efiAbi *efiQueryMode) (efiProtocol This, uint32 ModeNumber, uint64* SizeOfInfo, efiGraphicsOutputModeInformation** EfiTable);
   typedef efiStatus (efiAbi *efiSetMode) (efiProtocol This, uint32 ModeNumber);
 
   #define efiGraphicsOutputProtocol_Uuid {0x9042A9DE, {0x23DC, 0x4A38}, {0x96, 0xFB, 0x7A, 0xDE, 0xD0, 0x80, 0x51, 0x6A}}
@@ -54,7 +67,7 @@
     efiSetMode SetMode;
     efiNotImplemented Blt;
 
-    efiGraphicsOutputModeInformation* Mode;
+    efiGraphicsOutputProtocolMode* Mode;
 
   } efiGraphicsOutputProtocol;
 
