@@ -36,7 +36,7 @@ In order to build Serra, you will need the following tools:
 - **Assemblers and (cross) compilers**
 - - `nasm`, or any other compatible **x86** assembler;
 - - `i686-elf-gcc`, or any other **x86 native ELF** compiler;
-- - - This will be used to build `Boot/Legacy`, and ***must** have partial C23 support (GCC 13+, Clang 16+)*.
+- - - This will be used to build `Boot/Legacy`, and ***must** have full C23 support (GCC 15+, Clang 19+)*;
 - - `x86_64-elf-gcc`, or any other **x64 native ELF** compiler;
 - - - This will be used to build `Common/`, and ***must** have full C23 support (GCC 15+, Clang 19+)*;
 - - `x86_64-w64-mingw32-gcc`, or any other **x64 Windows/PE** compiler.
@@ -82,8 +82,7 @@ running `make all`.
 ## Roadmap
 
 - Finish implementing EFI support, in `Boot/Efi`;
-- - Work on a proper graphics subsystem (GOP support);
-- - Read and process the system memory map;
+- - Process the system memory map;
 - - Locate protocols for things like ACPI, USB, SATA, disk, etc.;
 - Review the build system (and add a better way to control things like debug messages);
 - - A configuration file would be ideal for this.
@@ -102,4 +101,4 @@ running `make all`.
 This project has been released under the [MIT license](https://choosealicense.com/licenses/mit/).
 For more information, please refer to the accompanying license agreement. <3
 
-*(last updated on April 28th 2025)*
+*(last updated on May 2nd 2025)*

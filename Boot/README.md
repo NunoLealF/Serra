@@ -75,8 +75,7 @@ For more information, refer to the [roadmap](#roadmap) below:
 ### Roadmap
 
 - Finish implementing EFI support, in `Boot/Efi`;
-- - Work on a proper graphics subsystem (GOP support);
-- - Read and process the system memory map;
+- - Process the system memory map;
 - - Locate protocols for things like ACPI, USB, SATA, disk, etc.;
 - Review the build system (and add a better way to control things like debug messages);
 - - A configuration file would be ideal for this.
@@ -89,4 +88,4 @@ For more information, refer to the [roadmap](#roadmap) below:
 This project has been released under the [MIT license](https://choosealicense.com/licenses/mit/).
 For more information, please refer to the accompanying license agreement. <3
 
-*(last updated on April 28th 2025)*
+*(last updated on May 2nd 2025)*
