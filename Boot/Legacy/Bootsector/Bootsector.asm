@@ -78,19 +78,25 @@ Start:
   ; MBR partition table - which is a 16-byte area stored in [DS:SI] - as well as the value
   ; of DL, since that contains our BIOS-provided drive number.
 
+  push ds
+
+  mov ds, ax
   mov [SaveDl], dl
 
   ; Thankfully, this is pretty simple - there's already an instruction called rep movsb that
   ; will move CX bytes at a time from [DS:SI] to [ES:DI], so we just need to use that:
 
-  mov di, [MbrPartitionTable]
+  mov di, MbrPartitionTable
   mov cx, 16
 
+  pop ds
   rep movsb
 
   ; Next, we need to actually read from the partition table, and see if the active bit is
   ; set - and if so, add MbrPartitionTable.Lba to DiskAddressPacket.Offset, so that we
   ; read from the correct LBA offset.
+
+  mov ds, ax
 
   mov bl, [MbrPartitionTable.Attributes]
   and bl, 0x80

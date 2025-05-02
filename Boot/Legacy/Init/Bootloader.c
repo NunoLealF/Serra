@@ -329,6 +329,11 @@ void RestoreState(void) {
   Putchar('\n', 0);
   Message(Boot, "Preparing to jump to the next stage of the bootloader.");
 
+  Message(Info, "Test.. lbaoffset is %d", PartitionLba);
+  if (PartitionEntryIsValid == true) {
+    Print("!!!", 0xC4);
+  }
+
   // (First, we need to get the root cluster, along with the sector offset of that cluster)
 
   uint32 RootCluster;
