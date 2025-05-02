@@ -5,6 +5,36 @@
 #ifndef SERRA_SHARED_DISK_H
 #define SERRA_SHARED_DISK_H
 
+  // MBR-related data structures. (Used in multiple files, defined here)
+
+  typedef struct __mbrPartitionEntry {
+
+    uint8 Attributes; // (Only use this entry if active bit (1 << 7) set)
+
+    struct __ChsStart {
+
+      uint8 High; // (Higher 8 bits of CHS partition start)
+      uint16 Low; // (Lower 16 bits of CHS partition start)
+
+    } __attribute__((packed)) ChsStart;
+
+    uint8 Type; // (Partition type - usually EEh or EFh, for boot partition)
+
+    struct __ChsEnd {
+
+      uint8 High; // (Higher 8 bits of CHS partition end)
+      uint16 Low; // (Lower 16 bits of CHS partition end)
+
+    } __attribute__((packed)) ChsEnd;
+
+    uint32 Lba; // (LBA offset of this partition; set PartitionLba to this)
+    uint32 NumSectors; // (Number of sectors in the partition)
+
+  } __attribute__((packed)) mbrPartitionEntry;
+
+  extern uint32 PartitionLba;
+
+
   // EDD (Enhanced Disk Drive)-related data structures. (Used in multiple files, defined here)
 
   typedef struct __eddDriveParameters {
@@ -138,7 +168,7 @@
   extern uint16 PhysicalSectorSize;
 
   realModeTable* ReadSector(uint16 NumBlocks, uint32 Address, uint64 Offset);
-  realModeTable* ReadLogicalSector(uint16 NumBlocks, uint32 Address, uint32 Lba);
+  realModeTable* ReadFatSector(uint16 NumBlocks, uint32 Address, uint32 Lba);
 
 
   // Filesystem-related functions. (Disk.c)

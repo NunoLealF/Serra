@@ -52,10 +52,14 @@
 
     } __attribute__((packed)) EddInfo;
 
-    // [Filesystem and BPB]
+    // [Filesystem, BPB and MBR]
 
     bool BpbIsFat32;
     uint8 Bpb[120]; // Regular+extended BPB (usually starts at 7C00h + 3!)
+
+    [[maybe_unused]] bool MbrEntryIsValid;
+    [[maybe_unused]] mbrPartitionEntry PartitionEntry;
+    uint32 PartitionLba;
 
     // [Terminal]
 

@@ -811,13 +811,14 @@ void S3Bootloader(void) {
 
   // First, let's read from the InfoTable to collect some information about
   // the current system - the (int 13h) drive number, the filesystem type,
-  // the physical and logical sector size, etc.
+  // the physical and logical sector size, the partition LBA, etc.
 
   DriveNumber = InfoTable->DriveNumber;
   bool EddEnabled = InfoTable->EddEnabled;
 
   LogicalSectorSize = InfoTable->LogicalSectorSize;
   PhysicalSectorSize = InfoTable->PhysicalSectorSize;
+  PartitionLba = InfoTable->PartitionLba;
 
   bool IsFat32 = InfoTable->BpbIsFat32;
 

@@ -58,15 +58,14 @@ Start:
 
   cli
 
-  ; Now we can move on to actually setting up the segment registers (DS, ES, SS), along with
-  ; the stack.
+  ; Now we can move on to actually setting up the segment registers (ES, SS), along with
+  ; the stack; we don't set DS for now, so we can copy the MBR partition table.
 
   ; We set up the stack at 7C00h, as that location should be available on essentially *all*
   ; x86 systems, and because it'll leave the stack with around 30KiB of space, which should
   ; be more than enough.
 
   mov ax, 00h
-  mov ds, ax
   mov es, ax
   mov ss, ax
   mov sp, 7C00h
@@ -75,23 +74,60 @@ Start:
 
   sti
 
-  ; The next step of the process is to try to load the second stage bootloader, and we'll
-  ; allow up to 8 tries for this.
-
-  ; Although this process 'uses up' most registers, si should be free, and so we'll be
-  ; using it to keep track of how many times we've tried.
-
-  mov si, 0
-
-  ; We also want to save the value of dl for later, as it represents the current drive number
-  ; (given to us by our BIOS) - specifically, we'll be saving it at the [saveDl] area, which
-  ; is at the end of this bootsector (immediately preceding the signature, AA55h).
+  ; Okay; now that we're in a suitable environment, the first thing we need to do is save the
+  ; MBR partition table - which is a 16-byte area stored in [DS:SI] - as well as the value
+  ; of DL, since that contains our BIOS-provided drive number.
 
   mov [SaveDl], dl
 
-  ; We can now finally jump to loadDisk!
+  ; Thankfully, this is pretty simple - there's already an instruction called rep movsb that
+  ; will move CX bytes at a time from [DS:SI] to [ES:DI], so we just need to use that:
 
-  jmp LoadDisk
+  mov di, [MbrPartitionTable]
+  mov cx, 16
+
+  rep movsb
+
+  ; Next, we need to actually read from the partition table, and see if the active bit is
+  ; set - and if so, add MbrPartitionTable.Lba to DiskAddressPacket.Offset, so that we
+  ; read from the correct LBA offset.
+
+  mov bl, [MbrPartitionTable.Attributes]
+  and bl, 0x80
+
+  cmp bl, 0
+  jne Start.SetupDiskAddressPacket
+  je Start.PrepareToLoadDisk
+
+  Start.SetupDiskAddressPacket:
+
+    ; If we're here, then that means we found a valid MBR partition table; in that case,
+    ; we need to add our partition's starting LBA to our disk address packet's offset.
+
+    mov eax, [DiskAddressPacket.Offset]
+    add eax, [MbrPartitionTable.Lba]
+    mov [DiskAddressPacket.Offset], eax
+
+    ; (Jump to the next subsection)
+
+    jmp Start.PrepareToLoadDisk
+
+  Start.PrepareToLoadDisk:
+
+    ; The next step of the process is to try to load the second stage bootloader, and we'll
+    ; allow up to 8 tries for this.
+
+    ; Although this process 'uses up' most registers, si should be free, and so we'll be
+    ; using it to keep track of how many times we've tried.
+
+    mov ax, 00h
+
+    mov ds, ax
+    mov si, 0
+
+    ; We can now finally jump to loadDisk!
+
+    jmp LoadDisk
 
 
 
@@ -257,7 +293,7 @@ PrintMessage:
   mov [es:bx], cl
   inc bx
 
-  ; ...
+  ; Jump back to PrintMessage until we're done, pretty much.
 
   jmp PrintMessage
   PrintMessageRet: ret
@@ -317,10 +353,29 @@ GdtTable:
 ; -----------------------------------
 
 ; Tell our assembler that we want to fill the rest of our bootsector (essentially, any areas
-; that haven't been used) with zero up to the (512 - 4)th byte, to account for the Debug
-; byte, SaveDl and the bootsector signature (which are 1, 1 and 2 bytes respectively).
+; that haven't been used) with zero up to the (512 - 20)th byte, to account for Debug,
+; SaveDl and BootsectorSignature.
 
-times (512 - 4) - ($-$$) db 0
+times (512 - 20) - ($-$$) db 0
+
+; When our MBR transfers control to our bootsector, it also loads the address
+; of the current partition table to DS:SI; later, our bootsector copies the
+; contents of that partition table here, so it can be used by the bootloader.
+
+MbrPartitionTable:
+
+  MbrPartitionTable.Attributes: db 0 ; Check for active bit (80h) (1 << 7)
+
+  MbrPartitionTable.ChsStartHigh: db 0 ; CHS start (bits 16-23)
+  MbrPartitionTable.ChsStartLow: dw 0 ; CHS start (bits 0-15)
+
+  MbrPartitionTable.Type: db 0 ; Partition type (usually EEh or EFh for boot)
+
+  MbrPartitionTable.ChsEndHigh: db 0 ; CHS end (bits 16-23)
+  MbrPartitionTable.ChsEndLow: dw 0 ; CHS end (bits 0-15)
+
+  MbrPartitionTable.Lba: dd 0 ; Partition LBA - important!
+  MbrPartitionTable.NumSectors: dd 0 ; Number of sectors in partition
 
 ; We want to have an easy way to toggle non-debug messages off and on, so we'll reserve a
 ; byte here in the bootsector for exactly that - in order to toggle *on* messages, set this

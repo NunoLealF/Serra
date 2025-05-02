@@ -7,7 +7,6 @@
 
   // Import other headers..
 
-  #include "../Shared/InfoTable.h"
   #include "../Shared/Rm/Rm.h"
   #include "../Shared/Disk/Disk.h"
 
@@ -16,6 +15,8 @@
   #include "Graphics/Graphics.h"
   #include "Int/Int.h"
   #include "Elf.h"
+
+  #include "../Shared/InfoTable.h"
 
   // Declare functions in Bootloader.c and Stub.asm
 
