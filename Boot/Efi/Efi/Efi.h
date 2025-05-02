@@ -44,7 +44,6 @@
   typedef struct __efiMemoryDescriptor {
 
     uint32 Type;
-    uint32 Padding; // come on, Intel, whyyyy
 
     efiPhysicalAddress PhysicalStart;
     efiVirtualAddress VirtualStart;

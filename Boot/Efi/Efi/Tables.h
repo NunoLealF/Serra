@@ -26,6 +26,7 @@
 
   // (Boot Services-related definitions)
 
+  #define GetMmapEntry(Mmap, DescriptorSize, Index) (efiMemoryDescriptor*)((uint64)Mmap + (DescriptorSize * Index))
   typedef efiStatus (efiAbi *efiAllocatePool) (efiMemoryType PoolType, uint64 Size, volatile void** Buffer);
   typedef efiStatus (efiAbi *efiFreePool) (void* Buffer);
   typedef efiStatus (efiAbi *efiGetMemoryMap) (volatile uint64* MemoryMapSize, volatile efiMemoryDescriptor* MemoryMap, volatile uint64* MapKey, volatile uint64* DescriptorSize, volatile uint32* DescriptorVersion);

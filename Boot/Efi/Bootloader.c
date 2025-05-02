@@ -35,11 +35,7 @@ efiRuntimeServices* gRT;
 
 efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTable) {
 
-  // First and foremost, we need to check to see if the tables our firmware
-  // gave us are even valid. We can do this by checking their signature
-  // and size, like this:
-
-  // (Before everything, prepare a few global variables)
+  // [Prepare global variables]
 
   KernelInfoTable.Firmware.IsEfi = true;
   KernelInfoTable.Firmware.EfiInfo.Address = (uint64)(&EfiInfoTable);
@@ -47,7 +43,13 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
   efiStatus AppStatus = EfiSuccess;
 
-  // (Check the EFI System Table)
+  // [Make sure the firmware-provided tables are valid]
+
+  // First and foremost, we need to check to see if the tables our firmware
+  // gave us are even valid. We can do this by checking their signature
+  // and size, like this:
+
+  // (Check EFI System Table, and update gST)
 
   if (SystemTable == NULL) {
     return EfiInvalidParameter;
@@ -62,7 +64,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   EfiInfoTable.SystemTable.Ptr = SystemTable;
   gST = SystemTable;
 
-  // (Check the EFI Boot Services table)
+  // (Check EFI Boot Services table, and update gBS)
 
   if (SystemTable->BootServices == NULL) {
     return EfiInvalidParameter;
@@ -75,7 +77,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   EfiInfoTable.BootServices.Ptr = SystemTable->BootServices;
   gBS = gST->BootServices;
 
-  // (Check the EFI Runtime Services table)
+  // (Check EFI Runtime Services table, and update gRT)
 
   if (SystemTable->RuntimeServices == NULL) {
     return EfiInvalidParameter;
@@ -90,17 +92,18 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
 
 
-  // After that, we also want to make sure SSE and other x64 features are
-  // enabled, since some firmware doesn't do that by default:
+  // [Enable any necessary x64 features]
 
-  // (First, let's save the state of the current control registers)
+  // After that, we also want to make sure SSE and other x64 features are
+  // enabled, since some firmware doesn't do that by default. Before that
+  // though, let's save the current state of the control registers:
 
   KernelInfoTable.System.Cr0 = ReadFromControlRegister(0);
   KernelInfoTable.System.Cr3 = ReadFromControlRegister(3);
   KernelInfoTable.System.Cr4 = ReadFromControlRegister(4);
   KernelInfoTable.System.Efer = ReadFromMsr(0xC0000080);
 
-  // (Next, let's set the necessary bits in CR0, to set up the task register)
+  // (Enable the FPU/MMX, by setting the necessary bits in CR0)
 
   uint32 Cr0 = ReadFromControlRegister(0);
 
@@ -110,7 +113,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
   WriteToControlRegister(0, Cr0);
 
-  // (As well as the necessary bits in CR4, to enable SSE)
+  // (Enable SSE, by setting the necessary bits in CR4)
 
   uint32 Cr4 = ReadFromControlRegister(4);
 
@@ -120,6 +123,8 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   WriteToControlRegister(4, Cr4);
 
 
+
+  // [Check availability of ConIn and ConOut]
 
   // Next, we also want to do the same thing, but for the input and output
   // protocols (SystemTable->ConIn and SystemTable->ConOut); it's not a
@@ -158,6 +163,8 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   }
 
 
+
+  // [Switch to largest text mode, if applicable]
 
   // Now that we know whether we can use EFI's text mode (by checking
   // SupportsConOut), we want to automatically switch to the best
@@ -217,6 +224,8 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
 
 
+  // [Check for GOP support]
+
   // Next, we also want to check for graphics mode support, since not all
   // systems support EFI text mode.
 
@@ -257,6 +266,8 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   KernelInfoTable.Graphics.Type = ((SupportsGop == true) ? Gop : EfiText);
 
 
+
+  // [Find GOP mode, if applicable]
 
   // If the firmware *does* support GOP, then the next thing we want
   // to do is try to find the best graphics mode (that fits our
@@ -368,6 +379,8 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
 
 
+  // [Obtaining system memory map]
+
   // After that, we want to move onto memory management - our kernel needs
   // to know about the system's memory map (so it knows where to allocate
   // pages).
@@ -381,7 +394,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
   // (Declare initial variables)
 
-  volatile efiMemoryDescriptor* Mmap = NULL; // Will be updated later.
+  volatile void* Mmap = NULL;
 
   uint64 MmapKey;
   volatile uint64 MmapSize = 0;
@@ -392,15 +405,31 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   // (Call gBS->GetMemoryMap(), with *MmapSize == 0; this will always return
   // EfiBufferTooSmall, and return the correct buffer size in MmapSize)
 
-  gBS->GetMemoryMap(&MmapSize, Mmap, &MmapKey, &MmapDescriptorSize, &MmapDescriptorVersion);
-  Message(Info, u"GetMemoryMap() requires %d bytes of space for the memory map", (uint64)MmapSize);
+  efiStatus MmapStatus = gBS->GetMemoryMap(&MmapSize, Mmap, &MmapKey, &MmapDescriptorSize, &MmapDescriptorVersion);
 
-  // (Allocate a buffer for the memory map - with extra space for another
-  // descriptor, just in case - using gBS->AllocatePool())
+  if (MmapStatus != EfiBufferTooSmall) {
+
+    if ((MmapSize != 0) && (MmapDescriptorSize != 0)) {
+
+      Message(Warning, u"Initial call to GetMemoryMap() appears to be badly implemented.");
+
+    } else {
+
+      Message(Fail, u"GetMemoryMap() appears to be working incorrectly.");
+
+      AppStatus = MmapStatus;
+      goto ExitEfiApplication;
+
+    }
+
+  }
+
+  Message(Ok, u"Initial call to GetMemoryMap() indicates memory map is %d bytes long.", (uint64)MmapSize);
+
+  // (Allocate space for the memory map, with some margin for error)
 
   MmapSize += (MmapDescriptorSize * 2);
-
-  efiStatus MmapStatus = gBS->AllocatePool(EfiLoaderData, MmapSize, (volatile void**)&Mmap);
+  MmapStatus = gBS->AllocatePool(EfiLoaderData, MmapSize, (volatile void**)&Mmap);
 
   if (MmapStatus == EfiSuccess) {
 
@@ -416,36 +445,73 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
   }
 
-  // (Now that we've obtained a buffer for the memory map, we can ask the
-  // firmware to actually fill it out)
+  // (Fill out the memory map, and show all usable entries)
 
   MmapStatus = gBS->GetMemoryMap(&MmapSize, Mmap, &MmapKey, &MmapDescriptorSize, &MmapDescriptorVersion);
 
   if (MmapStatus == EfiSuccess) {
 
-    Message(Ok, u"Successfully got mmap");
+    Message(Ok, u"Successfully obtained the system memory map.");
 
-    for (uint64 EntryAddress = (uint64)Mmap; EntryAddress <= ((uint64)Mmap + MmapSize); EntryAddress += MmapDescriptorSize) {
+    for (uint64 EntryNum = 0; EntryNum < (MmapSize / MmapDescriptorSize); EntryNum++) {
 
-      efiMemoryDescriptor* Entry = (efiMemoryDescriptor*)EntryAddress;
+      efiMemoryDescriptor* Entry = GetMmapEntry(Mmap, MmapDescriptorSize, EntryNum);
 
-      Message(Info, u"Type = %d, pStart = %xh, vStart = %xh, nPages = %d, Attr = %x",
-              (uint64)Entry->Type, Entry->PhysicalStart, Entry->VirtualStart, Entry->NumberOfPages, Entry->Attribute);
+      uint64 EntryStart = Entry->PhysicalStart;
+      uint64 EntryEnd = (EntryStart + (Entry->NumberOfPages * 0x1000));
 
-      while (gST->ConIn->ReadKeyStroke(gST->ConIn, &PhantomKey) == EfiNotReady);
+      switch (Entry->Type) {
+
+        case EfiConventionalMemory:
+          Message(Info, u"EfiConventionalMemory spans %xh to %xh", EntryStart, EntryEnd);
+          break;
+
+        case EfiLoaderCode:
+          Message(Info, u"EfiLoaderCode spans %xh to %xh", EntryStart, EntryEnd);
+          break;
+
+        case EfiLoaderData:
+          Message(Info, u"EfiLoaderData spans %xh to %xh", EntryStart, EntryEnd);
+          break;
+
+        default:
+          continue;
+
+      }
 
     }
 
   } else {
-    Message(Fail, u"ugh");
+
+    Message(Fail, u"Failed to obtain the system memory map.");
+
+    AppStatus = MmapStatus;
+    goto ExitEfiApplication;
+
   }
 
 
 
+  // TODO (List things to do)
+
+  Print(u"\n\r", 0);
+  Message(-1, u"TODO - Load and allocate space for kernel image");
+  Message(Info, u"Preferably, do this before you deal with the memory map");
+
+  Print(u"\n\r", 0);
+  Message(-1, u"TODO - Locate any necessary protocols, and try to do any remaining\n\rprep work.");
+
+
+
+  // TODO (Show Serra msg thing)
+
+  Print(u"\n\r", 0);
+  Print(u"Hi, this is EFI-mode Serra! <3 \n\r", 0x0F);
+  Printf(u"May %d %x", 0x3F, 2, 0x2025);
 
   // TODO (Wait until user strikes a key, then return.)
 
-  Print(u"\n\r", 0);
+  Print(u"\n\n\r", 0);
 
   if (SupportsConIn == true) {
     Message(Warning, u"Press any key to return.");
@@ -455,7 +521,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   AppStatus = EfiSuccess;
   goto ExitEfiApplication;
 
-
+  // TODO (Actually calling the kernel, i guess?)
 
   // ---------------- Restore state and exit EFI application ----------------
 

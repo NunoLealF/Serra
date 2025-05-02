@@ -21,6 +21,7 @@ OBJD = x86_64-w64-mingw32-objdump
 # -ffreestanding: This is a freestanding environment. Also, implies fno-builtin.
 # -fpie: Compile our code into a position-independent executable.
 # -maccumulate-outgoing-args: Necessary for the EFI/Microsoft ABI on GCC.
+# -march=x86-64: Make sure only base x64 instructions are used.
 # -mmmx, -msse, -msse2: Make sure to *enable* MMX, SSE and SSE2 instructions.
 # -std=c2x: Use the regular C23 standard (GCC 13+, Clang 16+)
 # -O3: Optimize the resulting file/binary for *speed*.
@@ -29,7 +30,7 @@ OBJD = x86_64-w64-mingw32-objdump
 # -Wpedantic: Be pedantic about the C standard / any possible mistakes
 
 LDFLAGS = -e SEfiBootloader -nostdlib -static-pie -Wl,--subsystem,10
-CFLAGS = -std=c2x -ffreestanding -fpie -maccumulate-outgoing-args -mmmx -msse -msse2 -O3 -Wall -Wextra -Wpedantic
+CFLAGS = -std=c2x -ffreestanding -fpie -maccumulate-outgoing-args -march=x86-64 -mmmx -msse -msse2 -O3 -Wall -Wextra -Wpedantic
 
 
 # The .PHONY directive is used on targets that don't output anything. For example, running 'make all' builds our
