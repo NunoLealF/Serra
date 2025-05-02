@@ -98,4 +98,4 @@ Graphics/Graphics.o:
 
 Bootx64.efi: Bootloader.o Cpu/Cpu.o Graphics/Exceptions.o Graphics/Format.o Graphics/Graphics.o
 	@echo "Building $@"
-	@$(CC) $(LDFLAGS) -o Bootx64.efi -ffreestanding -nolibc -nostdlib -lgcc $^
+	@$(CC) $(LDFLAGS) -o Bootx64.efi -ffreestanding -nolibc -nostdlib $^ -lgcc

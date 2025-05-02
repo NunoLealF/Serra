@@ -362,20 +362,90 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
     // (Show the mode number, as well as the resolution / color depth)
 
     Message(Ok, u"Found GOP mode %d, with a %d*%d resolution and %d-bit color depth.",
-            GopMode, GopResolution[0], GopResolution[1], GopColorDepth);
+            (uint64)GopMode, (uint64)GopResolution[0], (uint64)GopResolution[1], (uint64)GopColorDepth);
 
   }
 
 
 
-  // (Add memory-related functions, get the mmap, etc.)
+  // After that, we want to move onto memory management - our kernel needs
+  // to know about the system's memory map (so it knows where to allocate
+  // pages).
 
   Print(u"\n\r", 0);
-  Message(-1, u"TODO: Add memory-related functions, find mmap, etc.");
+  Message(Boot, u"Preparing to obtain the system's EFI memory map.");
+
+  // Thankfully, EFI makes this really easy for us; we just need to call
+  // GetMemoryMap(). First though, we need to query the size of the
+  // memory map, like this:
+
+  // (Declare initial variables)
+
+  volatile efiMemoryDescriptor* Mmap = NULL; // Will be updated later.
+
+  uint64 MmapKey;
+  volatile uint64 MmapSize = 0;
+
+  volatile uint64 MmapDescriptorSize = 0;
+  volatile uint32 MmapDescriptorVersion = 0;
+
+  // (Call gBS->GetMemoryMap(), with *MmapSize == 0; this will always return
+  // EfiBufferTooSmall, and return the correct buffer size in MmapSize)
+
+  gBS->GetMemoryMap(&MmapSize, Mmap, &MmapKey, &MmapDescriptorSize, &MmapDescriptorVersion);
+  Message(Info, u"GetMemoryMap() requires %d bytes of space for the memory map", (uint64)MmapSize);
+
+  // (Allocate a buffer for the memory map - with extra space for another
+  // descriptor, just in case - using gBS->AllocatePool())
+
+  MmapSize += (MmapDescriptorSize * 2);
+
+  efiStatus MmapStatus = gBS->AllocatePool(EfiLoaderData, MmapSize, (volatile void**)&Mmap);
+
+  if (MmapStatus == EfiSuccess) {
+
+    Message(Ok, u"Successfully allocated a %d-byte buffer for the memory map.", MmapSize);
+    Message(Info, u"Memory map buffer is located at %xh", (uint64)Mmap);
+
+  } else {
+
+    Message(Fail, u"Failed to allocate space for the memory map.");
+
+    AppStatus = MmapStatus;
+    goto ExitEfiApplication;
+
+  }
+
+  // (Now that we've obtained a buffer for the memory map, we can ask the
+  // firmware to actually fill it out)
+
+  MmapStatus = gBS->GetMemoryMap(&MmapSize, Mmap, &MmapKey, &MmapDescriptorSize, &MmapDescriptorVersion);
+
+  if (MmapStatus == EfiSuccess) {
+
+    Message(Ok, u"Successfully got mmap");
+
+    for (uint64 EntryAddress = (uint64)Mmap; EntryAddress <= ((uint64)Mmap + MmapSize); EntryAddress += MmapDescriptorSize) {
+
+      efiMemoryDescriptor* Entry = (efiMemoryDescriptor*)EntryAddress;
+
+      Message(Info, u"Type = %d, pStart = %xh, vStart = %xh, nPages = %d, Attr = %x",
+              (uint64)Entry->Type, Entry->PhysicalStart, Entry->VirtualStart, Entry->NumberOfPages, Entry->Attribute);
+
+      while (gST->ConIn->ReadKeyStroke(gST->ConIn, &PhantomKey) == EfiNotReady);
+
+    }
+
+  } else {
+    Message(Fail, u"ugh");
+  }
 
 
 
-  // (Wait until user strikes a key, then return.)
+
+  // TODO (Wait until user strikes a key, then return.)
+
+  Print(u"\n\r", 0);
 
   if (SupportsConIn == true) {
     Message(Warning, u"Press any key to return.");

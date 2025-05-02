@@ -41,6 +41,19 @@
 
   } efiInputKey;
 
+  typedef struct __efiMemoryDescriptor {
+
+    uint32 Type;
+    uint32 Padding; // come on, Intel, whyyyy
+
+    efiPhysicalAddress PhysicalStart;
+    efiVirtualAddress VirtualStart;
+
+    uint64 NumberOfPages;
+    uint64 Attribute;
+
+  } efiMemoryDescriptor;
+
   typedef struct __efiUuid {
 
     uint32 Uuid_A;
@@ -52,14 +65,25 @@
 
   // (Enums, and other types with a limited set of definitions)
 
-  typedef enum __efiTpl : uint64 {
+  typedef enum __efiMemoryType : uint32 {
 
-    TplApplication = 4,
-    TplCallback = 8,
-    TplNotify = 16,
-    TplHighLevel = 31
+    EfiReservedMemoryType,
+    EfiLoaderCode,
+    EfiLoaderData,
+    EfiBootServicesCode,
+    EfiBootServicesData,
+    EfiRuntimeServicesCode,
+    EfiRuntimeServicesData,
+    EfiConventionalMemory,
+    EfiUnusableMemory,
+    EfiAcpiReclaimMemory,
+    EfiAcpiMemoryNvs,
+    EfiMemoryMappedIo,
+    EfiMemoryMappedIoPortSpace,
+    EfiPalCode,
+    EfiMaxMemoryType
 
-  } efiTpl;
+  } efiMemoryType;
 
   typedef enum __efiStatus : uint64 {
 
@@ -114,6 +138,15 @@
     EfiHttpError = (35 | errorBit)
 
   } efiStatus;
+
+  typedef enum __efiTpl : uint64 {
+
+    TplApplication = 4,
+    TplCallback = 8,
+    TplNotify = 16,
+    TplHighLevel = 31
+
+  } efiTpl;
 
 
   // (Necessary table and protocol definitions)

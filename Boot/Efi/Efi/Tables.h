@@ -26,9 +26,12 @@
 
   // (Boot Services-related definitions)
 
+  typedef efiStatus (efiAbi *efiAllocatePool) (efiMemoryType PoolType, uint64 Size, volatile void** Buffer);
+  typedef efiStatus (efiAbi *efiFreePool) (void* Buffer);
+  typedef efiStatus (efiAbi *efiGetMemoryMap) (volatile uint64* MemoryMapSize, volatile efiMemoryDescriptor* MemoryMap, volatile uint64* MapKey, volatile uint64* DescriptorSize, volatile uint32* DescriptorVersion);
+  typedef efiStatus (efiAbi *efiLocateProtocol) (efiUuid* Protocol, void* Registration, void** Interface);
   typedef efiTpl (efiAbi *efiRaiseTpl) (efiTpl NewTpl);
   typedef void (efiAbi *efiRestoreTpl) (efiTpl OldTpl);
-  typedef efiStatus (efiAbi *efiLocateProtocol) (efiUuid* Protocol, void* Registration, void** Interface);
 
   #define efiBootServicesSignature 0x56524553544F4F42
 
@@ -48,10 +51,10 @@
     efiNotImplemented AllocatePages;
     efiNotImplemented FreePages;
 
-    efiNotImplemented GetMemoryMap;
+    efiGetMemoryMap GetMemoryMap;
 
-    efiNotImplemented AllocatePool;
-    efiNotImplemented FreePool;
+    efiAllocatePool AllocatePool;
+    efiFreePool FreePool;
 
     // (Timing-related functions)
 
@@ -185,7 +188,7 @@
 
     // (Boot and runtime services)
 
-    efiRuntimeServices* RuntimeServices; 
+    efiRuntimeServices* RuntimeServices;
     efiBootServices* BootServices;
 
     // (Configuration table)
