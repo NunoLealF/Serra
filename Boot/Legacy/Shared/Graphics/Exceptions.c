@@ -90,7 +90,7 @@ void Message(messageType Type, char* String, ...) {
 
   // Show the given message to the user, restore the value of Debug, and call va_end().
 
-  vPrintf(String, 0x0F, Arguments);
+  vPrintf(String, ((Type != Info) ? 0x0F : 0x07), Arguments);
   Print("\n", 0x0F);
 
   Debug = SaveDebug;
