@@ -45,6 +45,8 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   KernelInfoTable.Firmware.EfiInfo.Address = (uint64)(&EfiInfoTable);
   EfiInfoTable.ImageHandle.Ptr = ImageHandle;
 
+  efiStatus AppStatus = EfiSuccess;
+
   // (Check the EFI System Table)
 
   if (SystemTable == NULL) {
@@ -85,6 +87,37 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
   EfiInfoTable.RuntimeServices.Ptr = SystemTable->RuntimeServices;
   gRT = gST->RuntimeServices;
+
+
+
+  // After that, we also want to make sure SSE and other x64 features are
+  // enabled, since some firmware doesn't do that by default:
+
+  // (First, let's save the state of the current control registers)
+
+  KernelInfoTable.System.Cr0 = ReadFromControlRegister(0);
+  KernelInfoTable.System.Cr3 = ReadFromControlRegister(3);
+  KernelInfoTable.System.Cr4 = ReadFromControlRegister(4);
+  KernelInfoTable.System.Efer = ReadFromMsr(0xC0000080);
+
+  // (Next, let's set the necessary bits in CR0, to set up the task register)
+
+  uint32 Cr0 = ReadFromControlRegister(0);
+
+  Cr0 = setBit(Cr0, 1); // Set CR0.MP (1 << 1)
+  Cr0 = setBit(Cr0, 4); // Set CR0.ET (1 << 4)
+  Cr0 = setBit(Cr0, 5); // Set CR0.NE (1 << 5)
+
+  WriteToControlRegister(0, Cr0);
+
+  // (As well as the necessary bits in CR4, to enable SSE)
+
+  uint32 Cr4 = ReadFromControlRegister(4);
+
+  Cr4 = setBit(Cr4, 9); // Set CR4.OSFXSR (1 << 9)
+  Cr4 = setBit(Cr4, 10); // Set CR4.OSXMMEXCPT (1 << 10)
+
+  WriteToControlRegister(4, Cr4);
 
 
 
@@ -169,14 +202,13 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
     }
 
-    // Now that we know the best text mode to use, let's switch
-    // to it!
+    // Now that we know the best text mode to use, let's switch to it!
 
     gST->ConOut->SetMode(gST->ConOut, ConOutMode);
 
   }
 
-  // (Now that we've set up the console, show a few initial messages)
+  // (Show a few initial messages, now that we've set up the console)
 
   Message(Boot, u"Successfully initialized the console.");
 
@@ -214,7 +246,8 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
     if (SupportsConOut == true) {
       Message(Warning, u"Unable to initialize GOP; keeping EFI text mode.");
     } else {
-      return EfiUnsupported;
+      AppStatus = EfiUnsupported;
+      goto ExitEfiApplication;
     }
 
   }
@@ -335,22 +368,44 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
 
 
-  // -------------------------------------------------------------------------------------------------------------------------
-
-  // (TODO: Add memory-related functions, get the mmap, etc.)
+  // (Add memory-related functions, get the mmap, etc.)
 
   Print(u"\n\r", 0);
   Message(-1, u"TODO: Add memory-related functions, find mmap, etc.");
 
 
 
-  // (TODO: Wait until user strikes a key, then return.)
+  // (Wait until user strikes a key, then return.)
 
   if (SupportsConIn == true) {
     Message(Warning, u"Press any key to return.");
     while (gST->ConIn->ReadKeyStroke(gST->ConIn, &PhantomKey) == EfiNotReady);
   }
 
-  return EfiSuccess;
+  AppStatus = EfiSuccess;
+  goto ExitEfiApplication;
+
+
+
+  // ---------------- Restore state and exit EFI application ----------------
+
+  ExitEfiApplication:
+
+    // If text mode / ConOut is enabled, then restore regular text mode
+    // (which is always mode 0)
+
+    if (SupportsConOut == true) {
+      gST->ConOut->SetMode(gST->ConOut, 0);
+    }
+
+    // Restore the initial values of the CR0 and CR4 registers, since we
+    // modified them to set up the FPU and enable SSE.
+
+    WriteToControlRegister(0, KernelInfoTable.System.Cr0); // Restore CR0
+    WriteToControlRegister(4, KernelInfoTable.System.Cr4); // Restore CR4
+
+    // Return whatever is in AppStatus
+
+    return AppStatus;
 
 }

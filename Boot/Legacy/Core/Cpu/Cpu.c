@@ -401,7 +401,23 @@ uint64 ReadFromMsr(uint32 Msr) {
 
 }
 
-// WriteToControlRegister() - write to control register (CR-n, CR0-8)
+
+/* void WriteToControlRegister()
+
+   Inputs: uint8 Register - The control register you want to write to (for
+           example, 0 writes to CR0, 4 to CR4, etc.);
+
+           uint32 Value - The value you want to write to the register.
+
+   Outputs: (None, except an updated control register, or a warning message)
+
+   This function writes a value to a writeable control register (either
+   CR0, CR3, CR4 or CR8), and shows a warning message otherwise.
+
+   For example, to clear everything in the CR8 register, you could do:
+   -> WriteToControlRegister(8, 0x00000000);
+
+*/
 
 void WriteToControlRegister(uint8 Register, uint32 Value) {
 
@@ -427,7 +443,22 @@ void WriteToControlRegister(uint8 Register, uint32 Value) {
 }
 
 
-// ReadFromControlRegister() - read a control register (CR0-8)
+/* uint32 ReadFromControlRegister()
+
+   Inputs: uint8 Register - The control register you want to read from (for
+           example, 0 writes to CR0, 4 to CR4, etc.);
+
+   Outputs: uint32 Value - The value of that control register, or 0 if the
+            control register is unusable (which will display warning).
+
+   This function reads the current value of an accessible control register
+   (either CR0, CR2, CR3, CR4 or CR8) - returning it in Value - and shows
+   a warning message otherwise.
+
+   For example, to read the current value of the CR2 register, you could do:
+   -> uint32 Cr2 = ReadFromControlRegister(2);
+
+*/
 
 uint32 ReadFromControlRegister(uint8 Register) {
 

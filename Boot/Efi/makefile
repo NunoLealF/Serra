@@ -21,6 +21,7 @@ OBJD = x86_64-w64-mingw32-objdump
 # -ffreestanding: This is a freestanding environment. Also, implies fno-builtin.
 # -fpie: Compile our code into a position-independent executable.
 # -maccumulate-outgoing-args: Necessary for the EFI/Microsoft ABI on GCC.
+# -mmmx, -msse, -msse2: Make sure to *enable* MMX, SSE and SSE2 instructions.
 # -std=c2x: Use the regular C23 standard (GCC 13+, Clang 16+)
 # -O3: Optimize the resulting file/binary for *speed*.
 # -Wall: Enable all warnings.
@@ -28,7 +29,7 @@ OBJD = x86_64-w64-mingw32-objdump
 # -Wpedantic: Be pedantic about the C standard / any possible mistakes
 
 LDFLAGS = -e SEfiBootloader -nostdlib -static-pie -Wl,--subsystem,10
-CFLAGS = -std=c2x -ffreestanding -fpie -maccumulate-outgoing-args -O3 -Wall -Wextra -Wpedantic
+CFLAGS = -std=c2x -ffreestanding -fpie -maccumulate-outgoing-args -mmmx -msse -msse2 -O3 -Wall -Wextra -Wpedantic
 
 
 # The .PHONY directive is used on targets that don't output anything. For example, running 'make all' builds our
@@ -53,6 +54,8 @@ Clean:
 	@-rm -f *.o
 	@-rm -f *.efi
 
+	@-rm -f Cpu/*.o
+	@-rm -f Efi/*.o
 	@-rm -f Graphics/*.o
 
 Dump:
@@ -74,6 +77,10 @@ Bootloader.o:
 	@echo "Building $@"
 	@$(CC) $(CFLAGS) -ffunction-sections -c Bootloader.c -o Bootloader.o
 
+Cpu/Cpu.o:
+	@echo "Building $@"
+	@$(CC) $(CFLAGS) -ffunction-sections -c Cpu/Cpu.c -o Cpu/Cpu.o
+
 Graphics/Exceptions.o:
 	@echo "Building $@"
 	@$(CC) $(CFLAGS) -c Graphics/Exceptions.c -o Graphics/Exceptions.o
@@ -89,6 +96,6 @@ Graphics/Graphics.o:
 
 # [Link everything into one .EFI file]
 
-Bootx64.efi: Bootloader.o Graphics/Exceptions.o Graphics/Format.o Graphics/Graphics.o
+Bootx64.efi: Bootloader.o Cpu/Cpu.o Graphics/Exceptions.o Graphics/Format.o Graphics/Graphics.o
 	@echo "Building $@"
 	@$(CC) $(LDFLAGS) -o Bootx64.efi -ffreestanding -nolibc -nostdlib -lgcc $^

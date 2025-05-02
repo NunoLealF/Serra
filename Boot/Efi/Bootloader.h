@@ -7,6 +7,7 @@
 
   // Import other headers...
 
+  #include "Cpu/Cpu.h"
   #include "Efi/Efi.h"
   #include "Graphics/Graphics.h"
   #include "../../Common/InfoTable.h"
