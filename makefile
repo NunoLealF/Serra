@@ -176,6 +176,7 @@ Serra.img:
 	elif [ $(ImageType) = mbr ]; then \
 		dd if=/dev/zero of=Serra.img bs=1M count=$(ImageSize) status=none; \
 		echo "$$SFDISK_MBR_CONFIGURATION" | sfdisk Serra.img; \
+		dd if=Boot/Legacy/Bootsector/Mbr.bin of=Serra.img conv=notrunc bs=1 count=446 status=none; \
+		dd if=Boot/Legacy/Bootsector/Mbr.bin of=Serra.img conv=notrunc bs=1 count=2 skip=510 seek=510 status=none; \
 		dd if=Partition.img of=Serra.img conv=notrunc bs=$(SectorSize) seek=$(PartitionLba) status=none; \
-		install-mbr -e1 Serra.img; \
 	fi

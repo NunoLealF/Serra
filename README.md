@@ -45,7 +45,7 @@ In order to build Serra, you will need the following tools:
 
 - **Build tools**
 - - `make` (GNU make), for the build system itself;
-- - `dd`, `mtools`, `install-mbr` and `sfdisk`, to compile the final disk image.
+- - `dd`, `mtools` and `sfdisk`, to compile the final disk image.
 
 - **Other utilities *(optional)***
 - - `qemu` or `bochs`, to run the final disk image;

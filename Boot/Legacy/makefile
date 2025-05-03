@@ -55,7 +55,7 @@ include ${CONFIG}
 
 All: Clean Compile
 
-Compile: Bootsector/Bootsector.bin Init/Init.bin Shared/Rm/Rm.bin Core/Core.bin Bootx32.bin
+Compile: Bootsector/Mbr.bin Bootsector/Bootsector.bin Init/Init.bin Shared/Rm/Rm.bin Core/Core.bin Bootx32.bin
 
 Clean:
 	@echo "\033[0;2m""Cleaning leftover files (*.o, *.elf, *.bin).." "\033[0m"
@@ -108,7 +108,11 @@ dumpbin: Dumpbin
 
 # [The files themselves]
 
-# (First-stage bootloader, Legacy/Bootsector)
+# (MBR and first-stage bootloader (VBR), Legacy/Bootsector)
+
+Bootsector/Mbr.bin:
+	@echo "Building $@"
+	@$(AS) Bootsector/Mbr.asm -f bin -o Bootsector/Mbr.bin
 
 Bootsector/Bootsector.bin:
 	@echo "Building $@"
