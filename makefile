@@ -179,4 +179,5 @@ Serra.img:
 		dd if=Boot/Legacy/Bootsector/Mbr.bin of=Serra.img conv=notrunc bs=1 count=446 status=none; \
 		dd if=Boot/Legacy/Bootsector/Mbr.bin of=Serra.img conv=notrunc bs=1 count=2 skip=510 seek=510 status=none; \
 		dd if=Partition.img of=Serra.img conv=notrunc bs=$(SectorSize) seek=$(PartitionLba) status=none; \
+		rm Partition.img; \
 	fi

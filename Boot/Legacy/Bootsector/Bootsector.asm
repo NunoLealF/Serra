@@ -58,44 +58,90 @@ Start:
 
   cli
 
-  ; Now we can move on to actually setting up the segment registers (DS, ES
+  ; Now, we can move on to actually setting up the segment registers (DS, ES
   ; as well as SS), along with the stack.
 
   ; We set up the stack at 7C00h, as that location should be available on
   ; essentially *all* x86 systems, and because it'll leave the stack with
   ; around 30KiB of space, which should be more than enough.
 
-  mov ax, 00h
-  mov ds, ax
+  ; (Set up the initial segment registers, except for DS)
+
+  SetupRegisters:
+
+  mov ax, 0
   mov es, ax
   mov ss, ax
 
   mov sp, 7C00h
 
-  ; We can finally reenable interrupts now.
+  ; Next, we need to copy the MBR partition table entry - stored in DS:SI - to
+  ; the MbrEntry table here in the bootsector.
 
-  sti
+  ; (For context: on MBR targets, the current partition table is passed over
+  ; in DS:SI; and on MBR-less targets, you can check whether the table is
+  ; valid, which we do later on.)
 
-  ; The next step of the process is to try to load the second stage bootloader, and we'll
-  ; allow up to 8 tries for this.
+  CopyMbrEntry:
 
-  ; Although this process 'uses up' most registers, si should be free, and so we'll be
-  ; using it to keep track of how many times we've tried. We also want to save the
-  ; current value of dl in [SaveDl].
+  mov ds, bx
+  mov si, cx
+  mov di, MbrEntry
 
-  mov si, 0
+  mov cx, 16
+  rep movsb
+
+  ; Now that we've copied it, we can safely discard the old value of DS (and
+  ; SI), initializing them normally, before saving the value of DL.
+
+  ; (Our BIOS *always* passes the correct drive number in DL, which is why
+  ; we need to save it - the MBR also preserves it for us.)
+
+  SetupRemainingRegisters:
+
+  mov ax, 0
+  mov ds, ax
+  mov si, ax
+
   mov [SaveDl], dl
 
-  ; Since this isn't the MBR, but rather the bootsector of a FAT partition, that means that we
-  ; can't assume that our bootloader starts at LBA 0; because of that, we need to add the
-  ; number of hidden sectors before the bootsector to the offset in the disk address packet.
+  ; Check to see if the MBR entry is valid, and if so, update the BPB to have
+  ; the correct amount of hidden sectors; *most partitioning tools don't
+  ; update this correctly, for some reason*.
+
+  ; (This may cause issues on disks without an MBR, and it also modifies the
+  ; BPB, but the alternative is causing the partition to become completely
+  ; unbootable whenever it's moved or resized.)
+
+  VerifyMbrEntry:
+
+  mov al, [MbrEntry.Attributes]
+  cmp al, 0x80
+  jne UpdatePartitionOffset
+
+  mov eax, [MbrEntry.Lba]
+  cmp eax, 0
+  je UpdatePartitionOffset
+
+  mov [BPB.HiddenSectors], eax
+
+  ; Since we're in the bootsector of a FAT partition - and not necessarily an
+  ; MBR - we can't really assume our bootloader starts at the very start of
+  ; the disk.
+
+  ; Because of that, we need to add the number of hidden sectors (which is
+  ; a fancy way of saying the LBA offset of the partition) to the offset in
+  ; the disk address packet.
+
+  UpdatePartitionOffset:
 
   mov eax, [DiskAddressPacket.Offset]
   add eax, [BPB.HiddenSectors]
   mov [DiskAddressPacket.Offset], eax
 
-  ; We can now finally jump to loadDisk!
+  ; Finally, we can enable interrupts and jump to LoadDisk!
 
+  sti
   jmp LoadDisk
 
 
@@ -265,13 +311,27 @@ errorMsg db "[Serra] Failed to load the rest of the bootloader.", 0
 
 ; -----------------------------------
 
+MbrEntry:
+  .Attributes: db 0
+  .ChsStart.High: db 0
+  .ChsStart.Low: dw 0
+
+  .Type: db 0
+  .ChsEnd.High: db 0
+  .ChsEnd.Low: dw 0
+
+  .Lba: dd 0
+  .NumSectors: dd 0
+
+; -----------------------------------
+
 DiskAddressPacket:
 
-  DiskAddressPacket.Size: db 16 ; The size of this (disk address) packet is 16 bytes.
-  DiskAddressPacket.Reserved: db 0 ; (This area is reserved)
-  DiskAddressPacket.NumSectors: dw 24 ; We want to load 24 sectors into memory.
-  DiskAddressPacket.Location: dd 7E00h ; And we also want to load those at 7E00h.
-  DiskAddressPacket.Offset: dq 16 ; Additionally, we want to start loading from LBA 16 (this value may be changed).
+  .Size: db 16 ; The size of this (disk address) packet is 16 bytes.
+  .Reserved: db 0 ; (This area is reserved)
+  .NumSectors: dw 24 ; We want to load 24 sectors into memory.
+  .Location: dd 7E00h ; And we also want to load those at 7E00h.
+  .Offset: dq 16 ; Additionally, we want to start loading from LBA 16 (this value may be changed).
 
 ; -----------------------------------
 

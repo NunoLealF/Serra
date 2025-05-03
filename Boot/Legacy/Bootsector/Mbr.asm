@@ -152,7 +152,9 @@ LoadPartition:
   add bp, bx
 
   ; Check the LBA and CHS values, and if they appear to be correct, load
-  ; the partition bootsector
+  ; the partition bootsector.
+  
+  ; (Warning: CHS boot is mostly untested; this may not work!)
 
   .CheckLba:
 
@@ -160,9 +162,11 @@ LoadPartition:
 
     mov ax, [bp + 8]
     mov cx, [bp + 10]
-    or ax, cx
 
-    cmp ax, 0
+    mov bx, ax
+    or bx, cx
+
+    cmp bx, 0
     je .CheckChs
 
     ; (If so, load the bootsector of that partition, using the extended/LBA
@@ -190,8 +194,9 @@ LoadPartition:
     mov cl, [bp + 2]
     mov dh, [bp + 3]
 
-    or ch, cl
-    or ch, dh
+    mov bh, ch
+    or bh, cl
+    or bh, dh
 
     cmp ch, 0
     je .PartitionTableIsInvalid
@@ -227,7 +232,7 @@ LoadPartition:
 
     mov dl, [SaveDl]
 
-    jmp 7C00h
+    jmp 00h:BootsectorAddress
 
   ; If we've gotten here, then the partition table is invalid *or* we
   ; couldn't load it for some reason, so, return.
