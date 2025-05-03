@@ -54,12 +54,10 @@
 
     // [Filesystem, BPB and MBR]
 
-    bool BpbIsFat32;
     uint8 Bpb[120]; // Regular+extended BPB (usually starts at 7C00h + 3!)
-
-    [[maybe_unused]] bool MbrEntryIsValid;
-    [[maybe_unused]] mbrPartitionEntry PartitionEntry;
-    uint32 PartitionLba;
+    
+    bool PartitionIsFat32;
+    uint32 PartitionLba; // You can get this from the BPB's HiddenSectors field
 
     // [Terminal]
 

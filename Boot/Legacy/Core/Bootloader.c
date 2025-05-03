@@ -803,7 +803,6 @@ void S3Bootloader(void) {
 
 
 
-
   // [Preparing disk and (FAT) filesystem drivers]
 
   Putchar('\n', 0);
@@ -818,9 +817,8 @@ void S3Bootloader(void) {
 
   LogicalSectorSize = InfoTable->LogicalSectorSize;
   PhysicalSectorSize = InfoTable->PhysicalSectorSize;
-  PartitionLba = InfoTable->PartitionLba;
 
-  bool IsFat32 = InfoTable->BpbIsFat32;
+  bool PartitionIsFat32 = InfoTable->PartitionIsFat32;
 
   Message(Info, "Successfully obtained drive/EDD-related information.");
 
@@ -890,7 +888,7 @@ void S3Bootloader(void) {
 
   uint32 ClusterLimit = 0xFFF6;
 
-  if (IsFat32 == true) {
+  if (PartitionIsFat32 == true) {
     ClusterLimit = 0x0FFFFFF6;
   }
 
@@ -899,7 +897,7 @@ void S3Bootloader(void) {
 
   uint32 RootCluster;
 
-  if (IsFat32 == false) {
+  if (PartitionIsFat32 == false) {
     RootCluster = 2;
   } else {
     RootCluster = ExtendedBpb_32.RootCluster;
@@ -907,7 +905,7 @@ void S3Bootloader(void) {
 
   uint32 RootSectorOffset = DataSectorOffset;
 
-  if (IsFat32 == false) {
+  if (PartitionIsFat32 == false) {
     RootSectorOffset -= NumRootSectors;
   }
 
@@ -920,7 +918,7 @@ void S3Bootloader(void) {
   } else {
 
     Message(Ok, "Successfully read data from the BPB.");
-    Message(Info, "FAT%d Filesystem has %d sectors (%d root, %d data)", ((IsFat32 == true) ? 32: 16), TotalNumSectors, NumRootSectors, NumDataSectors);
+    Message(Info, "FAT%d Filesystem has %d sectors (%d root, %d data)", ((PartitionIsFat32 == true) ? 32: 16), TotalNumSectors, NumRootSectors, NumDataSectors);
     Message(Info, "Root cluster offset is %d; cluster limit is %xh", RootCluster, ClusterLimit);
 
   }
@@ -931,7 +929,7 @@ void S3Bootloader(void) {
 
   // (Start by searching for Boot/ within the root directory)
 
-  fatDirectory BootDirectory = FindDirectory(RootCluster, Bpb.SectorsPerCluster, Bpb.HiddenSectors, Bpb.ReservedSectors, RootSectorOffset, "BOOT    ", "   ", true, IsFat32);
+  fatDirectory BootDirectory = FindDirectory(RootCluster, Bpb.SectorsPerCluster, Bpb.HiddenSectors, Bpb.ReservedSectors, RootSectorOffset, "BOOT    ", "   ", true, PartitionIsFat32);
   uint32 BootCluster = GetDirectoryCluster(BootDirectory);
 
   if (ExceedsLimit(BootCluster, ClusterLimit)) {
@@ -940,7 +938,7 @@ void S3Bootloader(void) {
 
   // (Then, search for Serra/ within Boot/)
 
-  fatDirectory SerraDirectory = FindDirectory(BootCluster, Bpb.SectorsPerCluster, Bpb.HiddenSectors, Bpb.ReservedSectors, DataSectorOffset, "SERRA   ", "   ", true, IsFat32);
+  fatDirectory SerraDirectory = FindDirectory(BootCluster, Bpb.SectorsPerCluster, Bpb.HiddenSectors, Bpb.ReservedSectors, DataSectorOffset, "SERRA   ", "   ", true, PartitionIsFat32);
   uint32 SerraCluster = GetDirectoryCluster(SerraDirectory);
 
   if (ExceedsLimit(SerraCluster, ClusterLimit)) {
@@ -949,7 +947,7 @@ void S3Bootloader(void) {
 
   // (Finally, look for Kernel.elf within Boot/Serra/)
 
-  fatDirectory KernelDirectory = FindDirectory(SerraCluster, Bpb.SectorsPerCluster, Bpb.HiddenSectors, Bpb.ReservedSectors, DataSectorOffset, "KERNEL  ", "ELF", false, IsFat32);
+  fatDirectory KernelDirectory = FindDirectory(SerraCluster, Bpb.SectorsPerCluster, Bpb.HiddenSectors, Bpb.ReservedSectors, DataSectorOffset, "KERNEL  ", "ELF", false, PartitionIsFat32);
   uint32 KernelCluster = GetDirectoryCluster(KernelDirectory);
 
   if (ExceedsLimit(KernelCluster, ClusterLimit)) {
@@ -1176,7 +1174,7 @@ void S3Bootloader(void) {
   // directory earlier (KernelDirectory), and allocated space for it in
   // memory (KernelArea), so all that's left is to call ReadFile().
 
-  bool ReadFileSuccessful = ReadFile((void*)KernelArea, KernelDirectory, Bpb.SectorsPerCluster, Bpb.HiddenSectors, Bpb.ReservedSectors, DataSectorOffset, IsFat32);
+  bool ReadFileSuccessful = ReadFile((void*)KernelArea, KernelDirectory, Bpb.SectorsPerCluster, Bpb.HiddenSectors, Bpb.ReservedSectors, DataSectorOffset, PartitionIsFat32);
 
   if (ReadFileSuccessful == true) {
     Message(Ok, "Successfully loaded Boot/Serra/Kernel.elf to %xh.", (uint32)KernelArea);

@@ -95,27 +95,6 @@ void RestoreState(void) {
   // in our bootsector, so we only need to do this:
 
   #define DebugOffset 4
-  #define PartitionEntryOffset 20
-
-  // (Find partition table entry in bootsector, and set up PartitionLba)
-
-  mbrPartitionEntry PartitionEntry = *(mbrPartitionEntry*)(0x7E00 - PartitionEntryOffset);
-  bool PartitionEntryIsValid;
-
-  if ((PartitionEntry.Attributes & (1 << 7)) != 0) {
-
-    PartitionEntryIsValid = true;
-    PartitionLba = PartitionEntry.Lba;
-
-  } else {
-
-    PartitionEntryIsValid = false;
-    PartitionLba = 0;
-
-  }
-
-  // (Find Debug flag in bootsector)
-
   uint8 UseDebugFlag = *(uint8*)(0x7E00 - DebugOffset);
 
   if (UseDebugFlag == 0x00) {
@@ -418,12 +397,8 @@ void RestoreState(void) {
 
   // (Fill out filesystem/BPB info)
 
-  InfoTable->BpbIsFat32 = PartitionIsFat32;
   Memcpy(&InfoTable->Bpb, (void*)(BpbAddress + 3), sizeof(InfoTable->Bpb));
-
-  InfoTable->MbrEntryIsValid = PartitionEntryIsValid;
-  InfoTable->PartitionEntry = PartitionEntry;
-  InfoTable->PartitionLba = PartitionLba;
+  InfoTable->PartitionIsFat32 = PartitionIsFat32;
 
   // (Fill out terminal info)
 

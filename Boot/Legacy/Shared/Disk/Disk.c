@@ -13,8 +13,6 @@ uint8 DriveNumber;
 uint16 LogicalSectorSize;
 uint16 PhysicalSectorSize;
 
-uint32 PartitionLba;
-
 extern void Memcpy(void* Destination, void* Source, uint32 Size);
 extern void Memset(void* Buffer, uint8 Character, uint32 Size);
 
@@ -95,10 +93,6 @@ realModeTable* ReadSector(uint16 NumBlocks, uint32 Address, uint64 Offset) {
    usually expressed in the BPB) and PhysicalSectorSize (the actual sector size being used
    by the system), so those two variables must be set.
 
-   Additionally, *it also relies on the PartitionLba global variable to know where the
-   partition is actually located; if the system isn't partitioned, you can safely set this
-   to 0, but otherwise, it must always be accurate.*
-
    Otherwise, it runs in the same way as ReadSector(); *just be careful to avoid exceeding
    the stack size, since this function allocates a buffer/cache.*
 
@@ -108,8 +102,9 @@ realModeTable* ReadFatSector(uint16 NumBlocks, uint32 Address, uint32 Lba) {
 
   // First, we need to figure out the corresponding physical sector, like this:
 
-  // (NumSectors is the number of physical sectors to read, whereas NumBlocks is the number
-  // of logical sectors to read)
+  // (NumSectors is the number of physical sectors to read, whereas NumBlocks
+  // is the number of logical sectors to read; keep in mind we add the FAT
+  // partition's LBA to PhysicalLba.)
 
   uint32 PhysicalLba = Lba;
   uint16 Offset = 0;
@@ -129,11 +124,6 @@ realModeTable* ReadFatSector(uint16 NumBlocks, uint32 Address, uint32 Lba) {
     Offset += ((Lba % (PhysicalSectorSize / LogicalSectorSize)) * LogicalSectorSize);
 
   }
-
-  // (Additionally, we also want to add the partition LBA, if applicable;
-  // for systems without a partition table, this shouldn't do anything.)
-
-  PhysicalLba += PartitionLba;
 
   // Next, we'll want to create a temporary array to store the data we're reading from
   // disk. We can't just directly use ReadSector() on Address, since the size of a physical

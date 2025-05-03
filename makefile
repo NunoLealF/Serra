@@ -133,7 +133,7 @@ Serra.img:
 # for the BPB, sets the number of reserved sectors to 64, and the number of hidden sectors
 # to 2048.
 
-	@mformat -i Partition.img -c 16 -k -R 64 ::
+	@mformat -i Partition.img -H 2048 -c 16 -k -R 64 ::
 
 # (Add the 3rd stage bootloader; it's assumed that the actual bootloader will be in
 # Boot/Legacy/Boot/Bootx32.bin, with the kernel/common stage coming later on.)
