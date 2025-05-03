@@ -102,7 +102,7 @@ void RestoreState(void) {
   mbrPartitionEntry PartitionEntry = *(mbrPartitionEntry*)(0x7E00 - PartitionEntryOffset);
   bool PartitionEntryIsValid;
 
-  if ((PartitionEntry.Attributes | (1 << 7)) != 0) {
+  if ((PartitionEntry.Attributes & (1 << 7)) != 0) {
 
     PartitionEntryIsValid = true;
     PartitionLba = PartitionEntry.Lba;
@@ -328,11 +328,6 @@ void RestoreState(void) {
 
   Putchar('\n', 0);
   Message(Boot, "Preparing to jump to the next stage of the bootloader.");
-
-  Message(Info, "Test.. lbaoffset is %d", PartitionLba);
-  if (PartitionEntryIsValid == true) {
-    Print("!!!", 0xC4);
-  }
 
   // (First, we need to get the root cluster, along with the sector offset of that cluster)
 
