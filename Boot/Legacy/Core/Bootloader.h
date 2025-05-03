@@ -23,11 +23,22 @@
   void S3Bootloader(void);
   void LongmodeStub(uintptr InfoTable, uintptr Pml4);
 
+  // Global variables, for use throughout the entire bootloader
+
+  #ifdef Debug
+    bool DebugFlag = Debug; // Defined by the preprocessor, use -DDebug=true or false.
+  #else
+    bool DebugFlag = true; // If 'Debug' isn't defined, then assume it's true
+  #endif
+
+  terminalDataStruct TerminalTable;
+
   // Kernel-related definitions.
 
   #include "../../../Common/InfoTable.h"
 
   #define KernelStackSize 0x100000 // (Must be a multiple of 4KiB)
+
   uint64 KernelEntrypoint;
   uint64 KernelStack;
 

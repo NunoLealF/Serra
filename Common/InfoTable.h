@@ -167,9 +167,7 @@
 
     struct __Kernel {
 
-      bool Debug; // Debug flag.
-
-      universalPtr ElfHeader; // Pointer to the kernel elf header
+      universalPtr ElfHeader; // Pointer to the kernel ELF header
       universalPtr Entrypoint; // Kernel entrypoint *and* initial stack ptr
       universalPtr Stack; // Initial stack pointer (minus 128 bytes, as in stub)
 

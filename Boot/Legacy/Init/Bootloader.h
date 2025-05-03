@@ -20,4 +20,14 @@
   [[noreturn]] void S2Init(void);
   [[noreturn]] void S2Bootloader(void);
 
+  // Declare global variables, for use throughout the entire bootloader
+
+  #ifdef Debug
+    bool DebugFlag = Debug; // Defined by the preprocessor, use -DDebug=true or false.
+  #else
+    bool DebugFlag = true; // If 'Debug' isn't defined, then assume it's true
+  #endif
+
+  terminalDataStruct TerminalTable;
+
 #endif

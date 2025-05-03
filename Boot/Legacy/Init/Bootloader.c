@@ -89,23 +89,9 @@ void RestoreState(void) {
   // mode with the stack at 20000h in memory, and our bootloader between 7E00h and 9E00h in
   // memory (leaving us with a total of 8KiB of space).
 
-
-  // First, we'll want to set up the Debug flag/variable, which dictates whether
-  // non-important messages should be shown or not. It's hardcoded at a specific offset
-  // in our bootsector, so we only need to do this:
-
-  #define DebugOffset 4
-  uint8 UseDebugFlag = *(uint8*)(0x7E00 - DebugOffset);
-
-  if (UseDebugFlag == 0x00) {
-    Debug = false;
-  } else {
-    Debug = true;
-  }
-
-
-  // Next, we can go ahead and set up the terminal, and then display a message showing
-  // that we've successfully entered the second-stage bootloader.
+  // First and foremast, we'll go ahead and set up the terminal, and then
+  // display a message showing that we've successfully entered the
+  // second-stage bootloader.
 
   InitializeTerminal(80, 25, 0xB8000);
   ClearTerminal();
@@ -380,10 +366,6 @@ void RestoreState(void) {
   InfoTable->Version = 1;
 
   InfoTable->Size = sizeof(bootloaderInfoTable);
-
-  // (Fill out system info)
-
-  InfoTable->SystemInfo.Debug = Debug;
 
   // (Fill out disk/EDD info)
 

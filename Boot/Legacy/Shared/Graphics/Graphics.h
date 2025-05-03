@@ -49,7 +49,7 @@
   } __attribute__((packed)) terminalDataStruct;
 
   extern terminalDataStruct TerminalTable;
-  extern bool Debug;
+  extern bool DebugFlag;
 
 
   // Functions that directly interact with the TerminalTable{} structure, from Graphics.c

@@ -121,9 +121,8 @@ void S3Bootloader(void) {
   }
 
   // If it is, then that means we have a valid InfoTable, so let's set
-  // the debug flag, and initialize the terminal table:
+  // up the terminal/console:
 
-  Debug = InfoTable->SystemInfo.Debug;
   Memcpy(&TerminalTable, &InfoTable->TerminalInfo, sizeof(InfoTable->TerminalInfo));
 
   Putchar('\n', 0);
@@ -138,8 +137,6 @@ void S3Bootloader(void) {
   KernelInfo.Signature = 0x7577757E7577757E;
   KernelInfo.Version = KernelInfoTableVersion;
   KernelInfo.Size = sizeof(kernelInfoTable);
-
-  KernelInfo.Kernel.Debug = Debug;
 
   // (Copy contents of TerminalTable)
 

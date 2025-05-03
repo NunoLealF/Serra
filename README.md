@@ -45,7 +45,7 @@ In order to build Serra, you will need the following tools:
 
 - **Build tools**
 - - `make` (GNU make), for the build system itself;
-- - `dd` and `mtools`, to compile the final disk image.
+- - `dd`, `mtools`, `install-mbr` and `sfdisk`, to compile the final disk image.
 
 - **Other utilities *(optional)***
 - - `qemu` or `bochs`, to run the final disk image;
@@ -60,6 +60,10 @@ running `make all`.
 <details>
 
   <summary>Building and running the boot manager</summary>
+
+  ### Configuring the boot manager
+  This is still a work-in-progress, but you can configure how Serra is built
+  and configured in **`makefile.config` > *Build Options***.
 
   ### Building the boot manager
   - `make clean`: Clean all leftover files (.o, .bin, .elf, .img, etc.);
@@ -85,7 +89,7 @@ running `make all`.
 - - Process the system memory map;
 - - Locate protocols for things like ACPI, USB, SATA, disk, etc.;
 - Review the build system (and add a better way to control things like debug messages);
-- - A configuration file would be ideal for this.
+- - __This is done__, but needs to be rewritten + add GPT support.
 - Start working on the kernel, in `Common/`.
 - - Review the kernel info tables;
 - - Implement a few common drivers, for things like graphics support, PCI, etc.;

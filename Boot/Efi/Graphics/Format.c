@@ -228,7 +228,7 @@ char16* Itoa(uint64 Number, char16* Buffer, uint8 Base) {
    for more information, please check the documentation on Printf().
 
    Please keep in mind that, as with any other terminal/console-related
-   function, *this only does anything if Debug and SupportsConout == true.*
+   function, this only does anything if DebugFlag and SupportsConout == true.
 
 */
 
@@ -238,7 +238,7 @@ void vPrintf(const char16* String, int32 Color, va_list Arguments) {
   // former means we can't use text mode at all, whereas the latter means
   // we don't want to display any unimportant messages.
 
-  if ((Debug == false) || (SupportsConOut == false)) {
+  if ((DebugFlag == false) || (SupportsConOut == false)) {
     return;
   }
 
@@ -372,7 +372,7 @@ void Printf(const char16* String, int32 Color, ...) {
   // former means we can't use text mode at all, whereas the latter means
   // we don't want to display any unimportant messages.
 
-  if ((Debug == false) || (SupportsConOut == false)) {
+  if ((DebugFlag == false) || (SupportsConOut == false)) {
     return;
   }
 

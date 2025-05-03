@@ -22,14 +22,6 @@
 
     uint16 Size; // Maximum 512 bytes
 
-    // [System-related]
-
-    struct __SystemInfo {
-
-      bool Debug;
-
-    } __attribute__((packed)) SystemInfo;
-
     // [Disk/EDD]
 
     uint8 DriveNumber; // Same as SaveDL, or if Edd_Valid is false, 0x80
@@ -55,7 +47,7 @@
     // [Filesystem, BPB and MBR]
 
     uint8 Bpb[120]; // Regular+extended BPB (usually starts at 7C00h + 3!)
-    
+
     bool PartitionIsFat32;
     uint32 PartitionLba; // You can get this from the BPB's HiddenSectors field
 

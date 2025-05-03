@@ -32,6 +32,11 @@ OBJD = x86_64-w64-mingw32-objdump
 LDFLAGS = -e SEfiBootloader -nostdlib -static-pie -Wl,--subsystem,10
 CFLAGS = -std=c2x -ffreestanding -fpie -maccumulate-outgoing-args -march=x86-64 -mmmx -msse -msse2 -O3 -Wall -Wextra -Wpedantic
 
+# (Include the build configuration file, from the root directory)
+
+CONFIG := ../../makefile.config
+include ${CONFIG}
+
 
 # The .PHONY directive is used on targets that don't output anything. For example, running 'make all' builds our
 # bootloader, but it doesn't output any specific files; it just goes through a lot of targets; the target that builds

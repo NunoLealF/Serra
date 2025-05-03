@@ -50,7 +50,7 @@ void ClearTerminal(void) {
    supports strings, not individual characters).
 
    (Please keep in mind that, as with any other terminal/console-related
-   function, this only does anything if Debug and SupportsConOut == true)
+   function, this only does anything if DebugFlag and SupportsConOut == true)
 
 */
 
@@ -60,7 +60,7 @@ void Putchar(const char16 Character, int32 Color) {
   // former means we can't use text mode at all, whereas the latter means
   // we don't want to display any unimportant messages.
 
-  if ((Debug == false) || (SupportsConOut == false)) {
+  if ((DebugFlag == false) || (SupportsConOut == false)) {
     return;
   }
 
@@ -101,7 +101,7 @@ void Print(const char16* String, int32 Color) {
   // former means we can't use text mode at all, whereas the latter means
   // we don't want to display any unimportant messages.
 
-  if ((Debug == false) || (SupportsConOut == false)) {
+  if ((DebugFlag == false) || (SupportsConOut == false)) {
     return;
   }
 

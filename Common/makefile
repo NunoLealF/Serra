@@ -33,6 +33,11 @@ OBJD = x86_64-elf-objdump
 LDFLAGS = -nostdlib -mno-red-zone -static-pie
 CFLAGS = -std=c23 -funsigned-char -ffreestanding -fpie -march=x86-64 -mmmx -msse -msse2 -mno-red-zone -O3 -Wall -Wextra -Wpedantic
 
+# (Include the build configuration file, from the root directory)
+
+CONFIG := ../makefile.config
+include ${CONFIG}
+
 
 # The .PHONY directive is used on targets that don't output anything. For example, running 'make all' builds our
 # bootloader, but it doesn't output any specific files; it just goes through a lot of targets; the target that builds

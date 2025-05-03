@@ -35,6 +35,11 @@ QEMU = qemu-system-x86_64
 LDFLAGS = -Wl,--no-warn-rwx-segments
 CFLAGS = -std=c23 -ffunction-sections -funsigned-char -ffreestanding -mno-mmx -mno-sse -mno-sse2 -Os -Wall -Wextra -Wpedantic -Wno-discarded-qualifiers
 
+# (Include the build configuration file, from the root directory)
+
+CONFIG := ../../makefile.config
+include ${CONFIG}
+
 
 # The .PHONY directive is used on targets that don't output anything. For example, running 'make all' builds our
 # bootloader, but it doesn't output any specific files; it just goes through a lot of targets; the target that builds

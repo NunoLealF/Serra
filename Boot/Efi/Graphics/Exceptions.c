@@ -21,8 +21,8 @@
    in Graphics.h), which are shown to the user.
 
    Unlike other printing functions, this function doesn't necessarily need
-   Debug to be true for some message types, but SupportsConOut *must* be
-   true.
+   DebugFlag to be true for some message types, but SupportsConOut *must*
+   be true.
 
    For example, if you wanted to tell the user that something had gone
    wrong, you could do:
@@ -44,9 +44,9 @@ void Message(messageType Type, char16* String, ...) {
   va_list Arguments;
   va_start(Arguments, String);
 
-  // Depending on the 'severity level', turn on Debug
+  // Depending on the 'severity level', temporarily turn on the debug flag.
 
-  bool SaveDebug = Debug;
+  bool SaveDebug = DebugFlag;
 
   switch (Type) {
 
@@ -55,7 +55,7 @@ void Message(messageType Type, char16* String, ...) {
     case Warning:
       [[fallthrough]];
     case Error:
-      Debug = true;
+      DebugFlag = true;
 
     default:
       break;
@@ -106,7 +106,7 @@ void Message(messageType Type, char16* String, ...) {
   vPrintf(String, ((Type != Info) ? 0x0F : 0x07), Arguments);
   Print(u"\n\r", 0x0F);
 
-  Debug = SaveDebug;
+  DebugFlag = SaveDebug;
   va_end(Arguments);
 
 }

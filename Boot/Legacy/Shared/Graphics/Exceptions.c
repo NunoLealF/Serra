@@ -32,9 +32,9 @@ void Message(messageType Type, char* String, ...) {
   va_list Arguments;
   va_start(Arguments, String);
 
-  // Depending on the 'severity level', turn on Debug
+  // Depending on the 'severity level', temporarily turn on the debug flag.
 
-  bool SaveDebug = Debug;
+  bool SaveDebug = DebugFlag;
 
   switch (Type) {
 
@@ -43,7 +43,7 @@ void Message(messageType Type, char* String, ...) {
     case Warning:
       [[fallthrough]];
     case Error:
-      Debug = true;
+      DebugFlag = true;
 
     default:
       break;
@@ -93,7 +93,7 @@ void Message(messageType Type, char* String, ...) {
   vPrintf(String, ((Type != Info) ? 0x0F : 0x07), Arguments);
   Print("\n", 0x0F);
 
-  Debug = SaveDebug;
+  DebugFlag = SaveDebug;
   va_end(Arguments);
 
 }
@@ -128,7 +128,7 @@ void Message(messageType Type, char* String, ...) {
 
   Putchar('\n', 0);
 
-  Debug = true;
+  DebugFlag = true;
   Message(Error, String);
 
   // Show the instruction pointer, if applicable

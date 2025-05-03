@@ -231,7 +231,7 @@ void vPrintf(const char* String, uint8 Color, va_list Arguments) {
   // If Debug is false, then don't print anything (it's automatically set to true for any
   // important system messages)
 
-  if (Debug == false) {
+  if (DebugFlag == false) {
     return;
   }
 
@@ -353,7 +353,7 @@ void Printf(const char* String, uint8 Color, ...) {
   // If Debug is false, then don't print anything (it's automatically set to true for any
   // important system messages)
 
-  if (Debug == false) {
+  if (DebugFlag == false) {
     return;
   }
 

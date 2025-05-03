@@ -6,11 +6,6 @@
 #include "../Memory/Memory.h"
 #include "Graphics.h"
 
-// Global variables. (The Debug flag inhibits all messages if set to false)
-
-terminalDataStruct TerminalTable;
-bool Debug;
-
 /* void InitializeTerminal()
 
    Inputs: uint16 LimitX - The width (or horizontal limit) of our terminal;
@@ -220,7 +215,7 @@ static void PutcharAt(const char Character, uint8 Color, uint16 PosX, uint16 Pos
 
    It can be called by any function, even outside of this file (as it's not a static function),
    but its main purpose is to be called by Print(). However, if the Debug flag isn't set
-   (so, if (Debug == false)), this function doesn't print anything
+   (so, if (DebugFlag == false)), this function doesn't print anything
 
 */
 
@@ -229,7 +224,7 @@ void Putchar(const char Character, uint8 Color) {
   // If Debug is false, then don't print anything (it's automatically set to true for any
   // important system messages)
 
-  if (Debug == false) {
+  if (DebugFlag == false) {
     return;
   }
 
@@ -300,7 +295,7 @@ void Print(const char* String, uint8 Color) {
   // If Debug is false, then don't print anything (it's automatically set to true for any
   // important system messages)
 
-  if (Debug == false) {
+  if (DebugFlag == false) {
     return;
   }
 

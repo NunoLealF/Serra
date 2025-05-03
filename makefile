@@ -14,17 +14,9 @@ QEMU = qemu-system-x86_64
 QFLAGS = -cpu qemu64 -m 128
 OVMFDIR = /usr/share/OVMF/OVMF_CODE_4M.fd
 
-define SFDISK_CONFIGURATION
+CONFIG := makefile.config
+include ${CONFIG}
 
-	label: dos
-
-	unit: sectors
-	first-lba: 2048
-	sector-size: 512
-
-	start=1M, size=36M, type=0xEF, bootable
-
-endef
 
 # The .PHONY directive is used on targets that don't output anything. For example, running 'make all' builds our
 # bootloader, but it doesn't output any specific files; it just goes through a lot of targets; the target that builds
@@ -41,11 +33,15 @@ All: Clean Compile
 
 Compile:
 
-	@echo "\n\033[0;1m""Compiling [Boot/Efi]""\033[0m\n"
-	@$(MAKE) -C Boot/Efi compile
+	@if [ $(BuildEfi) = true ]; then \
+		echo "\n\033[0;1m""Compiling [Boot/Efi]""\033[0m\n"; \
+		$(MAKE) -C Boot/Efi compile; \
+	fi
 
-	@echo "\n\033[0;1m""Compiling [Boot/Legacy]""\033[0m\n"
-	@$(MAKE) -C Boot/Legacy compile
+	@if [ $(BuildBios) = true ]; then \
+		echo "\n\033[0;1m""Compiling [Boot/Legacy]""\033[0m\n"; \
+		$(MAKE) -C Boot/Legacy compile; \
+	fi
 
 	@echo "\n\033[0;1m""Compiling [Common]""\033[0m\n"
 	@$(MAKE) -C Common compile
@@ -60,11 +56,15 @@ Clean:
 	rm -f *.img
 	rm -f *.iso
 
-	@echo "\n\033[0;1m""Cleaning [Boot/Efi]""\033[0m\n"
-	@$(MAKE) -C Boot/Efi clean
+	@if [ $(BuildEfi) = true ]; then \
+	  echo "\n\033[0;1m""Cleaning [Boot/Efi]""\033[0m\n"; \
+	  $(MAKE) -C Boot/Efi clean; \
+	fi
 
-	@echo "\n\033[0;1m""Cleaning [Boot/Legacy]""\033[0m\n"
-	@$(MAKE) -C Boot/Legacy clean
+	@if [ $(BuildBios) = true ]; then \
+		echo "\n\033[0;1m""Cleaning [Boot/Legacy]""\033[0m\n"; \
+		$(MAKE) -C Boot/Legacy clean; \
+	fi
 
 	@echo "\n\033[0;1m""Cleaning [Common]""\033[0m\n"
 	@$(MAKE) -C Common clean
@@ -114,16 +114,23 @@ runkvm: RunKvm
 
 # [Mix all of the different stages together (36-40 MiB image)]
 
-export SFDISK_CONFIGURATION
+# TODO: This is now configured via makefile.config, but I'd still like to
+# rewrite this, it's way too messy for my liking.
+
+export SFDISK_MBR_CONFIGURATION
 
 Serra.img:
 
 	@echo "Building $@"
-	@dd if=/dev/zero of=Partition.img bs=1M count=36 status=none
+	@dd if=/dev/zero of=Partition.img bs=1M count=$(PartitionSize) status=none
 
-	@dd if=Boot/Legacy/Bootsector/Bootsector.bin of=Partition.img conv=notrunc bs=512 count=1 seek=0 status=none
-	@dd if=Boot/Legacy/Init/Init.bin of=Partition.img conv=notrunc bs=512 count=16 seek=16 status=none
-	@dd if=Boot/Legacy/Shared/Rm/Rm.bin of=Partition.img conv=notrunc bs=512 count=8 seek=32 status=none
+# (...)
+
+	@if [ $(BuildBios) = true ]; then \
+		dd if=Boot/Legacy/Bootsector/Bootsector.bin of=Partition.img conv=notrunc bs=512 count=1 seek=0 status=none; \
+		dd if=Boot/Legacy/Init/Init.bin of=Partition.img conv=notrunc bs=512 count=16 seek=16 status=none; \
+		dd if=Boot/Legacy/Shared/Rm/Rm.bin of=Partition.img conv=notrunc bs=512 count=8 seek=32 status=none; \
+	fi
 
 # (This formats it as a valid FAT16 filesystem while keeping the non-BPB part of the bootsector;
 # that being said, *it's a temporary solution*, since we'll eventually need to merge the
@@ -133,29 +140,42 @@ Serra.img:
 # for the BPB, sets the number of reserved sectors to 64, and the number of hidden sectors
 # to 2048.
 
-	@mformat -i Partition.img -H 2048 -c 16 -k -R 64 ::
+	@if [ $(ImageType) = unpart ]; then \
+		mformat -i Partition.img -M $(SectorSize) -c $(ClusterSize) -k -R 64 ::; \
+	else \
+		mformat -i Partition.img -M $(SectorSize) -c $(ClusterSize) -k -H $(PartitionLba) -R 64 ::; \
+	fi
 
 # (Add the 3rd stage bootloader; it's assumed that the actual bootloader will be in
 # Boot/Legacy/Boot/Bootx32.bin, with the kernel/common stage coming later on.)
 
-	@mmd -i Partition.img ::/Boot
-	@mcopy -i Partition.img Boot/Legacy/Bootx32.bin ::/Boot/
+	@mmd -i Partition.img ::/Boot; \
+
+	@if [ $(BuildBios) = true ]; then \
+		mcopy -i Partition.img Boot/Legacy/Bootx32.bin ::/Boot/; \
+	fi
 
 # (Add the EFI bootloader)
 
-	@mmd -i Partition.img ::/Efi
-	@mmd -i Partition.img ::/Efi/Boot
-	@mcopy -i Partition.img Boot/Efi/Bootx64.efi ::/Efi/Boot/
+	@if [ $(BuildEfi) = true ]; then \
+		mmd -i Partition.img ::/Efi; \
+		mmd -i Partition.img ::/Efi/Boot; \
+		mcopy -i Partition.img Boot/Efi/Bootx64.efi ::/Efi/Boot/; \
+	fi
 
 # (Add the actual kernel files)
 
 	@mmd -i Partition.img ::/Boot/Serra
 	@mcopy -i Partition.img Common/Kernel/Kernel.elf ::/Boot/Serra/
 
-# (Now, build the final image, and set up the partition table.)
+ # (Now, depending on the partition type, build the final image, and set up
+ # the partition table.)
 
-	@dd if=/dev/zero of=Serra.img bs=1048576 count=40 status=none
-	@echo "$$SFDISK_CONFIGURATION" | sfdisk Serra.img
-
-	@dd if=Partition.img of=Serra.img conv=notrunc bs=1M count=36 seek=1 status=none
-	@install-mbr -e1 Serra.img
+	@if [ $(ImageType) = unpart ]; then \
+		mv Partition.img Serra.img; \
+	elif [ $(ImageType) = mbr ]; then \
+		dd if=/dev/zero of=Serra.img bs=1M count=$(ImageSize) status=none; \
+		echo "$$SFDISK_MBR_CONFIGURATION" | sfdisk Serra.img; \
+		dd if=Partition.img of=Serra.img conv=notrunc bs=$(SectorSize) seek=$(PartitionLba) status=none; \
+		install-mbr -e1 Serra.img; \
+	fi

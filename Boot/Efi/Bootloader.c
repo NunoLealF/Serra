@@ -505,9 +505,11 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
   // TODO (Show Serra msg thing)
 
+  DebugFlag = true;
+
   Print(u"\n\r", 0);
   Print(u"Hi, this is EFI-mode Serra! <3 \n\r", 0x0F);
-  Printf(u"May %d %x", 0x3F, 2, 0x2025);
+  Printf(u"May %d %x", 0x3F, 3, 0x2025);
 
   // TODO (Wait until user strikes a key, then return.)
 

@@ -23,15 +23,13 @@
   void Message(messageType Type, char16* String, ...);
 
 
-  // Global variables, from Bootloader.h (and using types in Efi/Efi.h)
+  // Global variables, from Bootloader.h
 
   #ifndef SERRA_BOOTLOADER_H
 
-    // (Bootloader-defined variables)
-
-    extern bool Debug;
+    extern bool DebugFlag;
     extern bool SupportsConOut;
-
+    
   #endif
 
 
