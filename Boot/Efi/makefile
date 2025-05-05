@@ -63,6 +63,7 @@ Clean:
 	@-rm -f Cpu/*.o
 	@-rm -f Efi/*.o
 	@-rm -f Graphics/*.o
+	@-rm -f Memory/*.o
 
 Dump:
 	@$(OBJD) -S Bootx64.efi
@@ -99,9 +100,13 @@ Graphics/Graphics.o:
 	@echo "Building $@"
 	@$(CC) $(CFLAGS) -c Graphics/Graphics.c -o Graphics/Graphics.o
 
+Memory/Memory.o:
+	@echo "Building $@"
+	@$(CC) $(CFLAGS) -c Memory/Memory.c -o Memory/Memory.o
+
 
 # [Link everything into one .EFI file]
 
-Bootx64.efi: Bootloader.o Cpu/Cpu.o Graphics/Exceptions.o Graphics/Format.o Graphics/Graphics.o
+Bootx64.efi: Bootloader.o Cpu/Cpu.o Graphics/Exceptions.o Graphics/Format.o Graphics/Graphics.o Memory/Memory.o
 	@echo "Building $@"
 	@$(CC) $(LDFLAGS) -o Bootx64.efi -ffreestanding -nolibc -nostdlib $^ -lgcc

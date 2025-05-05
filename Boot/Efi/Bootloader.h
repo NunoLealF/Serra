@@ -10,6 +10,7 @@
   #include "Cpu/Cpu.h"
   #include "Efi/Efi.h"
   #include "Graphics/Graphics.h"
+  #include "Memory/Memory.h"
   #include "../../Common/InfoTable.h"
 
   // Declare functions and global variables in Bootloader.c

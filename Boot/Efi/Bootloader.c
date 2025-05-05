@@ -379,7 +379,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
 
 
-  // [Obtaining system memory map]
+  // [Obtain the system memory map]
 
   // After that, we want to move onto memory management - our kernel needs
   // to know about the system's memory map (so it knows where to allocate
@@ -492,7 +492,122 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
 
 
+  // [Find ACPI and SMBIOS tables]
+
+  Print(u"\n\r", 0);
+  Message(Boot, u"Preparing to find ACPI and SMBIOS tables.");
+
+  // (Prepare variables)
+
+  void* AcpiTable = NULL;
+  bool SupportsAcpi = false;
+  bool SupportsNewAcpi = false;
+
+  void* SmbiosTable = NULL;
+  bool SupportsSmbios = false;
+  bool SupportsNewSmbios = false;
+
+  // (Go through each configuration table entry, in the system table)
+
+  for (uint64 Entry = 0; Entry < gST->NumberOfTableEntries; Entry++) {
+
+    efiConfigurationTable* Table = &(gST->ConfigurationTable[Entry]);
+
+    // (Scan for ACPI 1 tables, making sure to not overwrite any existing
+    // ACPI 2+ tables if they exist.)
+
+    if (Memcmp(&Table->VendorGuid, &efiAcpiTable_Uuid, sizeof(efiUuid))) {
+
+      if (SupportsNewAcpi == false) {
+        AcpiTable = Table->VendorTable;
+      }
+
+      SupportsAcpi = true;
+
+      Message(Info, u"Found ACPI 1 table at %xh", (uintptr)Table->VendorTable);
+      continue;
+
+    }
+
+    // (Scan for ACPI 2+ tables.)
+
+    if (Memcmp(&Table->VendorGuid, &efiAcpi2Table_Uuid, sizeof(efiUuid))) {
+
+      SupportsNewAcpi = true;
+      AcpiTable = Table->VendorTable;
+
+      Message(Info, u"Found ACPI 2+ table at %xh", (uintptr)Table->VendorTable);
+      continue;
+
+    }
+
+    // (Scan for SMBIOS 1/2 tables, making sure not to overwrite any existing
+    // SMBIOS 3+ tables if they exist.)
+
+    if (Memcmp(&Table->VendorGuid, &efiSmbiosTable_Uuid, sizeof(efiUuid))) {
+
+      if (SupportsNewSmbios == false) {
+        SmbiosTable = Table->VendorTable;
+      }
+
+      SupportsSmbios = true;
+
+      Message(Info, u"Found SMBIOS 1/2 table at %xh", (uintptr)Table->VendorTable);
+      continue;
+
+    }
+
+    // (Scan for SMBIOS 3+ tables.)
+
+    if (Memcmp(&Table->VendorGuid, &efiAcpi2Table_Uuid, sizeof(efiUuid))) {
+
+      SupportsNewSmbios = true;
+      SmbiosTable = Table->VendorTable;
+
+      Message(Info, u"Found SMBIOS 3+ table at %xh", (uintptr)Table->VendorTable);
+      continue;
+
+    }
+
+  }
+
+  // (Fill out the kernel info table, and show information.)
+
+  if ((SupportsAcpi == true) || (SupportsNewAcpi == true)) {
+
+    KernelInfoTable.System.AcpiSupported = true;
+    KernelInfoTable.System.AcpiRsdp.Ptr = AcpiTable;
+    Message(Ok, u"ACPI appears to be present (using table at %xh).", AcpiTable);
+
+  } else {
+
+    KernelInfoTable.System.AcpiSupported = false;
+    Message(Warning, u"ACPI appears to be unsupported.");
+
+  }
+
+  if ((SupportsSmbios == true) || (SupportsNewSmbios == true)) {
+
+    KernelInfoTable.System.SmbiosSupported = true;
+    KernelInfoTable.System.SmbiosTable.Ptr = SmbiosTable;
+    Message(Ok, u"SMBIOS appears to be present (using table at %xh).", SmbiosTable);
+
+  } else {
+
+    KernelInfoTable.System.SmbiosSupported = false;
+    Message(Warning, u"SMBIOS appears to be unsupported.");
+
+  }
+
+
+
+
+
+
+
   // TODO (List things to do)
+
+  /*
 
   Print(u"\n\r", 0);
   Message(-1, u"TODO - Load and allocate space for kernel image");
@@ -500,6 +615,8 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
   Print(u"\n\r", 0);
   Message(-1, u"TODO - Locate any necessary protocols, and try to do any remaining\n\rprep work.");
+
+  */
 
 
 
@@ -509,7 +626,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
   Print(u"\n\r", 0);
   Print(u"Hi, this is EFI-mode Serra! <3 \n\r", 0x0F);
-  Printf(u"May %d %x", 0x3F, 3, 0x2025);
+  Printf(u"May %d %x", 0x3F, 5, 0x2025);
 
   // TODO (Wait until user strikes a key, then return.)
 

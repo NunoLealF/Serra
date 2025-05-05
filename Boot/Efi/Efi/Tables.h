@@ -161,6 +161,22 @@
   } efiRuntimeServices;
 
 
+  // (Configuration Table-related definitions)
+
+  constexpr efiUuid efiAcpiTable_Uuid = {0xEB9D2D30, {0x2D88, 0x11D3}, {0x9A, 0x16, 0x00, 0x90, 0x27, 0x3F, 0xC1, 0x4D}};
+  constexpr efiUuid efiAcpi2Table_Uuid = {0x8868E871, {0xE4F1, 0x11D3}, {0xBC, 0x22, 0x00, 0x80, 0xC7, 0x3C, 0x88, 0x81}};
+
+  constexpr efiUuid efiSmbiosTable_Uuid = {0xEB9D2D31, {0x2D88, 0x11D3}, {0x9A, 0x16, 0x00, 0x90, 0x27, 0x3F, 0xC1, 0x4D}};
+  constexpr efiUuid efiSmbios3Table_Uuid = {0xF2FD1544, {0x9794, 0x4A2C}, {0x99, 0x2E, 0xE5, 0xBB, 0xCF, 0x20, 0xE3, 0x94}};
+
+  typedef struct __efiConfigurationTable {
+
+    efiUuid VendorGuid;
+    void* VendorTable;
+
+  } efiConfigurationTable;
+
+
   // (System Table-related definitions)
 
   #define efiSystemTableSignature 0x5453595320494249
@@ -195,7 +211,7 @@
     // (Configuration table)
 
     uint64 NumberOfTableEntries;
-    efiNotImplemented* ConfigurationTable; // efiConfigurationTable*
+    efiConfigurationTable* ConfigurationTable;
 
   } efiSystemTable;
 
