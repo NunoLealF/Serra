@@ -24,7 +24,7 @@ include ${CONFIG}
 # it skips it (for example, for the target 'example.o', if it sees example.o is already there, it skips compiling it),
 # and this can cause problems for targets that don't output anything. These are called 'phony targets'.
 
-.PHONY: All Compile Clean Run RunBochs RunEfi RunGdb RunInt RunKvm all compile clean run runbochs runefi rungdb runint runkvm
+.PHONY: All Compile Clean MakeUnpart MakeMbr MakeGpt Run RunBochs RunEfi RunGdb RunInt RunKvm all compile clean run runbochs runefi rungdb runint runkvm
 
 # Names ->>
 # (By the way, it's assumed that you're on Linux, or at least some sort of Unix-like system)
@@ -111,20 +111,22 @@ runkvm: RunKvm
 
 
 
-
-# [Mix all of the different stages together (36-40 MiB image)]
-
-# TODO: This is now configured via makefile.config, but I'd still like to
-# rewrite this, it's way too messy for my liking.
+# [Combine all of the different stages into one unified image]
+# You can control the variables used here in `makefile.config`
 
 export SFDISK_MBR_CONFIGURATION
+export SFDISK_GPT_CONFIGURATION
 
 Serra.img:
 
 	@echo "Building $@"
+
+	# (Create a partition image)
+
 	@dd if=/dev/zero of=Partition.img bs=1M count=$(PartitionSize) status=none
 
-# (...)
+	# (If we're building for a BIOS target, then add the bootsector (VBR), as
+	# well as the 2nd stage bootloader to the reserved sectors of the image.)
 
 	@if [ $(BuildBios) = true ]; then \
 		dd if=Boot/Legacy/Bootsector/Bootsector.bin of=Partition.img conv=notrunc bs=512 count=1 seek=0 status=none; \
@@ -132,22 +134,18 @@ Serra.img:
 		dd if=Boot/Legacy/Shared/Rm/Rm.bin of=Partition.img conv=notrunc bs=512 count=8 seek=32 status=none; \
 	fi
 
-# (This formats it as a valid FAT16 filesystem while keeping the non-BPB part of the bootsector;
-# that being said, *it's a temporary solution*, since we'll eventually need to merge the
-# legacy and EFI code).
-
-# Specifically, this sets a cluster size of 16 sectors, keeps the current bootsector (except
-# for the BPB, sets the number of reserved sectors to 64, and the number of hidden sectors
-# to 2048.
+	# (Actually format the partition image itself, with the requested sector (-M)
+	# and cluster (-c) sizes, maintaining the boot sector (-k), adding the
+	# partition LBA (-H), and with *a minimum of 64 reserved sectors* (-R))
 
 	@if [ $(ImageType) = unpart ]; then \
 		mformat -i Partition.img -M $(SectorSize) -c $(ClusterSize) -k -R 64 ::; \
 	else \
-		mformat -i Partition.img -M $(SectorSize) -c $(ClusterSize) -k -H $(PartitionLba) -R 64 ::; \
+		mformat -i Partition.img -M 512 -c $(ClusterSize) -k -H $(PartitionLba) -R 64 ::; \
 	fi
 
-# (Add the 3rd stage bootloader; it's assumed that the actual bootloader will be in
-# Boot/Legacy/Boot/Bootx32.bin, with the kernel/common stage coming later on.)
+	# (Next, we create a Boot/ folder, and if building for a BIOS target, add
+	# our 3rd stage bootloader (Bootx32.bin) to that folder.)
 
 	@mmd -i Partition.img ::/Boot; \
 
@@ -155,7 +153,8 @@ Serra.img:
 		mcopy -i Partition.img Boot/Legacy/Bootx32.bin ::/Boot/; \
 	fi
 
-# (Add the EFI bootloader)
+	# (If we're building for an EFI target, we also add the EFI bootloader to
+	# Boot/Efi/Bootx64.efi, which is the default boot location.)
 
 	@if [ $(BuildEfi) = true ]; then \
 		mmd -i Partition.img ::/Efi; \
@@ -163,21 +162,40 @@ Serra.img:
 		mcopy -i Partition.img Boot/Efi/Bootx64.efi ::/Efi/Boot/; \
 	fi
 
-# (Add the actual kernel files)
+	# (Finally, we add the actual kernel files; this is necessary no matter
+	# what target we're building for.)
 
 	@mmd -i Partition.img ::/Boot/Serra
 	@mcopy -i Partition.img Common/Kernel/Kernel.elf ::/Boot/Serra/
 
- # (Now, depending on the partition type, build the final image, and set up
- # the partition table.)
+	# (Now, we can build the final image. Depending on the image type...)
+
+	# (unpart) The partition image is the final image, so we just rename it.
 
 	@if [ $(ImageType) = unpart ]; then \
 		mv Partition.img Serra.img; \
-	elif [ $(ImageType) = mbr ]; then \
+	fi
+
+	# (mbr) We make an MBR image (with the required partition tables), add
+	# our MBR code to it, and manually add the partition;
+
+	@if [ $(ImageType) = mbr ]; then \
 		dd if=/dev/zero of=Serra.img bs=1M count=$(ImageSize) status=none; \
 		echo "$$SFDISK_MBR_CONFIGURATION" | sfdisk Serra.img; \
-		dd if=Boot/Legacy/Bootsector/Mbr.bin of=Serra.img conv=notrunc bs=1 count=446 status=none; \
+		dd if=Boot/Legacy/Bootsector/Mbr.bin of=Serra.img conv=notrunc bs=1 count=440 status=none; \
 		dd if=Boot/Legacy/Bootsector/Mbr.bin of=Serra.img conv=notrunc bs=1 count=2 skip=510 seek=510 status=none; \
-		dd if=Partition.img of=Serra.img conv=notrunc bs=$(SectorSize) seek=$(PartitionLba) status=none; \
+		dd if=Partition.img of=Serra.img conv=notrunc bs=512 seek=$(PartitionLba) status=none; \
+		rm Partition.img; \
+	fi
+
+	# (gpt) We make a GPT image (with the required partition tables), and
+	# manually add the partition.
+	
+	# (Please keep in mind this has no BIOS support)
+
+	@if [ $(ImageType) = gpt ]; then \
+		dd if=/dev/zero of=Serra.img bs=1M count=$(ImageSize) status=none; \
+		echo "$$SFDISK_GPT_CONFIGURATION" | sfdisk Serra.img; \
+		dd if=Partition.img of=Serra.img conv=notrunc bs=512 seek=$(PartitionLba) status=none; \
 		rm Partition.img; \
 	fi

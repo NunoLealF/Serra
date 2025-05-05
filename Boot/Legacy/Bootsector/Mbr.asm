@@ -153,7 +153,7 @@ LoadPartition:
 
   ; Check the LBA and CHS values, and if they appear to be correct, load
   ; the partition bootsector.
-  
+
   ; (Warning: CHS boot is mostly untested; this may not work!)
 
   .CheckLba:
@@ -271,7 +271,6 @@ Error:
 ; ---------------------------------------------------------------------------
 
 SaveDl: db 0
-ErrorMessage db "[Serra MBR] Failed to load any partition.", 0
 
 DiskAddressPacket:
 
