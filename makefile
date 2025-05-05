@@ -121,12 +121,12 @@ Serra.img:
 
 	@echo "Building $@"
 
-	# (Create a partition image)
+# (Create a partition image)
 
 	@dd if=/dev/zero of=Partition.img bs=1M count=$(PartitionSize) status=none
 
-	# (If we're building for a BIOS target, then add the bootsector (VBR), as
-	# well as the 2nd stage bootloader to the reserved sectors of the image.)
+# (If we're building for a BIOS target, then add the bootsector (VBR), as
+# well as the 2nd stage bootloader to the reserved sectors of the image.)
 
 	@if [ $(BuildBios) = true ]; then \
 		dd if=Boot/Legacy/Bootsector/Bootsector.bin of=Partition.img conv=notrunc bs=512 count=1 seek=0 status=none; \
@@ -134,9 +134,9 @@ Serra.img:
 		dd if=Boot/Legacy/Shared/Rm/Rm.bin of=Partition.img conv=notrunc bs=512 count=8 seek=32 status=none; \
 	fi
 
-	# (Actually format the partition image itself, with the requested sector (-M)
-	# and cluster (-c) sizes, maintaining the boot sector (-k), adding the
-	# partition LBA (-H), and with *a minimum of 64 reserved sectors* (-R))
+# (Actually format the partition image itself, with the requested sector (-M)
+# and cluster (-c) sizes, maintaining the boot sector (-k), adding the
+# partition LBA (-H), and with *a minimum of 64 reserved sectors* (-R))
 
 	@if [ $(ImageType) = unpart ]; then \
 		mformat -i Partition.img -M $(SectorSize) -c $(ClusterSize) -k -R 64 ::; \
@@ -144,8 +144,8 @@ Serra.img:
 		mformat -i Partition.img -M 512 -c $(ClusterSize) -k -H $(PartitionLba) -R 64 ::; \
 	fi
 
-	# (Next, we create a Boot/ folder, and if building for a BIOS target, add
-	# our 3rd stage bootloader (Bootx32.bin) to that folder.)
+# (Next, we create a Boot/ folder, and if building for a BIOS target, add
+# our 3rd stage bootloader (Bootx32.bin) to that folder.)
 
 	@mmd -i Partition.img ::/Boot; \
 
@@ -153,8 +153,8 @@ Serra.img:
 		mcopy -i Partition.img Boot/Legacy/Bootx32.bin ::/Boot/; \
 	fi
 
-	# (If we're building for an EFI target, we also add the EFI bootloader to
-	# Boot/Efi/Bootx64.efi, which is the default boot location.)
+# (If we're building for an EFI target, we also add the EFI bootloader to
+# Boot/Efi/Bootx64.efi, which is the default boot location.)
 
 	@if [ $(BuildEfi) = true ]; then \
 		mmd -i Partition.img ::/Efi; \
@@ -162,22 +162,22 @@ Serra.img:
 		mcopy -i Partition.img Boot/Efi/Bootx64.efi ::/Efi/Boot/; \
 	fi
 
-	# (Finally, we add the actual kernel files; this is necessary no matter
-	# what target we're building for.)
+# (Finally, we add the actual kernel files; this is necessary no matter
+# what target we're building for.)
 
 	@mmd -i Partition.img ::/Boot/Serra
 	@mcopy -i Partition.img Common/Kernel/Kernel.elf ::/Boot/Serra/
 
-	# (Now, we can build the final image. Depending on the image type...)
+# (Now, we can build the final image. Depending on the image type...)
 
-	# (unpart) The partition image is the final image, so we just rename it.
+# (unpart) The partition image is the final image, so we just rename it.
 
 	@if [ $(ImageType) = unpart ]; then \
 		mv Partition.img Serra.img; \
 	fi
 
-	# (mbr) We make an MBR image (with the required partition tables), add
-	# our MBR code to it, and manually add the partition;
+# (mbr) We make an MBR image (with the required partition tables), add
+# our MBR code to it, and manually add the partition;
 
 	@if [ $(ImageType) = mbr ]; then \
 		dd if=/dev/zero of=Serra.img bs=1M count=$(ImageSize) status=none; \
@@ -188,10 +188,10 @@ Serra.img:
 		rm Partition.img; \
 	fi
 
-	# (gpt) We make a GPT image (with the required partition tables), and
-	# manually add the partition.
-	
-	# (Please keep in mind this has no BIOS support)
+# (gpt) We make a GPT image (with the required partition tables), and
+# manually add the partition.
+
+# (Please keep in mind this has no BIOS support)
 
 	@if [ $(ImageType) = gpt ]; then \
 		dd if=/dev/zero of=Serra.img bs=1M count=$(ImageSize) status=none; \
