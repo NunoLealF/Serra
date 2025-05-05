@@ -24,7 +24,7 @@ include ${CONFIG}
 # it skips it (for example, for the target 'example.o', if it sees example.o is already there, it skips compiling it),
 # and this can cause problems for targets that don't output anything. These are called 'phony targets'.
 
-.PHONY: All Compile Clean MakeUnpart MakeMbr MakeGpt Run RunBochs RunEfi RunGdb RunInt RunKvm all compile clean run runbochs runefi rungdb runint runkvm
+.PHONY: All Compile Clean Run RunBochs RunEfi RunGdb RunInt RunKvm all compile clean run runbochs runefi rungdb runint runkvm
 
 # Names ->>
 # (By the way, it's assumed that you're on Linux, or at least some sort of Unix-like system)
