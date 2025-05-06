@@ -75,10 +75,8 @@ For more information, refer to the [roadmap](#roadmap) below:
 ### Roadmap
 
 - Finish implementing EFI support, in `Boot/Efi`;
-- - Process the system memory map;
 - - Locate protocols for things like ACPI, USB, SATA, disk, etc.;
-- Review the build system (and add a better way to control things like debug messages);
-- - A configuration file would be ideal for this.
+- - Deal with paging, IDTs, etc.
 
 &nbsp;
 
@@ -88,4 +86,4 @@ For more information, refer to the [roadmap](#roadmap) below:
 This project has been released under the [MIT license](https://choosealicense.com/licenses/mit/).
 For more information, please refer to the accompanying license agreement. <3
 
-*(last updated on May 2nd 2025)*
+*(last updated on May 6th 2025)*
