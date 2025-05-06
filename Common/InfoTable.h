@@ -133,10 +133,7 @@
       uint64 Cr3; // Value of the CR3 control register
       uint64 Cr4; // Value of the CR4 control register
       uint64 Efer; // Value of the EFER model-specific register (MSR)
-
-      uint32 CpuidHighestStdLevel; // Highest standard CPUID level
-      uint32 CpuidHighestExtLevel; // Highest extended CPUID level
-
+      
       bool PatSupported; // Is PAT supported?
       uint64 PatMsr; // The value of the PAT MSR, if it's supported.. or 0
 

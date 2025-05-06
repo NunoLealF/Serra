@@ -485,9 +485,6 @@ void S3Bootloader(void) {
   registerTable Cpuid_ExtendedInfo = GetCpuid(0x80000000, 0);
   registerTable Cpuid_ExtendedFeatures = GetCpuid(0x80000001, 0);
 
-  KernelInfo.System.CpuidHighestStdLevel = Cpuid_Info.Eax;
-  KernelInfo.System.CpuidHighestExtLevel = Cpuid_ExtendedInfo.Eax;
-
   Message(Ok, "Successfully obtained CPUID data.");
 
   // Show some info to the user, including the vendor string (which is
@@ -496,8 +493,8 @@ void S3Bootloader(void) {
   char VendorString[16];
   GetVendorString(VendorString, Cpuid_Info);
 
-  Message(Info, "Highest supported (standard) CPUID level is %xh", KernelInfo.System.CpuidHighestStdLevel);
-  Message(Info, "Highest supported (extended) CPUID level is %xh", KernelInfo.System.CpuidHighestExtLevel);
+  Message(Info, "Highest supported (standard) CPUID level is %xh", Cpuid_Info.Eax);
+  Message(Info, "Highest supported (extended) CPUID level is %xh", Cpuid_ExtendedInfo.Eax);
   Message(Info, "CPU vendor ID is \'%s\'", VendorString);
 
   // We also want to check for PAE (Page Address Extensions), PSE (Page Size
