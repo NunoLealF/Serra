@@ -64,6 +64,15 @@
 
   // (Enums, and other types with a limited set of definitions)
 
+  typedef enum __efiAllocateType : uint32 {
+
+    AllocateAnyPages,
+    AllocateMaxAddress,
+    AllocateAddress,
+    MaxAllocateType
+
+  } efiAllocateType;
+
   typedef enum __efiMemoryType : uint32 {
 
     EfiReservedMemoryType,
