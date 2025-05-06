@@ -40,8 +40,8 @@ uint64 PageAlign(uint64 Address) {
 
            bool Clear - Whether the memory block should be zeroed out;
 
-           mmapEntry* UsableMmap - An array of memory map entries that only
-           correspond to usable memory (the "usable memory map");
+           usableMmapEntry* UsableMmap - An array of memory map entries that
+           only correspond to usable memory (the "usable memory map");
 
            uint8 NumUsableMmapEntries - The number of entries in UsableMmap.
 
@@ -81,7 +81,7 @@ uint64 PageAlign(uint64 Address) {
 
 */
 
-uint64 AllocateFromMmap(uint64 Start, uint32 Size, bool Clear, mmapEntry* UsableMmap, uint8 NumUsableMmapEntries) {
+uint64 AllocateFromMmap(uint64 Start, uint32 Size, bool Clear, usableMmapEntry* UsableMmap, uint8 NumUsableMmapEntries) {
 
   // (First, let's find the mmap entry that corresponds to Start, or at the very
   // least, the closest one)
@@ -173,8 +173,8 @@ uint64 AllocateFromMmap(uint64 Start, uint32 Size, bool Clear, mmapEntry* Usable
            from (this can either be the start of usable memory, or the last
            value returned by AllocFromUsableMmap(), whichever is greater);
 
-           mmapEntry* UsableMmap - A pointer to a table of usable memory map
-           entries (as outlined in struct mmapEntry{});
+           usableMmapEntry* UsableMmap - A pointer to a table of usable
+           memory map entries (as outlined in usableMmapEntry{});
 
            uint16 NumUsableMmapEntries - The number of entries in the
            previous table (UsableMmap).
@@ -199,7 +199,7 @@ uint64 AllocateFromMmap(uint64 Start, uint32 Size, bool Clear, mmapEntry* Usable
 
 */
 
-uint64 InitializePageEntries(uint64 PhysAddress, uint64 VirtAddress, uint64 Size, uint64* Pml4, uint64 Flags, bool UseLargePages, bool UsePat, uint64 MmapOffset, mmapEntry* UsableMmap, uint16 NumUsableMmapEntries) {
+uint64 InitializePageEntries(uint64 PhysAddress, uint64 VirtAddress, uint64 Size, uint64* Pml4, uint64 Flags, bool UseLargePages, bool UsePat, uint64 MmapOffset, usableMmapEntry* UsableMmap, uint16 NumUsableMmapEntries) {
 
   // First, let's see if the addresses themselves are page-aligned; if
   // not, panic (since this only happens when there's clearly something

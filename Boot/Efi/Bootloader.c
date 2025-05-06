@@ -427,7 +427,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   // (Allocate space for the memory map, with some margin for error; we also
   // do the same for the usable memory map, which we'll fill out later on.)
 
-  kernelUsableMmap* UsableMmap;
+  usableMmapEntry* UsableMmap;
 
   MmapSize += (MmapDescriptorSize * 4);
   AppStatus = gBS->AllocatePool(EfiLoaderData, MmapSize, (volatile void**)&Mmap);
@@ -441,7 +441,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
     // (Repeat the process, for the usable memory map buffer.)
 
-    uint64 UsableMmapSize = (MmapSize * sizeof(kernelUsableMmap) / MmapDescriptorSize);
+    uint64 UsableMmapSize = (MmapSize * sizeof(usableMmapEntry) / MmapDescriptorSize);
     AppStatus = gBS->AllocatePool(EfiLoaderData, UsableMmapSize, (volatile void**)&UsableMmap);
 
     if (AppStatus == EfiSuccess) {

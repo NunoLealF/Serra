@@ -371,8 +371,8 @@ void S3Bootloader(void) {
   // Next, we just need to isolate all the usable entries, and deal
   // with overlapping entries.
 
-  uint8 UsableMmapBuffer[sizeof(mmapEntry) * NumUsableMmapEntries];
-  mmapEntry* UsableMmap = (mmapEntry*)UsableMmapBuffer;
+  uint8 UsableMmapBuffer[sizeof(usableMmapEntry) * NumUsableMmapEntries];
+  usableMmapEntry* UsableMmap = (usableMmapEntry*)UsableMmapBuffer;
 
   uint64 MinStart = 0;
   uint8 UsablePosition = 0;
@@ -429,8 +429,6 @@ void S3Bootloader(void) {
 
       UsableMmap[UsablePosition].Base = Start;
       UsableMmap[UsablePosition].Limit = (End - Start);
-      UsableMmap[UsablePosition].Type = Mmap[Position].Type;
-      UsableMmap[UsablePosition].Acpi = Mmap[Position].Acpi;
 
       UsablePosition++;
 

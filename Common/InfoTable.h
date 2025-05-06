@@ -10,14 +10,7 @@
   #define getInfoTableVersion(Major, Minor) ((Major * 0x100) + Minor)
   #define KernelInfoTableVersion getInfoTableVersion(0, 1)
 
-  // Usable memory map format
 
-  typedef struct __kernelUsableMmap {
-
-    uint64 Base;
-    uint64 Limit;
-
-  } __attribute__((packed)) kernelUsableMmap;
 
   // Basically, you fill in Address in 32-bit mode, and you can use it
   // normally in 64-bit mode with the void*.
@@ -28,6 +21,17 @@
     void* Ptr;
 
   } universalPtr;
+
+  // Usable memory map format
+
+  typedef struct __usableMmapEntry {
+
+    uint64 Base;
+    uint64 Limit;
+
+  } __attribute__((packed)) usableMmapEntry;
+
+
 
   // (BIOS table)
 
@@ -44,6 +48,8 @@
 
   } __attribute__((packed)) kernelBiosInfoTable;
 
+
+
   // (EFI table)
 
   typedef struct __kernelEfiInfoTable {
@@ -59,6 +65,8 @@
     universalPtr RuntimeServices;
 
   } __attribute__((packed)) kernelEfiInfoTable;
+
+
 
   // (Main kernel info table)
 
@@ -101,6 +109,8 @@
     EfiMmap = 2 // From GetMemoryMap()
 
   } mmapTypeEnum;
+
+
 
   typedef struct __kernelInfoTable {
 
