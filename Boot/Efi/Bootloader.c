@@ -42,7 +42,13 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   EfiInfoTable.ImageHandle.Ptr = ImageHandle;
 
   efiStatus AppStatus = EfiSuccess;
+
+  // [Prepare local variables]
+
   bool HasAllocatedMemory = false;
+  bool HasAllocatedKernel = false;
+  bool HasAllocatedStack = false;
+  bool HasOpenedFsProtocols = false;
 
   // [Make sure the firmware-provided tables are valid]
 
@@ -237,10 +243,9 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   Message(Boot, u"Checking for UEFI GOP (Graphics Output Protocol) support.");
 
   efiGraphicsOutputProtocol* GopProtocol;
-  efiUuid GopUuid = efiGraphicsOutputProtocol_Uuid;
   bool SupportsGop = false;
 
-  if (gBS->LocateProtocol(&GopUuid, NULL, (void**)(&GopProtocol)) == EfiSuccess) {
+  if (gBS->LocateProtocol(&efiGraphicsOutputProtocol_Uuid, NULL, (void**)(&GopProtocol)) == EfiSuccess) {
 
     KernelInfoTable.Graphics.Type = Gop;
     SupportsGop = true;
@@ -294,7 +299,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
     for (uint32 Mode = 0; Mode < MaxMode; Mode++) {
 
-      efiGraphicsOutputModeInformation* ModeInfo;
+      volatile efiGraphicsOutputModeInformation* ModeInfo;
       uint64 Size;
 
       if (GopProtocol->QueryMode(GopProtocol, Mode, &Size, &ModeInfo) == EfiSuccess) {
@@ -689,7 +694,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
     HasAllocatedMemory = true;
 
-    Message(Ok, u"Allocated %d MiB of space (over %d usable memory areas) for the kernel.",
+    Message(Ok, u"Allocated %d MiB of space (over %d usable memory area(s)) for the kernel.",
             (UsableMemory / 1048576), (uint64)NumUsableMmapEntries);
 
     Message(Info, u"Usable memory below %xh is reserved for the firmware", UsableOffset);
@@ -717,10 +722,11 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   // (Prepare variables)
 
   void* AcpiTable = NULL;
+  void* SmbiosTable = NULL;
+
   bool SupportsAcpi = false;
   bool SupportsNewAcpi = false;
 
-  void* SmbiosTable = NULL;
   bool SupportsSmbios = false;
   bool SupportsNewSmbios = false;
 
@@ -818,22 +824,249 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
 
 
-
-
-
-
-  // TODO (List things to do)
-
-  /*
+  // [Initialize filesystem protocols]
+  // TODO: Some sort of explanation; you also need to move this further back                                 TODO TODO TODO
 
   Print(u"\n\r", 0);
-  Message(-1, u"TODO - Load and allocate space for kernel image");
-  Message(Info, u"Preferably, do this before you deal with the memory map");
+  Message(Boot, u"Preparing to initialize filesystem protocols.");
+
+  // (Get handles.)
+
+  efiHandle* FsHandles;
+  uint64 NumFsHandles = 0;
+
+  AppStatus = gBS->LocateHandleBuffer(ByProtocol, &efiSimpleFilesystemProtocol_Uuid, NULL, &NumFsHandles, &FsHandles);
+
+  if ((AppStatus != EfiSuccess) || (NumFsHandles == 0)) {
+
+    Message(Error, u"Failed to locate any filesystem protocol handles.");
+    goto ExitEfiApplication;
+
+  } else {
+
+    Message(Ok, u"Located %d filesystem protocol handle(s) at %xh.", NumFsHandles, (uint64)FsHandles);
+
+  }
+
+  // (Go through each handle, open protocol, check for thing..)
+
+  efiSimpleFilesystemProtocol* FsProtocol = NULL;
+  volatile efiHandle FsProtocolHandle = NULL;
+
+  efiFileProtocol* KernelFileHandle = NULL;
+
+  for (uint64 HandleNum = 0; HandleNum < NumFsHandles; HandleNum++) {
+
+    // (Initialize variables)
+
+    FsProtocol = NULL;
+    FsProtocolHandle = NULL;
+    efiFileProtocol* FileProtocol = NULL;
+
+    // (Open protocol)
+
+    AppStatus = gBS->OpenProtocol(FsHandles[HandleNum], &efiSimpleFilesystemProtocol_Uuid, (void**)&FsProtocol, ImageHandle, NULL, 1);
+
+    if ((AppStatus == EfiSuccess) && (FsProtocol != NULL)) {
+
+      FsProtocolHandle = FsHandles[HandleNum];
+      HasOpenedFsProtocols = true;
+
+      Message(Info, u"Successfully opened protocol for FsHandle[%d] at %xh", HandleNum, (uint64)FsProtocol);
+
+      // (Open filesystem volume)
+
+      AppStatus = FsProtocol->OpenVolume(FsProtocol, (void**)&FileProtocol);
+
+      if ((AppStatus == EfiSuccess) && (FileProtocol != NULL)) {
+
+        // (Open handle for kernel image)
+
+        AppStatus = FileProtocol->Open(FileProtocol, (void**)&KernelFileHandle, KernelLocation, 1, 0);
+
+        // (If we actually did find it, then..)
+
+        if ((AppStatus == EfiSuccess) && (KernelFileHandle != NULL)) {
+
+          Message(Ok, u"Successfully found kernel image (at %s).", KernelLocation);
+          Message(Info, u"Kernel file protocol handle is located at %xh", (uint64)KernelFileHandle);
+
+          break;
+
+        }
+
+      }
+
+      gBS->CloseProtocol(FsProtocolHandle, &efiSimpleFilesystemProtocol_Uuid, ImageHandle, NULL);
+
+    }
+
+    HasOpenedFsProtocols = false;
+
+  }
+
+  // (Check if we *did* even open any filesystem protocols)
+
+  if ((HasOpenedFsProtocols == false) || (FsProtocolHandle == NULL)) {
+
+    Message(Error, u"Failed to locate the kernel image (should be at %s).", KernelLocation);
+    goto ExitEfiApplication;
+
+  }
+
+  KernelInfoTable.FsDisk.DiskAccessMethod = Efi;
+
+
+
+  // [Read the kernel image from disk]
+  // TODO: Some sort of explanation.                                                                 TODO TODO TODO
+
+  void* Kernel = NULL;
+  uint64 KernelSize = 0;
 
   Print(u"\n\r", 0);
-  Message(-1, u"TODO - Locate any necessary protocols, and try to do any remaining\n\rprep work.");
+  Message(Boot, u"Preparing to read the kernel image from disk.");
 
-  */
+  // (Find the kernel info table, using the same mmap technique where we just
+  // call it once)
+
+  volatile efiFileInfo* KernelInfo = NULL;
+  uint64 KernelInfoSize = 0;
+
+  AppStatus = KernelFileHandle->GetInfo(KernelFileHandle, &efiFileInfo_Uuid, &KernelInfoSize, KernelInfo);
+
+  if (AppStatus != EfiBufferTooSmall) {
+
+    Message(Error, u"Failed to obtain the size of the efiFileInfo table.");
+    goto ExitEfiApplication;
+
+  } else {
+
+    // Now that we know the actual efiFileInfo size, let's obtain it.
+    // (Allocate from pool)
+
+    Message(Info, u"Size of the efiFileInfo table is %d bytes", KernelInfoSize);
+    AppStatus = gBS->AllocatePool(EfiLoaderData, KernelInfoSize, (volatile void**)&KernelInfo);
+
+    if (AppStatus != EfiSuccess) {
+      Message(Error, u"Failed to allocate space for the efiFileInfo table.");
+      goto ExitEfiApplication;
+    }
+
+    // (Get table)
+
+    AppStatus = KernelFileHandle->GetInfo(KernelFileHandle, &efiFileInfo_Uuid, &KernelInfoSize, KernelInfo);
+
+    if ((AppStatus != EfiSuccess) || (KernelInfo == NULL)) {
+
+      Message(Error, u"Failed to obtain the kernel's EFI file info table.");
+      Message(Info, u"Thing is %xh", (uint64)AppStatus);
+      goto ExitEfiApplication;
+
+    } else {
+
+      Message(Ok, u"Successfully obtained kernel's EFI file info table.");
+      Message(Info, u"efiFileInfo table is located at %xh", (uint64)KernelInfo);
+
+    }
+
+  }
+
+  // (Get the kernel size)
+
+  if (KernelInfo->FileSize != 0) {
+
+    KernelSize = KernelInfo->FileSize;
+
+  } else if (KernelInfo->PhysicalSize != 0) {
+
+    KernelSize = KernelInfo->PhysicalSize;
+
+  } else {
+
+    Message(Error, u"Kernel file size (returned by efiFileProtocol->GetInfo()) is zero.");
+    goto ExitEfiApplication;
+
+  }
+
+  Message(Info, u"Kernel file size is %d bytes.", KernelSize);
+
+  // (Allocate space for the kernel)
+
+  AppStatus = gBS->AllocatePages(AllocateAnyPages, EfiLoaderCode, ((KernelSize + 0xFFF) / 0x1000), (volatile efiPhysicalAddress*)&Kernel);
+
+  if ((AppStatus != EfiSuccess) || (Kernel == NULL)) {
+
+    Message(Error, u"Failed to allocate enough space (%d KiB) for the kernel.", ((KernelSize + 1023) / 1024));
+    goto ExitEfiApplication;
+
+  } else {
+
+    Message(Ok, u"Successfully allocated %d KiB of space for the kernel.", ((KernelSize + 1023) / 1024));
+    HasAllocatedKernel = true;
+
+  }
+
+  // (Read the kernel file)
+
+  AppStatus = KernelFileHandle->Read(KernelFileHandle, &KernelSize, Kernel);
+
+  if ((AppStatus != EfiSuccess) || (Kernel == NULL)) {
+
+    Message(Error, u"Failed to read the kernel image from disk.");
+    goto ExitEfiApplication;
+
+  } else {
+
+    Message(Ok, u"Successfully loaded kernel to %xh in memory.", (uint64)Kernel);
+
+  }
+
+
+
+  // [Allocate space for the kernel stack]
+  // TODO: Some sort of explanation.                                                                 TODO TODO TODO
+
+  Print(u"\n\r", 0);
+  Message(Boot, u"Preparing to allocate space for the kernel stack.");
+
+  // (Also let's allocate kernel stack space)
+
+  void* KernelStack = NULL;
+  AppStatus = gBS->AllocatePages(AllocateAnyPages, EfiLoaderData, (KernelStackSize / 0x1000), (volatile efiPhysicalAddress*)&KernelStack);
+
+  if ((AppStatus != EfiSuccess) || (KernelStack == NULL)) {
+
+    Message(Error, u"Failed to allocate enough space for the kernel (%d MiB)", (KernelSize / 1048576));
+    goto ExitEfiApplication;
+
+  } else {
+
+    Message(Ok, u"Successfully allocated %d KiB of space for the kernel stack.", (KernelStackSize / 1024));
+    HasAllocatedStack = true;
+
+  }
+
+  KernelInfoTable.Kernel.Stack.Address = ((uint64)KernelStack + KernelStackSize);
+
+
+
+  // [Read kernel ELF headers]
+  // TODO: Everything, lol                                                                 TODO TODO TODO
+
+  Print(u"\n\r", 0);
+  Message(Boot, u"Preparing to read the kernel's executable headers.");
+  Message(Fail, u"(!) Reminder that this needs to be moved *before* the memory map part");
+
+  Message(-1, u"TODO");
+  //KernelInfoTable.Kernel.Entrypoint.Address = SOMETHING;
+  //KernelInfoTable.Kernel.ElfHeader.Address = SOMETHING;
+
+
+
+
+
+
 
 
 
@@ -861,6 +1094,8 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
 
 
+
+
   // ---------------- Restore state and exit EFI application ----------------
 
   ExitEfiApplication:
@@ -872,7 +1107,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
       gST->ConOut->SetMode(gST->ConOut, 0);
     }
 
-    // If we've allocated memory for the usable memory map, then free it.
+    // If we've allocated memory *for the usable memory map*, then free it.
 
     if (HasAllocatedMemory == true) {
 
@@ -880,6 +1115,24 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
         gBS->FreePages(UsableMmap[Entry].Base, (UsableMmap[Entry].Limit / 0x1000));
       }
 
+    }
+
+    // If we've allocated memory *for the kernel*, then free it.
+
+    if (HasAllocatedKernel == true) {
+      gBS->FreePages((efiPhysicalAddress)Kernel, ((KernelSize + 0xFFF) / 0x1000));
+    }
+
+    // If we've allocated memory *for the kernel stack*, then free it.
+
+    if (HasAllocatedStack == true) {
+      gBS->FreePages((efiPhysicalAddress)KernelStack, (KernelStackSize / 0x1000));
+    }
+
+    // If we've opened file system protocols, then close them.
+
+    if (HasOpenedFsProtocols == true) {
+      gBS->CloseProtocol(FsProtocolHandle, &efiSimpleFilesystemProtocol_Uuid, ImageHandle, NULL);
     }
 
     // Restore the initial values of the CR0 and CR4 registers, since we

@@ -12,8 +12,10 @@
 
   // (File Protocol-related definitions)
 
-  typedef efiStatus (efiAbi *efiFileOpen) (efiProtocol This, volatile efiProtocol* NewHandle, char16* FileName, uint64 OpenMode, uint64 Attributes);
   typedef efiStatus (efiAbi *efiFileClose) (efiProtocol This);
+  typedef efiStatus (efiAbi *efiFileGetInfo) (efiProtocol This, const efiUuid* InformationType, volatile uint64* BufferSize, volatile void* Buffer);
+  typedef efiStatus (efiAbi *efiFileOpen) (efiProtocol This, volatile efiProtocol* NewHandle, char16* FileName, uint64 OpenMode, uint64 Attributes);
+  typedef efiStatus (efiAbi *efiFileRead) (efiProtocol This, volatile uint64* BufferSize, volatile void* Buffer);
 
   typedef struct __efiFileProtocol {
 
@@ -23,13 +25,13 @@
     efiFileClose Close;
 
     efiNotImplemented Delete;
-    efiNotImplemented Read;
+    efiFileRead Read;
     efiNotImplemented Write;
 
     efiNotImplemented GetPosition;
     efiNotImplemented SetPosition;
 
-    efiNotImplemented GetInfo;
+    efiFileGetInfo GetInfo;
     efiNotImplemented SetInfo;
 
     efiNotImplemented Flush;
@@ -83,10 +85,9 @@
 
   } efiGraphicsOutputProtocolMode;
 
-  typedef efiStatus (efiAbi *efiQueryMode) (efiProtocol This, uint32 ModeNumber, uint64* SizeOfInfo, efiGraphicsOutputModeInformation** EfiTable);
+  typedef efiStatus (efiAbi *efiQueryMode) (efiProtocol This, uint32 ModeNumber, volatile uint64* SizeOfInfo, volatile efiGraphicsOutputModeInformation** EfiTable);
   typedef efiStatus (efiAbi *efiSetMode) (efiProtocol This, uint32 ModeNumber);
-
-  #define efiGraphicsOutputProtocol_Uuid {0x9042A9DE, {0x23DC, 0x4A38}, {0x96, 0xFB, 0x7A, 0xDE, 0xD0, 0x80, 0x51, 0x6A}}
+  constexpr efiUuid efiGraphicsOutputProtocol_Uuid = {0x9042A9DE, {0x23DC, 0x4A38}, {0x96, 0xFB, 0x7A, 0xDE, 0xD0, 0x80, 0x51, 0x6A}};
 
   typedef struct __efiGraphicsOutputProtocol {
 
@@ -102,8 +103,7 @@
   // (Simple File System Protocol-related definitions)
 
   typedef efiStatus (efiAbi *efiOpenVolume) (efiProtocol This, volatile efiProtocol* Root);
-
-  #define efiSimpleFilesystemProtocol_Uuid {0x0964E5B22, {0x6459, 0x11D2}, {0x8E, 0x39, 0x00, 0xA0, 0xC9, 0x69, 0x72, 0x3B}};
+  constexpr efiUuid efiSimpleFilesystemProtocol_Uuid = {0x0964E5B22, {0x6459, 0x11D2}, {0x8E, 0x39, 0x00, 0xA0, 0xC9, 0x69, 0x72, 0x3B}};
 
   typedef struct __efiSimpleFilesystemProtocol {
 
@@ -111,7 +111,6 @@
     efiOpenVolume OpenVolume;
 
   } efiSimpleFilesystemProtocol;
-
 
 
   // (Simple Text Output Protocol-related definitions)

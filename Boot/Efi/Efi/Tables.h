@@ -10,7 +10,7 @@
 #ifndef SERRA_EFI_TABLES_H
 #define SERRA_EFI_TABLES_H
 
-  // (Table-related definitions)
+  // (General table-related definitions)
 
   typedef struct __efiTableHeader {
 
@@ -30,11 +30,13 @@
 
   typedef efiStatus (efiAbi *efiAllocatePool) (efiMemoryType PoolType, uint64 Size, volatile void** Buffer);
   typedef efiStatus (efiAbi *efiAllocatePages) (efiAllocateType Type, efiMemoryType MemoryType, uint64 Pages, volatile efiPhysicalAddress* Memory);
+  typedef efiStatus (efiAbi *efiCloseProtocol) (efiHandle Handle, const efiUuid* Protocol, efiHandle AgentHandle, efiHandle ControllerHandle);
   typedef efiStatus (efiAbi *efiFreePool) (void* Buffer);
   typedef efiStatus (efiAbi *efiFreePages) (efiPhysicalAddress Memory, uint64 Pages);
   typedef efiStatus (efiAbi *efiGetMemoryMap) (volatile uint64* MemoryMapSize, volatile efiMemoryDescriptor* MemoryMap, volatile uint64* MapKey, volatile uint64* DescriptorSize, volatile uint32* DescriptorVersion);
-  typedef efiStatus (efiAbi *efiLocateHandleBuffer) (efiLocateSearchType SearchType, efiUuid* Protocol, void* SearchKey, uint64* NoHandles, efiHandle** Buffer);
-  typedef efiStatus (efiAbi *efiLocateProtocol) (efiUuid* Protocol, void* Registration, void** Interface);
+  typedef efiStatus (efiAbi *efiLocateHandleBuffer) (efiLocateSearchType SearchType, const efiUuid* Protocol, void* SearchKey, uint64* NoHandles, efiHandle** Buffer);
+  typedef efiStatus (efiAbi *efiLocateProtocol) (const efiUuid* Protocol, void* Registration, efiProtocol* Interface);
+  typedef efiStatus (efiAbi *efiOpenProtocol) (efiHandle Handle, const efiUuid* Protocol, efiProtocol* Interface, efiHandle AgentHandle, efiHandle ControllerHandle, uint32 Attributes);
   typedef efiTpl (efiAbi *efiRaiseTpl) (efiTpl NewTpl);
   typedef void (efiAbi *efiRestoreTpl) (efiTpl OldTpl);
 
@@ -105,8 +107,8 @@
 
     // (Protocol-related functions)
 
-    efiNotImplemented OpenProtocol;
-    efiNotImplemented CloseProtocol;
+    efiOpenProtocol OpenProtocol;
+    efiCloseProtocol CloseProtocol;
     efiNotImplemented OpenProtocolInformation;
 
     efiNotImplemented ProtocolsPerHandle;
@@ -126,6 +128,21 @@
     efiNotImplemented SetMem;
 
   } efiBootServices;
+
+
+  // (File Info-related definitions)
+
+  constexpr efiUuid efiFileInfo_Uuid = {0x09576E92, {0x6D3F, 0x11D2}, {0x8E, 0x39, 0x00, 0xA0, 0xC9, 0x69, 0x72, 0x3B}};
+
+  typedef struct __efiFileInfo {
+
+    uint64 Size;
+    uint64 FileSize;
+    uint64 PhysicalSize;
+
+    // Other entries are ignored
+
+  } efiFileInfo;
 
 
   // (Runtime Services-related definitions)

@@ -20,7 +20,10 @@
   kernelEfiInfoTable EfiInfoTable;
   kernelInfoTable KernelInfoTable;
 
-  #define MinFirmwareMemory (64ULL * 1048576) // 64 MiB
+  #define MinFirmwareMemory (64ULL * 1048576) // A size of 64 MiB
+  
+  #define KernelLocation u"\\BOOT\\SERRA\\KERNEL.ELF" // Kernel file location
+  #define KernelStackSize 0x100000 // Must be a multiple of 4 KiB
 
   #ifdef Debug
     bool DebugFlag = Debug; // Defined by the preprocessor, use -DDebug=true or false.
