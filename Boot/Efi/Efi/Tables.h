@@ -33,6 +33,7 @@
   typedef efiStatus (efiAbi *efiFreePool) (void* Buffer);
   typedef efiStatus (efiAbi *efiFreePages) (efiPhysicalAddress Memory, uint64 Pages);
   typedef efiStatus (efiAbi *efiGetMemoryMap) (volatile uint64* MemoryMapSize, volatile efiMemoryDescriptor* MemoryMap, volatile uint64* MapKey, volatile uint64* DescriptorSize, volatile uint32* DescriptorVersion);
+  typedef efiStatus (efiAbi *efiLocateHandleBuffer) (efiLocateSearchType SearchType, efiUuid* Protocol, void* SearchKey, uint64* NoHandles, efiHandle** Buffer);
   typedef efiStatus (efiAbi *efiLocateProtocol) (efiUuid* Protocol, void* Registration, void** Interface);
   typedef efiTpl (efiAbi *efiRaiseTpl) (efiTpl NewTpl);
   typedef void (efiAbi *efiRestoreTpl) (efiTpl OldTpl);
@@ -109,7 +110,7 @@
     efiNotImplemented OpenProtocolInformation;
 
     efiNotImplemented ProtocolsPerHandle;
-    efiNotImplemented LocateHandleBuffer;
+    efiLocateHandleBuffer LocateHandleBuffer;
     efiLocateProtocol LocateProtocol;
 
     efiNotImplemented InstallMultipleProtocolInterfaces;

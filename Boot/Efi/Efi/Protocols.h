@@ -10,6 +10,33 @@
 #ifndef SERRA_EFI_PROTOCOLS_H
 #define SERRA_EFI_PROTOCOLS_H
 
+  // (File Protocol-related definitions)
+
+  typedef efiStatus (efiAbi *efiFileOpen) (efiProtocol This, volatile efiProtocol* NewHandle, char16* FileName, uint64 OpenMode, uint64 Attributes);
+  typedef efiStatus (efiAbi *efiFileClose) (efiProtocol This);
+
+  typedef struct __efiFileProtocol {
+
+    uint64 Revision;
+
+    efiFileOpen Open;
+    efiFileClose Close;
+
+    efiNotImplemented Delete;
+    efiNotImplemented Read;
+    efiNotImplemented Write;
+
+    efiNotImplemented GetPosition;
+    efiNotImplemented SetPosition;
+
+    efiNotImplemented GetInfo;
+    efiNotImplemented SetInfo;
+
+    efiNotImplemented Flush;
+
+  } efiFileProtocol;
+
+
   // (Graphics Output Protocol-related definitions)
 
   typedef struct __efiGraphicsOutputModeInformation {
@@ -70,6 +97,21 @@
     efiGraphicsOutputProtocolMode* Mode;
 
   } efiGraphicsOutputProtocol;
+
+
+  // (Simple File System Protocol-related definitions)
+
+  typedef efiStatus (efiAbi *efiOpenVolume) (efiProtocol This, volatile efiProtocol* Root);
+
+  #define efiSimpleFilesystemProtocol_Uuid {0x0964E5B22, {0x6459, 0x11D2}, {0x8E, 0x39, 0x00, 0xA0, 0xC9, 0x69, 0x72, 0x3B}};
+
+  typedef struct __efiSimpleFilesystemProtocol {
+
+    uint64 Revision;
+    efiOpenVolume OpenVolume;
+
+  } efiSimpleFilesystemProtocol;
+
 
 
   // (Simple Text Output Protocol-related definitions)

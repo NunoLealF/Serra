@@ -73,6 +73,14 @@
 
   } efiAllocateType;
 
+  typedef enum __efiLocateSearchType : uint32 {
+
+    AllHandles,
+    ByRegisterNotify,
+    ByProtocol
+
+  } efiLocateSearchType;
+
   typedef enum __efiMemoryType : uint32 {
 
     EfiReservedMemoryType,
