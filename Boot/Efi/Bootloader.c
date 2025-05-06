@@ -897,7 +897,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
       }
 
-      gBS->CloseProtocol(FsProtocolHandle, &efiSimpleFilesystemProtocol_Uuid, ImageHandle, NULL);
+      gBS->CloseProtocol(FsHandles[HandleNum], &efiSimpleFilesystemProtocol_Uuid, ImageHandle, NULL);
 
     }
 
