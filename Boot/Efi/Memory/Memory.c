@@ -133,3 +133,42 @@ void Memset(void* Buffer, uint8 Character, uint64 Size) {
   }
 
 }
+
+
+
+/* void Memswap()
+
+   Inputs: void* BufferA - The first memory area/buffer that you want to swap.
+           void* BufferB - The second memory area/buffer that you want to swap.
+           uint64 Size - The size of the memory area/buffer that you want to swap.
+
+   Outputs: (None)
+
+   This function swaps two memory areas - specifically, it swaps the data in
+   BufferA with the data in BufferB. It's assumed that both buffers are the
+   same length (Size).
+
+   It does this by allocating a temporary auxiliary buffer within the stack,
+   so be careful (this stage is usually limited to 128 KiB.)
+
+   For example, if you want to swap two elements in an array, you could do:
+   -> Memswap((void*)&Array[A], (void*)&Array[B], sizeof(Array[0]));
+
+*/
+
+void Memswap(void* BufferA, void* BufferB, uint64 Size) {
+
+  // In order to properly swap these two memory areas, we need to create an
+  // auxiliary buffer.
+
+  char Aux[Size];
+  void* AuxBuffer = (void*)Aux;
+
+  // Now, we can just swap the two memory areas, using our auxiliary buffer
+  // from earlier.
+
+  Memcpy(AuxBuffer, BufferA, Size);
+  Memcpy(BufferA, BufferB, Size);
+  Memcpy(BufferB, AuxBuffer, Size);
+
+}

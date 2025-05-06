@@ -10,5 +10,6 @@
   bool Memcmp(const void* BufferA, const void* BufferB, uint64 Size);
   void Memcpy(void* Destination, const void* Source, uint64 Size);
   void Memset(void* Buffer, uint8 Character, uint64 Size);
+  void Memswap(void* BufferA, void* BufferB, uint64 Size);
 
 #endif

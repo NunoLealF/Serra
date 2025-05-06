@@ -10,6 +10,15 @@
   #define getInfoTableVersion(Major, Minor) ((Major * 0x100) + Minor)
   #define KernelInfoTableVersion getInfoTableVersion(0, 1)
 
+  // Usable memory map format
+
+  typedef struct __kernelUsableMmap {
+
+    uint64 Base;
+    uint64 Limit;
+
+  } __attribute__((packed)) kernelUsableMmap;
+
   // Basically, you fill in Address in 32-bit mode, and you can use it
   // normally in 64-bit mode with the void*.
 
@@ -134,12 +143,13 @@
 
       mmapTypeEnum Type; // What type of mmap are we dealing with here?
 
-      // (System mmap, provided by BIOS or UEFI; format can vary)
+      // (System mmap - format can vary depending on BIOS or UEFI.)
 
       uint16 NumMmapEntries;
       universalPtr MemoryMap;
+      uint8 MemoryMapEntrySize;
 
-      // (Usable mmap, provided by BIOS or UEFI; format can vary)
+      // (Usable mmap - format must be kernelUsableMmap{})
 
       uint16 NumUsableMmapEntries; // Number of usable mmap entries.
       universalPtr UsableMemoryMap; // Pointer to the usable memory map

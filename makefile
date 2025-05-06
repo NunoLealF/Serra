@@ -11,7 +11,7 @@
 # a 64-bit version of QEMU if you want to emulate it.
 
 QEMU = qemu-system-x86_64
-QFLAGS = -cpu qemu64 -m 128
+QFLAGS = -cpu qemu64 -m 256
 OVMFDIR = /usr/share/OVMF/OVMF_CODE_4M.fd
 
 CONFIG := makefile.config

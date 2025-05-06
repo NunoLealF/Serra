@@ -20,6 +20,8 @@
   kernelEfiInfoTable EfiInfoTable;
   kernelInfoTable KernelInfoTable;
 
+  #define MinUsableMemory (128ULL * 1048576) // 128 MiB
+
   #ifdef Debug
     bool DebugFlag = Debug; // Defined by the preprocessor, use -DDebug=true or false.
   #else

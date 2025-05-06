@@ -38,7 +38,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   // [Prepare global variables]
 
   KernelInfoTable.Firmware.IsEfi = true;
-  KernelInfoTable.Firmware.EfiInfo.Address = (uint64)(&EfiInfoTable);
+  KernelInfoTable.Firmware.EfiInfo.Address = (uintptr)(&EfiInfoTable);
   EfiInfoTable.ImageHandle.Ptr = ImageHandle;
 
   efiStatus AppStatus = EfiSuccess;
@@ -405,9 +405,9 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   // (Call gBS->GetMemoryMap(), with *MmapSize == 0; this will always return
   // EfiBufferTooSmall, and return the correct buffer size in MmapSize)
 
-  efiStatus MmapStatus = gBS->GetMemoryMap(&MmapSize, Mmap, &MmapKey, &MmapDescriptorSize, &MmapDescriptorVersion);
+  AppStatus = gBS->GetMemoryMap(&MmapSize, Mmap, &MmapKey, &MmapDescriptorSize, &MmapDescriptorVersion);
 
-  if (MmapStatus != EfiBufferTooSmall) {
+  if (AppStatus != EfiBufferTooSmall) {
 
     if ((MmapSize != 0) && (MmapDescriptorSize != 0)) {
 
@@ -416,8 +416,6 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
     } else {
 
       Message(Fail, u"GetMemoryMap() appears to be working incorrectly.");
-
-      AppStatus = MmapStatus;
       goto ExitEfiApplication;
 
     }
@@ -426,30 +424,50 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
   Message(Ok, u"Initial call to GetMemoryMap() indicates memory map is %d bytes long.", (uint64)MmapSize);
 
-  // (Allocate space for the memory map, with some margin for error)
+  // (Allocate space for the memory map, with some margin for error; we also
+  // do the same for the usable memory map, which we'll fill out later on.)
 
-  MmapSize += (MmapDescriptorSize * 2);
-  MmapStatus = gBS->AllocatePool(EfiLoaderData, MmapSize, (volatile void**)&Mmap);
+  kernelUsableMmap* UsableMmap;
 
-  if (MmapStatus == EfiSuccess) {
+  MmapSize += (MmapDescriptorSize * 4);
+  AppStatus = gBS->AllocatePool(EfiLoaderData, MmapSize, (volatile void**)&Mmap);
+
+  if (AppStatus == EfiSuccess) {
+
+    // (Show message)
 
     Message(Ok, u"Successfully allocated a %d-byte buffer for the memory map.", MmapSize);
     Message(Info, u"Memory map buffer is located at %xh", (uint64)Mmap);
 
+    // (Repeat the process, for the usable memory map buffer.)
+
+    uint64 UsableMmapSize = (MmapSize * sizeof(kernelUsableMmap) / MmapDescriptorSize);
+    AppStatus = gBS->AllocatePool(EfiLoaderData, UsableMmapSize, (volatile void**)&UsableMmap);
+
+    if (AppStatus == EfiSuccess) {
+
+      Message(Ok, u"Successfully allocated a %d-byte buffer for the usable memory map.", UsableMmapSize);
+      Message(Info, u"Usable memory map buffer is located at %xh", (uint64)UsableMmap);
+
+    } else {
+
+      Message(Fail, u"Failed to allocate space for the usable memory map.");
+      goto ExitEfiApplication;
+
+    }
+
   } else {
 
     Message(Fail, u"Failed to allocate space for the memory map.");
-
-    AppStatus = MmapStatus;
     goto ExitEfiApplication;
 
   }
 
   // (Fill out the memory map, and show all usable entries)
 
-  MmapStatus = gBS->GetMemoryMap(&MmapSize, Mmap, &MmapKey, &MmapDescriptorSize, &MmapDescriptorVersion);
+  AppStatus = gBS->GetMemoryMap(&MmapSize, Mmap, &MmapKey, &MmapDescriptorSize, &MmapDescriptorVersion);
 
-  if (MmapStatus == EfiSuccess) {
+  if (AppStatus == EfiSuccess) {
 
     Message(Ok, u"Successfully obtained the system memory map.");
 
@@ -484,15 +502,165 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   } else {
 
     Message(Fail, u"Failed to obtain the system memory map.");
-
-    AppStatus = MmapStatus;
     goto ExitEfiApplication;
 
   }
 
 
 
+  // [Process the system memory map]
+  // TODO: Some sort of explanation.                                                                 TODO TODO TODO
+
+  Print(u"\n\r", 0);
+  Message(Boot, u"Preparing to process the system memory map.");
+
+  // First, let's sort each entry by their starting address. Since we can't
+  // dynamically allocate memory without changing the memory map, we need
+  // an algorithm that uses O(1) (no additional) memory, like this:
+
+  uint64 NumMmapEntries = (MmapSize / MmapDescriptorSize);
+
+  if (NumMmapEntries >= 65536) {
+
+    Message(Warning, u"Too many memory map entries - limiting to 65536.");
+    NumMmapEntries = 65535;
+
+  }
+
+  for (uint16 Threshold = 1; Threshold < NumMmapEntries; Threshold++) {
+
+    for (uint16 Position = Threshold; Position > 0; Position--) {
+
+      // (Get the actual entries themselves)
+
+      efiMemoryDescriptor* PreviousEntry = GetMmapEntry(Mmap, MmapDescriptorSize, (Position - 1));
+      efiMemoryDescriptor* Entry = GetMmapEntry(Mmap, MmapDescriptorSize, Position);
+
+      // (Sort by starting address, and if they're same, make sure the
+      // entry with the non-usable type comes first.)
+
+      if (Entry->PhysicalStart < PreviousEntry->PhysicalStart) {
+
+        Memswap((void*)Entry, (void*)PreviousEntry, MmapDescriptorSize);
+
+      } else if (Entry->PhysicalStart == PreviousEntry->PhysicalStart) {
+
+        if (Entry->Type != EfiConventionalMemory) {
+          Memswap((void*)Entry, (void*)PreviousEntry, MmapDescriptorSize);
+        }
+
+      }
+
+    }
+
+  }
+
+  // Now that we've sorted the memory map, we can move onto the next part:
+  // actually building the usable memory map.
+
+  uint16 NumUsableMmapEntries = 0;
+  uint64 UsableMemory = 0;
+
+  // (In this case, the usable memory map is simply just a 'simplified'
+  // memory map that accounts for overlapping and duplicate entries, and
+  // that *only* contains free/usable memory)
+
+  uint16 MmapPositionThreshold = 0;
+  uint64 UsableMmapThreshold = 0;
+
+  for (uint16 Position = 0; Position < NumMmapEntries; Position++) {
+
+    // Find the first entry that starts on or at UsableMmapThreshold, of
+    // type EfiConventionalMemory.
+
+    efiMemoryDescriptor* Entry = NULL;
+
+    for (uint16 MmapPosition = MmapPositionThreshold; MmapPosition < NumMmapEntries; MmapPosition++) {
+
+      efiMemoryDescriptor* MmapEntry = GetMmapEntry(Mmap, MmapDescriptorSize, MmapPosition);
+
+      if (MmapEntry->Type == EfiConventionalMemory) {
+
+        if (MmapEntry->PhysicalStart >= UsableMmapThreshold) {
+
+          Entry = MmapEntry;
+
+          MmapPositionThreshold = (MmapPosition + 1);
+          UsableMmapThreshold = MmapEntry->PhysicalStart;
+
+          break;
+
+        }
+
+      }
+
+    }
+
+    if (Entry == NULL) {
+      break;
+    }
+
+    // Now that we've found it, let's compare it with the starting position
+    // of the next entry, and update the entry size if the two overlap.
+
+    uint64 Start = Entry->PhysicalStart;
+    uint64 End = (Start + (Entry->NumberOfPages * 0x1000));
+
+    if (MmapPositionThreshold < NumMmapEntries) {
+
+      efiMemoryDescriptor* NextEntry = GetMmapEntry(Mmap, MmapDescriptorSize, MmapPositionThreshold);
+
+      if (NextEntry->PhysicalStart < End) {
+        End = NextEntry->PhysicalStart;
+      }
+
+    }
+
+    // Finally, let's add it to the usable memory map.
+
+    UsableMmap[NumUsableMmapEntries].Base = Start;
+    UsableMmap[NumUsableMmapEntries].Limit = (End - Start);
+    UsableMemory += (End - Start);
+
+    NumUsableMmapEntries++;
+
+  }
+
+  // (Sanity-check the output, and show infomation; *we want to make sure
+  // we have at least MinUsableMemory bytes available*.)
+
+  if (NumUsableMmapEntries == 0) {
+
+    Message(Fail, u"Unable to process the system memory map.");
+
+    AppStatus = EfiOutOfResources;
+    goto ExitEfiApplication;
+
+  } else if (UsableMemory < MinUsableMemory) {
+
+    Message(Warning, u"Found less usable memory than the recommended amount (%d/%d MiB).",
+            (UsableMemory / 1048576), (MinUsableMemory / 1048576));
+
+  } else {
+
+    Message(Ok, u"Found %d usable memory areas, for a total of %d MiB.",
+            (uint64)NumUsableMmapEntries, (UsableMemory / 1048576));
+
+  }
+
+  // (Update the kernel info table with the necessary values)
+
+  KernelInfoTable.Memory.NumMmapEntries = NumMmapEntries;
+  KernelInfoTable.Memory.MemoryMapEntrySize = MmapDescriptorSize;
+  KernelInfoTable.Memory.MemoryMap.Address = (uintptr)Mmap;
+
+  KernelInfoTable.Memory.NumUsableMmapEntries = NumUsableMmapEntries;
+  KernelInfoTable.Memory.UsableMemoryMap.Address = (uintptr)UsableMmap;
+
+
+
   // [Find ACPI and SMBIOS tables]
+  // TODO: Some sort of explanation.                                                                 TODO TODO TODO
 
   Print(u"\n\r", 0);
   Message(Boot, u"Preparing to find ACPI and SMBIOS tables.");
@@ -626,7 +794,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
   Print(u"\n\r", 0);
   Print(u"Hi, this is EFI-mode Serra! <3 \n\r", 0x0F);
-  Printf(u"May %d %x", 0x3F, 5, 0x2025);
+  Printf(u"May %d %x", 0x3F, 6, 0x2025);
 
   // TODO (Wait until user strikes a key, then return.)
 
