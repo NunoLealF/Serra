@@ -87,6 +87,40 @@ bool Strcmp(const char16* StringA, const char16* StringB) {
 }
 
 
+/* bool StrcmpShort()
+
+   Inputs: const char8* StringA - The string we want to compare with StringB.
+           const char8* StringB - The string we want to compare with StringA.
+
+   Outputs: bool - Whether the two strings are equal.
+
+   (This function functions the same way as Strcmp(), but for short (char8*)
+   strings instead of wide (char16*) ones.)
+
+*/
+
+bool StrcmpShort(const char8* StringA, const char8* StringB) {
+
+  // Compare each character of each string, until we hit a null byte,
+  // or until we find a different character.
+
+  unsigned int Position = 0;
+
+  while (StringA[Position] == StringB[Position]) {
+
+    if (StringA[Position] == '\0') {
+      return true;
+    }
+
+    Position++;
+
+  }
+
+  return false;
+
+}
+
+
 /* char16* Strrev()
 
    Inputs: char16* String - The string you want to reverse.

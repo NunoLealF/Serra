@@ -29,7 +29,7 @@
 
     extern bool DebugFlag;
     extern bool SupportsConOut;
-    
+
   #endif
 
 
@@ -37,6 +37,7 @@
 
   int Strlen(const char16* String);
   bool Strcmp(const char16* StringA, const char16* StringB);
+  bool StrcmpShort(const char8* StringA, const char8* StringB);
   char16* Strrev(char16* String);
   char16* Itoa(uint64 Number, char16* Buffer, uint8 Base);
 

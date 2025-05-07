@@ -1058,7 +1058,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
 
   // [Read kernel ELF headers]
-  // TODO: Everything, lol                                                                 TODO TODO TODO
+  // TODO: Some sort of explanation.                                                                 TODO TODO TODO
 
   Print(u"\n\r", 0);
   Message(Boot, u"Preparing to read the kernel's executable headers.");
@@ -1085,11 +1085,17 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
     Message(Warning, u"ELF header appears to have a non-executable file type (%d)", (uint32)KernelHeader->FileType);
   }
 
+  #define NumProgramHdrs (uint64)KernelHeader->NumProgramHeaders
+  #define NumSectionHdrs (uint64)KernelHeader->NumSectionHeaders
+
+  #define ProgramHdrOffset KernelHeader->ProgramHeaderOffset
+  #define SectionHdrOffset KernelHeader->SectionHeaderOffset
+
   if (KernelHasValidElf == false) {
 
     Message(Error, u"Kernel does not appear to be a valid ELF executable.");
 
-    AppStatus = EfiInvalidParameter;
+    AppStatus = EfiLoadError;
     goto ExitEfiApplication;
 
   } else {
@@ -1098,20 +1104,66 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
     Message(Info, u"ELF header is located at %xh", (uint64)KernelHeader);
     Message(Info, u"ELF entrypoint is located at +%xh", KernelHeader->Entrypoint);
 
-    Message(Info, u"Found %d program header(s), starting at +%xh.", (uint64)KernelHeader->NumProgramHeaders, KernelHeader->ProgramHeaderOffset);
-    Message(Info, u"Found %d section header(s), starting at +%xh.", (uint64)KernelHeader->NumSectionHeaders, KernelHeader->SectionHeaderOffset);
+    Message(Info, u"Found %d program header(s), starting at +%xh.", NumProgramHdrs, ProgramHdrOffset);
+    Message(Info, u"Found %d section header(s), starting at +%xh.", NumSectionHdrs, SectionHdrOffset);
 
   }
 
-  // (...)
+  // (Find the .text section; this requires us to go through the string
+  // section for each section, but it's worth it)
 
-  Message(-1, u"TODO");
-  //KernelInfoTable.Kernel.Entrypoint.Address = SOMETHING;
-  //KernelInfoTable.Kernel.ElfHeader.Address = SOMETHING;
+  #define ProgramHdrSize KernelHeader->ProgramHeaderSize
+  #define SectionHdrSize KernelHeader->SectionHeaderSize
 
+  #define GetProgramHeader(Start, Index) (elfProgramHeader*)(Start + ProgramHdrOffset + (Index * ProgramHdrSize))
+  #define GetSectionHeader(Start, Index) (elfSectionHeader*)(Start + SectionHdrOffset + (Index * SectionHdrSize))
+  #define GetSectionString(Start, SectionHeader, StringHeader) (const char8*)(Start + StringHeader->Offset + SectionHeader->NameOffset)
 
+  elfSectionHeader* KernelStringSection = GetSectionHeader((uint64)KernelHeader, KernelHeader->StringSectionIndex);
+  elfSectionHeader* KernelTextSection = NULL;
 
+  for (uint64 Index = 1; Index < NumSectionHdrs; Index++) {
 
+    // (Get the section string (the name string) of the current section)
+
+    elfSectionHeader* Section = GetSectionHeader((uint64)KernelHeader, Index);
+    const char8* SectionString = GetSectionString((uint64)KernelHeader, Section, KernelStringSection);
+
+    // (Compare the name string against u8".text"; if it matches, then we've
+    // successfully found the kernel's executable section!)
+
+    if (StrcmpShort(SectionString, u8".text") == true) {
+
+      Message(Ok, u"Successfully located the kernel header's executable section.");
+      Message(Info, u"Section header is located at %xh", (uint64)Section);
+      Message(Info, u"Section starts at +%xh and is %d bytes long", Section->Offset, Section->Size);
+
+      KernelTextSection = Section;
+      break;
+
+    }
+
+  }
+
+  if (KernelTextSection == NULL) {
+
+    Message(Error, u"Couldn't locate the kernel header's executable section.");
+
+    AppStatus = EfiLoadError;
+    goto ExitEfiApplication;
+
+  }
+
+  // (Calculate the kernel entrypoint, and add information to the info table)
+
+  #define KernelStart (uint64)Kernel // TODO: **Change this when not identity-mapped** (TODO TODO TODO TODO)
+  uint64 KernelEntrypoint = ((uint64)Kernel + KernelTextSection->Offset + KernelHeader->Entrypoint);
+
+  KernelInfoTable.Kernel.ElfHeader.Address = (uint64)KernelHeader;
+  KernelInfoTable.Kernel.Entrypoint.Address = KernelEntrypoint;
+
+  Message(Ok, u"Successfully located actual kernel entrypoint.");
+  Message(Info, u"Kernel entrypoint is at %xh", KernelEntrypoint);
 
 
 
