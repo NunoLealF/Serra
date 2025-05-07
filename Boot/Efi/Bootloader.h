@@ -8,7 +8,7 @@
   // Import other headers...
 
   #include "Cpu/Cpu.h"
-  #include "Elf/Elf.h"
+  #include "Elf.h"
   #include "Efi/Efi.h"
   #include "Graphics/Graphics.h"
   #include "Memory/Memory.h"

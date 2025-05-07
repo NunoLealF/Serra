@@ -86,7 +86,7 @@ Bootloader.o:
 
 Cpu/Cpu.o:
 	@echo "Building $@"
-	@$(CC) $(CFLAGS) -ffunction-sections -c Cpu/Cpu.c -o Cpu/Cpu.o
+	@$(CC) $(CFLAGS) -c Cpu/Cpu.c -o Cpu/Cpu.o
 
 Graphics/Exceptions.o:
 	@echo "Building $@"

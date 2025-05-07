@@ -1022,6 +1022,12 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
   }
 
+  // (If we've read it correctly, then we can close the file protocol handle,
+  // since we won't be using it anymore)
+
+  gBS->CloseProtocol(FsProtocolHandle, &efiSimpleFilesystemProtocol_Uuid, ImageHandle, NULL);
+  Message(Info, u"Closed filesystem protocol handle.");
+
 
 
   // [Allocate space for the kernel stack]
@@ -1056,7 +1062,48 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
   Print(u"\n\r", 0);
   Message(Boot, u"Preparing to read the kernel's executable headers.");
-  Message(Fail, u"(!) Reminder that this needs to be moved *before* the memory map part");
+  Message(Fail, u"(!) Reminder that this needs to be moved *before* the memory map part (!)");
+
+  // (First, let's validate the ELF headers)
+
+  elfHeader* KernelHeader = (elfHeader*)Kernel;
+  bool KernelHasValidElf = true;
+
+  if (KernelHeader->Ident.MagicNumber != 0x464C457F) {
+    KernelHasValidElf = false;
+  } else if ((KernelHeader->Ident.Class != 2) || (KernelHeader->MachineType != 0x3E)) {
+    KernelHasValidElf = false;
+  } else if ((KernelHeader->SectionHeaderOffset == 0) || (KernelHeader->NumSectionHeaders == 0)) {
+    KernelHasValidElf = false;
+  } else if (KernelHeader->StringSectionIndex == 0) {
+    KernelHasValidElf = false;
+  } else if ((KernelHeader->ProgramHeaderOffset == 0) || (KernelHeader->NumProgramHeaders == 0)) {
+    Message(Warning, u"Kernel does not appear to have any ELF program headers.");
+  } else if (KernelHeader->Version < 1) {
+    Message(Warning, u"ELF header version appears to be invalid (%d)", (uint32)KernelHeader->Version);
+  } else if (KernelHeader->FileType != 2) {
+    Message(Warning, u"ELF header appears to have a non-executable file type (%d)", (uint32)KernelHeader->FileType);
+  }
+
+  if (KernelHasValidElf == false) {
+
+    Message(Error, u"Kernel does not appear to be a valid ELF executable.");
+
+    AppStatus = EfiInvalidParameter;
+    goto ExitEfiApplication;
+
+  } else {
+
+    Message(Ok, u"Kernel appears to be a valid ELF executable.");
+    Message(Info, u"ELF header is located at %xh", (uint64)KernelHeader);
+    Message(Info, u"ELF entrypoint is located at +%xh", KernelHeader->Entrypoint);
+
+    Message(Info, u"Found %d program header(s), starting at +%xh.", (uint64)KernelHeader->NumProgramHeaders, KernelHeader->ProgramHeaderOffset);
+    Message(Info, u"Found %d section header(s), starting at +%xh.", (uint64)KernelHeader->NumSectionHeaders, KernelHeader->SectionHeaderOffset);
+
+  }
+
+  // (...)
 
   Message(-1, u"TODO");
   //KernelInfoTable.Kernel.Entrypoint.Address = SOMETHING;
@@ -1076,7 +1123,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
   Print(u"\n\r", 0);
   Print(u"Hi, this is EFI-mode Serra! <3 \n\r", 0x0F);
-  Printf(u"May %d %x", 0x3F, 6, 0x2025);
+  Printf(u"May %d %x", 0x3F, 7, 0x2025);
 
   // TODO (Wait until user strikes a key, then return.)
 
