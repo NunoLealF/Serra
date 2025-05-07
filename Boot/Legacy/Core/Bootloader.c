@@ -1213,7 +1213,7 @@ void S3Bootloader(void) {
          (uint32)KernelHeader->FileType, (uint32)KernelHeader->MachineType, KernelHeader->Version);
 
   Message(Info, "Physical address (start of file) at %xh", (uint32)KernelArea);
-  Message(Info, "Virtual address (entrypoint) at %x:%xh", (uint32)(KernelEntrypoint >> 32), (uint32)KernelEntrypoint);
+  Message(Info, "Virtual address (entrypoint) at %x:%xh", (uint32)((KernelHeader->Entrypoint) >> 32), (uint32)(KernelHeader->Entrypoint));
 
   Message(Info, "Found %d program header(s) at +%xh.", (uint32)KernelHeader->NumProgramHeaders, (uint32)KernelHeader->ProgramHeaderOffset);
   Message(Info, "Found %d section header(s) at +%xh.", (uint32)KernelHeader->NumSectionHeaders, (uint32)KernelHeader->SectionHeaderOffset);

@@ -81,8 +81,31 @@ elfSectionHeader* GetSectionHeader(uintptr Start, elfHeader* ElfHeader, uint16 I
 }
 
 
+/* const char* GetElfSectionString()
 
-// (TODO - write documentation)
+   Inputs: uintptr Start - The start of the file in memory;
+
+           elfSectionHeader* StringSection - A pointer to the file's ELF
+           section header (you can use GetSectionHeader() for this);
+
+           uint32 NameOffset - The offset of the section name within the
+           string section (you can use SectionHeader->NameOffset for this).
+
+   Outputs: const char* - A (non-wide) string that corresponds to the name
+   of the ELF section with the given NameOffset.
+
+   Each ELF executable is divided into sections, each of which has a name,
+   like ".text", ".data" or ".bss".
+
+   The purpose of this function is to find the *name* of a given section,
+   based on the NameOffset field in its header; for example, if you want
+   to check if a given section is named ".text", then you could do:
+
+   -> if (Strcmp(GetElfSectionString(Start, StringHeader, GivenSection->NameOffset), ".text") == true) {
+   ->   // Do something
+   -> }
+
+*/
 
 const char* GetElfSectionString(uintptr Start, elfSectionHeader* StringSection, uint32 NameOffset) {
 

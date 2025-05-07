@@ -8,6 +8,7 @@
   // Import other headers...
 
   #include "Cpu/Cpu.h"
+  #include "Elf/Elf.h"
   #include "Efi/Efi.h"
   #include "Graphics/Graphics.h"
   #include "Memory/Memory.h"
@@ -21,7 +22,7 @@
   kernelInfoTable KernelInfoTable;
 
   #define MinFirmwareMemory (64ULL * 1048576) // A size of 64 MiB
-  
+
   #define KernelLocation u"\\BOOT\\SERRA\\KERNEL.ELF" // Kernel file location
   #define KernelStackSize 0x100000 // Must be a multiple of 4 KiB
 
