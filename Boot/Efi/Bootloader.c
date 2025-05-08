@@ -340,11 +340,19 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
           if (ModeInfo->PixelFormat == PixelBitMask) {
 
+            // (Calculate an accurate reserved mask; sometimes buggy firmware
+            // will set `ModeInfo->PixelBitmask.ReservedMask` to zero.)
+
+            uint32 ReservedMask = ~(ModeInfo->PixelBitmask.RedMask | ModeInfo->PixelBitmask.GreenMask | ModeInfo->PixelBitmask.BlueMask);
+            ReservedMask |= ModeInfo->PixelBitmask.ReservedMask;
+
+            // (Calculate the color depth, based off of that reserved mask.)
+
             ColorDepth = 32;
 
             for (int Bit = 0; Bit < 32; Bit++) {
 
-              if ((ModeInfo->PixelBitmask.ReservedMask & (1 << Bit)) != 0) {
+              if ((ReservedMask & (1 << Bit)) != 0) {
                 ColorDepth--;
               }
 
@@ -759,7 +767,6 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
   Print(u"\n\r", 0);
   Message(Boot, u"Preparing to read the kernel's executable headers.");
-  Message(Fail, u"(!) Reminder that this needs to be moved *before* the memory map part (!)");
 
   // (First, let's validate the ELF headers)
 
@@ -1207,7 +1214,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
   Print(u"\n\r", 0);
   Print(u"Hi, this is EFI-mode Serra! <3 \n\r", 0x0F);
-  Printf(u"May %d %x", 0x3F, 7, 0x2025);
+  Printf(u"May %d %x", 0x3F, 8, 0x2025);
 
   // TODO (Wait until user strikes a key, then return.)
 
