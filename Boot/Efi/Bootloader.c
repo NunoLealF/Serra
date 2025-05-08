@@ -35,15 +35,21 @@ efiRuntimeServices* gRT;
 
 efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTable) {
 
-  // [Prepare global variables]
+  // [Initialize important variables]
+
+  // Before we do anything else, we'll want to prepare a few important
+  // variables and tables; namely, the kernel information tables, the return
+  // status of this function, and a couple other local varaibles.
+
+  // (Prepare global variables)
 
   KernelInfoTable.Firmware.IsEfi = true;
   KernelInfoTable.Firmware.EfiInfo.Address = (uintptr)(&EfiInfoTable);
   EfiInfoTable.ImageHandle.Ptr = ImageHandle;
 
-  efiStatus AppStatus = EfiSuccess;
+  // (Prepare local variables)
 
-  // [Prepare local variables]
+  efiStatus AppStatus = EfiSuccess;
 
   bool HasAllocatedMemory = false;
   bool HasAllocatedKernel = false;
@@ -54,12 +60,14 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
 
 
-
   // [Make sure the firmware-provided tables are valid]
 
-  // First and foremost, we need to check to see if the tables our firmware
-  // gave us are even valid. We can do this by checking their signature
-  // and size, like this:
+  // Next, we want to check to see if the tables our firmware gave us are
+  // even valid - and if they are, update their respective pointers (gST for
+  // the System Table, gBS for Boot Services, and gRT for Runtime Services).
+
+  // We can do this by checking their signature, as well as their size and
+  // revision (since we require EFI 1.1+), like this:
 
   // (Check EFI System Table, and update gST)
 
@@ -102,18 +110,24 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   EfiInfoTable.RuntimeServices.Ptr = SystemTable->RuntimeServices;
   gRT = gST->RuntimeServices;
 
-  // [Enable any necessary x64 features]
 
-  // After that, we also want to make sure SSE and other x64 features are
-  // enabled, since some firmware doesn't do that by default. Before that
-  // though, let's save the current state of the control registers:
+
+
+  // [Enable any necessary x64 features (FPU and SSE)]
+
+  // Additionally, we also want to make sure SSE and other x64 features are
+  // enabled, since some firmware doesn't do that by default. Before we do
+  // that though, let's save the current state of the control registers:
 
   KernelInfoTable.System.Cr0 = ReadFromControlRegister(0);
   KernelInfoTable.System.Cr3 = ReadFromControlRegister(3);
   KernelInfoTable.System.Cr4 = ReadFromControlRegister(4);
   KernelInfoTable.System.Efer = ReadFromMsr(0xC0000080);
 
-  // (Enable the FPU/MMX, by setting the necessary bits in CR0)
+  // Now that we've saved the current state of the control registers, we
+  // can move onto modifying them to enable the features we want.
+
+  // (Enable the FPU, by setting the necessary bits in CR0)
 
   uint32 Cr0 = ReadFromControlRegister(0);
 
@@ -135,11 +149,14 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
 
 
-  // [Check availability of ConIn and ConOut]
+  // [Check the availability of input/output protocols]
 
-  // Next, we also want to do the same thing, but for the input and output
-  // protocols (SystemTable->ConIn and SystemTable->ConOut); it's not a
-  // *deal breaker* if they aren't supported, we just want to make sure.
+  // Next, we also want to check whether the input and output protocols (ConIn
+  // and ConOut, respectively) are even supported.
+
+  // Unlike the previous tables, these aren't guaranteed to be available on
+  // every machine - for instance, most Macs don't support ConOut - so we
+  // need to make sure they're actually available before we can use them.
 
   // (Check for ConIn / efiSimpleTextInputProtocol)
 
@@ -173,26 +190,28 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
     gST->ConOut->Reset(gST->ConOut, true);
   }
 
-  // [Switch to largest text mode, if applicable]
 
-  // Now that we know whether we can use EFI's text mode (by checking
-  // SupportsConOut), we want to automatically switch to the best
-  // text mode available.
+
+  // [Switch to the best text mode available, if applicable]
+
+  // Now that we know whether we can use EFI's text mode functions or not
+  // (by checking whether ConOut is supported), we want to automatically
+  // switch to the best text mode available.
 
   int32 ConOutMode = 0;
   uint32 ConOutResolution[2] = {0};
 
   if (SupportsConOut == true) {
 
-    // EFI mode numbers run between 0 and (MaxMode - 1), so, we first
-    // need to look for MaxMode
+    // EFI mode numbers run between 0 and (MaxMode - 1), so the first
+    // thing we need to do is look for MaxMode.
 
     int32 MaxMode = gST->ConOut->Mode->MaxMode;
 
     for (int32 Mode = 0; Mode < MaxMode; Mode++) {
 
-      // Query mode information; we want to filter for modes that are
-      // at least 80*25 characters, and with the largest overall area.
+      // (Query mode information; we want to filter for modes that are at
+      // least 80*25 characters, and with the largest overall area)
 
       uint64 Columns, Rows;
 
@@ -200,8 +219,8 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
         if ((Columns >= 80) && (Rows >= 25)) {
 
-          // If this text mode is larger than 80*25 characters and has
-          // a larger overall area, then select it as our best mode.
+          // (If this text mode fits our criteria, then select it as our
+          // best mode)
 
           if ((Columns * Rows) >= (ConOutResolution[0] * ConOutResolution[1])) {
 
@@ -218,7 +237,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
     }
 
-    // Now that we know the best text mode to use, let's switch to it!
+    // (Now that we know the best text mode available, let's switch to it)
 
     gST->ConOut->SetMode(gST->ConOut, ConOutMode);
 
@@ -236,11 +255,12 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
   // [Check for GOP support]
 
-  // Next, we also want to check for graphics mode support, since not all
-  // systems support EFI text mode.
+  // Next, we also want to check for graphics mode support, since it's far
+  // more useful than regular EFI text mode. (We won't be enabling it just
+  // yet, though!)
 
-  // Thankfully, this is actually pretty easy; we just need to check for
-  // the existence of the Graphics Output Protocol (GOP), like this:
+  // Thankfully, this is actually pretty easy - we just need to check for
+  // the existence of the GOP (Graphics Output Protocol), like this:
 
   Print(u"\n\r", 0);
   Message(Boot, u"Checking for UEFI GOP (Graphics Output Protocol) support.");
@@ -258,8 +278,8 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
   } else {
 
-    // (If we didn't find one, that's fine, as long as text mode is
-    // supported; otherwise, return)
+    // If GOP isn't supported, that's fine, but *only* as long as text
+    // mode is also supported; otherwise, return.
 
     if (SupportsConOut == true) {
       Message(Warning, u"Unable to initialize GOP; keeping EFI text mode.");
@@ -276,11 +296,14 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
 
 
-  // [Find GOP mode, if applicable]
+  // [Find the best GOP mode available, if applicable]
 
-  // If the firmware *does* support GOP, then the next thing we want
-  // to do is try to find the best graphics mode (that fits our
-  // criteria, at least).
+  // If our system *does* support the Graphics Output Protocol, then the
+  // next thing we want to do is try to find the best graphics mode
+  // available on our system.
+
+  // We do that by manually querying the firmware about each graphics
+  // mode, like this (criteria further down):
 
   uint32 GopMode = 0;
 
@@ -292,13 +315,12 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
     Print(u"\n\r", 0);
     Message(Boot, u"Attempting to find the best graphics mode.");
 
-    // Just like with EFI text mode, GOP graphics modes also run between
-    // 0 and (MaxMode - 1), so we first need to look for that.
+    // Just like with EFI text mode, we also need to find MaxMode:
 
     uint32 MaxMode = GopProtocol->Mode->MaxMode;
 
-    // Now that we know the mode limit, we can manually go through
-    // each mode and try to find the best one, if possible.
+    // Now that we know the mode limit, we can manually go through each
+    // mode and try to find the best one, if possible.
 
     for (uint32 Mode = 0; Mode < MaxMode; Mode++) {
 
@@ -307,19 +329,16 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
       if (GopProtocol->QueryMode(GopProtocol, Mode, &Size, &ModeInfo) == EfiSuccess) {
 
-        // If the pixel format is PixelBltOnly, then that means it's
-        // not a linear framebuffer, so make sure it's not that
+        // (If the pixel format is PixelBltOnly, then that means it's not
+        // a linear framebuffer, so make sure it's not that)
 
         if (ModeInfo->PixelFormat < PixelBltOnly) {
 
-          // (Check and verify color depth - must be at least 16 bpp)
+          // First, let's make sure the color depth is at least 16 bpp:
 
           uint8 ColorDepth = 24;
 
           if (ModeInfo->PixelFormat == PixelBitMask) {
-
-            // For each bit set in the reserved mask, decrement ModeColorDepth
-            // This is essentially just (32 - popcount(ReservedMask))
 
             ColorDepth = 32;
 
@@ -340,8 +359,8 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
           }
 
-          // Now that we know the color depth isn't too low, we check for
-          // the following things, in order:
+          // Okay - now that we know the color depth isn't too low, we want
+          // to check for the following things, in order:
 
           // (1) Whether this mode's resolution is at least 640 by 480;
           // (2) Whether this mode's color depth is above the current maximum;
@@ -390,7 +409,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
 
   // [Find ACPI and SMBIOS tables]
-  // TODO: Some sort of explanation.                                                                 TODO TODO TODO
+  // (TODO: Some sort of explanation)                                                                TODO TODO TODO
 
   Print(u"\n\r", 0);
   Message(Boot, u"Preparing to find ACPI and SMBIOS tables.");
