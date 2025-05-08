@@ -5,6 +5,60 @@
 #include "../Stdint.h"
 #include "Memory.h"
 
+/* bool Memcmp(), memcmp()
+
+   Inputs: const void* BufferA - The first buffer you want to compare.
+           const void* BufferB - The second buffer you want to compare.
+           uint32 Size - The size of the buffers you want to compare.
+
+   Outputs: bool - Whether the two buffers are equal or not.
+
+   This function compares the contents of two buffers / memory areas of a
+   given size, and returns `true` if their contents are equal (otherwise,
+   `false`).
+
+   The main use of this function within the EFI bootloader is just to
+   compare UUIDs; for example:
+
+   -> // (sizeof(EfiUuid) == 16)
+   -> bool IsGenericTable = Memcmp(&TableUuid, &SelectedUuid, 16);
+
+   Please keep in mind that this function is quite slow, since it only
+   compares one byte at a time - use SSE instructions for more complicated
+   instructions.
+
+*/
+
+bool Memcmp(const void* BufferA, const void* BufferB, uint32 Size) {
+
+  // Translate each (const) void* pointer into a (const) uint8* pointer.
+
+  const uint8* ByteA = (const uint8*)BufferA;
+  const uint8* ByteB = (const uint8*)BufferB;
+
+  // Compare every individual byte in both memory areas, returning false
+  // if we find a mismatch.
+
+  for (uint32 i = 0; i < Size; i++) {
+
+    if (ByteA[i] != ByteB[i]) {
+      return false;
+    }
+
+  }
+
+  // Finally, if we didn't find a single mismatch, return true.
+
+  return true;
+
+}
+
+bool memcmp(const void* BufferA, const void* BufferB, uint32 Size) {
+  return Memcmp(BufferA, BufferB, Size);
+}
+
+
+
 /* void Memcpy()
 
    Inputs:  void* Destination - The memory area you want to copy data to.
@@ -40,6 +94,10 @@ void Memcpy(void* Destination, void* Source, uint32 Size) {
     DestinationByte[i] = SourceByte[i];
   }
 
+}
+
+void* memcpy(void* Destination, const void* Source, uint32 Size) {
+  Memcpy(Destination, Source, Size); return Destination;
 }
 
 
@@ -95,9 +153,13 @@ void Memmove(void* Destination, const void* Source, uint32 Size) {
 
 }
 
+void* memmove(void* Destination, const void* Source, uint32 Size) {
+  Memmove(Destination, Source, Size); return Destination;
+}
 
 
-/* void Memset()
+
+/* void Memset(), memset()
 
    Inputs:  void* Buffer - The memory area/buffer you want to write to.
             uint8 Character - The character you want to write with.
@@ -134,6 +196,10 @@ void Memset(void* Buffer, uint8 Character, uint32 Size) {
 
   }
 
+}
+
+void* memset(void* Buffer, int Character, uint32 Size) {
+  Memset(Buffer, (uint8)Character, Size); return Buffer;
 }
 
 

@@ -6,7 +6,7 @@
 #include "Memory.h"
 
 
-/* bool Memcmp()
+/* bool Memcmp(), memcmp()
 
    Inputs: const void* BufferA - The first buffer you want to compare.
            const void* BufferB - The second buffer you want to compare.
@@ -54,9 +54,13 @@ bool Memcmp(const void* BufferA, const void* BufferB, uint64 Size) {
 
 }
 
+bool memcmp(const void* BufferA, const void* BufferB, uint64 Size) {
+  return Memcmp(BufferA, BufferB, Size);
+}
 
 
-/* void Memcpy()
+
+/* void Memcpy(), memcpy()
 
    Inputs:  void* Destination - The memory area you want to copy data to.
             const void* Source - The memory area you want to copy data from.
@@ -93,9 +97,71 @@ void Memcpy(void* Destination, const void* Source, uint64 Size) {
 
 }
 
+void* memcpy(void* Destination, const void* Source, uint64 Size) {
+  Memcpy(Destination, Source, Size); return Destination;
+}
 
 
-/* void Memset()
+
+
+/* void Memmove(), memmove()
+
+   Inputs:  void* Destination - The memory area you want to move data to.
+            const void* Source - The memory area you want to move data from.
+            uint64 Size - The size of both memory areas, in bytes.
+
+   Outputs: (None)
+
+   This function, much like Memcpy(), copies/'moves' a certain amount of data
+   (Size) from one memory area (Source) to another (Destination).
+
+   However, unlike Memcpy(), it takes into account overlapping memory areas /
+   any possible overflows, making it a safer approach.
+
+   For example, if you want to move 100,000 bytes from 5200h to 5000h (two
+   overlapping memory areas), you could do Memmove(0x5000, 0x5200, 100000).
+
+*/
+
+void Memmove(void* Destination, const void* Source, uint64 Size) {
+
+  // Translate each (const) void* pointer into a (const) uint8* pointer.
+
+  uint8* DestinationByte = (uint8*)Destination;
+  const uint8* SourceByte = (const uint8*)Source;
+
+  // We always assume that the two memory areas overlap, we just don't
+  // know where.
+
+  if (Destination < Source) {
+
+    // If Destination > Source, then it's usually safe to just copy
+    // normally from the beginning of each memory area, as with Memcpy.
+
+    for (uint64 i = 0; i < Size; i++) {
+      DestinationByte[i] = SourceByte[i];
+    }
+
+  } else {
+
+    // If Destination <= Source, then we have to copy the data from the end
+    // of each memory area, not from the beginning.
+
+    for (uint64 i = Size; i > 0; i--) {
+      DestinationByte[(i-1)] = SourceByte[(i-1)];
+    }
+
+  }
+
+}
+
+void* memmove(void* Destination, const void* Source, uint64 Size) {
+  Memmove(Destination, Source, Size); return Destination;
+}
+
+
+
+/* void Memset(), memset()
 
    Inputs:  void* Buffer - The memory area/buffer you want to write to.
             uint8 Character - The character you want to write with.
@@ -132,6 +198,10 @@ void Memset(void* Buffer, uint8 Character, uint64 Size) {
 
   }
 
+}
+
+void* memset(void* Buffer, int Character, uint64 Size) {
+  Memset(Buffer, (uint8)Character, Size); return Buffer;
 }
 
 
