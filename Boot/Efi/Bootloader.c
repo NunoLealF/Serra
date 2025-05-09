@@ -833,9 +833,9 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   } else if ((KernelHeader->ProgramHeaderOffset == 0) || (KernelHeader->NumProgramHeaders == 0)) {
     Message(Warning, u"Kernel does not appear to have any ELF program headers.");
   } else if (KernelHeader->Version < 1) {
-    Message(Warning, u"ELF header version appears to be invalid (%d)", (uint32)KernelHeader->Version);
+    Message(Warning, u"ELF header version appears to be invalid (%d)", (uint64)KernelHeader->Version);
   } else if (KernelHeader->FileType != 2) {
-    Message(Warning, u"ELF header appears to have a non-executable file type (%d)", (uint32)KernelHeader->FileType);
+    Message(Warning, u"ELF header appears to have a non-executable file type (%d)", (uint64)KernelHeader->FileType);
   }
 
   // (Show messages, and debug information)
