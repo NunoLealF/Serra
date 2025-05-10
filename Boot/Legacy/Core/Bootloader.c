@@ -343,10 +343,17 @@ void S3Bootloader(void) {
 
     for (uint16 Position = Threshold; Position > 0; Position--) {
 
+      // (Use insertion sort to sort the entries; while Mmap[n] < Mmap[n-1],
+      // swap them both, and decrement n)
+
       if (Mmap[Position].Base < Mmap[Position - 1].Base) {
+        
         Memswap((void*)(int)&Mmap[Position], (void*)(int)&Mmap[Position - 1], sizeof(mmapEntry));
+
       } else {
+
         break;
+
       }
 
     }

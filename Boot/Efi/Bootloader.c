@@ -1075,9 +1075,9 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
   // (Sort each entry by their starting address)
 
-  // (Since we can't dynamically allocate memory without changing the
+  // Since we can't dynamically allocate memory without changing the
   // memory map, we need a sorting algorithm that uses no additional
-  // space, like insertion sort)
+  // space, like insertion sort:
 
   for (uint16 Threshold = 1; Threshold < NumMmapEntries; Threshold++) {
 
@@ -1085,19 +1085,22 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
       // (Get the actual entries themselves)
 
-      efiMemoryDescriptor* PreviousEntry = GetMmapEntry(Mmap, MmapDescriptorSize, (Position - 1));
       efiMemoryDescriptor* Entry = GetMmapEntry(Mmap, MmapDescriptorSize, Position);
+      efiMemoryDescriptor* PreviousEntry = GetMmapEntry(Mmap, MmapDescriptorSize, (Position - 1));
 
-      // (Sort by starting address, and if they're same, make sure the
-      // entry with the non-usable type comes first.)
+      // (Use insertion sort to sort the entries; while Mmap[n] < Mmap[n-1],
+      // swap them both, and decrement n.)
 
       if (Entry->PhysicalStart < PreviousEntry->PhysicalStart) {
-
         Memswap((void*)Entry, (void*)PreviousEntry, MmapDescriptorSize);
+      }
 
-      } else if (Entry->PhysicalStart == PreviousEntry->PhysicalStart) {
+      // (If we have two entries with the same starting point, make sure
+      // that the 'usable' one always comes last)
 
-        if (Entry->Type != EfiConventionalMemory) {
+      if (Entry->PhysicalStart == PreviousEntry->PhysicalStart) {
+
+        if (PreviousEntry->Type == EfiConventionalMemory) {
           Memswap((void*)Entry, (void*)PreviousEntry, MmapDescriptorSize);
         }
 
