@@ -7,11 +7,13 @@
 
   // (Functions and definitions, from Cpu.c)
 
-  void WriteToMsr(uint32 Msr, uint64 Value);
-  uint64 ReadFromMsr(uint32 Msr);
+  void WriteToMsr(uint64 Msr, volatile uint64 Value);
+  uint64 ReadFromMsr(uint64 Msr);
 
-  void WriteToControlRegister(uint8 Register, uint32 Value);
-  uint32 ReadFromControlRegister(uint8 Register);
+  void WriteToControlRegister(uint8 Register, volatile uint64 Value);
+  uint64 ReadFromControlRegister(uint8 Register);
+
+  uint8 GetCpuProtectionLevel(void);
 
   // (Macros, for use with bitwise operations)
 

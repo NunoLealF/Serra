@@ -129,13 +129,15 @@
       bool AcpiSupported; // Is ACPI supported?
       universalPtr AcpiRsdp; // If so, pointer to RSDP
 
-      uint64 Cr0; // Value of the CR0 control register
-      uint64 Cr3; // Value of the CR3 control register
-      uint64 Cr4; // Value of the CR4 control register
-      uint64 Efer; // Value of the EFER model-specific register (MSR)
-      
-      bool PatSupported; // Is PAT supported?
-      uint64 PatMsr; // The value of the PAT MSR, if it's supported.. or 0
+      uint8 Cpl; // What CPU protection level are we in? (Ring 0 only for BIOS, any ring for UEFI though with limitations)
+
+      uint64 Cr0; // Value of the CR0 control register, if supported
+      uint64 Cr3; // Value of the CR3 control register, if supported
+      uint64 Cr4; // Value of the CR4 control register, if supported
+      uint64 Efer; // Value of the EFER model-specific register, if supported
+
+      bool PatSupported; // Is PAT supported? (BIOS-only)
+      uint64 PatMsr; // The value of the PAT MSR, if supported (BIOS-only)
 
       universalPtr Pml4; // Location of the PML4
 

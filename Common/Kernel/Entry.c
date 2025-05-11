@@ -16,9 +16,30 @@
 
 */
 
+typedef uint8 char8;
+typedef uint16 char16;
+#include "../../Boot/Efi/Efi/Efi.h"
+
+efiSystemTable* gST;
+
 void Entrypoint(kernelInfoTable* InfoTable) {
 
-  // Let's test this out
+  // [Test out EFI, still very incomplete]
+
+  if (InfoTable->Firmware.IsEfi == true) {
+
+    kernelEfiInfoTable* EfiTable = InfoTable->Firmware.EfiInfo.Table;
+    gST = EfiTable->SystemTable.Ptr;
+
+    gST->ConOut->SetAttribute(gST->ConOut, 0x0F); gST->ConOut->OutputString(gST->ConOut, u"Hi, this is kernel mode Serra! <3\n\r");
+    gST->ConOut->SetAttribute(gST->ConOut, 0x3F); gST->ConOut->OutputString(gST->ConOut, u"May 11 2025");
+    gST->ConOut->SetAttribute(gST->ConOut, 0x0F); gST->ConOut->OutputString(gST->ConOut, u"\n\r");
+
+    return;
+
+  }
+
+  // [Test out BIOS, still very incomplete]
 
   /*
 
@@ -34,7 +55,7 @@ void Entrypoint(kernelInfoTable* InfoTable) {
 
   uint16* Thing = (uint16*)ThingAddr;
   char* Thing2 = "Hi, this is kernel mode Serra! <3";
-  char* Thing3 = "May 3 2025";
+  char* Thing3 = "May 11 2025";
 
   int Position = 0;
 

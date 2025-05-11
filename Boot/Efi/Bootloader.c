@@ -113,38 +113,58 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
 
 
-  // [Enable any necessary x64 features (FPU and SSE)]
+  // [Obtain the current CPU privilege level]
+
+  // The EFI specification don't actually define what privilege level the
+  // CPU is running in (at least, not before ExitBootServices()), so unlike
+  // with BIOS, we don't actually have any guarantee that we're in ring 0.
+
+  // That means that, before we can execute *any* code that uses privileged
+  // instructions, we have to make sure the CPU privilege level lets us
+  // (in this case, we need to check if it's equal to 0).
+
+  KernelInfoTable.System.Cpl = GetCpuProtectionLevel();
+
+
+
+  // [If possible, enable any necessary x64 features (FPU and SSE)]
 
   // Additionally, we also want to make sure SSE and other x64 features are
-  // enabled, since some firmware doesn't do that by default. Before we do
-  // that though, let's save the current state of the control registers:
+  // enabled, since some firmware doesn't do that by default.
 
-  KernelInfoTable.System.Cr0 = ReadFromControlRegister(0);
-  KernelInfoTable.System.Cr3 = ReadFromControlRegister(3);
-  KernelInfoTable.System.Cr4 = ReadFromControlRegister(4);
-  KernelInfoTable.System.Efer = ReadFromMsr(0xC0000080);
+  if (KernelInfoTable.System.Cpl == 0) {
 
-  // Now that we've saved the current state of the control registers, we
-  // can move onto modifying them to enable the features we want.
+    // Before we do that though, let's save the current state of the
+    // control registers:
 
-  // (Enable the FPU, by setting the necessary bits in CR0)
+    KernelInfoTable.System.Cr0 = ReadFromControlRegister(0);
+    KernelInfoTable.System.Cr3 = ReadFromControlRegister(3);
+    KernelInfoTable.System.Cr4 = ReadFromControlRegister(4);
+    KernelInfoTable.System.Efer = ReadFromMsr(0xC0000080);
 
-  uint32 Cr0 = ReadFromControlRegister(0);
+    // Now that we've saved the current state of the control registers, we
+    // can move onto modifying them to enable the features we want.
 
-  Cr0 = setBit(Cr0, 1); // Set CR0.MP (1 << 1)
-  Cr0 = setBit(Cr0, 4); // Set CR0.ET (1 << 4)
-  Cr0 = setBit(Cr0, 5); // Set CR0.NE (1 << 5)
+    // (Enable the FPU, by setting the necessary bits in CR0)
 
-  WriteToControlRegister(0, Cr0);
+    uint64 Cr0 = ReadFromControlRegister(0);
 
-  // (Enable SSE, by setting the necessary bits in CR4)
+    Cr0 = setBit(Cr0, 1); // Set CR0.MP (1 << 1)
+    Cr0 = setBit(Cr0, 4); // Set CR0.ET (1 << 4)
+    Cr0 = setBit(Cr0, 5); // Set CR0.NE (1 << 5)
 
-  uint32 Cr4 = ReadFromControlRegister(4);
+    WriteToControlRegister(0, Cr0);
 
-  Cr4 = setBit(Cr4, 9); // Set CR4.OSFXSR (1 << 9)
-  Cr4 = setBit(Cr4, 10); // Set CR4.OSXMMEXCPT (1 << 10)
+    // (Enable SSE, by setting the necessary bits in CR4)
 
-  WriteToControlRegister(4, Cr4);
+    uint64 Cr4 = ReadFromControlRegister(4);
+
+    Cr4 = setBit(Cr4, 9); // Set CR4.OSFXSR (1 << 9)
+    Cr4 = setBit(Cr4, 10); // Set CR4.OSXMMEXCPT (1 << 10)
+
+    WriteToControlRegister(4, Cr4);
+
+  }
 
 
 
@@ -247,9 +267,13 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
   Message(Boot, u"Successfully initialized the console.");
 
-  Message(Info, u"This system's EFI revision is %d.%d", (uint16)(gST->Hdr.Revision >> 16), (uint16)(gST->Hdr.Revision));
+  Message(Info, u"This system's EFI revision is %d.%d", (uint64)(gST->Hdr.Revision >> 16), (uint64)(gST->Hdr.Revision));
+  Message(Info, u"This system is running in ring %d", (uint64)KernelInfoTable.System.Cpl);
   Message(Info, u"Using text mode %d, with a %d*%d character resolution", ConOutMode, ConOutResolution[0], ConOutResolution[1]);
 
+  if (KernelInfoTable.System.Cpl > 0) {
+    Message(Warning, u"System not running in ring 0 - usability may be seriously limited.");
+  }
 
 
 
@@ -727,9 +751,6 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
   // Finally, now that we actually know the size of the kernel image, we
   // can allocate space for it, and read it from disk.
-
-  // (In this case, we're allocating pages, not just allocating from the
-  // pool; this will be useful later on, for our paging setup.)
 
   #define AlignDivision(Num, Divisor) ((Num + Divisor - 1) / Divisor)
 
@@ -1300,6 +1321,22 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
 
 
+  // [TODO - TEST!!!]
+
+  // Test setting up the stack (should be fine on ring 3..) and jumping
+  // to the kernel
+
+  Print(u"\n\r", 0);
+  Message(Boot, u"Preparing to call the kernel (test).");
+  Message(Warning, u"This doesn't use the new kernel stack space.");
+  Message(Info, u"In the future, this will be an assembly stub\n\r");
+
+
+  typedef __attribute__((sysv_abi)) void Test(kernelInfoTable* InfoTable);
+  Test* Entrypoint = (Test*)KernelEntrypoint;
+
+  Entrypoint(&KernelInfoTable);
+
 
 
 
@@ -1312,7 +1349,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
   Print(u"\n\r", 0);
   Print(u"Hi, this is EFI-mode Serra! <3 \n\r", 0x0F);
-  Printf(u"May %d %x", 0x3F, 8, 0x2025);
+  Printf(u"May %d %x", 0x3F, 11, 0x2025);
 
   // TODO (Wait until user strikes a key, then return.)
 
@@ -1385,11 +1422,16 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
     FreePoolIfAllocated(Mmap);
     FreePoolIfAllocated(UsableMmap);
 
-    // Restore the initial values of the CR0 and CR4 registers, since we
-    // modified them to set up the FPU and enable SSE.
+    // If we're in ring 0, then restore the initial values of the CR0 and
+    // CR4 registers, since we modified them early on.
 
-    WriteToControlRegister(0, KernelInfoTable.System.Cr0); // Restore CR0
-    WriteToControlRegister(4, KernelInfoTable.System.Cr4); // Restore CR4
+    if (KernelInfoTable.System.Cpl == 0) {
+
+      WriteToControlRegister(0, KernelInfoTable.System.Cr0); // Restore CR0
+      WriteToControlRegister(3, KernelInfoTable.System.Cr3); // Restore CR3
+      WriteToControlRegister(4, KernelInfoTable.System.Cr4); // Restore CR4
+
+    }
 
     // Return whatever is in AppStatus
 
