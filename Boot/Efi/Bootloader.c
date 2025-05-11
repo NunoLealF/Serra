@@ -119,20 +119,25 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   // CPU is running in (at least, not before ExitBootServices()), so unlike
   // with BIOS, we don't actually have any guarantee that we're in ring 0.
 
-  // That means that, before we can execute *any* code that uses privileged
-  // instructions, we have to make sure the CPU privilege level lets us
-  // (in this case, we need to check if it's equal to 0).
+  // That introduces a problem, because if we're not in ring 0, then we can't
+  // execute any privileged instructions, which limits what we can do; so, in
+  // order to guarantee we won't crash the system, we need to get the CPL.
 
-  KernelInfoTable.System.Cpl = GetCpuProtectionLevel();
+  // (The bootloader will still run on any protection level, even ring 3,
+  // but it won't be able to use all features unless it's in ring 0)
+
+  uint8 Cpl = GetCpuProtectionLevel();
+  KernelInfoTable.System.Cpl = Cpl;
 
 
 
   // [If possible, enable any necessary x64 features (FPU and SSE)]
 
   // Additionally, we also want to make sure SSE and other x64 features are
-  // enabled, since some firmware doesn't do that by default.
+  // enabled, since some firmware doesn't do that by default. This requires
+  // the system to be in ring 0 (supervisor mode).
 
-  if (KernelInfoTable.System.Cpl == 0) {
+  if (Cpl == 0) {
 
     // Before we do that though, let's save the current state of the
     // control registers:
@@ -268,10 +273,10 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   Message(Boot, u"Successfully initialized the console.");
 
   Message(Info, u"This system's EFI revision is %d.%d", (uint64)(gST->Hdr.Revision >> 16), (uint64)(gST->Hdr.Revision));
-  Message(Info, u"This system is running in ring %d", (uint64)KernelInfoTable.System.Cpl);
+  Message(Info, u"This system is running in ring %d", (uint64)Cpl);
   Message(Info, u"Using text mode %d, with a %d*%d character resolution", ConOutMode, ConOutResolution[0], ConOutResolution[1]);
 
-  if (KernelInfoTable.System.Cpl > 0) {
+  if (Cpl > 0) {
     Message(Warning, u"System not running in ring 0 - usability may be seriously limited.");
   }
 
@@ -936,7 +941,6 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   // Finally, now that we know which section is the .text section, we can
   // calculate the real kernel entrypoint.
 
-  #define KernelStart (uint64)Kernel //                                                                   TODO TODO TODO - Needs to be changed when kernel is mapped to higher half / stops being idmapped
   uint64 KernelEntrypoint = ((uint64)Kernel + KernelTextSection->Offset + KernelHeader->Entrypoint);
 
   Message(Ok, u"Successfully located actual kernel entrypoint.");
@@ -1072,8 +1076,8 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   // Now that we have the system's memory map, we have a pretty good idea of
   // which areas we can use, and which ones we can't.
 
-  // However, there's nothing that actually guarantees it's been "cleaned
-  // up"; not only is it often unsorted, but there can sometimes even be
+  // However, there's nothing that actually guarantees it's been cleaned
+  // up; not only is it often unsorted, but there can sometimes even be
   // overlapping entries!
 
   // The purpose of this section is, essentially, to be able to deal with
@@ -1131,17 +1135,6 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
   }
 
-  // TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO
-
-
-
-
-
-
-
-
-
-
   // Now that we've sorted the memory map, we can move onto the next part:
   // actually building the usable memory map.
 
@@ -1154,17 +1147,22 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
   uint64 UsableOffset = 0;
 
-  // (In this case, the usable memory map is simply just a 'simplified'
+  // In this case, the usable memory map is simply just a 'simplified'
   // memory map that accounts for overlapping and duplicate entries, and
-  // that *only* contains free/usable memory.)
+  // that *only* contains memory that the kernel can use.
+
+  // Since we don't plan on calling ExitBootServices(), that means we're
+  // still running 'alongside' the firmware - that means we need to set
+  // aside some space for it, as well as explicitly allocate any memory
+  // meant for the kernel.
 
   uint16 MmapPositionThreshold = 0;
   uint64 UsableMmapThreshold = 0;
 
   for (uint16 Position = 0; Position < NumMmapEntries; Position++) {
 
-    // Find the first entry that starts on or at UsableMmapThreshold, of
-    // type EfiConventionalMemory.
+    // (Find the first entry that starts on or at UsableMmapThreshold, of
+    // type EfiConventionalMemory)
 
     efiMemoryDescriptor* Entry = NULL;
 
@@ -1193,8 +1191,8 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
       break;
     }
 
-    // Now that we've found it, let's compare it with the starting position
-    // of the next entry, and update the entry size if the two overlap.
+    // (Now that we've found it, compare it with the starting position of
+    // the next entry and update the entry size if the two overlap)
 
     uint64 Start = Entry->PhysicalStart;
     uint64 Size = (Entry->NumberOfPages * 4096);
@@ -1212,8 +1210,8 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
     }
 
-    // Next, we want to make sure we have enough memory for the firmware;
-    // we'll still be interacting with some EFI services, so this is needed.
+    // (Make sure we have enough memory for the firmware, as defined in
+    // MinFirmwareMemory (see Bootloader.h))
 
     if (FirmwareMemory > 0) {
 
@@ -1240,8 +1238,8 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
     }
 
-    // (Align everything to 4 KiB boundaries, just in case; this should
-    // avoid problems later on with AllocatePages()).
+    // (Align everything to 4 KiB (page) boundaries, and make sure each
+    // entry isn't empty)
 
     if ((Start % 4096) != 0) {
 
@@ -1253,8 +1251,6 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
     }
 
     Size -= (Size % 4096);
-
-    // (Make sure the entries are empty)
 
     if (Size == 0) {
       continue;
@@ -1425,7 +1421,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
     // If we're in ring 0, then restore the initial values of the CR0 and
     // CR4 registers, since we modified them early on.
 
-    if (KernelInfoTable.System.Cpl == 0) {
+    if (Cpl == 0) {
 
       WriteToControlRegister(0, KernelInfoTable.System.Cr0); // Restore CR0
       WriteToControlRegister(3, KernelInfoTable.System.Cr3); // Restore CR3
