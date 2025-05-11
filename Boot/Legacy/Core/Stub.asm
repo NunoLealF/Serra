@@ -8,7 +8,7 @@ SECTION .text
 
 EXTERN KernelEntrypoint
 EXTERN KernelStack
-GLOBAL LongmodeStub
+GLOBAL TransitionStub
 
 ; It's assumed that this stub will behave as a regular 32-bit function
 ; would, so we need to initialize a new call frame, and get arguments:
@@ -16,7 +16,7 @@ GLOBAL LongmodeStub
 ; (uintptr InfoTable [ebx], uintptr Pml4 [edx])
 ; (We discard [eax] and [ecx])
 
-LongmodeStub:
+TransitionStub:
 
   ; Deal with the C calling convention / initialize the call frame.
 

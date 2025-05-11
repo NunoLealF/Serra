@@ -5,21 +5,6 @@
 #include "Stdint.h"
 #include "Bootloader.h"
 
-/* efiSystemTable* gST, efiBootServices* gBS, efiRuntimeServices* gRT
-
-   Definitions: (Efi/Efi.h, Efi/Tables.h)
-
-   These are global pointers to their respective EFI tables; they're
-   declared here, initialized in SEfiBootloader(), and can be used
-   by *any* function that uses the Efi/Efi.h header.
-
-*/
-
-efiSystemTable* gST;
-efiBootServices* gBS;
-efiRuntimeServices* gRT;
-
-
 /* efiStatus efiAbi SEfiBootloader()
 
    Inputs: efiHandle ImageHandle - The firmware-provided image handle.
@@ -676,7 +661,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   // we first need to figure out how large it is and then allocate the
   // necessary buffer, which can take some time.
 
-  void* Kernel = NULL;
+  Kernel = NULL;
   uint64 KernelSize = 0;
 
   Print(u"\n\r", 0);
@@ -808,7 +793,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   // (Initialize variables, and allocate as many pages as necessary for
   // *at least* KernelStackSize bytes.)
 
-  void* KernelStack = NULL;
+  KernelStack = NULL;
   AppStatus = gBS->AllocatePages(AllocateAnyPages, EfiLoaderData, AlignDivision(KernelStackSize, 4096), (volatile efiPhysicalAddress*)&KernelStack);
 
   if ((AppStatus != EfiSuccess) || (KernelStack == NULL)) {
@@ -823,9 +808,11 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
   }
 
+  KernelStack = (void*)((uint64)KernelStack + KernelStackSize);
+
   // (Update the kernel information table)
 
-  KernelInfoTable.Kernel.Stack.Address = ((uint64)KernelStack + KernelStackSize);
+  KernelInfoTable.Kernel.Stack.Ptr = KernelStack;
 
 
 
@@ -941,15 +928,15 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   // Finally, now that we know which section is the .text section, we can
   // calculate the real kernel entrypoint.
 
-  uint64 KernelEntrypoint = ((uint64)Kernel + KernelTextSection->Offset + KernelHeader->Entrypoint);
+  KernelEntrypoint = (void*)((uint64)Kernel + KernelTextSection->Offset + KernelHeader->Entrypoint);
 
   Message(Ok, u"Successfully located actual kernel entrypoint.");
-  Message(Info, u"Kernel entrypoint is at %xh", KernelEntrypoint);
+  Message(Info, u"Kernel entrypoint is at %xh", (uint64)KernelEntrypoint);
 
   // (Fill out the kernel information table, again)
 
   KernelInfoTable.Kernel.ElfHeader.Address = (uint64)KernelHeader;
-  KernelInfoTable.Kernel.Entrypoint.Address = KernelEntrypoint;
+  KernelInfoTable.Kernel.Entrypoint.Address = (uint64)KernelEntrypoint;
 
 
 
@@ -1317,39 +1304,58 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
 
 
-  // [TODO - TEST!!!]
+  // [Transfer control to the kernel]
 
-  // Test setting up the stack (should be fine on ring 3..) and jumping
-  // to the kernel
-
-  Print(u"\n\r", 0);
-  Message(Boot, u"Preparing to call the kernel (test).");
-  Message(Warning, u"This doesn't use the new kernel stack space.");
-  Message(Info, u"In the future, this will be an assembly stub\n\r");
-
-
-  typedef __attribute__((sysv_abi)) void Test(kernelInfoTable* InfoTable);
-  Test* Entrypoint = (Test*)KernelEntrypoint;
-
-  Entrypoint(&KernelInfoTable);
-
-
-
-
-
-
-
-  // TODO (Show Serra msg thing)
-
-  DebugFlag = true;
+  // Now that we've successfully initialized everything - including the
+  // kernel info table - we can transfer control to the kernel itself.
 
   Print(u"\n\r", 0);
-  Print(u"Hi, this is EFI-mode Serra! <3 \n\r", 0x0F);
-  Printf(u"May %d %x", 0x3F, 11, 0x2025);
+  Message(Boot, u"Preparing to transfer control to the kernel.");
+  
+  Message(Info, u"Preparing to call TransitionStub() at %xh", (uint64)(&TransitionStub));
+  Message(Info, u"(kernelInfoTable*) KernelInfoTable -> %xh", (uint64)(&KernelInfoTable));
+  Message(Info, u"(void*) KernelEntrypoint -> %xh", (uint64)KernelEntrypoint);
+  Message(Info, u"(void*) KernelStack -> %xh\n\r", (uint64)KernelStack);
 
-  // TODO (Wait until user strikes a key, then return.)
+  /*
+  // (TODO: Wait until we have a proper graphics implementation set up.)
+  // (If supported, enable a graphics mode, and update mode information)
 
-  Print(u"\n\n\r", 0);
+  if (SupportsGop == true) {
+
+    Message(Info, u"Setting GOP mode %d.", (uint64)GopMode);
+    AppStatus = GopProtocol->SetMode(GopProtocol, GopMode);
+
+    if (AppStatus == EfiSuccess) {
+
+      // (TODO: Set something up)
+
+    } else {
+
+      if (SupportsConOut == true) {
+
+        Message(Fail, u"Failed to enable graphics mode - staying with EFI text mode.");
+        KernelInfoTable.Graphics.Type = EfiText;
+
+      } else {
+
+        goto ExitEfiApplication;
+
+      }
+
+    }
+
+  } */
+
+  // (Transfer control to the kernel.)
+
+  TransitionStub(&KernelInfoTable, KernelEntrypoint, KernelStack);
+
+
+
+  // [TODO] [Wait until the user strikes a key, and then return.]
+
+  Print(u"\n\r", 0);
 
   if (SupportsConIn == true) {
     Message(Warning, u"Press any key to return.");
@@ -1358,9 +1364,6 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
   AppStatus = EfiSuccess;
   goto ExitEfiApplication;
-
-  // TODO (Actually calling the kernel, i guess?)
-
 
 
 

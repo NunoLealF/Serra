@@ -2,9 +2,12 @@
 # This file is part of the Serra project, which is released under the MIT license.
 # For more information, please refer to the accompanying license agreement. <3
 
-# You'll need an x86_64-w64-mingw32-gcc toolchain that supports the C23 standard.
-# (If you're on Ubuntu 24.04+, you can use apt; otherwise, you *must* cross-compile it)
+# You'll need an x86_64-w64-mingw32-gcc toolchain that supports the C23
+# standard, as well as nasm.
+# (If you're on Ubuntu 24.04+, you can use apt; otherwise, you *must* cross-
+# -compile it)
 
+AS = nasm
 CC = x86_64-w64-mingw32-gcc
 LD = x86_64-w64-mingw32-ld
 OBJC = x86_64-w64-mingw32-objcopy
@@ -104,9 +107,13 @@ Memory/Memory.o:
 	@echo "Building $@"
 	@$(CC) $(CFLAGS) -c Memory/Memory.c -o Memory/Memory.o
 
+Stub.o:
+	@echo "Building $@"
+	@$(AS) Stub.asm -f elf64 -o Stub.o
+
 
 # [Link everything into one .EFI file]
 
-Bootx64.efi: Bootloader.o Cpu/Cpu.o Graphics/Exceptions.o Graphics/Format.o Graphics/Graphics.o Memory/Memory.o
+Bootx64.efi: Bootloader.o Cpu/Cpu.o Graphics/Exceptions.o Graphics/Format.o Graphics/Graphics.o Memory/Memory.o Stub.o
 	@echo "Building $@"
 	@$(CC) $(LDFLAGS) -o Bootx64.efi -ffreestanding -nolibc -nostdlib $^ -lgcc

@@ -17,11 +17,12 @@
   #include "Elf.h"
 
   #include "../Shared/InfoTable.h"
+  #include "../../../Common/InfoTable.h"
 
   // Declare functions in Bootloader.c and Stub.asm
 
   void S3Bootloader(void);
-  void LongmodeStub(uintptr InfoTable, uintptr Pml4);
+  void TransitionStub(kernelInfoTable* InfoTable, void* Pml4);
 
   // Global variables, for use throughout the entire bootloader
 
@@ -35,9 +36,7 @@
 
   // Kernel-related definitions.
 
-  #include "../../../Common/InfoTable.h"
-
-  #define KernelStackSize 0x100000 // (Must be a multiple of 4KiB)
+  #define KernelStackSize 0x100000 // Must be a multiple of 4 KiB
 
   uint64 KernelEntrypoint;
   uint64 KernelStack;

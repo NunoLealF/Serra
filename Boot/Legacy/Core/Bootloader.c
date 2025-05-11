@@ -103,7 +103,7 @@ void RestoreState(void) {
 
    -> (10) Prepare the necessary environment to transfer control
    to the kernel, and prepare info tables, before running the
-   kernel (via LongmodeStub()).
+   kernel (via TransitionStub()).
 
 */
 
@@ -347,7 +347,7 @@ void S3Bootloader(void) {
       // swap them both, and decrement n)
 
       if (Mmap[Position].Base < Mmap[Position - 1].Base) {
-        
+
         Memswap((void*)(int)&Mmap[Position], (void*)(int)&Mmap[Position - 1], sizeof(mmapEntry));
 
       } else {
@@ -1350,16 +1350,24 @@ void S3Bootloader(void) {
 
   Putchar('\n', 0);
   Message(Boot, "Transferring control to the kernel.");
-  Message(Info, "Preparing to call LongmodeStub(%xh, %xh) at %xh", &KernelInfo, Pml4, &LongmodeStub);
+
+  Message(Info, "Preparing to call TransitionStub() at %xh", &TransitionStub);
+  Message(Info, "(kernelInfoTable*) InfoTable -> %xh", (uint32)(&KernelInfo));
+  Message(Info, "(void*) Pml4 -> %xh", (uint32)Pml4);
+
+  /*
+  // (TODO: Wait until we have a proper graphics implementation set up.)
 
   if (SupportsVbe == true) {
 
-    //Message(Info, "Setting VBE mode %xh.", BestVbeMode);
-    //SetVbeMode(BestVbeMode, false, true, true, NULL);
+    Message(Info, "Setting VBE mode %d.", BestVbeMode);
+    SetVbeMode(BestVbeMode, false, true, true, NULL);
 
-  }
+  } */
 
-  LongmodeStub((uintptr)&KernelInfo, Pml4);
+  // (Actually transfer control to the kernel.)
+
+  TransitionStub(&KernelInfo, (void*)Pml4);
 
   for(;;);
 
