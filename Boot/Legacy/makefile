@@ -55,7 +55,7 @@ include ${CONFIG}
 
 All: Clean Compile
 
-Compile: Bootsector/Mbr.bin Bootsector/Bootsector.bin Init/Init.bin Shared/Rm/Rm.bin Core/Core.bin Bootx32.bin
+Compile: Bootsector/Mbr.bin Bootsector/Bootsector.bin Stage2/Stage2.bin Shared/Rm/Rm.bin Stage3/Stage3.bin Bootx32.bin
 
 Clean:
 	@echo "\033[0;2m""Cleaning leftover files (*.o, *.elf, *.bin).." "\033[0m"
@@ -63,20 +63,20 @@ Clean:
 	@-rm -f Bootsector/*.o
 	@-rm -f Bootsector/*.bin
 
-	@-rm -f Init/*.o
-	@-rm -f Init/*.elf
-	@-rm -f Init/*.bin
+	@-rm -f Stage2/*.o
+	@-rm -f Stage2/*.elf
+	@-rm -f Stage2/*.bin
 
-	@-rm -f Core/*.o
-	@-rm -f Core/*.elf
-	@-rm -f Core/*.bin
+	@-rm -f Stage3/*.o
+	@-rm -f Stage3/*.elf
+	@-rm -f Stage3/*.bin
 
-	@-rm -f Core/Cpu/*.o
-	@-rm -f Core/Graphics/*.o
-	@-rm -f Core/Int/*.o
-	@-rm -f Core/Memory/A20/*.o
-	@-rm -f Core/Memory/Mmap/*.o
-	@-rm -f Core/Memory/Paging/*.o
+	@-rm -f Stage3/Cpu/*.o
+	@-rm -f Stage3/Graphics/*.o
+	@-rm -f Stage3/Int/*.o
+	@-rm -f Stage3/Memory/A20/*.o
+	@-rm -f Stage3/Memory/Mmap/*.o
+	@-rm -f Stage3/Memory/Paging/*.o
 
 	@-rm -f Shared/Disk/*.o
 	@-rm -f Shared/Graphics/*.o
@@ -91,10 +91,10 @@ Clean:
 # (...)
 
 Dump:
-	@$(OBJD) -S Core/Core.elf
+	@$(OBJD) -S Stage3/Stage3.elf
 
 Dumpbin:
-	@$(OBJD) -Mintel,i686 -b binary -m i386 --adjust-vma=0x7E00 -D Init/Init.bin
+	@$(OBJD) -Mintel,i686 -b binary -m i386 --adjust-vma=0x7E00 -D Stage2/Stage2.bin
 
 # Lowercase names
 
@@ -119,70 +119,70 @@ Bootsector/Bootsector.bin:
 	@$(AS) Bootsector/Bootsector.asm -f bin -o Bootsector/Bootsector.bin
 
 
-# (Second-stage bootloader, Legacy/Init)
+# (Second-stage bootloader, Legacy/Stage2)
 
-Init/Bootloader.o:
+Stage2/Bootloader.o:
 	@echo "Building $@"
-	@$(CC) $(CFLAGS) -c Init/Bootloader.c -o Init/Bootloader.o
+	@$(CC) $(CFLAGS) -c Stage2/Bootloader.c -o Stage2/Bootloader.o
 
 
-# (Third-stage bootloader, Legacy/Core)
+# (Third-stage bootloader, Legacy/Stage3)
 
-Core/Bootloader.o:
+Stage3/Bootloader.o:
 	@echo "Building $@"
-	@$(CC) $(CFLAGS) -c Core/Bootloader.c -o Core/Bootloader.o
+	@$(CC) $(CFLAGS) -c Stage3/Bootloader.c -o Stage3/Bootloader.o
 
-Core/Elf.o:
+Stage3/Elf.o:
 	@echo "Building $@"
-	@$(CC) $(CFLAGS) -c Core/Elf.c -o Core/Elf.o
+	@$(CC) $(CFLAGS) -c Stage3/Elf.c -o Stage3/Elf.o
 
-Core/Stub.o:
+Stage3/Stub.o:
 	@echo "Building $@"
-	@$(AS) -w-zext-reloc Core/Stub.asm -f elf -o Core/Stub.o
+	@$(AS) -w-zext-reloc Stage3/Stub.asm -f elf -o Stage3/Stub.o
 
-Core/Cpu/Cpu.o:
+Stage3/Cpu/Cpu.o:
 	@echo "Building $@"
-	@$(CC) $(CFLAGS) -Wno-array-bounds -c Core/Cpu/Cpu.c -o Core/Cpu/Cpu.o
+	@$(CC) $(CFLAGS) -Wno-array-bounds -c Stage3/Cpu/Cpu.c -o Stage3/Cpu/Cpu.o
 
-Core/Memory/A20/A20.o:
+Stage3/Memory/A20/A20.o:
 	@echo "Building $@"
-	@$(CC) $(CFLAGS) -c Core/Memory/A20/A20.s -o Core/Memory/A20/A20.o
+	@$(CC) $(CFLAGS) -c Stage3/Memory/A20/A20.s -o Stage3/Memory/A20/A20.o
 
-Core/Memory/A20/A20_Wrapper.o:
+Stage3/Memory/A20/A20_Wrapper.o:
 	@echo "Building $@"
-	@$(CC) $(CFLAGS) -c Core/Memory/A20/A20_Wrapper.c -o Core/Memory/A20/A20_Wrapper.o
+	@$(CC) $(CFLAGS) -c Stage3/Memory/A20/A20_Wrapper.c -o Stage3/Memory/A20/A20_Wrapper.o
 
-Core/Memory/Mmap/Mmap.o:
+Stage3/Memory/Mmap/Mmap.o:
 	@echo "Building $@"
-	@$(CC) $(CFLAGS) -c Core/Memory/Mmap/Mmap.c -o Core/Memory/Mmap/Mmap.o
+	@$(CC) $(CFLAGS) -c Stage3/Memory/Mmap/Mmap.c -o Stage3/Memory/Mmap/Mmap.o
 
-Core/Memory/Paging/Paging.o:
+Stage3/Memory/Paging/Paging.o:
 	@echo "Building $@"
-	@$(CC) $(CFLAGS) -c Core/Memory/Paging/Paging.c -o Core/Memory/Paging/Paging.o
+	@$(CC) $(CFLAGS) -c Stage3/Memory/Paging/Paging.c -o Stage3/Memory/Paging/Paging.o
 
-Core/Graphics/Exceptions.o:
+Stage3/Graphics/Exceptions.o:
 	@echo "Building $@"
-	@$(CC) $(CFLAGS) -c Core/Graphics/Exceptions.c -o Core/Graphics/Exceptions.o
+	@$(CC) $(CFLAGS) -c Stage3/Graphics/Exceptions.c -o Stage3/Graphics/Exceptions.o
 
-Core/Graphics/Format.o:
+Stage3/Graphics/Format.o:
 	@echo "Building $@"
-	@$(CC) $(CFLAGS) -c Core/Graphics/Format.c -o Core/Graphics/Format.o
+	@$(CC) $(CFLAGS) -c Stage3/Graphics/Format.c -o Stage3/Graphics/Format.o
 
-Core/Graphics/Vbe.o:
+Stage3/Graphics/Vbe.o:
 	@echo "Building $@"
-	@$(CC) $(CFLAGS) -c Core/Graphics/Vbe.c -o Core/Graphics/Vbe.o
+	@$(CC) $(CFLAGS) -c Stage3/Graphics/Vbe.c -o Stage3/Graphics/Vbe.o
 
-Core/Int/Idt.o:
+Stage3/Int/Idt.o:
 	@echo "Building $@"
-	@$(CC) $(CFLAGS) -c Core/Int/Idt.c -o Core/Int/Idt.o
+	@$(CC) $(CFLAGS) -c Stage3/Int/Idt.c -o Stage3/Int/Idt.o
 
-Core/Int/Irq.o:
+Stage3/Int/Irq.o:
 	@echo "Building $@"
-	@$(CC) $(CFLAGS) -c Core/Int/Irq.c -o Core/Int/Irq.o
+	@$(CC) $(CFLAGS) -c Stage3/Int/Irq.c -o Stage3/Int/Irq.o
 
-Core/Int/Isr.o:
+Stage3/Int/Isr.o:
 	@echo "Building $@"
-	@$(CC) $(CFLAGS) -c Core/Int/Isr.s -o Core/Int/Isr.o
+	@$(CC) $(CFLAGS) -c Stage3/Int/Isr.s -o Stage3/Int/Isr.o
 
 
 # (Shared code, Legacy/Shared)
@@ -217,15 +217,15 @@ Shared/Rm/RmWrapper.o:
 
 # Link the stages into .bin
 
-Init/Init.bin: Init/Bootloader.o Shared/Disk/Disk.o Shared/Graphics/Exceptions.o Shared/Graphics/Format.o Shared/Graphics/Graphics.o Shared/Memory/Memory.o Shared/Rm/RmWrapper.o
+Stage2/Stage2.bin: Stage2/Bootloader.o Shared/Disk/Disk.o Shared/Graphics/Exceptions.o Shared/Graphics/Format.o Shared/Graphics/Graphics.o Shared/Memory/Memory.o Shared/Rm/RmWrapper.o
 	@echo "Building $@"
-	@$(CC) -T Init/Linker.ld $(LDFLAGS) -o Init/Init.elf -ffreestanding -nolibc -nostdlib -lgcc $^
-	@$(OBJC) -O binary Init/Init.elf Init/Init.bin
+	@$(CC) -T Stage2/Linker.ld $(LDFLAGS) -o Stage2/Stage2.elf -ffreestanding -nolibc -nostdlib -lgcc $^
+	@$(OBJC) -O binary Stage2/Stage2.elf Stage2/Stage2.bin
 
-Core/Core.bin: Core/Bootloader.o Core/Elf.o Core/Stub.o Core/Cpu/Cpu.o Core/Memory/A20/A20.o Core/Memory/A20/A20_Wrapper.o Core/Memory/Mmap/Mmap.o Core/Memory/Paging/Paging.o Core/Graphics/Vbe.o Core/Int/Idt.o Core/Int/Irq.o Core/Int/Isr.o Shared/Disk/Disk.o Shared/Graphics/Exceptions.o Shared/Graphics/Format.o Shared/Graphics/Graphics.o Shared/Memory/Memory.o Shared/Rm/RmWrapper.o
+Stage3/Stage3.bin: Stage3/Bootloader.o Stage3/Elf.o Stage3/Stub.o Stage3/Cpu/Cpu.o Stage3/Memory/A20/A20.o Stage3/Memory/A20/A20_Wrapper.o Stage3/Memory/Mmap/Mmap.o Stage3/Memory/Paging/Paging.o Stage3/Graphics/Vbe.o Stage3/Int/Idt.o Stage3/Int/Irq.o Stage3/Int/Isr.o Shared/Disk/Disk.o Shared/Graphics/Exceptions.o Shared/Graphics/Format.o Shared/Graphics/Graphics.o Shared/Memory/Memory.o Shared/Rm/RmWrapper.o
 	@echo "Building $@"
-	@$(CC) -T Core/Linker.ld $(LDFLAGS) -o Core/Core.elf -ffreestanding -nolibc -nostdlib -lgcc $^
-	@$(OBJC) -O binary Core/Core.elf Core/Core.bin
+	@$(CC) -T Stage3/Linker.ld $(LDFLAGS) -o Stage3/Stage3.elf -ffreestanding -nolibc -nostdlib -lgcc $^
+	@$(OBJC) -O binary Stage3/Stage3.elf Stage3/Stage3.bin
 
-Bootx32.bin: Core/Core.bin
-	@cp Core/Core.bin Bootx32.bin
+Bootx32.bin: Stage3/Stage3.bin
+	@cp Stage3/Stage3.bin Bootx32.bin

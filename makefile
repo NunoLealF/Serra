@@ -130,7 +130,7 @@ Serra.img:
 
 	@if [ $(BuildBios) = true ]; then \
 		dd if=Boot/Legacy/Bootsector/Bootsector.bin of=Partition.img conv=notrunc bs=512 count=1 seek=0 status=none; \
-		dd if=Boot/Legacy/Init/Init.bin of=Partition.img conv=notrunc bs=512 count=16 seek=16 status=none; \
+		dd if=Boot/Legacy/Stage2/Stage2.bin of=Partition.img conv=notrunc bs=512 count=16 seek=16 status=none; \
 		dd if=Boot/Legacy/Shared/Rm/Rm.bin of=Partition.img conv=notrunc bs=512 count=8 seek=32 status=none; \
 	fi
 

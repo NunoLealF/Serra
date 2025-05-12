@@ -24,23 +24,24 @@ in `Boot/Efi` (or `/Efi/Boot/Bootx64.efi` in the image itself).
   - - Loaded to 7C00h\~7E00h *by the firmware*;
   - - CPU is in 16-bit real mode (with access to BIOS interrupts).
 
-  - **Second stage (`Boot/Legacy/Init`, S2Init() ~ S2Bootloader()) and
+  - **Second stage (`Boot/Legacy/Stage2`, S2Init() ~ S2Bootloader()) and
   real mode wrapper (`Boot/Legacy/Shared/Rm`):** Located within the 16-40th
   sectors of the disk/partition, and loads the next stage of the bootloader
   from the FAT file system, as well as preparing a few important things;
-  - - Loaded to 7E00h\~9E00h (wrapper between 9E00\~AE00h) *by the bootsector (using int 13h)*;
+  - - Loaded to 7E00h\~9E00h (wrapper between 9E00\~AE00h) *by the*
+  *bootsector (using int 13h)*;
   - - CPU is in 32-bit protected mode (with access to BIOS interrupts *via*
   the 16-bit real mode wrapper, which temporarily switches back).
 
-  - **Third stage (`Boot/Legacy/Core`, S3Bootloader()):** Located in the
+  - **Third stage (`Boot/Legacy/Stage3`, S3Bootloader()):** Located in the
   `/Boot/Bootx32.bin` file on a FAT partition, and prepares the kernel
   environment - enabling the A20 line, querying the system memory map, setting
   up identity paging, etc. - before loading the kernel.
   - - Loaded to 20000h *by the second stage (using int 13h)*;
   - - CPU is in 32-bit protected mode (with access to BIOS interrupts via
   the same mechanism for earlier), until the switch to 64-bit long mode;
-  - - Transfers control to the kernel via LongmodeStub (`Stub.asm`), after
-  filling out the kernel info table, and enabling paging/VESA modes/etc.
+  - - Transfers control to the kernel via `Stub.asm`, after filling out the
+  kernel info table, and enabling paging / VESA modes / etc
 
 </details>
 
@@ -55,8 +56,8 @@ in `Boot/Efi` (or `/Efi/Boot/Bootx64.efi` in the image itself).
   position-independent (compiled with `-fpie`, linked with `-static-pie`);
   - - CPU is in 64-bit long mode (without access to BIOS interrupts, but
   *with access to EFI functions*);
-  - - Transfers control to the kernel via **TODO (still not here yet)**,
-  after filling out the kernel info table, and enabling **TODO (features)**.
+  - - Transfers control to the kernel via `Stub.asm`, after filling out the
+  kernel info table, and enabling paging / GOP modes / etc.
 
   - **EFI subsystem/headers (`Boot/Efi/Efi`):** This is linked together with
   the EFI application, and it provides a minimal interface with EFI tables,
@@ -74,9 +75,7 @@ For more information, refer to the [roadmap](#roadmap) below:
 
 ### Roadmap
 
-- Finish implementing EFI support, in `Boot/Efi`;
-- - Locate protocols for things like ACPI, USB, SATA, disk, etc.;
-- - Deal with paging, IDTs, etc.
+- *Not much - maybe rewrite documentation?*
 
 &nbsp;
 
@@ -86,4 +85,4 @@ For more information, refer to the [roadmap](#roadmap) below:
 This project has been released under the [MIT license](https://choosealicense.com/licenses/mit/).
 For more information, please refer to the accompanying license agreement. <3
 
-*(last updated on May 6th 2025)*
+*(last updated on May 12th 2025)*

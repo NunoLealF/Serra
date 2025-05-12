@@ -44,8 +44,8 @@ void RestoreState(void) {
    Outputs: (none)
 
    This is the main function (and entrypoint) of our *third-stage* bootloader.
-   The second stage bootloader (located in Init/, instead of Core/) jumps
-   here after it finishes reading Boot/Bootx32.bin from disk.
+   The second stage bootloader (located in Stage2/) jumps here after it
+   finishes reading Boot/Bootx32.bin from disk.
 
    This stage of the bootloader occupies the space after 20000h in memory,
    and its role is to initialize as much as possible, before eventually

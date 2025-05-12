@@ -85,9 +85,6 @@ running `make all`.
 
 ## Roadmap
 
-- Finish implementing EFI support, in `Boot/Efi`;
-- - Locate protocols for things like ACPI, USB, SATA, disk, etc.;
-- - Deal with paging, IDTs, etc.
 - Start working on the kernel, in `Common/`.
 - - Review the kernel info tables;
 - - Implement a few common drivers, for things like graphics support, PCI, etc.;
@@ -103,4 +100,4 @@ running `make all`.
 This project has been released under the [MIT license](https://choosealicense.com/licenses/mit/).
 For more information, please refer to the accompanying license agreement. <3
 
-*(last updated on May 6th 2025)*
+*(last updated on May 12th 2025)*
