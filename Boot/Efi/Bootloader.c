@@ -744,7 +744,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
   #define AlignDivision(Num, Divisor) ((Num + Divisor - 1) / Divisor)
 
-  AppStatus = gBS->AllocatePages(AllocateAnyPages, EfiLoaderCode, AlignDivision(KernelSize, 4096), (volatile efiPhysicalAddress*)&Kernel);
+  AppStatus = gBS->AllocatePages(AllocateAnyPages, EfiLoaderData, AlignDivision(KernelSize, 4096), (volatile efiPhysicalAddress*)&Kernel);
 
   if ((AppStatus != EfiSuccess) || (Kernel == NULL)) {
 
@@ -1311,7 +1311,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
   Print(u"\n\r", 0);
   Message(Boot, u"Preparing to transfer control to the kernel.");
-  
+
   Message(Info, u"Preparing to call TransitionStub() at %xh", (uint64)(&TransitionStub));
   Message(Info, u"(kernelInfoTable*) KernelInfoTable -> %xh", (uint64)(&KernelInfoTable));
   Message(Info, u"(void*) KernelEntrypoint -> %xh", (uint64)KernelEntrypoint);
