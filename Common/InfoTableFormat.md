@@ -14,7 +14,7 @@ Size `uint16`
 &nbsp;
 
 
-## [Disk | Int13,EfiFs]
+## [Disk | Int13(Edd), EfiFs()]
 
 - Disk.AccessMethod `enum:uint16 ("UnknownMethod", "EfiFsMethod", "Int13Method")`
 
@@ -35,7 +35,7 @@ Size `uint16`
 &nbsp;
 
 
-## [Display : Text,Graphics]
+## [Display : Edid(), Graphics(Bits), Text()]
 
 - Display.Type `enum:uint16 ("UnknownDisplayType", "VgaDisplayType", "VbeDisplayType", "EfiTextDisplayType", "GopDisplayType")`
 
@@ -45,11 +45,11 @@ Size `uint16`
 
 - - Display\~Graphics.Framebuffer `ptr`
 
-- - Display\~Graphics.Pitch `uint32`
+- - Display\~Graphics.Pitch `uint32 (bytes per scanline)`
 
-- - Display\~Graphics.LimitX `uint16`
+- - Display\~Graphics.LimitX `uint16 (horizontal resolution)`
 
-- - Display\~Graphics.LimitY `uint16`
+- - Display\~Graphics.LimitY `uint16 (vertical resolution)`
 
 - - - Display\~Graphics\~Bits.PerPixel `uint8`
 
@@ -74,7 +74,7 @@ Size `uint16`
 &nbsp;
 
 
-[Firmware : Bios,Efi]
+## [Firmware : Bios(A20,Mmap,Pat,PciBios,Vbe), Efi(Gop,Mmap,Tables)]
 
 - Firmware.Type `enum:uint16 ("Unknown_Firmware", "Bios_Firmware", "Efi_Firmware")`
 
@@ -106,22 +106,20 @@ Size `uint16`
 
 - - Firmware->Efi.ImageHandle `ptr`
 
-- - Firmware->Efi.Mmap.NumEntries `uint16`
-
-- - Firmware->Efi.Mmap.EntrySize `uint8`
-
-- - Firmware->Efi.Mmap.List `ptr`
-
 - - Firmware->Efi.SupportsConIn `ptr`
 
 - - Firmware->Efi.SupportsConOut `ptr`
 
 - - - Firmware->Efi\~Gop.IsSupported `bool`
 
-- - - Firmware->Efi\~Gop.Mode `uint32`
-
 - - - Firmware->Efi\~Gop.Protocol `ptr`
+    - 
+- - - Firmware->Efi\~Mmap.NumEntries `uint16`
 
+- - - Firmware->Efi\~Mmap.EntrySize `uint8`
+
+- - - Firmware->Efi\~Mmap.List `ptr`
+    - 
 - - - Firmware->Efi\~Tables.BootServices `ptr`
 
 - - - Firmware->Efi\~Tables.SystemTable `ptr`
@@ -131,15 +129,15 @@ Size `uint16`
 &nbsp;
 
 
-## [Image]
+## [Image : Executable()]
 
 - Image.Stack `ptr`
 
 - Image.Type `enum:uint8 ("Raw_ImageType", "Elf_ImageType")`
 
-- - Image\~Executable.Header `ptr`
-
 - - Image\~Executable.Entrypoint `ptr`
+
+- - Image\~Executable.Header `ptr` *optional for Raw_ImageType*
 
 &nbsp;
 
@@ -148,12 +146,12 @@ Size `uint16`
 
 - Memory.NumEntries `uint16`
 
-- Memory.Table `ptr`
+- Memory.Table `ptr` *(should be of type kernelMmapEntry{})*
 
 &nbsp;
 
 
-## [System : Acpi,Cpu,Smbios]
+## [System : Acpi(), Cpu(), Smbios()]
 
 - System.Architecture `enum:uint16 ("Unknown_Architecture", "x86_Architecture", "x64_Architecture")`
 
