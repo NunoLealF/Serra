@@ -257,7 +257,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
   Message(Boot, u"Successfully initialized the console.");
 
-  Message(Info, u"This system's EFI revision is %d.%d", (uint64)(gST->Hdr.Revision >> 16), (uint64)(gST->Hdr.Revision));
+  Message(Info, u"This system's EFI revision is %d.%d", (uint64)((gST->Hdr.Revision >> 16) & 0xFF), (uint64)(gST->Hdr.Revision & 0xFF));
   Message(Info, u"This system is running in ring %d", (uint64)Cpl);
   Message(Info, u"Using text mode %d, with a %d*%d character resolution", ConOutMode, ConOutResolution[0], ConOutResolution[1]);
 
