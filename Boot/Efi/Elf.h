@@ -11,7 +11,7 @@
 
     // (This part is called 'e_ident' in the ELF documentation)
 
-    struct __Ident {
+    struct {
 
       uint32 MagicNumber; // (Must be 464C457Fh).
 
