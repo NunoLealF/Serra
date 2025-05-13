@@ -7,14 +7,14 @@
 SECTION .text
 
 EXTERN KernelEntrypoint
-EXTERN KernelStack
+EXTERN KernelStackTop
 GLOBAL TransitionStub
 
 ; It's assumed that this stub will behave as a regular 64-bit function (with
 ; the EFI/Microsoft ABI) would, so we need to initialize a new call frame,
 ; and get arguments:
 
-; (kernelInfoTable* InfoTable [rcx], void* KernelEntrypoint [rdx], void* KernelStack [r8])
+; (kernelInfoTable* InfoTable [rcx], void* KernelEntrypoint [rdx], void* KernelStackTop [r8])
 ; (We preserve rbx, rdi, rsi, rsp, rbp, r12, r13, r14 and r15)
 
 TransitionStub:

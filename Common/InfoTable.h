@@ -277,6 +277,7 @@
     struct {
 
       uptr Stack;
+      uint64 StackSize;
 
       enum {
 

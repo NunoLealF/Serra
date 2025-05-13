@@ -802,11 +802,10 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
   }
 
-  KernelStack = (void*)((uint64)KernelStack + KernelStackSize);
+  // (Define KernelStackTop, and update the kernel information table)
 
-  // (Update the kernel information table)
-
-  KernelInfoTable.Kernel.Stack.Ptr = KernelStack;
+  void* KernelStackTop = (void*)((uint64)KernelStack + KernelStackSize - 128);
+  KernelInfoTable.Kernel.Stack.Ptr = KernelStackTop;
 
 
 
@@ -1309,7 +1308,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   Message(Info, u"Preparing to call TransitionStub() at %xh", (uint64)(&TransitionStub));
   Message(Info, u"(kernelInfoTable*) KernelInfoTable -> %xh", (uint64)(&KernelInfoTable));
   Message(Info, u"(void*) KernelEntrypoint -> %xh", (uint64)KernelEntrypoint);
-  Message(Info, u"(void*) KernelStack -> %xh\n\r", (uint64)KernelStack);
+  Message(Info, u"(void*) KernelStackTop -> %xh\n\r", (uint64)KernelStackTop);
 
   /*
   // (TODO: Wait until we have a proper graphics implementation set up.)
@@ -1343,7 +1342,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
   // (Transfer control to the kernel.)
 
-  TransitionStub(&KernelInfoTable, KernelEntrypoint, KernelStack);
+  TransitionStub(&KernelInfoTable, KernelEntrypoint, KernelStackTop);
 
 
 
@@ -1363,9 +1362,6 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
 
   // ---------------- Restore state and exit EFI application ----------------
-
-  // TODO - Strangely enough, this doesn't return properly once the kernel's
-  // been called - gotta fix that later.
 
   ExitEfiApplication:
 

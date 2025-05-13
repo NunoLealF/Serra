@@ -125,6 +125,8 @@ Size `uint16`
 
 - Image.Stack `uptr`
 
+- Image.StackSize `uint64`
+
 - Image.Type `enum:uint8 ("RawImageType", "ElfImageType", "PeImageType")`
 
 - - Image\~Executable.Entrypoint `uptr`
