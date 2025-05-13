@@ -105,13 +105,13 @@ Size `uint16`
 - - - Firmware->Efi\~Gop.IsSupported `bool`
 
 - - - Firmware->Efi\~Gop.Protocol `uptr`
-    -
+
 - - - Firmware->Efi\~Mmap.NumEntries `uint16`
 
 - - - Firmware->Efi\~Mmap.EntrySize `uint8`
 
 - - - Firmware->Efi\~Mmap.List `uptr` *pointer to a list of efiMmapEntry{}*
-    -
+
 - - - Firmware->Efi\~Tables.BootServices `uptr`
 
 - - - Firmware->Efi\~Tables.SystemTable `uptr`
