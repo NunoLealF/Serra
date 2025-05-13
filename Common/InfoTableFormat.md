@@ -1,7 +1,7 @@
-# Common/InfoTable.h structure
+# commonInfoTable{} / InfoTable.h structure
 
 > [!WARNING]
-> **(May 12 2025)** This does not reflect the current infotable structure, there *are* missing parts, this is just a basic outline.
+> *This section is **still** a work in progress, so please don't expect this to be functional or complete*
 
 ## [N/A]
 
@@ -18,32 +18,28 @@ Size `uint16`
 
 - Disk.AccessMethod `enum:uint16 ("UnknownMethod", "EfiFsMethod", "Int13Method")`
 
-- - Disk\~Partition.Bpb `ptr` *optional for EfiFsMethod*
+- - Disk->EfiFs.FsHandle `uptr`
 
-- - Disk\~Partition.BytesPerSector `uint16`
-
-- - Disk\~Partition.LbaOffset `uint64`
+- - Disk->EfiFs.FsProtocolHandle `uptr`
 
 - - Disk->Int13.DriveNumber `uint8`
 
 - - - Disk->Int13.Edd.IsEnabled `bool`
 
-- - - Disk->Int13.Edd.Table `ptr`
-
-- - Disk->EfiFs.**???**
+- - - Disk->Int13.Edd.Table `uptr`
 
 &nbsp;
 
 
 ## [Display : Edid(), Graphics(Bits), Text()]
 
-- Display.Type `enum:uint16 ("UnknownDisplayType", "VgaDisplayType", "VbeDisplayType", "EfiTextDisplayType", "GopDisplayType")`
+- Display.Type `enum:uint16 ("UnknownDisplay", "VgaDisplay", "VbeDisplay", "EfiTextDisplay", "GopDisplay")`
 
 - - Display\~Edid.IsSupported `bool`
 
-- - Display\~Edid.Table `ptr`
+- - Display\~Edid.Table `uptr`
 
-- - Display\~Graphics.Framebuffer `ptr`
+- - Display\~Graphics.Framebuffer `uptr`
 
 - - Display\~Graphics.Pitch `uint32 (bytes per scanline)`
 
@@ -59,13 +55,11 @@ Size `uint16`
 
 - - - Display\~Graphics\~Bits.BlueMask `uint64`
 
-- - - Display\~Graphics\~Bits.ReservedMask `uint64`
+- - Display\~Text.Format `enum:uint8 ("AsciiFormat", "Utf16Format")`
 
-- - Display\~Text.Format `enum:uint8 ("AsciiFormat", "Utf8Format", "Utf16Format")`
+- - Display\~Text.XPos `uint16` *optional for EfiTextDisplay*
 
-- - Display\~Text.XPos `uint16` *optional for EfiTextDisplayType*
-
-- - Display\~Text.YPos `uint16` *optional for EfiTextDisplayType*
+- - Display\~Text.YPos `uint16` *optional for EfiTextDisplay*
 
 - - Display\~Text.LimitX `uint16`
 
@@ -76,17 +70,15 @@ Size `uint16`
 
 ## [Firmware : Bios(A20,Mmap,Pat,PciBios,Vbe), Efi(Gop,Mmap,Tables)]
 
-- Firmware.Type `enum:uint16 ("Unknown_Firmware", "Bios_Firmware", "Efi_Firmware")`
+- Firmware.Type `enum:uint16 ("UnknownFirmware", "BiosFirmware", "EfiFirmware")`
 
-- - Firmware->Bios.**???**
-
-- - - Firmware->Bios\~A20.EnableMethod `enum:uint8 ("A20_ByUnknown", "A20_ByDefault", "A20_ByKeyboard", "A20_ByFast")`
+- - Firmware->Bios.A20 `enum:uint8 ("EnabledByUnknown", "EnabledByDefault", "EnabledByKeyboard", "EnabledByFast")`
 
 - - - Firmware->Bios\~Mmap.NumEntries `uint16`
 
 - - - Firmware->Bios\~Mmap.EntrySize `uint8`
 
-- - - Firmware->Bios\~Mmap.List `ptr`
+- - - Firmware->Bios\~Mmap.List `uptr` *pointer to a list of e820MmapEntry{}*
 
 - - - Firmware->Bios\~Pat.IsSupported `bool`
 
@@ -94,50 +86,50 @@ Size `uint16`
 
 - - - Firmware->Bios\~PciBios.IsSupported `bool`
 
-- - - Firmware->Bios\~PciBios.Table `ptr`
+- - - Firmware->Bios\~PciBios.Table `uptr`
 
 - - - Firmware->Bios\~Vbe.IsSupported `bool`
 
-- - - Firmware->Bios\~Vbe.InfoBlock `ptr`
+- - - Firmware->Bios\~Vbe.InfoBlock `uptr`
 
-- - - Firmware->Bios\~Vbe.ModeInfo `ptr`
+- - - Firmware->Bios\~Vbe.ModeInfo `uptr`
 
 - - - Firmware->Bios\~Vbe.ModeNumber `uint16`
 
-- - Firmware->Efi.ImageHandle `ptr`
+- - Firmware->Efi.ImageHandle `uptr`
 
-- - Firmware->Efi.SupportsConIn `ptr`
+- - Firmware->Efi.SupportsConIn `bool`
 
-- - Firmware->Efi.SupportsConOut `ptr`
+- - Firmware->Efi.SupportsConOut `bool`
 
 - - - Firmware->Efi\~Gop.IsSupported `bool`
 
-- - - Firmware->Efi\~Gop.Protocol `ptr`
-    - 
+- - - Firmware->Efi\~Gop.Protocol `uptr`
+    -
 - - - Firmware->Efi\~Mmap.NumEntries `uint16`
 
 - - - Firmware->Efi\~Mmap.EntrySize `uint8`
 
-- - - Firmware->Efi\~Mmap.List `ptr`
-    - 
-- - - Firmware->Efi\~Tables.BootServices `ptr`
+- - - Firmware->Efi\~Mmap.List `uptr` *pointer to a list of efiMmapEntry{}*
+    -
+- - - Firmware->Efi\~Tables.BootServices `uptr`
 
-- - - Firmware->Efi\~Tables.SystemTable `ptr`
+- - - Firmware->Efi\~Tables.SystemTable `uptr`
 
-- - - Firmware->Efi\~Tables.RuntimeServices `ptr`
+- - - Firmware->Efi\~Tables.RuntimeServices `uptr`
 
 &nbsp;
 
 
 ## [Image : Executable()]
 
-- Image.Stack `ptr`
+- Image.Stack `uptr`
 
-- Image.Type `enum:uint8 ("Raw_ImageType", "Elf_ImageType")`
+- Image.Type `enum:uint8 ("RawImageType", "ElfImageType", "PeImageType")`
 
-- - Image\~Executable.Entrypoint `ptr`
+- - Image\~Executable.Entrypoint `uptr`
 
-- - Image\~Executable.Header `ptr` *optional for Raw_ImageType*
+- - Image\~Executable.Header `uptr` *optional for RawImageType*
 
 &nbsp;
 
@@ -146,38 +138,48 @@ Size `uint16`
 
 - Memory.NumEntries `uint16`
 
-- Memory.Table `ptr` *(should be of type kernelMmapEntry{})*
+- Memory.List `uptr` *pointer to a list of usableMmapEntry{}*
 
 &nbsp;
 
 
 ## [System : Acpi(), Cpu(), Smbios()]
 
-- System.Architecture `enum:uint16 ("Unknown_Architecture", "x86_Architecture", "x64_Architecture")`
+- System.Architecture `enum:uint16 ("UnknownArchitecture", "x64Architecture")`
 
 - - System\~Acpi.IsSupported `bool`
 
-- - System\~Acpi.Table `ptr`
+- - System\~Acpi.Table `uptr`
 
-- - System\~Cpu.Cr0 `uint64` *optional if .ProtectionLevel != 0*
+- - - System\~Cpu\~x64.ProtectionLevel `uint8`
 
-- - System\~Cpu.Cr3 `uint64` *optional if .ProtectionLevel != 0*
+- - - System\~Cpu\~x64.Cr0 `uint64` *optional if .ProtectionLevel != 0*
 
-- - System\~Cpu.Cr4 `uint64` *optional if .ProtectionLevel != 0*
+- - - System\~Cpu\~x64.Cr3 `uint64` *optional if .ProtectionLevel != 0*
 
-- - System\~Cpu.Efer `uint64` *optional if .ProtectionLevel != 0*
+- - - System\~Cpu\~x64.Cr4 `uint64` *optional if .ProtectionLevel != 0*
 
-- - System\~Cpu.Pml4 `uint64` *optional if .ProtectionLevel != 0*
+- - - System\~Cpu\~x64.Efer `uint64` *optional if .ProtectionLevel != 0*
 
-- - System\~Cpu.ProtectionLevel `uint8`
+- - - System\~Cpu\~x64.Pml4 `uint64` *optional if .ProtectionLevel != 0*
 
 - - System\~Smbios.IsSupported `bool`
 
-- - System\~Smbios.Table `ptr`
+- - System\~Smbios.Table `uptr`
 
 &nbsp;
 
 
 ## [N/A, again]
 
-Checksum `uint16 (sum all 16-bit words)`
+Checksum `uint16` *sum all bytes in the table, up to Checksum*
+
+&nbsp;
+
+
+## Disclaimer
+
+This project has been released under the [MIT license](https://choosealicense.com/licenses/mit/).
+For more information, please refer to the accompanying license agreement. <3
+
+*(last updated on May 13th 2025)*

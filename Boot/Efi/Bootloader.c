@@ -773,12 +773,6 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
   }
 
-  // (If we've read it correctly, then we can close the file protocol handle,
-  // since we won't be using it anymore)
-
-  gBS->CloseProtocol(FsProtocolHandle, &efiSimpleFilesystemProtocol_Uuid, ImageHandle, NULL);
-  Message(Info, u"Closed filesystem protocol handle (FsProtocolHandle).");
-
 
 
   // [Allocate space for the kernel stack]
