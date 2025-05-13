@@ -42,7 +42,7 @@
 
   */
 
-  typedef struct __usableMmapEntry {
+  typedef struct _usableMmapEntry {
 
     uint64 Base;
     uint64 Limit;
@@ -51,7 +51,7 @@
 
 
 
-  /* struct __attribute__((packed)) commonInfoTable{}
+  /* struct attribute__((packed)) commonInfoTable{}
 
      Location: (Depends, but probably somewhere in the bootloader stack)
      Members: (...)
@@ -81,11 +81,7 @@
   #define commonInfoTableSignature 0x7577757E7577757E
   #define commonInfoTableVersion 2
 
-  // (TODO - IMPORTANT: I misunderstood the purpose of __, oh god; I need to
-  // fix that everywhere else lol. (hey, at least this is the first struct
-  // that *doesn't* blatantly break the C standard!!))
-
-  typedef struct commonInfoTable {
+  typedef struct _commonInfoTable {
 
     // [Table header]
 
@@ -361,6 +357,16 @@
 
 
 
+
+
+
+
+
+
+
+
+
+
   // ====================================================================
   //                [EVERYTHING BELOW THIS IS DEPRECATED]
 
@@ -377,7 +383,7 @@
   // Basically, you fill in Address in 32-bit mode, and you can use it
   // normally in 64-bit mode with the void*.
 
-  typedef union __universalPtr {
+  typedef union _universalPtr {
 
     uint64 Address;
     void* Ptr;
@@ -388,7 +394,7 @@
 
   // (BIOS table)
 
-  typedef struct __kernelBiosInfoTable {
+  typedef struct _kernelBiosInfoTable {
 
     // (Pointers to BIOS-specific stuff)
 
@@ -405,7 +411,7 @@
 
   // (EFI table)
 
-  typedef struct __kernelEfiInfoTable {
+  typedef struct _kernelEfiInfoTable {
 
     // (Pointer to EFI image handle)
 
@@ -423,7 +429,7 @@
 
   // (Main kernel info table)
 
-  typedef enum __a20Enum : uint8 {
+  typedef enum _a20Enum : uint8 {
 
     ByUnknown = 0,
     ByDefault = 1,
@@ -432,7 +438,7 @@
 
   } a20Enum;
 
-  typedef enum __diskAccessMethodEnum : uint8 {
+  typedef enum _diskAccessMethodEnum : uint8 {
 
     Int13 = 0,
     Int13WithEdd = 1,
@@ -445,7 +451,7 @@
 
   } diskAccessMethodEnum;
 
-  typedef enum __graphicsTypeEnum : uint8 {
+  typedef enum _graphicsTypeEnum : uint8 {
 
     None = 0, // None known
     VgaText = 1, // VGA text mode
@@ -455,7 +461,7 @@
 
   } graphicsTypeEnum;
 
-  typedef enum __mmapTypeEnum : uint8 {
+  typedef enum _mmapTypeEnum : uint8 {
 
     Unknown = 0, // Unknown
     BiosMmap = 1, // (int 15h / eax E820h), normal for BIOS
@@ -465,7 +471,7 @@
 
 
 
-  typedef struct __kernelInfoTable {
+  typedef struct _kernelInfoTable {
 
     // (Table section)
 
@@ -475,7 +481,7 @@
 
     // (System section - x64-specific, of course)
 
-    struct __System2 {
+    struct System2 {
 
       a20Enum A20Method; // What method was used to enable the A20 line?
 
@@ -501,7 +507,7 @@
 
     // (System-independent sections | Memory)
 
-    struct __Memory2 {
+    struct Memory2 {
 
       mmapTypeEnum Type; // What type of mmap are we dealing with here?
 
@@ -522,7 +528,7 @@
 
     // (System-independent sections | Filesystem and disk)
 
-    struct __FsDisk2 {
+    struct FsDisk2 {
 
       diskAccessMethodEnum DiskAccessMethod; // What method *can* we use for the disk?
       uint8 DriveNumber; // If we used the BIOS, set the int13h drive number
@@ -537,7 +543,7 @@
 
     // (System-independent sections | Kernel environment)
 
-    struct __Kernel2 {
+    struct Kernel2 {
 
       universalPtr ElfHeader; // Pointer to the kernel ELF header
       universalPtr Entrypoint; // Kernel entrypoint *and* initial stack ptr
@@ -547,11 +553,11 @@
 
     // (System-independent sections | Graphics)
 
-    struct __Graphics2 {
+    struct Graphics2 {
 
       graphicsTypeEnum Type; // What type of graphics?
 
-      struct __VgaText2 {
+      struct VgaText2 {
 
         uint16 PosX;
         uint16 PosY;
@@ -563,7 +569,7 @@
 
       } __attribute__((packed)) VgaText;
 
-      struct __Vesa2 {
+      struct Vesa2 {
 
         universalPtr VbeInfoBlock; // VBE info block
         universalPtr VbeModeInfo; // VBE mode info block (of the current mode)
@@ -576,14 +582,14 @@
 
       } __attribute__((packed)) Vesa;
 
-      struct __EfiText2 {
+      struct EfiText2 {
 
         // (TODO: everything)
         char PLACEHOLDER;
 
       } __attribute__((packed)) EfiText;
 
-      struct __Gop2 {
+      struct Gop2 {
 
         // (TODO: everything)
         char PLACEHOLDER;
@@ -594,7 +600,7 @@
 
     // (Firmware and external sections)
 
-    struct __Firmware2 {
+    struct Firmware2 {
 
       bool IsEfi; // False for BIOS, true for EFI.
 

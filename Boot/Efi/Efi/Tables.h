@@ -12,7 +12,7 @@
 
   // (General table-related definitions)
 
-  typedef struct __efiTableHeader {
+  typedef struct _efiTableHeader {
 
     uint64 Signature;
     uint32 Revision;
@@ -42,7 +42,7 @@
 
   #define efiBootServicesSignature 0x56524553544F4F42
 
-  typedef struct __efiBootServices {
+  typedef struct _efiBootServices {
 
     // (Table header; always check this first.)
 
@@ -134,7 +134,7 @@
 
   constexpr efiUuid efiFileInfo_Uuid = {0x09576E92, {0x6D3F, 0x11D2}, {0x8E, 0x39, 0x00, 0xA0, 0xC9, 0x69, 0x72, 0x3B}};
 
-  typedef struct __efiFileInfo {
+  typedef struct _efiFileInfo {
 
     uint64 Size;
     uint64 FileSize;
@@ -149,7 +149,7 @@
 
   #define efiRuntimeServicesSignature 0x56524553544E5552
 
-  typedef struct __efiRuntimeServices {
+  typedef struct _efiRuntimeServices {
 
     // (Table header; always check this first.)
 
@@ -190,7 +190,7 @@
   constexpr efiUuid efiSmbiosTable_Uuid = {0xEB9D2D31, {0x2D88, 0x11D3}, {0x9A, 0x16, 0x00, 0x90, 0x27, 0x3F, 0xC1, 0x4D}};
   constexpr efiUuid efiSmbios3Table_Uuid = {0xF2FD1544, {0x9794, 0x4A2C}, {0x99, 0x2E, 0xE5, 0xBB, 0xCF, 0x20, 0xE3, 0x94}};
 
-  typedef struct __efiConfigurationTable {
+  typedef struct _efiConfigurationTable {
 
     efiUuid VendorGuid;
     void* VendorTable;
@@ -202,7 +202,7 @@
 
   #define efiSystemTableSignature 0x5453595320494249
 
-  typedef struct __efiSystemTable {
+  typedef struct _efiSystemTable {
 
     // (Table header; always check this first.)
 

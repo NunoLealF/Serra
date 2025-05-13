@@ -12,7 +12,7 @@
 
   // VBE-related data structures, from Vbe.c
 
-  typedef struct __vbeInfoBlock {
+  typedef struct _vbeInfoBlock {
 
     // (VBE 1.0 and higher)
 
@@ -26,7 +26,7 @@
 
     // (VBE 2.0 and higher)
 
-    struct __OemInfo {
+    struct {
 
       uint16 VbeRevision;
       farPtr VendorNamePtr;
@@ -42,13 +42,13 @@
 
   } __attribute__((packed)) vbeInfoBlock;
 
-  typedef struct __vbeModeInfoBlock {
+  typedef struct _vbeModeInfoBlock {
 
     // (VBE 1.0 and higher)
 
     uint16 ModeAttributes;
 
-    struct __WindowInfo {
+    struct {
 
       uint8 Attributes[2]; // First is window A, second is window B.
       uint16 Granularity;
@@ -61,7 +61,7 @@
 
     // (VBE 1.2 and higher, except for ModeInfo.BytesPerScanLine)
 
-    struct __ModeInfo {
+    struct {
 
       uint16 BytesPerScanLine; // (supported by VBE 1.0!)
 
@@ -82,7 +82,7 @@
 
     } __attribute__((packed)) ModeInfo;
 
-    struct __ColorInfo {
+    struct {
 
       uint8 RedMaskSize;
       uint8 RedBit;
@@ -102,7 +102,7 @@
 
     // (VBE 2.0 and higher)
 
-    struct __Vbe2Info {
+    struct {
 
       uint32 Framebuffer; // Physical address of the framebuffer (if flat memory and not window)
       uint8 Reserved_Vbe2[6]; // The VBE 2 spec says this is used, while the VBE 3 spec says it isn't..?
@@ -111,7 +111,7 @@
 
     // (VBE 3.0 and higher)
 
-    struct __Vbe3Info {
+    struct {
 
       uint16 LinearBytesPerScanLine;
 
@@ -143,9 +143,9 @@
 
   // EDID-related data structures, from Vbe.c
 
-  typedef struct __edidDetailedTiming {
+  typedef struct _edidDetailedTiming {
 
-    struct __Timings {
+    struct {
 
       uint16 PixelClock; // The pixel clock, in 10 kHz steps, and with the upper/lower halves reversed..?
 
@@ -162,7 +162,7 @@
 
     } __attribute__((packed)) Timings;
 
-    struct __Display {
+    struct {
 
       uint16 Size_Low; // Upper half is horizontal (low 8 bits), lower half is vertical (low 8 bits)
       uint8 Size_High; // Upper half is horizontal (high 4 bits), lower half is vertical (high 4 bits)
@@ -176,7 +176,7 @@
 
   } __attribute__((packed)) edidDetailedTiming;
 
-  typedef struct __edidInfoBlock {
+  typedef struct _edidInfoBlock {
 
     uint64 Signature; // This should be 00FFFFFFFFFFFF00h
 

@@ -17,7 +17,7 @@
   typedef efiStatus (efiAbi *efiFileOpen) (efiProtocol This, volatile efiProtocol* NewHandle, char16* FileName, uint64 OpenMode, uint64 Attributes);
   typedef efiStatus (efiAbi *efiFileRead) (efiProtocol This, volatile uint64* BufferSize, volatile void* Buffer);
 
-  typedef struct __efiFileProtocol {
+  typedef struct _efiFileProtocol {
 
     uint64 Revision;
 
@@ -41,14 +41,14 @@
 
   // (Graphics Output Protocol-related definitions)
 
-  typedef struct __efiGraphicsOutputModeInformation {
+  typedef struct _efiGraphicsOutputModeInformation {
 
     uint32 Version;
 
     uint32 HorizontalResolution;
     uint32 VerticalResolution;
 
-    enum __efiGraphicsPixelFormat {
+    enum : uint32 {
 
       PixelRedGreenBlueReserved8BitPerColor,
       PixelBlueGreenRedReserved8BitPerColor,
@@ -58,7 +58,7 @@
 
     } PixelFormat;
 
-    struct __efiPixelBitmask {
+    struct {
 
       uint32 RedMask;
       uint32 GreenMask;
@@ -72,7 +72,7 @@
 
   } efiGraphicsOutputModeInformation;
 
-  typedef struct __efiGraphicsOutputProtocolMode {
+  typedef struct _efiGraphicsOutputProtocolMode {
 
     uint32 MaxMode;
     uint32 Mode;
@@ -89,7 +89,7 @@
   typedef efiStatus (efiAbi *efiSetMode) (efiProtocol This, uint32 ModeNumber);
   constexpr efiUuid efiGraphicsOutputProtocol_Uuid = {0x9042A9DE, {0x23DC, 0x4A38}, {0x96, 0xFB, 0x7A, 0xDE, 0xD0, 0x80, 0x51, 0x6A}};
 
-  typedef struct __efiGraphicsOutputProtocol {
+  typedef struct _efiGraphicsOutputProtocol {
 
     efiQueryMode QueryMode;
     efiSetMode SetMode;
@@ -105,7 +105,7 @@
   typedef efiStatus (efiAbi *efiOpenVolume) (efiProtocol This, volatile efiProtocol* Root);
   constexpr efiUuid efiSimpleFilesystemProtocol_Uuid = {0x0964E5B22, {0x6459, 0x11D2}, {0x8E, 0x39, 0x00, 0xA0, 0xC9, 0x69, 0x72, 0x3B}};
 
-  typedef struct __efiSimpleFilesystemProtocol {
+  typedef struct _efiSimpleFilesystemProtocol {
 
     uint64 Revision;
     efiOpenVolume OpenVolume;
@@ -122,7 +122,7 @@
   typedef efiStatus (efiAbi *efiTextQueryMode) (efiProtocol This, uint64 ModeNumber, uint64* Columns, uint64* Rows);
   typedef efiStatus (efiAbi *efiTextSetMode) (efiProtocol This, uint64 ModeNumber);
 
-  typedef struct __efiSimpleTextOutputMode {
+  typedef struct _efiSimpleTextOutputMode {
 
     int32 MaxMode;
 
@@ -136,7 +136,7 @@
 
   } efiSimpleTextOutputMode;
 
-  typedef struct __efiSimpleTextOutputProtocol {
+  typedef struct _efiSimpleTextOutputProtocol {
 
     efiReset Reset;
 
@@ -160,7 +160,7 @@
 
   typedef efiStatus (efiAbi *efiReadKeyStroke) (efiProtocol This, efiInputKey* Key);
 
-  typedef struct __efiSimpleTextInputProtocol {
+  typedef struct _efiSimpleTextInputProtocol {
 
     efiReset Reset;
     efiReadKeyStroke ReadKeyStroke;

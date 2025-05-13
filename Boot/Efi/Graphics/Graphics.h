@@ -7,7 +7,7 @@
 
   // Exception/info message functions and data structures, from Exceptions.c.
 
-  typedef enum __messageType : int8 {
+  typedef enum _messageType : int8 {
 
     Info = 0,
 

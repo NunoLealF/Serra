@@ -7,7 +7,7 @@
 
   // (Structures from Cpu.c)
 
-  typedef struct __registerTable {
+  typedef struct _registerTable {
 
     uint32 Eax;
     uint32 Ebx;
@@ -16,7 +16,7 @@
 
   } __attribute__ ((packed)) registerTable;
 
-  typedef struct __acpiRsdpTable {
+  typedef struct _acpiRsdpTable {
 
     // Available in all versions of ACPI (revision >= any)
 
@@ -38,7 +38,7 @@
 
   } __attribute__ ((packed)) acpiRsdpTable;
 
-  typedef struct __pciBiosInfoTable {
+  typedef struct _pciBiosInfoTable {
 
     uint32 Signature; // This should be set to 'PCI', or 20494350h
 

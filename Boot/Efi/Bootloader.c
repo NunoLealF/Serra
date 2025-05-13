@@ -1364,6 +1364,9 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
   // ---------------- Restore state and exit EFI application ----------------
 
+  // TODO - Strangely enough, this doesn't return properly once the kernel's
+  // been called - gotta fix that later.
+
   ExitEfiApplication:
 
     // If text mode / ConOut is enabled, then restore regular text mode

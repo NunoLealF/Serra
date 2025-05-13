@@ -13,7 +13,7 @@
 
   #define InfoTableLocation 0xAE00
 
-  typedef struct __bootloaderInfoTable {
+  typedef struct _bootloaderInfoTable {
 
     // [Table-related info]
 
@@ -30,7 +30,7 @@
     uint16 LogicalSectorSize; // FAT/BPB
     uint16 PhysicalSectorSize; // EDD/int13h
 
-    struct __EddInfo {
+    struct {
 
       uint16 Size;
       uint16 Flags;
@@ -53,7 +53,7 @@
 
     // [Terminal]
 
-    struct __TerminalInfo {
+    struct {
 
       uint16 PosX;
       uint16 PosY;

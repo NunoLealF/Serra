@@ -7,14 +7,14 @@
 
   // Data structures, and important variables from Idt.c.
 
-  typedef struct __descriptorTable {
+  typedef struct _descriptorTable {
 
     uint16 Size;
     uint32 Offset;
 
   } __attribute__((packed)) descriptorTable;
 
-  typedef struct __idtEntry {
+  typedef struct _idtEntry {
 
     uint16 OffsetLow;
     uint16 Selector;

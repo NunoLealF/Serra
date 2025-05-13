@@ -7,11 +7,11 @@
 
   // ELF-related structures, from Elf.c
 
-  typedef struct __elfHeader {
+  typedef struct _elfHeader {
 
     // (This part is called 'e_ident' in the ELF documentation)
 
-    struct __Ident {
+    struct {
 
       uint32 MagicNumber; // (Must be 464C457Fh).
 
@@ -47,7 +47,7 @@
 
   } __attribute__((packed)) elfHeader;
 
-  typedef struct __elfProgramHeader {
+  typedef struct _elfProgramHeader {
 
     uint32 Type; // (0 = ignore, 1 = load, any other = ignore..?)
     uint32 Flags; // (Can be ignored if we're just loading the kernel)
@@ -62,7 +62,7 @@
 
   } __attribute__((packed)) elfProgramHeader;
 
-  typedef struct __elfSectionHeader {
+  typedef struct _elfSectionHeader {
 
     uint32 NameOffset; // (The offset for the name string, in .shstrtab (StringSectionIndex))
     uint32 Type; // (1 = load, 3 = string, otherwise ignore)

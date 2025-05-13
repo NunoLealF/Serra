@@ -21,7 +21,7 @@
 
   // Memory-map-related structures, from Mmap/Mmap.c.
 
-  typedef struct __mmapEntry {
+  typedef struct _mmapEntry {
 
     uint64 Base;
     uint64 Limit;
@@ -42,16 +42,12 @@
 
   // Usable memory map-related structures, used in the kernel infotable.
 
-  #ifndef usableMmapEntry
+  typedef struct _usableMmapEntry {
 
-    typedef struct __usableMmapEntry {
+    uint64 Base;
+    uint64 Limit;
 
-      uint64 Base;
-      uint64 Limit;
-
-    } __attribute__((packed)) usableMmapEntry;
-
-  #endif
+  } __attribute__((packed)) usableMmapEntry;
 
   // Memory-map-related functions, from Mmap/Mmap.c.
 

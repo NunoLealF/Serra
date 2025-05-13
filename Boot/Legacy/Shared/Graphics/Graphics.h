@@ -7,7 +7,7 @@
 
   // Exception/info message functions and data structures. (Exceptions.c)
 
-  typedef enum __messageType : int8 {
+  typedef enum _messageType : int8 {
 
     Info = 0,
 
@@ -33,7 +33,7 @@
 
   // Type definitions, global variables and flags, from Graphics.c
 
-  typedef volatile struct __terminalDataStruct {
+  typedef volatile struct _terminalDataStruct {
 
     // General info
 

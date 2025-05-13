@@ -47,7 +47,7 @@
 
 #ifndef SERRA_SHARED_REALMODE_H
 
-  typedef struct __realModeTable {
+  typedef struct _realModeTable {
 
     // General purpose registers.
 

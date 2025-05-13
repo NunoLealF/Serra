@@ -34,14 +34,14 @@
   typedef uint64 efiVirtualAddress;
   typedef uint64 efiNotImplemented; // sizeof(uint64*) is still sizeof(void*), so this is okay
 
-  typedef struct __efiInputKey {
+  typedef struct _efiInputKey {
 
     uint16 ScanCode;
     char16 UnicodeChar;
 
   } efiInputKey;
 
-  typedef struct __efiMemoryDescriptor {
+  typedef struct _efiMemoryDescriptor {
 
     uint32 Type;
 
@@ -53,7 +53,7 @@
 
   } efiMemoryDescriptor;
 
-  typedef struct __efiUuid {
+  typedef struct _efiUuid {
 
     uint32 Uuid_A;
     uint16 Uuid_B[2];
@@ -64,7 +64,7 @@
 
   // (Enums, and other types with a limited set of definitions)
 
-  typedef enum __efiAllocateType : uint32 {
+  typedef enum _efiAllocateType : uint32 {
 
     AllocateAnyPages,
     AllocateMaxAddress,
@@ -73,7 +73,7 @@
 
   } efiAllocateType;
 
-  typedef enum __efiLocateSearchType : uint32 {
+  typedef enum _efiLocateSearchType : uint32 {
 
     AllHandles,
     ByRegisterNotify,
@@ -81,7 +81,7 @@
 
   } efiLocateSearchType;
 
-  typedef enum __efiMemoryType : uint32 {
+  typedef enum _efiMemoryType : uint32 {
 
     EfiReservedMemoryType,
     EfiLoaderCode,
@@ -101,7 +101,7 @@
 
   } efiMemoryType;
 
-  typedef enum __efiStatus : uint64 {
+  typedef enum _efiStatus : uint64 {
 
     // (Success status, all bits *clear*)
 
@@ -155,7 +155,7 @@
 
   } efiStatus;
 
-  typedef enum __efiTpl : uint64 {
+  typedef enum _efiTpl : uint64 {
 
     TplApplication = 4,
     TplCallback = 8,
