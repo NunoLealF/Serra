@@ -22,7 +22,7 @@ typedef uint16 char16;
 
 efiSystemTable* gST;
 
-void Entrypoint(kernelInfoTable* InfoTable) {
+uint64 Entrypoint(kernelInfoTable* InfoTable) {
 
   // [Test out EFI, still very incomplete]
 
@@ -35,7 +35,7 @@ void Entrypoint(kernelInfoTable* InfoTable) {
     gST->ConOut->SetAttribute(gST->ConOut, 0x3F); gST->ConOut->OutputString(gST->ConOut, u"May 11 2025");
     gST->ConOut->SetAttribute(gST->ConOut, 0x0F); gST->ConOut->OutputString(gST->ConOut, u"\n\r");
 
-    return;
+    return 0xFEDCBA987654321;
 
   }
 
@@ -82,10 +82,10 @@ void Entrypoint(kernelInfoTable* InfoTable) {
   // (2) Set up basic IDT, panic handling, etc.
   // (3) Actually
 
-  for(;;);
+  //for(;;);
 
   // (Return?)
 
-  return;
+  return 0xFEDCBA987654321;
 
 }

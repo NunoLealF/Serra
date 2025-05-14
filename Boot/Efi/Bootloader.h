@@ -17,7 +17,7 @@
   // Declare functions in Bootloader.c and Stub.asm.
 
   efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTable);
-  void efiAbi TransitionStub(kernelInfoTable* InfoTable, void* KernelEntrypoint, void* KernelStackTop);
+  uint64 efiAbi TransitionStub(kernelInfoTable* InfoTable, void* KernelEntrypoint, void* KernelStackTop);
 
   // Declare global variables, used throughout the bootloader.
 

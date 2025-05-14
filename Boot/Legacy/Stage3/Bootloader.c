@@ -1367,7 +1367,11 @@ void S3Bootloader(void) {
 
   // (Actually transfer control to the kernel.)
 
-  TransitionStub(&KernelInfo, (void*)Pml4);
+  uint64 nya = TransitionStub(&KernelInfo, (void*)Pml4);
+
+  Putchar('\n', 0);
+  Message(Boot, "Hopefully this works");
+  Message(Info, "nya -> %x:%xh", (uint32)(nya>>32),(uint32)nya);
 
   for(;;);
 

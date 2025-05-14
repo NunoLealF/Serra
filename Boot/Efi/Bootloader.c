@@ -918,7 +918,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
   // (Define KernelStackTop, and update the kernel information table)
 
-  void* KernelStackTop = (void*)((uint64)KernelStack + KernelStackSize - 128);
+  void* KernelStackTop = (void*)((uint64)KernelStack + KernelStackSize);
   KernelInfoTable.Kernel.Stack.Ptr = KernelStackTop;
 
 
@@ -1456,8 +1456,8 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
   // (Transfer control to the kernel.)
 
-  TransitionStub(&KernelInfoTable, KernelEntrypoint, KernelStackTop);
-
+  uint64 nya = TransitionStub(&KernelInfoTable, KernelEntrypoint, KernelStackTop);
+  Message(Info, u"nya = %xh", nya);
 
 
   // [TODO] [Wait until the user strikes a key, and then return.]
