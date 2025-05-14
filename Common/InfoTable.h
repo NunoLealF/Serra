@@ -140,6 +140,8 @@
       struct {
 
         bool IsSupported;
+
+        uint16 PreferredResolution[2];
         uptr Table;
 
       } __attribute__((packed)) Edid;
@@ -275,6 +277,8 @@
     // [Image-related information]
 
     struct {
+
+      bool DebugFlag;
 
       uptr Stack;
       uint64 StackSize;

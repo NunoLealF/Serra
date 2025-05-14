@@ -41,6 +41,15 @@
 
   // (Graphics Output Protocol-related definitions)
 
+  constexpr efiUuid efiEdidActiveProtocol_Uuid = {0xBD8C1056, {0x9F36, 0x44EC}, {0x92, 0xA8, 0xA6, 0x33, 0x7F, 0x81, 0x79, 0x86}};
+
+  typedef struct _efiEdidProtocol {
+
+    uint32 SizeOfEdid;
+    uint8* Edid;
+
+  } efiEdidProtocol;
+
   typedef struct _efiGraphicsOutputModeInformation {
 
     uint32 Version;

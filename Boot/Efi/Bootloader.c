@@ -41,7 +41,11 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   bool HasAllocatedStack = false;
 
   bool HasOpenedFsHandles = false;
+  bool HasOpenedGopHandles = false;
+
   bool HasOpenedFsProtocols = false;
+  bool HasOpenedGopProtocols = false;
+  bool HasOpenedEdidProtocols = false;
 
 
 
@@ -267,6 +271,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
 
 
+
   // [Check for GOP support]
 
   // Next, we also want to check for graphics mode support, since it's far
@@ -279,34 +284,109 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   Print(u"\n\r", 0);
   Message(Boot, u"Checking for UEFI GOP (Graphics Output Protocol) support.");
 
-  efiGraphicsOutputProtocol* GopProtocol;
+  // (Define a few variables)
+
+  efiHandle* GopHandles;
+  uint64 NumGopHandles = 0;
+
   bool SupportsGop = false;
 
-  if (gBS->LocateProtocol(&efiGraphicsOutputProtocol_Uuid, NULL, (void**)(&GopProtocol)) == EfiSuccess) {
+  // (Use LocateHandleBuffer() with `ByProtocol` to locate *every* handle
+  // that supports efiGraphicsOutputProtocol)
 
-    KernelInfoTable.Graphics.Type = Gop;
-    SupportsGop = true;
+  AppStatus = gBS->LocateHandleBuffer(ByProtocol, &efiGraphicsOutputProtocol_Uuid, NULL, &NumGopHandles, &GopHandles);
 
-    Message(Ok, u"Successfully located a GOP protocol instance using LocateProtocol().");
-    Message(Info, u"Protocol instance is located at %xh", (uintptr)GopProtocol);
+  if ((AppStatus == EfiSuccess) && (NumGopHandles > 0)) {
 
-  } else {
+    Message(Ok, u"Located %d GOP handle(s) at %xh.", NumGopHandles, (uint64)GopHandles);
+    HasOpenedGopHandles = true;
 
-    // If GOP isn't supported, that's fine, but *only* as long as text
-    // mode is also supported; otherwise, return.
+  }
 
-    if (SupportsConOut == true) {
-      Message(Warning, u"Unable to initialize GOP; keeping EFI text mode.");
+  // (Open the first working handle that supports GOP; in theory every handle
+  // returned by LocateHandleBuffer() *should* work, but who knows lol)
+
+  efiGraphicsOutputProtocol* GopProtocol = NULL;
+  efiHandle GopProtocolHandle = GopHandles[0];
+
+  for (uint64 HandleNum = 0; HandleNum < NumGopHandles; HandleNum++) {
+
+    // (Initialize variables)
+
+    GopProtocol = NULL;
+    GopProtocolHandle = GopHandles[HandleNum];
+
+    // (Try to open a efiGraphicsOutputProtocol instance from this handle)
+
+    AppStatus = gBS->OpenProtocol(GopProtocolHandle, &efiGraphicsOutputProtocol_Uuid, (void**)&GopProtocol, ImageHandle, NULL, 1);
+
+    if ((AppStatus == EfiSuccess) && (GopProtocol != NULL)) {
+
+      HasOpenedGopProtocols = true;
+      SupportsGop = true;
+
+      Message(Ok, u"Located a valid GOP instance at handle %d.", HandleNum);
+      break;
+
     } else {
-      AppStatus = EfiUnsupported;
-      goto ExitEfiApplication;
+
+      Message(Warning, u"Skipped invalid GOP handle %d.", HandleNum);
+
     }
 
   }
 
-  // (Update the graphics type in the kernel info table)
+  // We also want to check for EDID (Extended Display Identification Data).
+  // In theory, this should be supported on most systems, and provide us with
+  // information about the screen we're connected to.
 
-  KernelInfoTable.Graphics.Type = ((SupportsGop == true) ? Gop : EfiText);
+  // (Define EDID-related variables, as well as PreferredResolution[], which
+  // is set to 1024 by 768 pixels by default.)
+
+  efiEdidProtocol* EdidProtocol = NULL;
+  uint16 PreferredResolution[2] = {1024, 768};
+
+  bool SupportsEdid = false;
+
+  if (SupportsGop == true) {
+
+    // (Try to open an efiEdidActiveProtocol instance from this handle)
+
+    AppStatus = gBS->OpenProtocol(GopProtocolHandle, &efiEdidActiveProtocol_Uuid, (void**)&EdidProtocol, ImageHandle, NULL, 1);
+
+    if ((AppStatus == EfiSuccess) && (EdidProtocol != NULL)) {
+
+      // (Even if there *is* a protocol attached to this handle, it may not
+      // necessarily support EDID, so let's sanity-check our values first)
+
+      HasOpenedEdidProtocols = true;
+
+      if ((EdidProtocol->SizeOfEdid > 0) && (EdidProtocol->Edid != NULL)) {
+
+        // Only *now* can we actually guarantee that EDID is supported,
+        // which means we can fill out PreferredResolution.
+
+        PreferredResolution[0] = (EdidProtocol->Edid[56] & 0xFF) | ((EdidProtocol->Edid[58] & 0xF0) << 4);
+        PreferredResolution[1] = (EdidProtocol->Edid[59] & 0xFF) | ((EdidProtocol->Edid[61] & 0xF0) << 4);
+        SupportsEdid = true;
+
+        Message(Ok, u"Successfully located an EDID info block for the selected GOP protocol.");
+        Message(Info, u"Preferred resolution appears to be %d*%d (according to EDID)",
+               (uint64)PreferredResolution[0], (uint64)PreferredResolution[1]);
+
+      } else {
+
+        Message(Warning, u"GOP handle does not support EDID; could not find preferred resolution.");
+
+      }
+
+    } else {
+
+      Message(Warning, u"GOP handle does not support EDID; could not find preferred resolution.");
+
+    }
+
+  }
 
 
 
@@ -384,24 +464,35 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
           // Okay - now that we know the color depth isn't too low, we want
           // to check for the following things, in order:
 
+          const uint32 HRes = ModeInfo->HorizontalResolution;
+          const uint32 VRes = ModeInfo->VerticalResolution;
+
           // (1) Whether this mode's resolution is at least 640 by 480;
-          // (2) Whether this mode's color depth is above the current maximum;
-          // (3) Whether this mode's width is above or equal to the current maximum;
 
-          if ((ModeInfo->HorizontalResolution >= 640) && (ModeInfo->VerticalResolution >= 480)) {
+          if ((HRes >= 640) && (VRes >= 480)) {
 
-            if (ColorDepth >= GopColorDepth) {
+            // (2) Whether this mode's resolution is within the bounds of
+            // PreferredResolution[];
 
-              // In this case, we actually want to filter modes by their
-              // horizontal resolution, not necessarily their area
+            if ((HRes <= PreferredResolution[0]) && (VRes <= PreferredResolution[1])) {
 
-              if (ModeInfo->HorizontalResolution >= GopResolution[0]) {
+              // (3) Whether this mode's color depth is above the current
+              // maximum;
 
-                GopMode = Mode;
+              if (ColorDepth >= GopColorDepth) {
 
-                GopColorDepth = ColorDepth;
-                GopResolution[0] = ModeInfo->HorizontalResolution;
-                GopResolution[1] = ModeInfo->VerticalResolution;
+                // (4) Whether this mode's *area* is above or equal to the
+                // current maximum.
+
+                if ((HRes * VRes) >= (GopResolution[0] * GopResolution[1])) {
+
+                  GopMode = Mode;
+
+                  GopColorDepth = ColorDepth;
+                  GopResolution[0] = ModeInfo->HorizontalResolution;
+                  GopResolution[1] = ModeInfo->VerticalResolution;
+
+                }
 
               }
 
@@ -420,13 +511,36 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
     }
 
-    // (Show the mode number, as well as the resolution / color depth)
+    // (If we *did* actually find a valid mode, then show the mode number,
+    // as well as the resolution and color depth - otherwise, error.)
 
-    Message(Ok, u"Found GOP mode %d, with a %d*%d resolution and %d-bit color depth.",
-            (uint64)GopMode, (uint64)GopResolution[0], (uint64)GopResolution[1], (uint64)GopColorDepth);
+    if ((GopResolution[0] == 0) || (GopResolution[1] == 0)) {
+
+      Message(Fail, u"Couldn't find a graphics mode that met the necessary criteria.");
+      SupportsGop = false; SupportsEdid = false;
+
+    } else {
+
+      Message(Ok, u"Found GOP mode %d, with a %d*%d resolution and %d-bit color depth.",
+              (uint64)GopMode, (uint64)GopResolution[0], (uint64)GopResolution[1], (uint64)GopColorDepth);
+
+    }
 
   }
 
+  // (Update the kernel information tables.)                                            TODO - Update to common info tables later on
+
+  if (SupportsGop == true) {
+    KernelInfoTable.Graphics.Type = Gop;
+  } else if (SupportsConOut == true) {
+    KernelInfoTable.Graphics.Type = EfiText;
+  } else {
+    KernelInfoTable.Graphics.Type = None;
+  }
+
+  if (SupportsEdid == true) {
+    KernelInfoTable.Graphics.Vesa.EdidIsSupported = true; // (TODO: Update this to .Display.Edid.IsSupported in common info table)
+  }
 
 
 
@@ -1398,11 +1512,28 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
     if (HasOpenedFsHandles == true) {
 
-      gBS->FreePool(FsHandles);
-
       if (HasOpenedFsProtocols == true) {
         gBS->CloseProtocol(FsProtocolHandle, &efiSimpleFilesystemProtocol_Uuid, ImageHandle, NULL);
       }
+
+      gBS->FreePool(FsHandles);
+
+    }
+
+    // If we've opened GOP handles/protocols, then free/close them.
+
+    if (HasOpenedGopHandles == true) {
+
+      if (HasOpenedGopProtocols == true) {
+
+        if (HasOpenedEdidProtocols == true) {
+          gBS->CloseProtocol(GopProtocolHandle, &efiEdidActiveProtocol_Uuid, ImageHandle, NULL);
+        }
+
+        gBS->CloseProtocol(GopProtocolHandle, &efiGraphicsOutputProtocol_Uuid, ImageHandle, NULL);
+      }
+
+      gBS->FreePool(GopHandles);
 
     }
 

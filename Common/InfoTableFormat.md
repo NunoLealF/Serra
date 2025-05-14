@@ -37,6 +37,8 @@ Size `uint16`
 
 - - Display\~Edid.IsSupported `bool`
 
+- - Display\~Edid.PreferredResolution[] `uint16[2]`
+
 - - Display\~Edid.Table `uptr`
 
 - - Display\~Graphics.Framebuffer `uptr`
@@ -122,6 +124,8 @@ Size `uint16`
 
 
 ## [Image : Executable()]
+
+- Image.DebugFlag `bool`
 
 - Image.Stack `uptr`
 
