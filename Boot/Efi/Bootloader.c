@@ -462,7 +462,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
             for (int Bit = 0; Bit < 32; Bit++) {
 
-              if ((ReservedMask & (1 << Bit)) != 0) {
+              if ((ReservedMask & (1ULL << Bit)) != 0) {
                 ColorDepth--;
               }
 
@@ -1492,7 +1492,14 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
         CombinedMask |= ModeInfo->PixelBitmask.BlueMask;
         CombinedMask |= ModeInfo->PixelBitmask.ReservedMask;
 
-        while ((CombinedMask & (1 << --PixelSize)) == 0);
+        uint32 Bit = 32;
+
+        do {
+
+          Bit--;
+          if ((CombinedMask & (1UL << Bit)) != 0) break;
+
+        } while (Bit > 0);
 
         // (Show the bitmasks)
 
