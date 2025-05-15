@@ -276,11 +276,28 @@ uint16 FindBestVbeMode(uint16* VbeModeList, uint16 PreferredX_Resolution, uint16
 
   while (*VbeModeList != 0xFFFF) {
 
-    // First, get information about the current mode
+    // First, get information about the current mode - we'll want to filter
+    // out anything that doesn't have bit 0 (supported) and 7 (uses linear
+    // framebuffer) set, as well as any non-direct (MemoryModel != 6) modes.
 
     VbeReturnStatus = GetVbeModeInfo(&VbeModeInfo, *VbeModeList);
 
     if (VbeReturnStatus != 0x004F) {
+
+      VbeModeList++;
+      continue;
+
+    } else if ((VbeModeInfo.ModeAttributes & (1 << 7)) == 0) {
+
+      VbeModeList++;
+      continue;
+
+    } else if ((VbeModeInfo.ModeAttributes & (1 << 0)) == 0) {
+
+      VbeModeList++;
+      continue;
+
+    } else if (VbeModeInfo.ModeInfo.MemoryModel != 0x06) {
 
       VbeModeList++;
       continue;
