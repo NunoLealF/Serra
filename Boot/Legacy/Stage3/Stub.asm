@@ -14,7 +14,8 @@ GLOBAL TransitionStub
 ; would, so we need to initialize a new call frame, and get arguments:
 
 ; (kernelInfoTable* InfoTable [ebp+8], void* Pml4 [ebp+12])
-; (We discard [eax] and [edx])
+; (We preserve EBP, ESP, EBX, ECX, ESI and EDI.)
+; (We return in EDX and EAX.)
 
 TransitionStub:
 
@@ -32,7 +33,7 @@ TransitionStub:
   pushad
   cli
 
-  ; Store our current stack pointer.
+  ; Store our current stack pointer, so we can restore it later.
 
   mov [SaveStack], esp
 
@@ -63,13 +64,14 @@ TransitionStub:
   mov cr0, eax
 
   ; At this point, we're finally in compatibility (IA-32e) mode, but
-  ; in order to start executing 64-bit code, we actually need to
-  ; update the GDT with 64-bit segments, so let's do that:
+  ; in order to switch to long mode, we need to:
+
+  ; (1) Update the GDT with 64-bit segments;
 
   lgdt [LongModeGdtDescriptor]
 
-  ; Now that we've taken care of that, we can *finally* load the
-  ; new GDT, and actually enter long mode!
+  ; (2) Set the CS register by doing a far jump (in this case, 08h
+  ; represents our code segment) - this "resets" our GDT.
 
   jmp 0x08:JumpToKernel
 
@@ -80,10 +82,13 @@ TransitionStub:
 
 JumpToKernel:
 
-  ; Our CPU has successfully entered 64-bit mode, hooray! <3
+  ; Now that we're here, our CPU has successfully entered long
+  ; mode - hooray! <3
 
-  ; For now, let's just set up the stack and segment registers
-  ; before jumping to the actual entrypoint.
+  ; We still need to set up a couple things before we can jump
+  ; to the actual entrypoint, though.
+
+  ; (3) Set up the segment registers with 10h (our data segment)
 
   mov ax, 0x10
 
@@ -93,55 +98,68 @@ JumpToKernel:
   mov gs, ax
   mov ss, ax
 
-  ; (Set up the stack)
+  ; (4) Set up the stack (we subtract 128 bytes just in case)
 
   mov rsp, [KernelStack]
   sub rsp, 128
 
   push rbp
 
-  ; Now, we can finally jump to the entrypoint:
+  ; Now that we've done that, we can finally jump to the
+  ; kernel entrypoint:
 
   mov rcx, [KernelEntrypoint]
   call rcx
 
-  ; If we're here, then that means the entrypoint returned,
-  ; so we need to transfer back control.
+ReturnFromKernel64:
 
-  ; (Turn rax into edx:eax, since that's how you're supposed
-  ; to return 64-bit values in 32-bit functions)
+  ; If we're here, then that means that the entrypoint returned,
+  ; so we need to transfer back control to our bootloader.
+
+  ; First though - the 32-bit System-V ABI requires that 64-bit
+  ; values be returned in EDX:EAX, whereas the 64-bit ABI just
+  ; returns them in RAX, so we need to do this:
 
   mov rdx, rax
   shr rdx, 32
 
+  ; We also want to save them, since they'll be reset by some
+  ; upcoming instructions:
+
   mov [SaveEax], eax
   mov [SaveEdx], edx
 
-  ; The first step in that process is to switch back to
-  ; compatibility (IA-32e) mode, by loading a valid 32-bit
-  ; GDT, like this:
+  ; Okay - now we can actually make the switch back to 32-bit
+  ; mode. First though, we need to switch from long mode to
+  ; compatibility mode (IA-32e), like this:
+
+  ; (1) Update the GDT with 32-bit segments;
 
   lgdt [ProtectedModeGdtDescriptor]
 
-  ; Next, we need to set CS to the code segment (08h), just
-  ; as we did before switching into long mode (though this
-  ; requires a far *return*, not jump):
+  ; (2) Set the CS register by doing a far return, which pops
+  ; CS and IP from the stack, "resetting" our GDT.
+
+  ; Keep in mind that long mode stores CS as a 64-bit register,
+  ; so we *must* push it as a qword, because retfq pops it as
+  ; one.
 
   push qword 0x08
-  push qword ReturnFromKernel
-  retfq
+  push qword ReturnFromKernel32
+  retfq ; (`retfq` = `lretq` = `o64 retf`)
 
 
 ; ------------------------------------------------------------
 
 [BITS 32]
 
-ReturnFromKernel:
+ReturnFromKernel32:
 
   ; Now that we're back in 32-bit mode, we just need to unwind
   ; the changes we made to get here.
 
-  ; First, let's set up the segment registers (again):
+  ; (1) Set up the segment registers with our data segment (10h),
+  ; again.
 
   mov ax, 0x10
 
@@ -151,18 +169,14 @@ ReturnFromKernel:
   mov gs, ax
   mov ss, ax
 
-  ; Second, let's disable (long mode) paging, by clearing bit
-  ; 31 of CR0:
+  ; (2) Disable long mode paging, by clearing bit 31 of CR0
 
   mov eax, cr0
   and eax, ~(1 << 31)
   mov cr0, eax
 
-  ; Get the current value of the EFER register, and clear bit 8
-  ; (long mode, or the 'LME' bit) - we want to preserve eax, so
-  ; we'll temporarily push everything to the stack.
-
-  pushad
+  ; (3) Disable compatibility mode, by clearing bit 8 of the
+  ; EFER model specific register (MSR number C0000080h)
 
   mov ecx, 0xC0000080
   rdmsr
@@ -170,23 +184,26 @@ ReturnFromKernel:
   and eax, ~(1 << 8)
   wrmsr
 
-  popad
-
   ; We don't really need to deal with CR3 or disable PAE, since
   ; those steps don't affect anything in protected mode, so we
   ; can restore the previous program state and return.
 
+  ; (4) Restore the old stack pointer from [SaveStack].
+
   mov esp, [SaveStack]
 
-  ; Pop registers - we use SaveEaxEdx to temporarily store eax
-  ; and edx, since they contain our return value.
+  ; (5) Restore the registers we pushed at the beginning of
+  ; TransitionStub.
 
   popad
+
+  ; (6) Restore the value of EDX and EAX from [SaveEdx] and
+  ; [SaveEax], since that has our return value.
 
   mov edx, [SaveEdx]
   mov eax, [SaveEax]
 
-  ; Pop the base pointer, and return
+  ; (7) Pop the base pointer from the stack, and return.
 
   pop ebp
   ret

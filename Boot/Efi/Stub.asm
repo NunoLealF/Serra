@@ -15,9 +15,14 @@ GLOBAL TransitionStub
 ; and get arguments:
 
 ; (kernelInfoTable* InfoTable [rcx], void* KernelEntrypoint [rdx], void* KernelStackTop [r8])
-; (We preserve rbx, rdi, rsi, rsp, rbp, r12, r13, r14 and r15)
+; (We preserve RBX, RDI, RSI, RSP, RBP, R12, R13, R14 and R15.)
+; (We discard RCX, RDX and R8; and return in RAX.)
 
 TransitionStub:
+
+  ; Disable interrupts.
+
+  cli
 
   ; Push all preserved registers.
 
@@ -31,8 +36,12 @@ TransitionStub:
   push r14
   push r15
 
+  ; Store the kernel entrypoint in RBX, instead of RDX.
+
+  mov rbx, rdx
+
   ; Save the current stack pointer, so we can restore it later.
-  ; (In this case, we store rsp in r15)
+  ; (In this case, we store RSP in R15)
 
   mov r15, rsp
 
@@ -41,21 +50,25 @@ TransitionStub:
   mov rsp, r8
   sub rsp, 128
 
-  ; Initialize rbp and the call frame.
+  ; Initialize RBP and the call frame, and enable interrupts.
 
   push rbp
   mov rbp, rsp
 
+  sti
+
   ; Call the kernel, this time using the regular (System-V) ABI, which
-  ; makes us pass the first argument (InfoTable) in rdi:
+  ; makes us pass the first argument (InfoTable) in RDI:
 
   mov rdi, rcx
-  mov rax, rdx
-  call rax
+  call rbx ; (KernelEntrypoint -> rdx -> rbx)
+
+  cli
 
   ; Once it returns, we can gracefully transfer control back to the EFI
-  ; application. First, we need to restore the old stack pointer:
+  ; application. First, we need to restore the old base and stack pointers:
 
+  pop rbp
   mov rsp, r15
 
   ; After that, we can pop all of the preserved registers back from the
@@ -70,5 +83,7 @@ TransitionStub:
   pop rsi
   pop rdi
   pop rbx
+
+  sti
 
   ret

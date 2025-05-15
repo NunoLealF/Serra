@@ -22,6 +22,7 @@ OBJD = x86_64-elf-objdump
 # -ffreestanding: This is a freestanding environment. Also, implies fno-builtin.
 # -fpie: Compile our code into a position-independent executable.
 # -std=c23: Use the regular C23 standard (GCC 15+, Clang 20+)
+# -maccumulate-outgoing-args: Necessary for the EFI/Microsoft ABI on GCC.
 # -march=x86-64: Make sure only base x64 instructions are used.
 # -mmmx, -msse, -msse2: Make sure to *enable* MMX, SSE and SSE2 instructions.
 # -mno-red-zone: Disable the System V ABI 'red zone'; this is necessary for now.
@@ -31,7 +32,7 @@ OBJD = x86_64-elf-objdump
 # -Wpedantic: Be pedantic about the C standard / any possible mistakes
 
 LDFLAGS = -nostdlib -mno-red-zone -static-pie
-CFLAGS = -std=c23 -funsigned-char -ffreestanding -fpie -march=x86-64 -mmmx -msse -msse2 -mno-red-zone -O3 -Wall -Wextra -Wpedantic
+CFLAGS = -std=c23 -funsigned-char -ffreestanding -fpie -maccumulate-outgoing-args -march=x86-64 -mmmx -msse -msse2 -mno-red-zone -O3 -Wall -Wextra -Wpedantic
 
 # (Include the build configuration file, from the root directory)
 
