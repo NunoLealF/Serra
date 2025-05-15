@@ -23,14 +23,20 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   // [Initialize important variables]
 
   // Before we do anything else, we'll want to prepare a few important
-  // variables and tables; namely, the kernel information tables, the return
-  // status of this function, and a couple other local varaibles.
+  // variables and tables; namely, the common information table, the return
+  // value of this function, as well as a couple other local variables.
 
   // (Prepare global variables)
 
-  KernelInfoTable.Firmware.IsEfi = true;
-  KernelInfoTable.Firmware.EfiInfo.Address = (uintptr)(&EfiInfoTable);
-  EfiInfoTable.ImageHandle.Ptr = ImageHandle;
+  CommonInfoTable.Signature = commonInfoTableSignature;
+  CommonInfoTable.Version = commonInfoTableVersion;
+  CommonInfoTable.Size = sizeof(CommonInfoTable);
+
+  CommonInfoTable.Firmware.Type = EfiFirmware;
+  CommonInfoTable.Firmware.Efi.ImageHandle.Pointer = ImageHandle;
+
+  CommonInfoTable.Image.DebugFlag = DebugFlag;
+  CommonInfoTable.System.Architecture = x64Architecture;
 
   // (Prepare local variables)
 
@@ -46,6 +52,11 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   bool HasOpenedFsProtocols = false;
   bool HasOpenedGopProtocols = false;
   bool HasOpenedEdidProtocols = false;
+
+  volatile efiFileInfo* KernelInfo = NULL;
+  volatile void* Mmap = NULL;
+  uint16 NumUsableMmapEntries = 0;
+  usableMmapEntry* UsableMmap = NULL;
 
 
 
@@ -70,7 +81,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
     return EfiUnsupported; // We don't support anything below EFI 1.1
   }
 
-  EfiInfoTable.SystemTable.Ptr = SystemTable;
+  CommonInfoTable.Firmware.Efi.Tables.SystemTable.Pointer = SystemTable;
   gST = SystemTable;
 
   // (Check EFI Boot Services table, and update gBS)
@@ -83,7 +94,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
     return EfiInvalidParameter;
   }
 
-  EfiInfoTable.BootServices.Ptr = SystemTable->BootServices;
+  CommonInfoTable.Firmware.Efi.Tables.BootServices.Pointer = gST->BootServices;
   gBS = gST->BootServices;
 
   // (Check EFI Runtime Services table, and update gRT)
@@ -96,13 +107,13 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
     return EfiInvalidParameter;
   }
 
-  EfiInfoTable.RuntimeServices.Ptr = SystemTable->RuntimeServices;
+  CommonInfoTable.Firmware.Efi.Tables.RuntimeServices.Pointer = gST->RuntimeServices;
   gRT = gST->RuntimeServices;
 
 
 
 
-  // [Obtain the current CPU privilege level]
+  // [Obtain the current CPU privilege level, and enable x64 features]
 
   // The EFI specification don't actually define what privilege level the
   // CPU is running in (at least, not before ExitBootServices()), so unlike
@@ -116,25 +127,23 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   // but it won't be able to use all features unless it's in ring 0)
 
   uint8 Cpl = GetCpuProtectionLevel();
-  KernelInfoTable.System.Cpl = Cpl;
+  CommonInfoTable.System.Cpu.x64.ProtectionLevel = Cpl;
 
+  // Now that we're aware of the CPU privilege level, we can move onto the
+  // next step, which is to make sure SSE (and other x64 features) are
+  // enabled, since some firmware doesn't do that by default.
 
-
-  // [If possible, enable any necessary x64 features (FPU and SSE)]
-
-  // Additionally, we also want to make sure SSE and other x64 features are
-  // enabled, since some firmware doesn't do that by default. This requires
-  // the system to be in ring 0 (supervisor mode).
+  // (This requires the system to be in ring 0 (supervisor mode))
 
   if (Cpl == 0) {
 
     // Before we do that though, let's save the current state of the
     // control registers:
 
-    KernelInfoTable.System.Cr0 = ReadFromControlRegister(0);
-    KernelInfoTable.System.Cr3 = ReadFromControlRegister(3);
-    KernelInfoTable.System.Cr4 = ReadFromControlRegister(4);
-    KernelInfoTable.System.Efer = ReadFromMsr(0xC0000080);
+    CommonInfoTable.System.Cpu.x64.Cr0 = ReadFromControlRegister(0);
+    CommonInfoTable.System.Cpu.x64.Cr3 = ReadFromControlRegister(3);
+    CommonInfoTable.System.Cpu.x64.Cr4 = ReadFromControlRegister(4);
+    CommonInfoTable.System.Cpu.x64.Efer = ReadFromMsr(0xC0000080);
 
     // Now that we've saved the current state of the control registers, we
     // can move onto modifying them to enable the features we want.
@@ -187,6 +196,8 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
     gST->ConIn->Reset(gST->ConIn, true);
   }
 
+  CommonInfoTable.Firmware.Efi.SupportsConIn = SupportsConIn;
+
   // (Check for ConOut / efiSimpleTextOutputProtocol)
 
   SupportsConOut = true;
@@ -204,6 +215,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
     gST->ConOut->Reset(gST->ConOut, true);
   }
 
+  CommonInfoTable.Firmware.Efi.SupportsConOut = SupportsConOut;
 
 
   // [Switch to the best text mode available, if applicable]
@@ -213,7 +225,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   // switch to the best text mode available.
 
   int32 ConOutMode = 0;
-  uint32 ConOutResolution[2] = {0};
+  uint32 ConOutResolution[2] = {0, 0};
 
   if (SupportsConOut == true) {
 
@@ -255,6 +267,12 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
     gST->ConOut->SetMode(gST->ConOut, ConOutMode);
 
+    // (Lastly, let's fill out the common information table)
+
+    CommonInfoTable.Display.Text.Format = Utf16Format;
+    CommonInfoTable.Display.Text.LimitX = ConOutResolution[0];
+    CommonInfoTable.Display.Text.LimitY = ConOutResolution[1];
+
   }
 
   // (Show a few initial messages, now that we've set up the console)
@@ -266,7 +284,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   Message(Info, u"Using text mode %d, with a %d*%d character resolution", ConOutMode, ConOutResolution[0], ConOutResolution[1]);
 
   if (Cpl > 0) {
-    Message(Warning, u"System not running in ring 0 - usability may be seriously limited.");
+    Message(Warning, u"System not running in ring 0; usability may be seriously limited.");
   }
 
 
@@ -283,8 +301,6 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
   Print(u"\n\r", 0);
   Message(Boot, u"Checking for UEFI GOP (Graphics Output Protocol) support.");
-
-  // (Define a few variables)
 
   efiHandle* GopHandles;
   uint64 NumGopHandles = 0;
@@ -304,7 +320,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   }
 
   // (Open the first working handle that supports GOP; in theory every handle
-  // returned by LocateHandleBuffer() *should* work, but who knows lol)
+  // returned by LocateHandleBuffer() *should* work, but you never know~)
 
   efiGraphicsOutputProtocol* GopProtocol = NULL;
   efiHandle GopProtocolHandle = GopHandles[0];
@@ -486,9 +502,8 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
                 if ((HRes * VRes) >= (GopResolution[0] * GopResolution[1])) {
 
-                  GopMode = Mode;
-
                   GopColorDepth = ColorDepth;
+                  GopMode = Mode;
                   GopResolution[0] = ModeInfo->HorizontalResolution;
                   GopResolution[1] = ModeInfo->VerticalResolution;
 
@@ -528,19 +543,36 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
   }
 
-  // (Update the kernel information tables.)                                            TODO - Update to common info tables later on
+  // (Update the common information tables)
 
   if (SupportsGop == true) {
-    KernelInfoTable.Graphics.Type = Gop;
+
+    if (SupportsEdid == true) {
+
+      CommonInfoTable.Display.Edid.IsSupported = true;
+      CommonInfoTable.Display.Edid.PreferredResolution[0] = PreferredResolution[0];
+      CommonInfoTable.Display.Edid.PreferredResolution[1] = PreferredResolution[1];
+      CommonInfoTable.Display.Edid.Table.Pointer = (void*)EdidProtocol->Edid;
+
+    }
+
+    CommonInfoTable.Display.Type = GopDisplay;
+    CommonInfoTable.Display.Graphics.LimitX = GopResolution[0];
+    CommonInfoTable.Display.Graphics.LimitY = GopResolution[1];
+
+    CommonInfoTable.Firmware.Efi.Gop.IsSupported = true;
+    CommonInfoTable.Firmware.Efi.Gop.Protocol.Pointer = GopProtocol;
+
   } else if (SupportsConOut == true) {
-    KernelInfoTable.Graphics.Type = EfiText;
+
+    CommonInfoTable.Display.Type = EfiTextDisplay;
+
   } else {
-    KernelInfoTable.Graphics.Type = None;
+
+    CommonInfoTable.Display.Type = UnknownDisplay;
+
   }
 
-  if (SupportsEdid == true) {
-    KernelInfoTable.Graphics.Vesa.EdidIsSupported = true; // (TODO: Update this to .Display.Edid.IsSupported in common info table)
-  }
 
 
 
@@ -628,30 +660,33 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
   }
 
-  // (Fill out the kernel info table, and show information.)
+  // (Fill out the common information table, and show information - for
+  // both ACPI and SMBIOS.)
 
   if ((SupportsAcpi == true) || (SupportsNewAcpi == true)) {
 
-    KernelInfoTable.System.AcpiSupported = true;
-    KernelInfoTable.System.AcpiRsdp.Ptr = AcpiTable;
-    Message(Ok, u"ACPI appears to be present (using table at %xh).", AcpiTable);
+    CommonInfoTable.System.Acpi.IsSupported = true;
+    CommonInfoTable.System.Acpi.Table.Pointer = AcpiTable;
+
+    Message(Ok, u"ACPI appears to be present; using table at %xh.", (uint64)AcpiTable);
 
   } else {
 
-    KernelInfoTable.System.AcpiSupported = false;
+    CommonInfoTable.System.Acpi.IsSupported = false;
     Message(Warning, u"ACPI appears to be unsupported.");
 
   }
 
   if ((SupportsSmbios == true) || (SupportsNewSmbios == true)) {
 
-    KernelInfoTable.System.SmbiosSupported = true;
-    KernelInfoTable.System.SmbiosTable.Ptr = SmbiosTable;
-    Message(Ok, u"SMBIOS appears to be present (using table at %xh).", SmbiosTable);
+    CommonInfoTable.System.Smbios.IsSupported = true;
+    CommonInfoTable.System.Smbios.Table.Pointer = SmbiosTable;
+
+    Message(Ok, u"SMBIOS appears to be present; using table at %xh.", (uint64)SmbiosTable);
 
   } else {
 
-    KernelInfoTable.System.SmbiosSupported = false;
+    CommonInfoTable.System.Smbios.IsSupported = false;
     Message(Warning, u"SMBIOS appears to be unsupported.");
 
   }
@@ -677,7 +712,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   // (Use LocateHandleBuffer() with `ByProtocol` to locate every handle
   // that supports efiSimpleFilesystemProtocol)
 
-  efiHandle* FsHandles;
+  efiHandle* FsHandles = NULL;
   uint64 NumFsHandles = 0;
 
   AppStatus = gBS->LocateHandleBuffer(ByProtocol, &efiSimpleFilesystemProtocol_Uuid, NULL, &NumFsHandles, &FsHandles);
@@ -753,7 +788,8 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
   }
 
-  // (Check if we managed to find the kernel image)
+  // (Check if we managed to find the kernel image, and update common
+  // information tables)
 
   if ((HasOpenedFsProtocols == false) || (FsProtocolHandle == NULL)) {
 
@@ -762,7 +798,11 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
   }
 
-  KernelInfoTable.FsDisk.DiskAccessMethod = Efi;
+  CommonInfoTable.Disk.AccessMethod = EfiFsMethod;
+
+  CommonInfoTable.Disk.EfiFs.HandleList.Pointer = (void*)FsHandles;
+  CommonInfoTable.Disk.EfiFs.Handle.Pointer = (void*)KernelFileHandle;
+  CommonInfoTable.Disk.EfiFs.Protocol.Pointer = (void*)FsProtocol;
 
 
 
@@ -775,7 +815,6 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   // we first need to figure out how large it is and then allocate the
   // necessary buffer, which can take some time.
 
-  Kernel = NULL;
   uint64 KernelSize = 0;
 
   Print(u"\n\r", 0);
@@ -784,7 +823,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   // (Our kernel's file handle has an information table of its own (defined
   // in efiFileInfo{}), which we need to get the size of.)
 
-  volatile efiFileInfo* KernelInfo = NULL;
+  KernelInfo = NULL;
   uint64 KernelInfoSize = 0;
 
   AppStatus = KernelFileHandle->GetInfo(KernelFileHandle, &efiFileInfo_Uuid, &KernelInfoSize, KernelInfo);
@@ -824,6 +863,8 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
       goto ExitEfiApplication;
 
     } else {
+
+      CommonInfoTable.Disk.EfiFs.FileInfo.Pointer = (void*)KernelInfo;
 
       Message(Ok, u"Successfully obtained kernel's EFI file info table.");
       Message(Info, u"efiFileInfo table is located at %xh", (uint64)KernelInfo);
@@ -919,7 +960,9 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   // (Define KernelStackTop, and update the kernel information table)
 
   void* KernelStackTop = (void*)((uint64)KernelStack + KernelStackSize);
-  KernelInfoTable.Kernel.Stack.Ptr = KernelStackTop;
+
+  CommonInfoTable.Image.StackSize = AlignDivision(KernelStackSize, 4096);
+  CommonInfoTable.Image.StackTop.Pointer = KernelStackTop;
 
 
 
@@ -1040,10 +1083,11 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   Message(Ok, u"Successfully located actual kernel entrypoint.");
   Message(Info, u"Kernel entrypoint is at %xh", (uint64)KernelEntrypoint);
 
-  // (Fill out the kernel information table, again)
+  // (Fill out the common information table)
 
-  KernelInfoTable.Kernel.ElfHeader.Address = (uint64)KernelHeader;
-  KernelInfoTable.Kernel.Entrypoint.Address = (uint64)KernelEntrypoint;
+  CommonInfoTable.Image.Type = ElfImageType;
+  CommonInfoTable.Image.Executable.Entrypoint.Pointer = KernelEntrypoint;
+  CommonInfoTable.Image.Executable.Header.Pointer = KernelHeader;
 
 
 
@@ -1064,8 +1108,8 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   // ahead, so to avoid issues with Mmap == NULL, we point it to a
   // temporary 64-byte buffer instead.)
 
-  volatile void* Mmap;
-  usableMmapEntry* UsableMmap;
+  Mmap = NULL;
+  UsableMmap = NULL;
 
   uint64 MmapKey;
   volatile uint64 MmapSize = 0;
@@ -1235,7 +1279,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   // (We also want to set aside a certain amount of memory for the
   // firmware to use, defined in MinFirmwareMemory.)
 
-  uint16 NumUsableMmapEntries = 0;
+  NumUsableMmapEntries = 0;
   uint64 UsableMemory = 0;
   uint64 FirmwareMemory = MinFirmwareMemory;
 
@@ -1398,15 +1442,15 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
   }
 
-  // (Update the kernel info table with the necessary values)
+  // (Fill out the common information table with the necessary values)
 
-  KernelInfoTable.Memory.NumMmapEntries = NumMmapEntries;
-  KernelInfoTable.Memory.MemoryMapEntrySize = MmapDescriptorSize;
-  KernelInfoTable.Memory.MemoryMap.Address = (uintptr)Mmap;
+  CommonInfoTable.Firmware.Efi.Mmap.NumEntries = NumMmapEntries;
+  CommonInfoTable.Firmware.Efi.Mmap.EntrySize = MmapDescriptorSize;
+  CommonInfoTable.Firmware.Efi.Mmap.List.Pointer = (void*)Mmap;
 
-  KernelInfoTable.Memory.NumUsableMmapEntries = NumUsableMmapEntries;
-  KernelInfoTable.Memory.UsableMemoryMap.Address = (uintptr)UsableMmap;
-  KernelInfoTable.Memory.PreserveOffset = UsableOffset;
+  CommonInfoTable.Memory.NumEntries = NumUsableMmapEntries;
+  CommonInfoTable.Memory.List.Pointer = (void*)UsableMmap;
+  CommonInfoTable.Memory.PreserveUntilOffset = UsableOffset;
 
 
 
@@ -1419,57 +1463,114 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   Print(u"\n\r", 0);
   Message(Boot, u"Preparing to transfer control to the kernel.");
 
-  Message(Info, u"Preparing to call TransitionStub() at %xh", (uint64)(&TransitionStub));
-  Message(Info, u"(kernelInfoTable*) KernelInfoTable -> %xh", (uint64)(&KernelInfoTable));
-  Message(Info, u"(void*) KernelEntrypoint -> %xh", (uint64)KernelEntrypoint);
-  Message(Info, u"(void*) KernelStackTop -> %xh\n\r", (uint64)KernelStackTop);
+  Message(Info, u"(function) TransitionStub() is at %xh", (uint64)(&TransitionStub));
+  Message(Info, u"(commonInfoTable*) CommonInfoTable is at %xh", (uint64)(&CommonInfoTable));
+  Message(Info, u"(void*) KernelEntrypoint is at %xh", (uint64)KernelEntrypoint);
+  Message(Info, u"(void*) KernelStackTop is at %xh", (uint64)KernelStackTop);
 
-  /*
-  // (TODO: Wait until we have a proper graphics implementation set up.)
-  // (If supported, enable a graphics mode, and update mode information)
+  // (If GOP is enabled, enable a graphics mode, and fill out information)
 
   if (SupportsGop == true) {
 
-    Message(Info, u"Setting GOP mode %d.", (uint64)GopMode);
+    Message(Boot, u"Enabling graphics mode %d", (uint64)GopMode);
     AppStatus = GopProtocol->SetMode(GopProtocol, GopMode);
 
     if (AppStatus == EfiSuccess) {
 
-      // (TODO: Set something up)
+      // Get the mode information, calculate the pixel size, and fill out
+      // the color mask information.
 
-    } else {
+      efiGraphicsOutputModeInformation* ModeInfo = GopProtocol->Mode->Info;
+      uint8 PixelSize = 32;
 
-      if (SupportsConOut == true) {
+      if (ModeInfo->PixelFormat == PixelBitMask) {
 
-        Message(Fail, u"Failed to enable graphics mode - staying with EFI text mode.");
-        KernelInfoTable.Graphics.Type = EfiText;
+        // (Calculate the pixel size manually)
 
-      } else {
+        uint32 CombinedMask = ModeInfo->PixelBitmask.RedMask;
+        CombinedMask |= ModeInfo->PixelBitmask.GreenMask;
+        CombinedMask |= ModeInfo->PixelBitmask.BlueMask;
+        CombinedMask |= ModeInfo->PixelBitmask.ReservedMask;
 
-        goto ExitEfiApplication;
+        while ((CombinedMask & (1 << --PixelSize)) == 0);
+
+        // (Show the bitmasks)
+
+        CommonInfoTable.Display.Graphics.Bits.RedMask = ModeInfo->PixelBitmask.RedMask;
+        CommonInfoTable.Display.Graphics.Bits.GreenMask = ModeInfo->PixelBitmask.GreenMask;
+        CommonInfoTable.Display.Graphics.Bits.BlueMask = ModeInfo->PixelBitmask.BlueMask;
+
+      } else if (ModeInfo->PixelFormat == PixelRedGreenBlueReserved8BitPerColor) {
+
+        CommonInfoTable.Display.Graphics.Bits.RedMask = 0xFF;
+        CommonInfoTable.Display.Graphics.Bits.GreenMask = 0xFF00;
+        CommonInfoTable.Display.Graphics.Bits.BlueMask = 0xFF0000;
+
+      } else if (ModeInfo->PixelFormat == PixelBlueGreenRedReserved8BitPerColor) {
+
+        CommonInfoTable.Display.Graphics.Bits.RedMask = 0xFF0000;
+        CommonInfoTable.Display.Graphics.Bits.GreenMask = 0xFF00;
+        CommonInfoTable.Display.Graphics.Bits.BlueMask = 0xFF;
 
       }
 
+      CommonInfoTable.Display.Graphics.Bits.PerPixel = PixelSize;
+
+      // Fill out the rest of the common information table.
+
+      CommonInfoTable.Display.Graphics.Framebuffer.Address = (uint64)(GopProtocol->Mode->FramebufferBase);
+      CommonInfoTable.Display.Graphics.Pitch = (GopProtocol->Mode->Info->PixelsPerScanline * AlignDivision(PixelSize, 8));
+      CommonInfoTable.Display.Graphics.LimitX = ModeInfo->HorizontalResolution;
+      CommonInfoTable.Display.Graphics.LimitY = ModeInfo->VerticalResolution;
+
+    } else {
+
+      CommonInfoTable.Display.Type = ((SupportsConOut == true) ? EfiTextDisplay : UnknownDisplay);
+      SupportsGop = false;
+
+      Message(Fail, u"Failed to enable default graphics mode; staying with EFI text mode.");
+
     }
 
-  } */
-
-  // (Transfer control to the kernel.)
-
-  uint64 nya = TransitionStub(&KernelInfoTable, KernelEntrypoint, KernelStackTop);
-  Message(Info, u"nya = %xh", nya);
-
-
-  // [TODO] [Wait until the user strikes a key, and then return.]
-
-  Print(u"\n\r", 0);
-
-  if (SupportsConIn == true) {
-    Message(Warning, u"Press any key to return.");
-    while (gST->ConIn->ReadKeyStroke(gST->ConIn, &PhantomKey) == EfiNotReady);
   }
 
-  AppStatus = EfiSuccess;
+  // (Calculate the table checksum - we do this by manually summing every
+  // byte in the table, up to the Checksum element)
+
+  uint16 ChecksumSize = CommonInfoTable.Size - sizeof(CommonInfoTable.Checksum);
+  uint8* RawCommonInfoTable = (uint8*)(&CommonInfoTable);
+
+  for (uint16 Offset = 0; Offset < ChecksumSize; Offset++) {
+    CommonInfoTable.Checksum += RawCommonInfoTable[Offset];
+  }
+
+  // Finally, transfer control to the kernel - we keep track of the return
+  // status, in case something goes wrong
+
+  uint64 KernelStatus = TransitionStub(&CommonInfoTable, KernelEntrypoint, KernelStackTop);
+
+  // If the kernel *does* return, then we need to show the return status,
+  // like this:
+
+  // (If it was enabled, then disable graphics mode)
+
+  if (SupportsGop == true) {
+
+    GopProtocol->SetMode(GopProtocol, 0);
+
+    if (SupportsConOut == true) {
+      gST->ConOut->SetMode(gST->ConOut, 0);
+
+    }
+
+  }
+
+  // (Show message, and exit EFI application)
+
+  DebugFlag = true;
+  Message(Fail, u"Kernel returned with a status of %xh.", KernelStatus);
+
+  AppStatus = KernelStatus;
   goto ExitEfiApplication;
 
 
@@ -1478,6 +1579,18 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   // ---------------- Restore state and exit EFI application ----------------
 
   ExitEfiApplication:
+
+    // If possible, wait for the user to strike a key, and only then
+    // continue with the process.
+
+    Print(u"\n\r", 0);
+
+    if ((SupportsConIn == true) && (SupportsConOut == true)) {
+
+      Message(Warning, u"Press any key to return.");
+      while (gST->ConIn->ReadKeyStroke(gST->ConIn, &PhantomKey) == EfiNotReady);
+
+    }
 
     // If text mode / ConOut is enabled, then restore regular text mode
     // (which is always mode 0)
@@ -1550,13 +1663,23 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
     if (Cpl == 0) {
 
-      WriteToControlRegister(0, KernelInfoTable.System.Cr0); // Restore CR0
-      WriteToControlRegister(3, KernelInfoTable.System.Cr3); // Restore CR3
-      WriteToControlRegister(4, KernelInfoTable.System.Cr4); // Restore CR4
+      WriteToControlRegister(0, CommonInfoTable.System.Cpu.x64.Cr0); // Restore CR0
+      WriteToControlRegister(3, CommonInfoTable.System.Cpu.x64.Cr3); // Restore CR3
+      WriteToControlRegister(4, CommonInfoTable.System.Cpu.x64.Cr4); // Restore CR4
 
     }
 
-    // Return whatever is in AppStatus
+    // If gBS isn't NULL (meaning that it's valid), then try to exit using
+    // gBS->Exit() - this lets us provide an exit message
+
+    if (gBS != NULL) {
+
+      char16* ExitReason = ((AppStatus == EfiSuccess) ? u"Exiting Serra." : u"Failed to load Serra :(");
+      gBS->Exit(ImageHandle, AppStatus, (uint64)(Strlen(ExitReason)), ExitReason);
+
+    }
+
+    // Otherwise, just return whatever's in AppStatus.
 
     return AppStatus;
 

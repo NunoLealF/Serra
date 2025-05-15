@@ -17,16 +17,13 @@
   // Declare functions in Bootloader.c and Stub.asm.
 
   efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTable);
-  uint64 efiAbi TransitionStub(kernelInfoTable* InfoTable, void* KernelEntrypoint, void* KernelStackTop);
+  uint64 efiAbi TransitionStub(commonInfoTable* InfoTable, void* KernelEntrypoint, void* KernelStackTop);
 
   // Declare global variables, used throughout the bootloader.
 
-  efiSystemTable* gST;
-  efiBootServices* gBS;
-  efiRuntimeServices* gRT;
-
-  kernelEfiInfoTable EfiInfoTable;
-  kernelInfoTable KernelInfoTable;
+  efiSystemTable* gST = NULL;
+  efiBootServices* gBS = NULL;
+  efiRuntimeServices* gRT = NULL;
 
   #ifdef Debug
     bool DebugFlag = Debug; // Defined by the preprocessor, use -DDebug=true or false.
@@ -44,8 +41,10 @@
   #define KernelLocation u"\\BOOT\\SERRA\\KERNEL.ELF" // Kernel file location
   #define KernelStackSize 0x100000 // Must be a multiple of 4 KiB
 
-  void* Kernel;
-  void* KernelEntrypoint;
-  void* KernelStack;
+  commonInfoTable CommonInfoTable = {0};
+
+  void* Kernel = NULL;
+  void* KernelEntrypoint = NULL;
+  void* KernelStack = NULL;
 
 #endif

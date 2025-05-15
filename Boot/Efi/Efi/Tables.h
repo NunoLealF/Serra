@@ -31,6 +31,7 @@
   typedef efiStatus (efiAbi *efiAllocatePool) (efiMemoryType PoolType, uint64 Size, volatile void** Buffer);
   typedef efiStatus (efiAbi *efiAllocatePages) (efiAllocateType Type, efiMemoryType MemoryType, uint64 Pages, volatile efiPhysicalAddress* Memory);
   typedef efiStatus (efiAbi *efiCloseProtocol) (efiHandle Handle, const efiUuid* Protocol, efiHandle AgentHandle, efiHandle ControllerHandle);
+  typedef efiStatus (efiAbi *efiExit) (efiHandle ImageHandle, efiStatus ExitStatus, uint64 ExitDataSize, char16* ExitData);
   typedef efiStatus (efiAbi *efiFreePool) (void* Buffer);
   typedef efiStatus (efiAbi *efiFreePages) (efiPhysicalAddress Memory, uint64 Pages);
   typedef efiStatus (efiAbi *efiGetMemoryMap) (volatile uint64* MemoryMapSize, volatile efiMemoryDescriptor* MemoryMap, volatile uint64* MapKey, volatile uint64* DescriptorSize, volatile uint32* DescriptorVersion);
@@ -89,7 +90,7 @@
 
     efiNotImplemented LoadImage;
     efiNotImplemented StartImage;
-    efiNotImplemented Exit;
+    efiExit Exit;
     efiNotImplemented UnloadImage;
 
     efiNotImplemented ExitBootServices;

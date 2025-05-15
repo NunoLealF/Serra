@@ -18,9 +18,13 @@ Size `uint16`
 
 - Disk.AccessMethod `enum:uint16 ("UnknownMethod", "EfiFsMethod", "Int13Method")`
 
-- - Disk->EfiFs.FsHandle `uptr`
+- - Disk->EfiFs.FileInfo `uptr`
 
-- - Disk->EfiFs.FsProtocolHandle `uptr`
+- - Disk->EfiFs.HandleList `uptr`
+
+- - Disk->EfiFs.Handle `uptr`
+
+- - Disk->EfiFs.Protocol `uptr`
 
 - - Disk->Int13.DriveNumber `uint8`
 
@@ -78,7 +82,7 @@ Size `uint16`
 
 - - - Firmware->Bios\~Mmap.NumEntries `uint16`
 
-- - - Firmware->Bios\~Mmap.EntrySize `uint8`
+- - - Firmware->Bios\~Mmap.EntrySize `uint32`
 
 - - - Firmware->Bios\~Mmap.List `uptr` *pointer to a list of e820MmapEntry{}*
 
@@ -110,7 +114,7 @@ Size `uint16`
 
 - - - Firmware->Efi\~Mmap.NumEntries `uint16`
 
-- - - Firmware->Efi\~Mmap.EntrySize `uint8`
+- - - Firmware->Efi\~Mmap.EntrySize `uint64`
 
 - - - Firmware->Efi\~Mmap.List `uptr` *pointer to a list of efiMmapEntry{}*
 
@@ -127,9 +131,9 @@ Size `uint16`
 
 - Image.DebugFlag `bool`
 
-- Image.Stack `uptr`
+- Image.StackTop `uptr` *StackStart + StackSize*
 
-- Image.StackSize `uint64`
+- Image.StackSize `uint64` *in bytes*
 
 - Image.Type `enum:uint8 ("RawImageType", "ElfImageType", "PeImageType")`
 
@@ -145,6 +149,8 @@ Size `uint16`
 - Memory.NumEntries `uint16`
 
 - Memory.List `uptr` *pointer to a list of usableMmapEntry{}*
+
+- Memory.PreserveUntilOffset `uint64` *tell the kernel to keep everything below this untouched*
 
 &nbsp;
 

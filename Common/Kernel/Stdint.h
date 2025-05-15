@@ -119,6 +119,16 @@
   typedef uintptr uintptr_t;
   typedef uintptr UINTPTR;
 
+  // [Character types]
+
+  typedef uint8 char8;
+  typedef char8 char8_t;
+  typedef char8 CHAR8;
+
+  typedef uint16 char16;
+  typedef char16 char16_t;
+  typedef char16 CHAR16;
+
   // [Other integer/pointer types]
 
   #define intmax 0x7FFFFFFFFFFFFFFF

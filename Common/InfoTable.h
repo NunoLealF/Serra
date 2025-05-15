@@ -79,7 +79,7 @@
   */
 
   #define commonInfoTableSignature 0x7577757E7577757E
-  #define commonInfoTableVersion 2
+  #define commonInfoTableVersion 3
 
   typedef struct _commonInfoTable {
 
@@ -103,8 +103,11 @@
 
       struct {
 
-        uptr FsHandle;
-        uptr FsProtocolHandle;
+        uptr FileInfo;
+
+        uptr HandleList;
+        uptr Handle;
+        uptr Protocol;
 
       } __attribute__((packed)) EfiFs;
 
@@ -210,7 +213,7 @@
         struct {
 
           uint16 NumEntries;
-          uint8 EntrySize;
+          uint32 EntrySize;
           uptr List; // (pointer to a list of e820MmapEntry{})
 
         } __attribute__((packed)) Mmap;
@@ -257,7 +260,7 @@
         struct {
 
           uint16 NumEntries;
-          uint8 EntrySize;
+          uint64 EntrySize;
           uptr List; // (pointer to a list of efiMmapEntry{})
 
         } __attribute__((packed)) Mmap;
@@ -280,8 +283,8 @@
 
       bool DebugFlag;
 
-      uptr Stack;
-      uint64 StackSize;
+      uptr StackTop; // (StackStart + StackSize)
+      uint64 StackSize; // (in bytes)
 
       enum {
 
@@ -307,7 +310,7 @@
       uint16 NumEntries;
       uptr List; // (pointer to a list of usableMmapEntry{})
 
-      uint64 PreserveUntilOffset; // Don't touch *anything* until..
+      uint64 PreserveUntilOffset; // (tell the kernel to keep everything below this untouched)
 
     } __attribute__((packed)) Memory;
 

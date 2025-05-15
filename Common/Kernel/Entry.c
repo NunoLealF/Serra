@@ -5,87 +5,80 @@
 #include "Stdint.h"
 #include "../InfoTable.h"
 
-/* void Entrypoint()
+/* uint64 Entrypoint()
 
-   Inputs: kernelInfoTable* InfoTable - A pointer to the bootloader-provided kernel
-           info table.
+   Inputs: commonInfoTable* InfoTable - A pointer to the bootloader-provided
+           common information table.
 
-   Outputs: (None)
+   Outputs: uint64 - If the kernel can't be initialized for some reason,
+            we return an error code (defined in TODO{}).
 
    TODO - ...
 
 */
 
-typedef uint8 char8;
-typedef uint16 char16;
 #include "../../Boot/Efi/Efi/Efi.h"
-
 efiSystemTable* gST;
 
-uint64 Entrypoint(kernelInfoTable* InfoTable) {
+uint64 Entrypoint(commonInfoTable* InfoTable) {
 
-  // [Test out EFI, still very incomplete]
 
-  if (InfoTable->Firmware.IsEfi == true) {
+  // (TODO: Verify the table header)
 
-    kernelEfiInfoTable* EfiTable = InfoTable->Firmware.EfiInfo.Table;
-    gST = EfiTable->SystemTable.Ptr;
+  if (InfoTable->Signature != commonInfoTableSignature) {
+    return ((1UL << 32) | 0); // (1:0)
+  } else if (InfoTable->Version != commonInfoTableVersion) {
+    return ((1UL << 32) | 1); // (1:1)
+  } else if (InfoTable->Size != sizeof(commonInfoTable)) {
+    return ((1UL << 32) | 2); // (1:2)
+  }
 
-    gST->ConOut->SetAttribute(gST->ConOut, 0x0F); gST->ConOut->OutputString(gST->ConOut, u"Hi, this is kernel mode Serra! <3\n\r");
-    gST->ConOut->SetAttribute(gST->ConOut, 0x3F); gST->ConOut->OutputString(gST->ConOut, u"May 11 2025");
-    gST->ConOut->SetAttribute(gST->ConOut, 0x0F); gST->ConOut->OutputString(gST->ConOut, u"\n\r");
 
-    return 0xFEDCBA987654321;
+  // (TODO: Verify the checksum)
+
+  uint16 Checksum = 0;
+  uint16 ChecksumSize = InfoTable->Size - sizeof(InfoTable->Checksum);
+  uint8* RawInfoTable = (uint8*)InfoTable;
+
+  for (uint16 Offset = 0; Offset < ChecksumSize; Offset++) {
+    Checksum += RawInfoTable[Offset];
+  }
+
+  if (InfoTable->Checksum != Checksum) {
+    return ((1UL << 32) | 3); // (1:3)
+  }
+
+
+  // (Demo)
+
+  if (InfoTable->Firmware.Type == EfiFirmware) {
+
+    gST = InfoTable->Firmware.Efi.Tables.SystemTable.Pointer;
+
+    gST->ConOut->SetAttribute(gST->ConOut, 0x0F);
+    gST->ConOut->OutputString(gST->ConOut, u"Hi, this is Serra! <3 ");
+
+    gST->ConOut->SetAttribute(gST->ConOut, 0x3F);
+    gST->ConOut->OutputString(gST->ConOut, u"May 15 2025");
+
+    gST->ConOut->SetAttribute(gST->ConOut, 0x07);
+
+    efiInputKey PhantomKey;
+    while (gST->ConIn->ReadKeyStroke(gST->ConIn, &PhantomKey) == EfiNotReady);
+    return ((2UL << 32) | 0); // (2:0)
+
+  } else {
+
+    *(uint16*)0xB8280 = 0x0F + 'H';
+    *(uint16*)0xB8282 = 0x0F + 'i';
+    return ((2UL << 32) | 1); // (2:1)
 
   }
 
-  // [Test out BIOS, still very incomplete]
 
-  /*
+  // ...
 
-  uint32* Vesathing = (uint32*)(InfoTable->Graphics.Vesa.Framebuffer);
-
-  for (int i = 0; i < (640*480); i++) {
-    Vesathing[i] = i;
-  }
-
-  */
-
-  uintptr ThingAddr = (uintptr)InfoTable->Graphics.VgaText.Framebuffer;
-
-  uint16* Thing = (uint16*)ThingAddr;
-  char* Thing2 = "Hi, this is kernel mode Serra! <3";
-  char* Thing3 = "May 11 2025";
-
-  int Position = 0;
-
-  for (int a = 0; a < (80*3); a++) {
-    Thing[a] = 0;
-  }
-
-  while (Thing2[Position] != '\0') {
-    Thing[Position] = 0x0F00 + Thing2[Position];
-    Position++;
-  }
-
-  Position = 0;
-
-  while (Thing3[Position] != '\0') {
-    Thing[Position + 80] = 0x3F00 + Thing3[Position];
-    Position++;
-  }
-
-  // TODO: Set up environment
-
-  // (0) Make it so that the stub can eventually return.
-  // (1) Check for problems - is SSE not enabled, sanity-check things, etc.
-  // (2) Set up basic IDT, panic handling, etc.
-  // (3) Actually
-
-  //for(;;);
-
-  // (Return?)
-
-  return 0xFEDCBA987654321;
+  for(;;);
+  return 0x000000000; // (0:0)
 
 }
