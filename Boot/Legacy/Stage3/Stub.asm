@@ -13,7 +13,7 @@ GLOBAL TransitionStub
 ; It's assumed that this stub will behave as a regular 32-bit function
 ; would, so we need to initialize a new call frame, and get arguments:
 
-; (kernelInfoTable* InfoTable [ebp+8], void* Pml4 [ebp+12])
+; (commonInfoTable* InfoTable [ebp+8], void* Pml4 [ebp+12])
 ; (We preserve EBP, ESP, EBX, ECX, ESI and EDI.)
 ; (We return in EDX and EAX.)
 

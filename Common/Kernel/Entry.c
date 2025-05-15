@@ -55,13 +55,29 @@ uint64 Entrypoint(commonInfoTable* InfoTable) {
 
     gST = InfoTable->Firmware.Efi.Tables.SystemTable.Pointer;
 
-    gST->ConOut->SetAttribute(gST->ConOut, 0x0F);
-    gST->ConOut->OutputString(gST->ConOut, u"Hi, this is Serra! <3 ");
+    if (InfoTable->Display.Type == EfiTextDisplay) {
 
-    gST->ConOut->SetAttribute(gST->ConOut, 0x3F);
-    gST->ConOut->OutputString(gST->ConOut, u"May 15 2025");
+      gST->ConOut->SetAttribute(gST->ConOut, 0x0F);
+      gST->ConOut->OutputString(gST->ConOut, u"Hi, this is Serra! <3 ");
 
-    gST->ConOut->SetAttribute(gST->ConOut, 0x07);
+      gST->ConOut->SetAttribute(gST->ConOut, 0x3F);
+      gST->ConOut->OutputString(gST->ConOut, u"May 15 2025");
+
+      gST->ConOut->SetAttribute(gST->ConOut, 0x07);
+
+    } else {
+
+      for (uint64 y = 0; y < InfoTable->Display.Graphics.LimitY; y++) {
+
+        for (uint64 x = 0; x < (InfoTable->Display.Graphics.LimitX * InfoTable->Display.Graphics.Bits.PerPixel / 4); x++) {
+
+          *(uint8*)(InfoTable->Display.Graphics.Framebuffer.Address + (InfoTable->Display.Graphics.Pitch * y) + x) = (y * 255 / InfoTable->Display.Graphics.LimitY);
+
+        }
+
+      }
+
+    }
 
     efiInputKey PhantomKey;
     while (gST->ConIn->ReadKeyStroke(gST->ConIn, &PhantomKey) == EfiNotReady);
@@ -69,8 +85,46 @@ uint64 Entrypoint(commonInfoTable* InfoTable) {
 
   } else {
 
-    *(uint16*)0xB8280 = 0x0F + 'H';
-    *(uint16*)0xB8282 = 0x0F + 'i';
+    if (InfoTable->Display.Type == VgaDisplay) {
+
+      char* Test = "Hi, this is Serra! <3";
+      char* Test2 = "May 15 2025";
+
+      uint16* TestPtr = (uint16*)(0xB8000 + (160*3));
+      uint16* Test2Ptr = (uint16*)(0xB8000 + (160*4));
+
+      for (uint16 a = 0; a < 160; a++) {
+        TestPtr[a] = 0;
+      }
+
+      int Index = 0;
+      while (Test[Index] != '\0') {
+        TestPtr[Index] = 0x0F00 + Test[Index];
+        Index++;
+      }
+
+      Index = 0;
+      while (Test2[Index] != '\0') {
+        Test2Ptr[Index] = 0x3F00 + Test2[Index];
+        Index++;
+      }
+
+    } else {
+
+      for (uint64 y = 0; y < InfoTable->Display.Graphics.LimitY; y++) {
+
+        for (uint64 x = 0; x < (InfoTable->Display.Graphics.LimitX * InfoTable->Display.Graphics.Bits.PerPixel / 4); x++) {
+
+          *(uint8*)(InfoTable->Display.Graphics.Framebuffer.Address + (InfoTable->Display.Graphics.Pitch * y) + x) = (y * 255 / InfoTable->Display.Graphics.LimitY);
+
+        }
+
+      }
+
+      for(;;);
+
+    }
+
     return ((2UL << 32) | 1); // (2:1)
 
   }
@@ -79,6 +133,6 @@ uint64 Entrypoint(commonInfoTable* InfoTable) {
   // ...
 
   for(;;);
-  return 0x000000000; // (0:0)
+  return 0; // (0:0)
 
 }

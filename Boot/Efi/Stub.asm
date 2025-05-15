@@ -14,7 +14,7 @@ GLOBAL TransitionStub
 ; the EFI/Microsoft ABI) would, so we need to initialize a new call frame,
 ; and get arguments:
 
-; (kernelInfoTable* InfoTable [rcx], void* KernelEntrypoint [rdx], void* KernelStackTop [r8])
+; (commonInfoTable* InfoTable [rcx], void* KernelEntrypoint [rdx], void* KernelStackTop [r8])
 ; (We preserve RBX, RDI, RSI, RSP, RBP, R12, R13, R14 and R15.)
 ; (We discard RCX, RDX and R8; and return in RAX.)
 
@@ -81,5 +81,5 @@ ReturnToEfiApplication:
   pop rsi
   pop rdi
   pop rbx
-  
+
   ret

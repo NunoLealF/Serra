@@ -128,27 +128,28 @@ void S3Bootloader(void) {
   Putchar('\n', 0);
   Message(Boot, "Successfully entered the third-stage bootloader.");
 
-  // Finally, let's initialize the kernel info table; this will be useful
-  // later on.
+  // Finally, let's initialize the common info table; this will be
+  // useful later on.
 
-  kernelInfoTable KernelInfo = {0};
-  kernelBiosInfoTable KernelBiosInfo = {0};
+  // (Initialize table headers)
 
-  KernelInfo.Signature = 0x7577757E7577757E;
-  KernelInfo.Version = KernelInfoTableVersion;
-  KernelInfo.Size = sizeof(kernelInfoTable);
+  CommonInfoTable.Signature = commonInfoTableSignature;
+  CommonInfoTable.Version = commonInfoTableVersion;
+  CommonInfoTable.Size = sizeof(commonInfoTable);
 
-  // (Copy contents of TerminalTable)
+  CommonInfoTable.Firmware.Type = BiosFirmware;
+  CommonInfoTable.Image.DebugFlag = DebugFlag;
+  CommonInfoTable.System.Architecture = x64Architecture;
 
-  KernelInfo.Graphics.Type = VgaText; // Automatically updated if we find VESA support
+  // (Copy the contents of TerminalTable)
 
-  KernelInfo.Graphics.VgaText.PosX = TerminalTable.PosX;
-  KernelInfo.Graphics.VgaText.LimitX = TerminalTable.LimitX;
+  CommonInfoTable.Display.Type = VgaDisplay;
+  CommonInfoTable.Display.Text.Format = AsciiFormat;
 
-  KernelInfo.Graphics.VgaText.PosY = TerminalTable.PosY;
-  KernelInfo.Graphics.VgaText.LimitY = TerminalTable.LimitY;
-
-  KernelInfo.Graphics.VgaText.Framebuffer = TerminalTable.Framebuffer;
+  CommonInfoTable.Display.Text.XPos = TerminalTable.PosX;
+  CommonInfoTable.Display.Text.YPos = TerminalTable.PosY;
+  CommonInfoTable.Display.Text.LimitX = TerminalTable.LimitX;
+  CommonInfoTable.Display.Text.LimitY = TerminalTable.LimitY;
 
 
 
@@ -188,7 +189,6 @@ void S3Bootloader(void) {
 
   Putchar('\n', 0);
   Message(Boot, "Preparing to enable the A20 line");
-  KernelInfo.System.A20Method = ByUnknown;
 
   if (CheckA20() == true) {
 
@@ -196,7 +196,7 @@ void S3Bootloader(void) {
     // the A20 line has already been enabled (either by the firmware
     // itself, or by the BIOS function method in the bootsector).
 
-    KernelInfo.System.A20Method = ByDefault;
+    CommonInfoTable.Firmware.Bios.A20 = EnabledByDefault;
     Message(Ok, "The A20 line has already been enabled.");
 
   } else {
@@ -215,7 +215,7 @@ void S3Bootloader(void) {
 
     if (CheckA20() == true) {
 
-      KernelInfo.System.A20Method = ByKeyboard;
+      CommonInfoTable.Firmware.Bios.A20 = EnabledByKeyboard;
       Message(Ok, "The A20 line has successfully been enabled.");
 
     } else {
@@ -236,7 +236,7 @@ void S3Bootloader(void) {
 
       if (CheckA20() == true) {
 
-        KernelInfo.System.A20Method = ByFast;
+        CommonInfoTable.Firmware.Bios.A20 = EnabledByFast;
         Message(Ok, "The A20 line has successfully been enabled.");
 
       } else {
@@ -323,10 +323,9 @@ void S3Bootloader(void) {
 
   // (Write to info table)
 
-  KernelInfo.Memory.Type = BiosMmap;
-
-  KernelInfo.Memory.NumMmapEntries = NumMmapEntries;
-  KernelInfo.Memory.MemoryMap.Address = (uintptr)Mmap;
+  CommonInfoTable.Firmware.Bios.Mmap.NumEntries = NumMmapEntries;
+  CommonInfoTable.Firmware.Bios.Mmap.EntrySize = sizeof(mmapEntry);
+  CommonInfoTable.Firmware.Bios.Mmap.List.Address = (uintptr)Mmap;
 
 
 
@@ -462,8 +461,8 @@ void S3Bootloader(void) {
 
   // (Commit to info table)
 
-  KernelInfo.Memory.NumUsableMmapEntries = NumUsableMmapEntries;
-  KernelInfo.Memory.UsableMemoryMap.Address = (uintptr)UsableMmap;
+  CommonInfoTable.Memory.NumEntries = NumUsableMmapEntries;
+  CommonInfoTable.Memory.List.Address = (uintptr)UsableMmap;
 
 
 
@@ -534,11 +533,11 @@ void S3Bootloader(void) {
   // Also check for PAT support - this isn't essential, but it can help
   // with performance later on.
 
-  KernelInfo.System.PatSupported = false;
+  CommonInfoTable.Firmware.Bios.Pat.IsSupported = false;
 
   if (Cpuid_Features.Edx & (1 << 16)) {
     Message(Info, "PAT appears to be supported");
-    KernelInfo.System.PatSupported = true;
+    CommonInfoTable.Firmware.Bios.Pat.IsSupported = true;
   }
 
 
@@ -562,17 +561,18 @@ void S3Bootloader(void) {
 
   // First, we'll want to save the state of the current control registers:
 
-  KernelInfo.System.Cr0 = ReadFromControlRegister(0);
-  KernelInfo.System.Cr3 = ReadFromControlRegister(3);
-  KernelInfo.System.Cr4 = ReadFromControlRegister(4);
+  CommonInfoTable.System.Cpu.x64.ProtectionLevel = 0; // (We're in ring 0)
 
-  KernelInfo.System.Efer = ReadFromMsr(0xC0000080);
+  CommonInfoTable.System.Cpu.x64.Cr0 = ReadFromControlRegister(0);
+  CommonInfoTable.System.Cpu.x64.Cr3 = ReadFromControlRegister(3);
+  CommonInfoTable.System.Cpu.x64.Cr4 = ReadFromControlRegister(4);
+  CommonInfoTable.System.Cpu.x64.Efer = ReadFromMsr(0xC0000080);
 
   // Second, we'll want to enable the x87 FPU, which (in turn) should enable
   // MMX and 3DNow! operations as well. We do this by clearing and setting
   // a few bits in CR0:
 
-  uint32 Cr0 = ReadFromControlRegister(0);
+  uint32 Cr0 = CommonInfoTable.System.Cpu.x64.Cr0;
 
   Cr0 = setBit(Cr0, 1); // Set CR0.MP (1 << 1)
   Cr0 = clearBit(Cr0, 2); // Clear CR0.EM (1 << 2)
@@ -586,7 +586,7 @@ void S3Bootloader(void) {
   // Next, we also want to enable SSE, which is a lot simpler - we just need
   // to set bits 9 (OSFXSR) and 10 (OSXMMEXCPT) of CR4:
 
-  uint32 Cr4 = ReadFromControlRegister(4);
+  uint32 Cr4 = CommonInfoTable.System.Cpu.x64.Cr4;
 
   Cr4 = setBit(Cr4, 9); // Set CR4.OSFXSR (1 << 9)
   Cr4 = setBit(Cr4, 10); // Set CR4.OSXMMEXCPT (1 << 10)
@@ -697,19 +697,47 @@ void S3Bootloader(void) {
 
   }
 
-  // (Finally, let's store that information in the info table)
+  // (Finally, let's store that information in the common info table.)
 
   if (SupportsVbe == true) {
 
-    KernelInfo.Graphics.Type = Vesa;
+    CommonInfoTable.Display.Type = VbeDisplay;
 
-    KernelInfo.Graphics.Vesa.VbeInfoBlock.Address = (uintptr)&VbeInfo;
-    KernelInfo.Graphics.Vesa.VbeModeInfo.Address = (uintptr)&BestVbeModeInfo;
-    KernelInfo.Graphics.Vesa.CurrentVbeMode = BestVbeMode;
-    KernelInfo.Graphics.Vesa.Framebuffer = BestVbeModeInfo.Vbe2Info.Framebuffer;
+    CommonInfoTable.Display.Edid.IsSupported = SupportsEdid;
+    CommonInfoTable.Display.Edid.PreferredResolution[0] = PreferredResolution[0];
+    CommonInfoTable.Display.Edid.PreferredResolution[1] = PreferredResolution[1];
+    CommonInfoTable.Display.Edid.Table.Address = ((SupportsEdid == true) ? (uintptr)(&EdidInfo) : 0);
 
-    KernelInfo.Graphics.Vesa.EdidIsSupported = SupportsEdid;
-    KernelInfo.Graphics.Vesa.EdidInfo.Address = (uintptr)((SupportsEdid == true) ? &EdidInfo : 0);
+    CommonInfoTable.Display.Graphics.Framebuffer.Address = BestVbeModeInfo.Vbe2Info.Framebuffer;
+    CommonInfoTable.Display.Graphics.LimitX = BestVbeModeInfo.ModeInfo.X_Resolution;
+    CommonInfoTable.Display.Graphics.LimitY = BestVbeModeInfo.ModeInfo.Y_Resolution;
+
+    CommonInfoTable.Display.Graphics.Bits.PerPixel = BestVbeModeInfo.ModeInfo.BitsPerPixel;
+
+    // (For reference, this creates a mask `Num` bits wide, and shifted left
+    // by `Shift` bits, since VBE only gives us those parameters)
+
+    #define MakeColorMask(Num, Shift) (((1ULL << Num) - 1) << Shift)
+
+    if ((BestVbeModeInfo.Vbe3Info.LinearBytesPerScanLine != 0) && (VbeInfo.Version >= 0x300)) {
+
+      CommonInfoTable.Display.Graphics.Pitch = BestVbeModeInfo.Vbe3Info.LinearBytesPerScanLine;
+      CommonInfoTable.Display.Graphics.Bits.RedMask = MakeColorMask(BestVbeModeInfo.Vbe3Info.LinearRedMaskSize, BestVbeModeInfo.Vbe3Info.LinearRedBit);
+      CommonInfoTable.Display.Graphics.Bits.GreenMask = MakeColorMask(BestVbeModeInfo.Vbe3Info.LinearGreenMaskSize, BestVbeModeInfo.Vbe3Info.LinearGreenBit);
+      CommonInfoTable.Display.Graphics.Bits.BlueMask = MakeColorMask(BestVbeModeInfo.Vbe3Info.LinearBlueMaskSize, BestVbeModeInfo.Vbe3Info.LinearBlueBit);
+
+    } else {
+
+      CommonInfoTable.Display.Graphics.Pitch = BestVbeModeInfo.ModeInfo.BytesPerScanLine;
+      CommonInfoTable.Display.Graphics.Bits.RedMask = MakeColorMask(BestVbeModeInfo.ColorInfo.RedMaskSize, BestVbeModeInfo.ColorInfo.RedBit);
+      CommonInfoTable.Display.Graphics.Bits.GreenMask = MakeColorMask(BestVbeModeInfo.ColorInfo.GreenMaskSize, BestVbeModeInfo.ColorInfo.GreenBit);
+      CommonInfoTable.Display.Graphics.Bits.BlueMask = MakeColorMask(BestVbeModeInfo.ColorInfo.BlueMaskSize, BestVbeModeInfo.ColorInfo.BlueBit);
+    }
+
+    CommonInfoTable.Firmware.Bios.Vbe.IsSupported = true;
+    CommonInfoTable.Firmware.Bios.Vbe.InfoBlock.Address = (uintptr)(&VbeInfo);
+    CommonInfoTable.Firmware.Bios.Vbe.ModeInfo.Address = (uintptr)(&BestVbeModeInfo);
+    CommonInfoTable.Firmware.Bios.Vbe.ModeNumber = BestVbeMode;
 
   }
 
@@ -739,15 +767,12 @@ void S3Bootloader(void) {
 
   }
 
-  KernelInfo.System.AcpiSupported = SupportsAcpi;
-  KernelInfo.System.AcpiRsdp.Address = (uintptr)Rsdp;
-
   // Next, let's do the same, but for the SMBIOS tables:
 
-  void* SmbiosEntryPoint = GetSmbiosEntryPointTable();
+  void* SmbiosEntrypoint = GetSmbiosEntryPointTable();
   bool SupportsSmbios;
 
-  if (SmbiosEntryPoint == NULL) {
+  if (SmbiosEntrypoint == NULL) {
 
     SupportsSmbios = false;
     Message(Warning, "SMBIOS appears to be unsupported (unable to find table).");
@@ -756,14 +781,17 @@ void S3Bootloader(void) {
 
     SupportsSmbios = true;
     Message(Ok, "Successfully located SMBIOS tables.");
-    Message(Info, "SMBIOS entry point table appears to be located at %xh", (uint32)SmbiosEntryPoint);
+    Message(Info, "SMBIOS entry point table appears to be located at %xh", (uint32)SmbiosEntrypoint);
 
   }
 
-  // (Save that in info table)
+  // (Save that in the common information table)
 
-  KernelInfo.System.SmbiosSupported = SupportsSmbios;
-  KernelInfo.System.SmbiosTable.Address = (uintptr)((SupportsSmbios == true) ? SmbiosEntryPoint : 0);
+  CommonInfoTable.System.Acpi.IsSupported = SupportsAcpi;
+  CommonInfoTable.System.Acpi.Table.Address = (uintptr)Rsdp;
+
+  CommonInfoTable.System.Smbios.IsSupported = SupportsSmbios;
+  CommonInfoTable.System.Smbios.Table.Address = (uintptr)SmbiosEntrypoint;
 
 
 
@@ -794,10 +822,10 @@ void S3Bootloader(void) {
 
   }
 
-  // (Save that in the info table as well)
+  // (Commit that to the common information table as well)
 
-  KernelBiosInfo.PciBiosSupported = SupportsPciBios;
-  KernelBiosInfo.PciBiosTable.Address = ((SupportsPciBios == true) ? (uintptr)&PciBiosTable : 0);
+  CommonInfoTable.Firmware.Bios.PciBios.IsSupported = SupportsPciBios;
+  CommonInfoTable.Firmware.Bios.PciBios.Table.Address = (uintptr)&PciBiosTable;
 
 
 
@@ -821,13 +849,13 @@ void S3Bootloader(void) {
 
   Message(Info, "Successfully obtained drive/EDD-related information.");
 
-  // (Commit information to the info table)
+  // (Commit that information to the common info table)
 
-  KernelInfo.FsDisk.DiskAccessMethod = ((EddEnabled == false) ? Int13 : Int13WithEdd);
-  KernelInfo.FsDisk.DriveNumber = DriveNumber;
+  CommonInfoTable.Disk.AccessMethod = Int13Method;
 
-  KernelInfo.FsDisk.LogicalBytesPerSector = LogicalSectorSize;
-  KernelInfo.FsDisk.PhysicalBytesPerSector = PhysicalSectorSize;
+  CommonInfoTable.Disk.Int13.DriveNumber = DriveNumber;
+  CommonInfoTable.Disk.Int13.Edd.IsEnabled = EddEnabled;
+  CommonInfoTable.Disk.Int13.Edd.Table.Address = (uintptr)(&InfoTable->EddInfo);
 
   // Next, let's find the BPB (BIOS Parameter Block); this will tell us
   // more information about the filesystem.
@@ -839,7 +867,6 @@ void S3Bootloader(void) {
   #define BpbAddress (&InfoTable->Bpb[0])
 
   biosParameterBlock Bpb = *(biosParameterBlock*)(BpbAddress);
-  KernelInfo.FsDisk.Bpb.Address = (uintptr)BpbAddress;
 
   [[maybe_unused]] biosParameterBlock_Fat16 ExtendedBpb_16 = *(biosParameterBlock_Fat16*)(BpbAddress + 33);
   [[maybe_unused]] biosParameterBlock_Fat32 ExtendedBpb_32 = *(biosParameterBlock_Fat32*)(BpbAddress + 33);
@@ -1114,12 +1141,12 @@ void S3Bootloader(void) {
   // its MSR (the default value is usually 0007040600070406h, where PAT4
   // is 00h (uncached) instead of 01h (write-combining)).
 
-  #define PatMsrValue 0x0007040601070406
+  constexpr uint64 PatMsrValue = 0x0007040601070406;
 
-  if (KernelInfo.System.PatSupported == true) {
+  if (CommonInfoTable.Firmware.Bios.Pat.IsSupported == true) {
 
     WriteToMsr(patMsr, PatMsrValue);
-    KernelInfo.System.PatMsr = PatMsrValue;
+    CommonInfoTable.Firmware.Bios.Pat.Value = PatMsrValue;
 
     Message(Ok, "Updated the PAT MSR to %x:%xh.", (uint32)(PatMsrValue >> 32), (uint32)PatMsrValue);
 
@@ -1212,7 +1239,8 @@ void S3Bootloader(void) {
 
   // (Define a few variables / set up info table)
 
-  KernelInfo.Kernel.ElfHeader.Address = (uintptr)KernelHeader;
+  CommonInfoTable.Image.Type = ElfImageType;
+  CommonInfoTable.Image.Executable.Header.Address = (uintptr)KernelHeader;
 
   // (Additionally, show some extra debug information)
 
@@ -1268,16 +1296,17 @@ void S3Bootloader(void) {
   } else {
 
     KernelEntrypoint = (KernelArea + KernelTextHeader->Offset + KernelHeader->Entrypoint);
-    KernelInfo.Kernel.Entrypoint.Address = KernelEntrypoint;
+    CommonInfoTable.Image.Executable.Entrypoint.Address = KernelEntrypoint;
 
     Message(Ok, "Successfully found actual kernel entrypoint at %xh.", (uint32)KernelEntrypoint);
 
   }
 
-  // (Set up stack)
+  // (Set up the stack)
 
   KernelStack = (KernelStackArea + KernelStackSize);
-  KernelInfo.Kernel.Stack.Address = KernelStack;
+  CommonInfoTable.Image.StackTop.Address = KernelStack;
+  CommonInfoTable.Image.StackSize = KernelStackSize;
 
   Message(Ok, "Set up kernel stack (%d KiB) at %xh.", (KernelStackSize / 1024), (uint32)KernelStack);
 
@@ -1302,46 +1331,18 @@ void S3Bootloader(void) {
   Putchar('\n', 0);
   Message(Boot, "Preparing the kernel environment.");
 
-  // Let's set up the info table. We'll need to do this (TODO TODO TODO)
+  // Let's set up the remaining bits of the information table.
 
-  // (Table)
+  CommonInfoTable.Memory.PreserveUntilOffset = Offset;
 
-  // (System)
+  uint8* RawCommonInfoTable = (uint8*)(&CommonInfoTable);
+  uint16 ChecksumSize = (sizeof(CommonInfoTable) - sizeof(CommonInfoTable.Checksum));
 
-  // (Memory)
-
-  KernelInfo.Memory.PreserveOffset = Offset;
-
-  // (Fs/disk)
-
-  KernelInfo.FsDisk.PartitionOffset = 0; // (TODO TODO TODO TODO)
-
-  // (Kernel)
-
-  // (Graphics)
-
-  // (Firmware -> BIOS)
-
-  KernelInfo.Firmware.BiosInfo.Address = (uintptr)&KernelBiosInfo;
-  KernelInfo.Firmware.EfiInfo.Address = 0;
-
-  Message(Ok, "Successfully filled out kernel info table.");
-
-  // (Firmware -> BIOS -> Real mode wrapper)
-
-  KernelBiosInfo.RmWrapper.Address = 0x9E00;
-
-  Message(Ok, "Successfully filled out kernel BIOS info table.");
-
-  // (Checksum)
-
-  uint8* RawKernelInfo = (uint8*)(&KernelInfo);
-
-  for (uint16 Index = 0; Index < sizeof(kernelInfoTable); Index++) {
-    KernelInfo.Checksum += RawKernelInfo[Index];
+  for (uint16 Offset = 0; Offset < ChecksumSize; Offset++) {
+    CommonInfoTable.Checksum += RawCommonInfoTable[Offset];
   }
 
-  Message(Ok, "Successfully calculated kernel info table checksum (%xh).", KernelInfo.Checksum);
+  Message(Ok, "Successfully calculated common info table checksum (%xh).", CommonInfoTable.Checksum);
 
 
 
@@ -1352,26 +1353,57 @@ void S3Bootloader(void) {
   Message(Boot, "Transferring control to the kernel.");
 
   Message(Info, "Preparing to call TransitionStub() at %xh", &TransitionStub);
-  Message(Info, "(kernelInfoTable*) InfoTable -> %xh", (uint32)(&KernelInfo));
+  Message(Info, "(commonInfoTable*) InfoTable -> %xh", (uint32)(&CommonInfoTable));
   Message(Info, "(void*) Pml4 -> %xh", (uint32)Pml4);
 
-  /*
+
   // (TODO: Wait until we have a proper graphics implementation set up.)
 
   if (SupportsVbe == true) {
 
     Message(Info, "Setting VBE mode %d.", BestVbeMode);
-    SetVbeMode(BestVbeMode, false, true, true, NULL);
+    uint32 VbeStatusCode = SetVbeMode(BestVbeMode, false, true, true, NULL);
 
-  } */
+    // (If it didn't correctly set the VBE mode, switch back to text mode
+    // and show a warning message)
+
+    if (VbeStatusCode != 0x4F) {
+
+      CommonInfoTable.Display.Type = VgaDisplay;
+      CommonInfoTable.Firmware.Bios.Vbe.IsSupported = false;
+      SupportsVbe = false;
+
+      Table->Eax = 0x0003; // AH = 00h, AL = 03h - switch to VGA mode 03h.
+      Table->Int = 0x10; // We need to use int 10h
+      RealMode();
+
+      Message(Warning, "Failed to switch to VBE mode %d - staying on VGA text mode %xh.", BestVbeMode, 0x03);
+      Message(Info, "VBE status code was %xh.", VbeStatusCode);
+
+    }
+
+  }
 
   // (Actually transfer control to the kernel.)
 
-  uint64 nya = TransitionStub(&KernelInfo, (void*)Pml4);
+  uint64 KernelStatus = TransitionStub(&CommonInfoTable, (void*)Pml4);
 
-  Putchar('\n', 0);
-  Message(Boot, "Hopefully this works");
-  Message(Info, "nya -> %x:%xh", (uint32)(nya>>32),(uint32)nya);
+  // (If we're here, then set text mode again (if we were in VBE), and
+  // show an error message.)
+
+  if (SupportsVbe == true) {
+
+    Table->Eax = 0x0003; // AH = 00h, AL = 03h - switch to VGA mode 03h.
+    Table->Int = 0x10; // We need to use int 10h
+    RealMode();
+
+  }
+
+  DebugFlag = true;
+  Message(Info, "Entrypoint returned with a status code of %x:%xh",
+          (uint32)(KernelStatus >> 32), (uint32)KernelStatus);
+
+  Panic("Failed to load the kernel entrypoint.", 0);
 
   for(;;);
 

@@ -22,7 +22,7 @@
   // Declare functions in Bootloader.c and Stub.asm
 
   void S3Bootloader(void);
-  uint64 TransitionStub(kernelInfoTable* InfoTable, void* Pml4);
+  uint64 TransitionStub(commonInfoTable* InfoTable, void* Pml4);
 
   // Global variables, for use throughout the entire bootloader
 
@@ -32,13 +32,14 @@
     bool DebugFlag = true; // If 'Debug' isn't defined, then assume it's true
   #endif
 
-  terminalDataStruct TerminalTable;
+  terminalDataStruct TerminalTable = {0};
 
   // Kernel-related definitions.
 
   #define KernelStackSize 0x100000 // Must be a multiple of 4 KiB
 
-  uint64 KernelEntrypoint;
-  uint64 KernelStack;
+  commonInfoTable CommonInfoTable = {0};
+  uint64 KernelEntrypoint = 0;
+  uint64 KernelStack = 0;
 
 #endif

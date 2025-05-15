@@ -1575,7 +1575,8 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   // (Show message, and exit EFI application)
 
   DebugFlag = true;
-  Message(Fail, u"Kernel returned with a status of %xh.", KernelStatus);
+  Message(Error, u"Failed to load the kernel entrypoint.");
+  Message(Info, u"Entrypoint returned with a status code of %xh", KernelStatus);
 
   AppStatus = KernelStatus;
   goto ExitEfiApplication;
