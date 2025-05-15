@@ -20,11 +20,7 @@ GLOBAL TransitionStub
 
 TransitionStub:
 
-  ; Disable interrupts.
-
-  cli
-
-  ; Push all preserved registers.
+  ; (1) Push all preserved registers.
 
   push rbx
   push rdi
@@ -36,43 +32,45 @@ TransitionStub:
   push r14
   push r15
 
-  ; Store the kernel entrypoint in RBX, instead of RDX.
+  ; (2) Store the kernel entrypoint in RBX, and save the current stack
+  ; pointer in R15 - both of these are preserved by the ABI.
 
   mov rbx, rdx
-
-  ; Save the current stack pointer, so we can restore it later.
-  ; (In this case, we store RSP in R15)
-
   mov r15, rsp
 
-  ; Set the stack pointer to the one that will be used by the kernel.
+  ; (3) Set the stack pointer to the one that will be used by the
+  ; kernel (we subtract 128 bytes, just in case).
 
   mov rsp, r8
   sub rsp, 128
 
-  ; Initialize RBP and the call frame, and enable interrupts.
+  ; (4) Set up the call frame (the stack needs to be 16-byte
+  ; aligned, so we subtract 8 bytes before pushing rbp).
 
+  sub rsp, 8
   push rbp
+
   mov rbp, rsp
 
-  sti
-
-  ; Call the kernel, this time using the regular (System-V) ABI, which
-  ; makes us pass the first argument (InfoTable) in RDI:
+  ; (5) Call the kernel, this time using the regular (System-V) ABI,
+  ; which dictates we should pass the first argument (InfoTable) in RDI.
 
   mov rdi, rcx
   call rbx ; (KernelEntrypoint -> rdx -> rbx)
 
-  cli
+ReturnToEfiApplication:
 
-  ; Once it returns, we can gracefully transfer control back to the EFI
-  ; application. First, we need to restore the old base and stack pointers:
+  ; Once it returns, we can gracefully transfer control back to the
+  ; EFI application.
+
+  ; (1) First, we need to restore the old base base and stack pointers
+  ; (which are RBP and RSP, respectively):
 
   pop rbp
   mov rsp, r15
 
-  ; After that, we can pop all of the preserved registers back from the
-  ; stack, and return.
+  ; (2) Next, we can pop all of the preserved registers back from the
+  ; stack, before returning.
 
   pop r15
   pop r14
@@ -83,7 +81,5 @@ TransitionStub:
   pop rsi
   pop rdi
   pop rbx
-
-  sti
-
+  
   ret

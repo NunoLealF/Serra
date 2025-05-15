@@ -103,6 +103,10 @@ JumpToKernel:
   mov rsp, [KernelStack]
   sub rsp, 128
 
+  ; (5) Set up the call frame (the stack needs to be 16-byte
+  ; aligned, so we subtract 8 bytes before pushing rbp)
+
+  sub rsp, 8
   push rbp
 
   ; Now that we've done that, we can finally jump to the
