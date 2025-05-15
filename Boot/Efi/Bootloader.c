@@ -357,10 +357,11 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   // information about the screen we're connected to.
 
   // (Define EDID-related variables, as well as PreferredResolution[], which
-  // is set to 1024 by 768 pixels by default.)
+  // is set to the maximum value by default; GOP is smarter than VBE, so we
+  // it *probably* won't expose an unsupported resolution at mode 0.
 
   efiEdidProtocol* EdidProtocol = NULL;
-  uint16 PreferredResolution[2] = {1024, 768};
+  uint16 PreferredResolution[2] = {0xFFFF, 0xFFFF};
 
   bool SupportsEdid = false;
 
@@ -412,9 +413,10 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   // next thing we want to do is try to find the best graphics mode
   // available on our system.
 
-  // We do that by manually querying the firmware about each graphics
-  // mode, like this (criteria further down):
-
+  // If EDID is available, we do that by manually querying the firmware
+  // about each mode (criteria further down) - otherwise, we just pick
+  // mode 0, since that's guaranteed to work on all hardware.
+  
   uint32 GopMode = 0;
 
   uint8 GopColorDepth = 0;
@@ -426,8 +428,9 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
     Message(Boot, u"Attempting to find the best graphics mode.");
 
     // Just like with EFI text mode, we also need to find MaxMode:
+    // (If EDID isn't enabled, only query mode 0.)
 
-    uint32 MaxMode = GopProtocol->Mode->MaxMode;
+    uint32 MaxMode = ((SupportsEdid == true) ? GopProtocol->Mode->MaxMode : 1);
 
     // Now that we know the mode limit, we can manually go through each
     // mode and try to find the best one, if possible.

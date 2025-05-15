@@ -121,7 +121,9 @@ uint64 Entrypoint(commonInfoTable* InfoTable) {
 
       }
 
-      for(;;);
+      for (uint64 a = 0; a < 100000000; a++) {
+        __asm__ __volatile__ ("nop");
+      }
 
     }
 
