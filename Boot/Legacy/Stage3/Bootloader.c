@@ -1386,10 +1386,13 @@ void S3Bootloader(void) {
 
   // (Actually transfer control to the kernel.)
 
+  SaveState();
   uint64 KernelStatus = TransitionStub(&CommonInfoTable, (void*)Pml4);
 
   // (If we're here, then set text mode again (if we were in VBE), and
   // show an error message.)
+
+  RestoreState();
 
   if (SupportsVbe == true) {
 
