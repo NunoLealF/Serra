@@ -205,7 +205,7 @@ Shared/Graphics/Graphics.o:
 
 Shared/Memory/Memory.o:
 	@echo "Building $@"
-	@$(CC) $(CFLAGS) -c Shared/Memory/Memory.c -o Shared/Memory/Memory.o
+	@$(CC) $(CFLAGS) -mmmx -msse -msse2 -c Shared/Memory/Memory.c -o Shared/Memory/Memory.o
 
 Shared/Rm/Rm.bin:
 	@echo "Building $@"

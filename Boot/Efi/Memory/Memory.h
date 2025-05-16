@@ -13,6 +13,13 @@
   void Memset(void* Buffer, uint8 Character, uint64 Size);
   void Memswap(void* BufferA, void* BufferB, uint64 Size);
 
+  // SSE-optimized memory functions (SseMemcpy, etc.), from Memory.c.
+  // (These functions only copy 256 bytes at a time, and addresses must
+  // be 16-byte aligned).
+
+  void SseMemcpy(void* Destination, const void* Source, uint64 Size);
+  void SseMemset(void* Buffer, uint8 Character, uint64 Size);
+
   // Even in a freestanding environment, compilers will sometimes still
   // emit calls to memcpy, memcmp, memset and memmove, so we need to
   // provide wrappers for those.

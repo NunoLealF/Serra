@@ -242,3 +242,106 @@ void Memswap(void* BufferA, void* BufferB, uint64 Size) {
   Memcpy(BufferB, AuxBuffer, Size);
 
 }
+
+
+
+// (TODO: Write documentation / SSE memcpy)
+
+// (!) This function only copies 256 bytes at a time, and addresses
+// *must* be 16-byte aligned.
+
+void SseMemcpy(void* Destination, const void* Source, uint64 Size) {
+
+  // Translate each (const) void* pointer into a uint64 address.
+
+  uint64 DestinationAddress = (uint64)Destination;
+  uint64 SourceAddress = (uint64)Source;
+
+  // Copy 256 bytes at a time, using XMM registers 0 through 15.
+  // (This requires SSE to be enabled.)
+
+  uint64 NumBlocksLeft = (Size / 256);
+
+  while (NumBlocksLeft > 0) {
+
+    // (Use `movdqa` to move 128-bit (16 byte) blocks at a time into an XMM
+    // register, and `movntdq` to move it back into memory)
+
+    __asm__ __volatile__ ("movdqa 0(%%rsi), %%xmm0;"
+                          "movdqa 16(%%rsi), %%xmm1;"
+                          "movdqa 32(%%rsi), %%xmm2;"
+                          "movdqa 48(%%rsi), %%xmm3;"
+                          "movdqa 64(%%rsi), %%xmm4;"
+                          "movdqa 80(%%rsi), %%xmm5;"
+                          "movdqa 96(%%rsi), %%xmm6;"
+                          "movdqa 112(%%rsi), %%xmm7;"
+                          "movdqa 128(%%rsi), %%xmm8;"
+                          "movdqa 144(%%rsi), %%xmm9;"
+                          "movdqa 160(%%rsi), %%xmm10;"
+                          "movdqa 176(%%rsi), %%xmm11;"
+                          "movdqa 192(%%rsi), %%xmm12;"
+                          "movdqa 208(%%rsi), %%xmm13;"
+                          "movdqa 224(%%rsi), %%xmm14;"
+                          "movdqa 240(%%rsi), %%xmm15;"
+                          "movntdq %%xmm0, 0(%%rdi);"
+                          "movntdq %%xmm1, 16(%%rdi);"
+                          "movntdq %%xmm2, 32(%%rdi);"
+                          "movntdq %%xmm3, 48(%%rdi);"
+                          "movntdq %%xmm4, 64(%%rdi);"
+                          "movntdq %%xmm5, 80(%%rdi);"
+                          "movntdq %%xmm6, 96(%%rdi);"
+                          "movntdq %%xmm7, 112(%%rdi);"
+                          "movntdq %%xmm8, 128(%%rdi);"
+                          "movntdq %%xmm9, 144(%%rdi);"
+                          "movntdq %%xmm10, 160(%%rdi);"
+                          "movntdq %%xmm11, 176(%%rdi);"
+                          "movntdq %%xmm12, 192(%%rdi);"
+                          "movntdq %%xmm13, 208(%%rdi);"
+                          "movntdq %%xmm14, 224(%%rdi);"
+                          "movntdq %%xmm15, 240(%%rdi);"
+                          :: "S"(SourceAddress), "D"(DestinationAddress) :
+                          "memory", "xmm0", "xmm1", "xmm2", "xmm3", "xmm4",
+                          "xmm5", "xmm6", "xmm7", "xmm8", "xmm9", "xmm10",
+                          "xmm11", "xmm12", "xmm13", "xmm14", "xmm15");
+
+    NumBlocksLeft--;
+
+    SourceAddress += 256;
+    DestinationAddress += 256;
+
+  }
+
+  // Return.
+
+  return;
+
+}
+
+
+
+// (TODO: Write documentation / SSE memset)
+
+// (!) This function only sets 256 bytes at a time, and addresses
+// *must* be 16-byte aligned.
+
+void SseMemset(void* Buffer, uint8 Character, uint64 Size) {
+
+  // Create a 256-byte buffer, and fill it with our character of
+  // choice using the regular Memset function.
+
+  char Temp[256] __attribute__((aligned(16)));
+  Memset(Temp, Character, 256);
+
+  // Using SseMemcpy, copy from TempBuffer as many times as necessary.
+
+  uint64 Address = (uint64)Buffer;
+  uint64 Offset = 0;
+
+  while (Offset < Size) {
+    SseMemcpy((void*)(Address + Offset), (const void*)Temp, 256);
+    Offset += 256;
+  }
+
+  return;
+
+}
