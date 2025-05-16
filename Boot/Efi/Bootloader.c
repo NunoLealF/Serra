@@ -1554,15 +1554,33 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
     CommonInfoTable.Checksum += RawCommonInfoTable[Offset];
   }
 
+  // If we're in ring 0, then disable interrupts, since we change the stack
+  // pointer (most systems are fine without this, but not all!)
+
+  if (CommonInfoTable.System.Cpu.x64.ProtectionLevel == 0) {
+    __asm__ __volatile__ ("cli");
+  }
+
   // Finally, transfer control to the kernel - we keep track of the return
-  // status, in case something goes wrong
+  // status, in case something goes wrong.
 
   uint64 KernelStatus = TransitionStub(&CommonInfoTable, KernelEntrypoint, KernelStackTop);
 
-  // If the kernel *does* return, then we need to show the return status,
-  // like this:
 
-  // (If it was enabled, then disable graphics mode)
+
+  // [Restore the EFI application environment, and show return status]
+
+  // If the kernel *does* return, then we need to switch back into text
+  // mode and show the return status (before exiting the application),
+  // which we can do like this:
+
+  // (If we're in ring 0, re-enable interrupts.)
+
+  if (CommonInfoTable.System.Cpu.x64.ProtectionLevel == 0) {
+    __asm__ __volatile__ ("sti");
+  }
+
+  // (Disable graphics/GOP mode, if it was enabled earlier.)
 
   if (SupportsGop == true) {
 

@@ -22,6 +22,9 @@ TransitionStub:
 
   ; (1) Push all preserved registers.
 
+  push rbp
+  mov rbp, rsp
+
   push rbx
   push rdi
   push rsi
@@ -81,5 +84,7 @@ ReturnToEfiApplication:
   pop rsi
   pop rdi
   pop rbx
+
+  pop rbp
 
   ret
