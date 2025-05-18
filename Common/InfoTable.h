@@ -79,7 +79,7 @@
   */
 
   #define commonInfoTableSignature 0x7577757E7577757E
-  #define commonInfoTableVersion 3
+  #define commonInfoTableVersion 4
 
   typedef struct _commonInfoTable {
 
@@ -336,11 +336,9 @@
 
         struct {
 
-          uint64 Cr0, Cr3, Cr4; // (optional if ProtectionLevel != 0)
-          uint64 Efer; // (optional if ProtectionLevel != 0)
-          uint64 Pml4; // (optional if ProtectionLevel != 0)
-
-          uint8 ProtectionLevel;
+          uint64 Cr0, Cr3, Cr4;
+          uint64 Efer;
+          uint64 Pml4;
 
         } __attribute__((packed)) x64;
 

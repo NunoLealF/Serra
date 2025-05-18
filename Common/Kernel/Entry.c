@@ -53,7 +53,7 @@ uint64 Entrypoint(commonInfoTable* InfoTable) {
 
   if (InfoTable->Firmware.Type == EfiFirmware) {
 
-    if (InfoTable->System.Cpu.x64.ProtectionLevel == 0) __asm__ __volatile__ ("sti");
+    __asm__ __volatile__ ("sti");
 
     gST = InfoTable->Firmware.Efi.Tables.SystemTable.Pointer;
 
@@ -87,7 +87,7 @@ uint64 Entrypoint(commonInfoTable* InfoTable) {
 
     ReturnToEfi:
 
-    if (InfoTable->System.Cpu.x64.ProtectionLevel == 0) __asm__ __volatile__ ("cli");
+    __asm__ __volatile__ ("cli");
     return ((2UL << 32) | 0); // (2:0)
 
   } else {

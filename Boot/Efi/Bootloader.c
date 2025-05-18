@@ -120,55 +120,49 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   // with BIOS, we don't actually have any guarantee that we're in ring 0.
 
   // That introduces a problem, because if we're not in ring 0, then we can't
-  // execute any privileged instructions, which limits what we can do; so, in
-  // order to guarantee we won't crash the system, we need to get the CPL.
-
-  // (The bootloader will still run on any protection level, even ring 3,
-  // but it won't be able to use all features unless it's in ring 0)
+  // execute any privileged instructions, which limits what we can do, so in
+  // order to guarantee we won't crash the system, we need to make sure
+  // we're in ring 0.
 
   uint8 Cpl = GetCpuProtectionLevel();
-  CommonInfoTable.System.Cpu.x64.ProtectionLevel = Cpl;
+
+  if (Cpl != 0) {
+    return EfiUnsupported;
+  }
 
   // Now that we're aware of the CPU privilege level, we can move onto the
   // next step, which is to make sure SSE (and other x64 features) are
   // enabled, since some firmware doesn't do that by default.
 
-  // (This requires the system to be in ring 0 (supervisor mode))
+  // Before we do that though, let's save the current state of the
+  // control registers:
 
-  if (Cpl == 0) {
+  CommonInfoTable.System.Cpu.x64.Cr0 = ReadFromControlRegister(0);
+  CommonInfoTable.System.Cpu.x64.Cr3 = ReadFromControlRegister(3);
+  CommonInfoTable.System.Cpu.x64.Cr4 = ReadFromControlRegister(4);
+  CommonInfoTable.System.Cpu.x64.Efer = ReadFromMsr(0xC0000080);
 
-    // Before we do that though, let's save the current state of the
-    // control registers:
+  // Now that we've saved the current state of the control registers, we
+  // can move onto modifying them to enable the features we want.
 
-    CommonInfoTable.System.Cpu.x64.Cr0 = ReadFromControlRegister(0);
-    CommonInfoTable.System.Cpu.x64.Cr3 = ReadFromControlRegister(3);
-    CommonInfoTable.System.Cpu.x64.Cr4 = ReadFromControlRegister(4);
-    CommonInfoTable.System.Cpu.x64.Efer = ReadFromMsr(0xC0000080);
+  // (Enable the FPU, by setting the necessary bits in CR0)
 
-    // Now that we've saved the current state of the control registers, we
-    // can move onto modifying them to enable the features we want.
+  uint64 Cr0 = ReadFromControlRegister(0);
 
-    // (Enable the FPU, by setting the necessary bits in CR0)
+  Cr0 = setBit(Cr0, 1); // Set CR0.MP (1 << 1)
+  Cr0 = setBit(Cr0, 4); // Set CR0.ET (1 << 4)
+  Cr0 = setBit(Cr0, 5); // Set CR0.NE (1 << 5)
 
-    uint64 Cr0 = ReadFromControlRegister(0);
+  WriteToControlRegister(0, Cr0);
 
-    Cr0 = setBit(Cr0, 1); // Set CR0.MP (1 << 1)
-    Cr0 = setBit(Cr0, 4); // Set CR0.ET (1 << 4)
-    Cr0 = setBit(Cr0, 5); // Set CR0.NE (1 << 5)
+  // (Enable SSE, by setting the necessary bits in CR4)
 
-    WriteToControlRegister(0, Cr0);
+  uint64 Cr4 = ReadFromControlRegister(4);
 
-    // (Enable SSE, by setting the necessary bits in CR4)
+  Cr4 = setBit(Cr4, 9); // Set CR4.OSFXSR (1 << 9)
+  Cr4 = setBit(Cr4, 10); // Set CR4.OSXMMEXCPT (1 << 10)
 
-    uint64 Cr4 = ReadFromControlRegister(4);
-
-    Cr4 = setBit(Cr4, 9); // Set CR4.OSFXSR (1 << 9)
-    Cr4 = setBit(Cr4, 10); // Set CR4.OSXMMEXCPT (1 << 10)
-
-    WriteToControlRegister(4, Cr4);
-
-  }
-
+  WriteToControlRegister(4, Cr4);
 
 
 
@@ -280,12 +274,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   Message(Boot, u"Successfully initialized the console.");
 
   Message(Info, u"This system's EFI revision is %d.%d", (uint64)((gST->Hdr.Revision >> 16) & 0xFF), (uint64)(gST->Hdr.Revision & 0xFF));
-  Message(Info, u"This system is running in ring %d", (uint64)Cpl);
   Message(Info, u"Using text mode %d, with a %d*%d character resolution", ConOutMode, ConOutResolution[0], ConOutResolution[1]);
-
-  if (Cpl > 0) {
-    Message(Warning, u"System not running in ring 0; usability may be seriously limited.");
-  }
 
 
 
@@ -416,7 +405,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   // If EDID is available, we do that by manually querying the firmware
   // about each mode (criteria further down) - otherwise, we just pick
   // mode 0, since that's guaranteed to work on all hardware.
-  
+
   uint32 GopMode = 0;
 
   uint8 GopColorDepth = 0;
@@ -1554,13 +1543,6 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
     CommonInfoTable.Checksum += RawCommonInfoTable[Offset];
   }
 
-  // If we're in ring 0, then disable interrupts, since we change the stack
-  // pointer (most systems are fine without this, but not all!)
-
-  if (CommonInfoTable.System.Cpu.x64.ProtectionLevel == 0) {
-    __asm__ __volatile__ ("cli");
-  }
-
   // Finally, transfer control to the kernel - we keep track of the return
   // status, in case something goes wrong.
 
@@ -1573,12 +1555,6 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   // If the kernel *does* return, then we need to switch back into text
   // mode and show the return status (before exiting the application),
   // which we can do like this:
-
-  // (If we're in ring 0, re-enable interrupts.)
-
-  if (CommonInfoTable.System.Cpu.x64.ProtectionLevel == 0) {
-    __asm__ __volatile__ ("sti");
-  }
 
   // (Disable graphics/GOP mode, if it was enabled earlier.)
 
@@ -1687,16 +1663,12 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
     FreePoolIfAllocated(Mmap);
     FreePoolIfAllocated(UsableMmap);
 
-    // If we're in ring 0, then restore the initial values of the CR0 and
-    // CR4 registers, since we modified them early on.
+    // Restore the initial values of the CR0 and CR4 registers, since we
+    // modified them early on.
 
-    if (Cpl == 0) {
-
-      WriteToControlRegister(0, CommonInfoTable.System.Cpu.x64.Cr0); // Restore CR0
-      WriteToControlRegister(3, CommonInfoTable.System.Cpu.x64.Cr3); // Restore CR3
-      WriteToControlRegister(4, CommonInfoTable.System.Cpu.x64.Cr4); // Restore CR4
-
-    }
+    WriteToControlRegister(0, CommonInfoTable.System.Cpu.x64.Cr0);
+    WriteToControlRegister(3, CommonInfoTable.System.Cpu.x64.Cr3);
+    WriteToControlRegister(4, CommonInfoTable.System.Cpu.x64.Cr4);
 
     // If gBS isn't NULL (meaning that it's valid), then try to exit using
     // gBS->Exit() - this lets us provide an exit message

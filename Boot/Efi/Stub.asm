@@ -35,19 +35,23 @@ TransitionStub:
   push r14
   push r15
 
-  ; (2) Store the kernel entrypoint in RBX, and save the current stack
+  ; (2) Disable interrupts - we can reenable them later, though.
+
+  cli
+
+  ; (3) Store the kernel entrypoint in RBX, and save the current stack
   ; pointer in R15 - both of these are preserved by the ABI.
 
   mov rbx, rdx
   mov r15, rsp
 
-  ; (3) Set the stack pointer to the one that will be used by the
+  ; (4) Set the stack pointer to the one that will be used by the
   ; kernel (we subtract 128 bytes, just in case).
 
   mov rsp, r8
   sub rsp, 128
 
-  ; (4) Set up the call frame (the stack needs to be 16-byte
+  ; (5) Set up the call frame (the stack needs to be 16-byte
   ; aligned, so we subtract 8 bytes before pushing rbp).
 
   sub rsp, 8
@@ -55,7 +59,7 @@ TransitionStub:
 
   mov rbp, rsp
 
-  ; (5) Call the kernel, this time using the regular (System-V) ABI,
+  ; (6) Call the kernel, this time using the regular (System-V) ABI,
   ; which dictates we should pass the first argument (InfoTable) in RDI.
 
   mov rdi, rcx
@@ -66,13 +70,18 @@ ReturnToEfiApplication:
   ; Once it returns, we can gracefully transfer control back to the
   ; EFI application.
 
-  ; (1) First, we need to restore the old base base and stack pointers
-  ; (which are RBP and RSP, respectively):
+  ; (1) First, we need to disable interrupts again, in case they've
+  ; been enabled:
+
+  cli
+
+  ; (2) Second, we need to restore the old base base and stack
+  ; pointers (RBP and RSP, respectively):
 
   pop rbp
   mov rsp, r15
 
-  ; (2) Next, we can pop all of the preserved registers back from the
+  ; (3) Next, we can pop all of the preserved registers back from the
   ; stack, before returning.
 
   pop r15

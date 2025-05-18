@@ -561,8 +561,6 @@ void S3Bootloader(void) {
 
   // First, we'll want to save the state of the current control registers:
 
-  CommonInfoTable.System.Cpu.x64.ProtectionLevel = 0; // (We're in ring 0)
-
   CommonInfoTable.System.Cpu.x64.Cr0 = ReadFromControlRegister(0);
   CommonInfoTable.System.Cpu.x64.Cr3 = ReadFromControlRegister(3);
   CommonInfoTable.System.Cpu.x64.Cr4 = ReadFromControlRegister(4);

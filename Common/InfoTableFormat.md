@@ -163,17 +163,15 @@ Size `uint16`
 
 - - System\~Acpi.Table `uptr`
 
-- - - System\~Cpu\~x64.ProtectionLevel `uint8`
+- - - System\~Cpu\~x64.Cr0 `uint64`
 
-- - - System\~Cpu\~x64.Cr0 `uint64` *optional if .ProtectionLevel != 0*
+- - - System\~Cpu\~x64.Cr3 `uint64`
 
-- - - System\~Cpu\~x64.Cr3 `uint64` *optional if .ProtectionLevel != 0*
+- - - System\~Cpu\~x64.Cr4 `uint64`
 
-- - - System\~Cpu\~x64.Cr4 `uint64` *optional if .ProtectionLevel != 0*
+- - - System\~Cpu\~x64.Efer `uint64`
 
-- - - System\~Cpu\~x64.Efer `uint64` *optional if .ProtectionLevel != 0*
-
-- - - System\~Cpu\~x64.Pml4 `uint64` *optional if .ProtectionLevel != 0*
+- - - System\~Cpu\~x64.Pml4 `uint64`
 
 - - System\~Smbios.IsSupported `bool`
 
