@@ -31,6 +31,12 @@
     bool DebugFlag = true; // If 'Debug' isn't defined, then assume it's true
   #endif
 
+  #ifdef Graphical
+    bool GraphicalFlag = Graphical; // Defined by the preprocessor, use -DGraphical=true or false.
+  #else
+    bool GraphicalFlag = true; // If 'Graphical' isn't defined, then assume it's true
+  #endif
+
   bool SupportsConIn = true;
   bool SupportsConOut = true;
 

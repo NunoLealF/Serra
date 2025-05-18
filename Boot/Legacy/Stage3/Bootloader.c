@@ -608,12 +608,15 @@ void S3Bootloader(void) {
   // because VBE versions before 2.0 don't have support for linear
   // framebuffers, and because VBE lets us deal with graphics modes.)
 
+  // (We also skip this step if graphics support is explicitly disabled,
+  // which you can do by defining `Graphical` as false in makefile.config)
+
   volatile vbeInfoBlock VbeInfo = {0};
   uint32 VbeReturnStatus = GetVbeInfoBlock(&VbeInfo);
 
   bool SupportsVbe;
 
-  if ((VbeReturnStatus != 0x004F) || (VbeInfo.Version < 0x200)) {
+  if ((VbeReturnStatus != 0x004F) || (VbeInfo.Version < 0x200) || (GraphicalFlag == false)) {
 
     SupportsVbe = false;
     Message(Warning, "VBE (2.0+) appears to be unsupported.");
@@ -1510,6 +1513,8 @@ void S3Bootloader(void) {
     }
 
   }
+
+  Putchar('\n', 0);
 
   // (Actually transfer control to the kernel.)
 

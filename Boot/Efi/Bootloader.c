@@ -297,50 +297,63 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
   bool SupportsGop = false;
 
-  // (Use LocateHandleBuffer() with `ByProtocol` to locate *every* handle
-  // that supports efiGraphicsOutputProtocol)
+  // If graphics support is enabled, use LocateHandleBuffer() with ByProtocol
+  // to locate *every* handle that supports efiGraphicsOutputProtocol.
 
-  AppStatus = gBS->LocateHandleBuffer(ByProtocol, &efiGraphicsOutputProtocol_Uuid, NULL, &NumGopHandles, &GopHandles);
+  if (GraphicalFlag == true) {
 
-  if ((AppStatus == EfiSuccess) && (NumGopHandles > 0)) {
+    AppStatus = gBS->LocateHandleBuffer(ByProtocol, &efiGraphicsOutputProtocol_Uuid, NULL, &NumGopHandles, &GopHandles);
 
-    Message(Ok, u"Located %d GOP handle(s) at %xh.", NumGopHandles, (uint64)GopHandles);
-    HasOpenedGopHandles = true;
+    if ((AppStatus == EfiSuccess) && (NumGopHandles > 0)) {
 
-  }
-
-  // (Open the first working handle that supports GOP; in theory every handle
-  // returned by LocateHandleBuffer() *should* work, but you never know~)
-
-  efiGraphicsOutputProtocol* GopProtocol = NULL;
-  efiHandle GopProtocolHandle = GopHandles[0];
-
-  for (uint64 HandleNum = 0; HandleNum < NumGopHandles; HandleNum++) {
-
-    // (Initialize variables)
-
-    GopProtocol = NULL;
-    GopProtocolHandle = GopHandles[HandleNum];
-
-    // (Try to open a efiGraphicsOutputProtocol instance from this handle)
-
-    AppStatus = gBS->OpenProtocol(GopProtocolHandle, &efiGraphicsOutputProtocol_Uuid, (void**)&GopProtocol, ImageHandle, NULL, 1);
-
-    if ((AppStatus == EfiSuccess) && (GopProtocol != NULL)) {
-
-      HasOpenedGopProtocols = true;
-      SupportsGop = true;
-
-      Message(Ok, u"Located a valid GOP instance at handle %d.", HandleNum);
-      break;
-
-    } else {
-
-      Message(Warning, u"Skipped invalid GOP handle %d.", HandleNum);
+      Message(Ok, u"Located %d GOP handle(s) at %xh.", NumGopHandles, (uint64)GopHandles);
+      HasOpenedGopHandles = true;
 
     }
 
   }
+
+  // Open the first working handle that supports GOP; in theory every handle
+  // returned by LocateHandleBuffer() *should* work, but you never know~
+
+  efiGraphicsOutputProtocol* GopProtocol = NULL;
+  efiHandle GopProtocolHandle;
+
+  // (Make sure graphics support is enabled, obviously)
+
+  if (HasOpenedGopHandles == true) {
+
+    GopProtocolHandle = GopHandles[0];
+
+    for (uint64 HandleNum = 0; HandleNum < NumGopHandles; HandleNum++) {
+
+      // (Initialize variables)
+
+      GopProtocol = NULL;
+      GopProtocolHandle = GopHandles[HandleNum];
+
+      // (Try to open a efiGraphicsOutputProtocol instance from this handle)
+
+      AppStatus = gBS->OpenProtocol(GopProtocolHandle, &efiGraphicsOutputProtocol_Uuid, (void**)&GopProtocol, ImageHandle, NULL, 1);
+
+      if ((AppStatus == EfiSuccess) && (GopProtocol != NULL)) {
+
+        HasOpenedGopProtocols = true;
+        SupportsGop = true;
+
+        Message(Ok, u"Located a valid GOP instance at handle %d.", HandleNum);
+        break;
+
+      } else {
+
+        Message(Warning, u"Skipped invalid GOP handle %d.", HandleNum);
+
+      }
+
+    }
+
+  }
+
 
   // We also want to check for EDID (Extended Display Identification Data).
   // In theory, this should be supported on most systems, and provide us with
@@ -1570,7 +1583,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   Message(Info, u"(function) TransitionStub() is at %xh", (uint64)(&TransitionStub));
   Message(Info, u"(commonInfoTable*) CommonInfoTable is at %xh", (uint64)(&CommonInfoTable));
   Message(Info, u"(void*) KernelEntrypoint is at %xh", (uint64)KernelEntrypoint);
-  Message(Info, u"(void*) KernelStackTop is at %xh", (uint64)KernelStackTop);
+  Message(Info, u"(void*) KernelStackTop is at %xh \n\r", (uint64)KernelStackTop);
 
   // (If GOP is enabled, enable a graphics mode, and fill out information)
 
@@ -1684,6 +1697,8 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   // (Show message, and exit EFI application)
 
   DebugFlag = true;
+
+  Print(u"\n\r", 0);
   Message(Error, u"Failed to load the kernel entrypoint.");
   Message(Info, u"Entrypoint returned with a status code of %xh", KernelStatus);
 

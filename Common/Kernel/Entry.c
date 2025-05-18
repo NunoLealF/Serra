@@ -63,9 +63,10 @@ uint64 Entrypoint(commonInfoTable* InfoTable) {
       gST->ConOut->OutputString(gST->ConOut, u"Hi, this is Serra! <3 ");
 
       gST->ConOut->SetAttribute(gST->ConOut, 0x3F);
-      gST->ConOut->OutputString(gST->ConOut, u"May 15 2025");
+      gST->ConOut->OutputString(gST->ConOut, u"May 18 2025");
 
       gST->ConOut->SetAttribute(gST->ConOut, 0x07);
+      gST->ConOut->OutputString(gST->ConOut, u"\n\r");
 
     } else {
 
@@ -95,7 +96,7 @@ uint64 Entrypoint(commonInfoTable* InfoTable) {
     if (InfoTable->Display.Type == VgaDisplay) {
 
       char* Test = "Hi, this is Serra! <3";
-      char* Test2 = "May 15 2025";
+      char* Test2 = "May 18 2025";
 
       uint16* TestPtr = (uint16*)(0xB8000 + (160*3));
       uint16* Test2Ptr = (uint16*)(0xB8000 + (160*4));
@@ -115,6 +116,8 @@ uint64 Entrypoint(commonInfoTable* InfoTable) {
         Test2Ptr[Index] = 0x3F00 + Test2[Index];
         Index++;
       }
+
+      for(;;);
 
     } else {
 
