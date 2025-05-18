@@ -292,6 +292,13 @@ void SseMemcpy(void* Destination, const void* Source, uint32 Size) {
 
   }
 
+  // If there's still anything left to copy, then copy it with the regular
+  // (non-SSE) Memcpy.
+
+  if ((Size % 128) != 0) {
+    Memcpy((void*)DestinationAddress, (const void*)SourceAddress, (Size % 128));
+  }
+
   // Return.
 
   return;
@@ -321,6 +328,13 @@ void SseMemset(void* Buffer, uint8 Character, uint32 Size) {
   while (Offset < Size) {
     SseMemcpy((void*)(Address + Offset), (const void*)Temp, 128);
     Offset += 128;
+  }
+
+  // If there's still anything left to set, then set it with the regular
+  // (non-SSE) Memset.
+
+  if ((Size % 128) != 0) {
+    Memset((void*)(Address + Offset), Character, (Size % 128));
   }
 
   return;
