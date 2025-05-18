@@ -248,7 +248,7 @@ void Memswap(void* BufferA, void* BufferB, uint64 Size) {
 // (TODO: Write documentation / SSE memcpy)
 
 // (!) This function only copies 256 bytes at a time, and addresses
-// *must* be 16-byte aligned.
+// *should* be 16-byte aligned.
 
 void SseMemcpy(void* Destination, const void* Source, uint64 Size) {
 
@@ -256,6 +256,19 @@ void SseMemcpy(void* Destination, const void* Source, uint64 Size) {
 
   uint64 DestinationAddress = (uint64)Destination;
   uint64 SourceAddress = (uint64)Source;
+
+  // If our addresses aren't 16-byte aligned, then manually copy the
+  // 'remainder' using Memcpy.
+
+  if ((SourceAddress % 16) != 0) {
+
+    uint8 Remainder = (16 - (SourceAddress % 16));
+    Memcpy(Destination, Source, Remainder);
+
+    SourceAddress += Remainder;
+    DestinationAddress += Remainder;
+
+  }
 
   // Copy 256 bytes at a time, using XMM registers 0 through 15.
   // (This requires SSE to be enabled.)
@@ -329,7 +342,7 @@ void SseMemcpy(void* Destination, const void* Source, uint64 Size) {
 // (TODO: Write documentation / SSE memset)
 
 // (!) This function only sets 256 bytes at a time, and addresses
-// *must* be 16-byte aligned.
+// *should* be 16-byte aligned.
 
 void SseMemset(void* Buffer, uint8 Character, uint64 Size) {
 
@@ -339,10 +352,24 @@ void SseMemset(void* Buffer, uint8 Character, uint64 Size) {
   char Temp[256] __attribute__((aligned(16)));
   Memset(Temp, Character, 256);
 
-  // Using SseMemcpy, copy from TempBuffer as many times as necessary.
+  // (Declare other variables)
 
   uint64 Address = (uint64)Buffer;
   uint64 Offset = 0;
+
+  // If our address isn't 16-byte aligned, then Memset the non-
+  // -aligned bytes.
+
+  if ((Address % 16) != 0) {
+
+    uint8 Remainder = (16 - (Address % 16));
+    Memset(Buffer, Character, Remainder);
+
+    Offset += Remainder;
+
+  }
+
+  // Using SseMemcpy, copy from TempBuffer as many times as necessary.
 
   while (Offset < Size) {
 

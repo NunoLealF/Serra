@@ -246,7 +246,7 @@ void Memswap(void* BufferA, void* BufferB, uint32 Size) {
 // (TODO: Write documentation / SSE memcpy)
 
 // (!) This function only copies 128 bytes at a time, and addresses
-// *must* be 16-byte aligned.
+// *should* be 16-byte aligned.
 
 void SseMemcpy(void* Destination, const void* Source, uint32 Size) {
 
@@ -254,6 +254,19 @@ void SseMemcpy(void* Destination, const void* Source, uint32 Size) {
 
   uint32 DestinationAddress = (uint32)Destination;
   uint32 SourceAddress = (uint32)Source;
+
+  // If our addresses aren't 16-byte aligned, then manually copy the
+  // 'remainder' using Memcpy.
+
+  if ((SourceAddress % 16) != 0) {
+
+    uint8 Remainder = (16 - (SourceAddress % 16));
+    Memcpy(Destination, Source, Remainder);
+
+    SourceAddress += Remainder;
+    DestinationAddress += Remainder;
+
+  }
 
   // Copy 128 bytes at a time, using XMM registers 0 through 7.
   // (This requires SSE to be enabled - *do not use from Stage2*)
@@ -310,7 +323,7 @@ void SseMemcpy(void* Destination, const void* Source, uint32 Size) {
 // (TODO: Write documentation / SSE memset)
 
 // (!) This function only sets 128 bytes at a time, and addresses
-// *must* be 16-byte aligned.
+// *should* be 16-byte aligned.
 
 void SseMemset(void* Buffer, uint8 Character, uint32 Size) {
 
@@ -320,14 +333,30 @@ void SseMemset(void* Buffer, uint8 Character, uint32 Size) {
   char Temp[128] __attribute__((aligned(16)));
   Memset(Temp, Character, 128);
 
-  // Using SseMemcpy, copy from TempBuffer as many times as necessary.
+  // (Declare other variables)
 
   uint32 Address = (uint32)Buffer;
   uint32 Offset = 0;
 
+  // If our address isn't 16-byte aligned, then Memset the non-
+  // -aligned bytes.
+
+  if ((Address % 16) != 0) {
+
+    uint8 Remainder = (16 - (Address % 16));
+    Memset(Buffer, Character, Remainder);
+
+    Offset += Remainder;
+
+  }
+
+  // Using SseMemcpy, copy from TempBuffer as many times as necessary.
+
   while (Offset < Size) {
+
     SseMemcpy((void*)(Address + Offset), (const void*)Temp, 128);
     Offset += 128;
+
   }
 
   // If there's still anything left to set, then set it with the regular

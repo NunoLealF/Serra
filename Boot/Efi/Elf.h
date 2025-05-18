@@ -5,7 +5,7 @@
 #ifndef SERRA_ELF_H
 #define SERRA_ELF_H
 
-  // ELF-related structures, from Elf.c
+  // ELF-related structures, from Bootloader.c
 
   typedef struct _elfHeader {
 

@@ -24,14 +24,17 @@ TransitionStub:
   push ebp
   mov ebp, esp
 
-  mov edi, [ebp + 8]
-  mov esi, [ebp + 12]
-
   ; Set up the necessary environment - disable interrupts, and push
   ; everything to the stack.
 
-  pushad
   cli
+  pushad
+
+  ; Move InfoTable to edi, and Pml4 to esi; we can't do this before
+  ; we push to the stack, otherwise we don't preserve esi/edi.
+
+  mov edi, [ebp + 8]
+  mov esi, [ebp + 12]
 
   ; Store our current stack pointer, so we can restore it later.
 
@@ -200,6 +203,7 @@ ReturnFromKernel32:
   ; TransitionStub.
 
   popad
+  sti
 
   ; (6) Restore the value of EDX and EAX from [SaveEdx] and
   ; [SaveEax], since that has our return value.
@@ -209,6 +213,7 @@ ReturnFromKernel32:
 
   ; (7) Pop the base pointer from the stack, and return.
 
+  mov esp, ebp
   pop ebp
   ret
 

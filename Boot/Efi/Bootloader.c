@@ -1020,59 +1020,13 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
   }
 
-  // Next, we want to find the .text section, since that's where our kernel's
-  // executable code is located. Before we do that though, we need to go
-  // through the string section, like this:
-
-  #define SectionHdrSize KernelHeader->SectionHeaderSize
-  #define GetSectionHeader(Start, Index) (elfSectionHeader*)(Start + SectionHdrOffset + (Index * SectionHdrSize))
-  #define GetSectionString(Start, SectionHeader, StringHeader) (const char8*)(Start + StringHeader->Offset + SectionHeader->NameOffset)
-
-  elfSectionHeader* KernelStringSection = GetSectionHeader((uint64)KernelHeader, KernelHeader->StringSectionIndex);
-  elfSectionHeader* KernelTextSection = NULL;
-
-  for (uint64 Index = 1; Index < NumSectionHdrs; Index++) {
-
-    // (Get the section string (the name string) of the current section)
-
-    elfSectionHeader* Section = GetSectionHeader((uint64)KernelHeader, Index);
-    const char8* SectionString = GetSectionString((uint64)KernelHeader, Section, KernelStringSection);
-
-    // (Compare the name string against u8".text"; if it matches, then we've
-    // successfully found the kernel's executable section!)
-
-    if (StrcmpShort(SectionString, u8".text") == true) {
-
-      Message(Ok, u"Successfully located the kernel's executable (.text) section.");
-      Message(Info, u"Section header is located at %xh", (uint64)Section);
-      Message(Info, u"Section starts at +%xh and is %d bytes long", Section->Offset, Section->Size);
-
-      KernelTextSection = Section;
-      break;
-
-    }
-
-  }
-
-  // If we couldn't find the .text section, then panic, since that means the
-  // kernel image has no executable code at all.
-
-  if (KernelTextSection == NULL) {
-
-    Message(Error, u"Couldn't locate the kernel's executable (.text) section.");
-
-    AppStatus = EfiLoadError;
-    goto ExitEfiApplication;
-
-  }
-
 
 
   // [Allocate space for the kernel itself]
 
-  // Now that we've found the .text section, we can start reading the kernel
-  // executable's program headers. These headers tell us *what* needs to be
-  // loaded, and where.
+  // Now that we've read through the ELF headers, we can start reading the
+  // kernel image's program headers. These tell us *what* needs to be loaded,
+  // and where.
 
   // In our case, we need to allocate a space large enough for *all* of the
   // program headers, and then copy everything there.
@@ -1083,16 +1037,11 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   // (Go through all loadable program headers, and keep track of the
   // 'earliest' and 'latest' virtual addresses we find)
 
-  // (We also try to find the program header that corresponds to the .text
-  // section, since we need that to calculate our entrypoint later on)
-
   #define ProgramHdrSize KernelHeader->ProgramHeaderSize
   #define GetProgramHeader(Start, Index) (elfProgramHeader*)(Start + ProgramHdrOffset + (Index * ProgramHdrSize))
 
   uint64 EarliestVirtualAddress = uintmax;
   uint64 LatestVirtualAddress = 0;
-
-  elfProgramHeader* KernelTextProgramHeader = NULL;
 
   for (uint16 Index = 0; Index < NumProgramHdrs; Index++) {
 
@@ -1119,10 +1068,9 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
       continue;
     }
 
-    // (If the start of a program section isn't page-aligned, then panic,
-    // since we need everything to be page-aligned; log(4096) = 12)
+    // (If the start of a program section isn't page-aligned, then panic)
 
-    if (((Start % 4096) != 0) || (Program->Alignment < 12)) {
+    if (((Start % 4096) != 0) || (Program->Alignment < 4096)) {
 
       Message(Error, u"Program header %d is not page-aligned.", Index);
       AppStatus = EfiLoadError;
@@ -1141,13 +1089,6 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
       LatestVirtualAddress = End;
     }
 
-    // (If this program header corresponds to the .text (executable) section,
-    // then take note of that)
-
-    if (Program->Offset == KernelTextSection->Offset){
-      KernelTextProgramHeader = Program;
-    }
-
     // (Show information)
 
     Message(Info, u"Found a loadable program header for virtual addresses %xh to %xh", Start, End);
@@ -1162,10 +1103,9 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
     Message(Error, u"Kernel executable doesn't appear to have any loadable program headers.");
     goto ExitEfiApplication;
 
-  } else if (KernelTextProgramHeader == NULL) {
+  } else {
 
-    Message(Error, u"Couldn't locate the .text section in the kernel's program headers.");
-    goto ExitEfiApplication;
+    Message(Ok, u"Kernel executable appears to have valid/loadable program headers.");
 
   }
 
@@ -1175,7 +1115,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   KernelArea = NULL;
   uint64 KernelAreaSize = (LatestVirtualAddress - EarliestVirtualAddress);
 
-  AppStatus = gBS->AllocatePages(AllocateAnyPages, EfiLoaderCode, AlignDivision(KernelAreaSize, 4096), (volatile efiPhysicalAddress*)&KernelArea);
+  AppStatus = gBS->AllocatePages(AllocateAnyPages, EfiLoaderData, AlignDivision(KernelAreaSize, 4096), (volatile efiPhysicalAddress*)&KernelArea);
 
   if ((AppStatus != EfiSuccess) || (KernelArea == NULL)) {
 
@@ -1233,19 +1173,16 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
     if (Program->PaddedSize > Program->Size) {
 
       SseMemset((void*)((uint64)KernelArea + Program->VirtAddress + Program->Size), 0, (Program->PaddedSize - Program->Size));
-      Message(Info, u"Padded %xh bytes at %xh", (Program->PaddedSize - Program->Size), ((uint64)KernelArea + Program->VirtAddress + Program->Size));
+      Message(Info, u"Padded %xh bytes starting at %xh", (Program->PaddedSize - Program->Size), ((uint64)KernelArea + Program->VirtAddress + Program->Size));
 
     }
 
   }
 
-  // Now that we've done that, we need to figure out *where* the kernel
-  // entrypoint is located.
+  // Now that we've done that, we can also calculate where the actual
+  // kernel entrypoint is located - thankfully, this is pretty easy:
 
-  // (Thankfully, this isn't that difficult - it's just the offset within
-  // the kernel's .text (executable) section, which we already know about)
-
-  KernelEntrypoint = (void*)((uint64)KernelArea + KernelTextProgramHeader->VirtAddress + KernelHeader->Entrypoint);
+  KernelEntrypoint = (void*)((uint64)KernelArea + KernelHeader->Entrypoint);
 
   Message(Ok, u"Successfully located the kernel entrypoint.");
   Message(Info, u"Kernel entrypoint is at %xh", (uint64)KernelEntrypoint);

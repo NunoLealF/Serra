@@ -33,7 +33,7 @@
     uint64 ProgramHeaderOffset; // (Program header offset, in bytes)
     uint64 SectionHeaderOffset; // (Section header offset, in bytes)
 
-    uint32 Flags; // (Useless in x86)
+    uint32 Flags; // (Useless on x86)
 
     uint16 Size; // (ELF header size, in bytes)
 
@@ -68,7 +68,7 @@
     uint32 Type; // (1 = load, 3 = string, otherwise ignore)
     uint64 Flags; // (Can be ignored)
 
-    uint64 Address; // (Can be ignored)
+    uint64 Address; // (Same as elfProgramHeader->VirtAddress)
     uint64 Offset; // (The offset from which to start reading from, in bytes)
     uint64 Size; // (The size of the section, also in bytes)
 

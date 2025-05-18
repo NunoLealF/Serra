@@ -30,8 +30,8 @@ void SaveState(void) {
 
 void RestoreState(void) {
 
-  __asm__ __volatile__ ("sti");
   LoadIdt(&IdtDescriptor);
+  __asm__ __volatile__ ("sti");
 
   return;
 
@@ -1016,18 +1016,18 @@ void S3Bootloader(void) {
   // usable memory map. We'll start off by allocating space for the kernel
   // executable:
 
-  uintptr KernelArea = (uintptr)(AllocateFromMmap(Offset, PageAlign(KernelDirectory.Size), false, UsableMmap, NumUsableMmapEntries));
+  uintptr KernelImage = (uintptr)(AllocateFromMmap(Offset, PageAlign(KernelDirectory.Size), false, UsableMmap, NumUsableMmapEntries));
 
-  if (KernelArea == 0) {
+  if (KernelImage == 0) {
 
     Panic("Unable to allocate enough space for the kernel.", 0);
 
   } else {
 
-    Offset = KernelArea;
-    KernelArea -= PageAlign(KernelDirectory.Size);
+    Offset = KernelImage;
+    KernelImage -= PageAlign(KernelDirectory.Size);
 
-    Message(Ok, "Allocated kernel space between %xh and %xh (in pmem).", KernelArea, (uint32)Offset);
+    Message(Ok, "Allocated kernel space between %xh and %xh (in pmem).", KernelImage, (uint32)Offset);
 
   }
 
@@ -1189,19 +1189,19 @@ void S3Bootloader(void) {
 
 
 
-  // [Loading the kernel]
+  // [Read the kernel's ELF headers]
 
   Putchar('\n', 0);
-  Message(Boot, "Preparing to load the kernel.");
+  Message(Boot, "Preparing to read the kernel's ELF headers.");
 
   // First, let's read the kernel file from disk. We already obtained the
   // directory earlier (KernelDirectory), and allocated space for it in
-  // memory (KernelArea), so all that's left is to call ReadFile().
+  // memory (KernelImage), so all that's left is to call ReadFile().
 
-  bool ReadFileSuccessful = ReadFile((void*)KernelArea, KernelDirectory, Bpb.SectorsPerCluster, Bpb.HiddenSectors, Bpb.ReservedSectors, DataSectorOffset, PartitionIsFat32);
+  bool ReadFileSuccessful = ReadFile((void*)KernelImage, KernelDirectory, Bpb.SectorsPerCluster, Bpb.HiddenSectors, Bpb.ReservedSectors, DataSectorOffset, PartitionIsFat32);
 
   if (ReadFileSuccessful == true) {
-    Message(Ok, "Successfully loaded Boot/Serra/Kernel.elf to %xh.", (uint32)KernelArea);
+    Message(Ok, "Successfully loaded Boot/Serra/Kernel.elf to %xh.", (uint32)KernelImage);
   } else {
     Panic("Failed to read Boot/Serra/Kernel.elf from disk.", 0);
   }
@@ -1215,7 +1215,7 @@ void S3Bootloader(void) {
   // such as where to load the kernel, and are always located at the
   // very beginning of the file.)
 
-  elfHeader* KernelHeader = (elfHeader*)KernelArea;
+  elfHeader* KernelHeader = (elfHeader*)KernelImage;
 
   if (KernelHeader->Ident.MagicNumber != 0x464C457F) {
     Panic("Kernel does not appear to be an actual ELF file.", 0);
@@ -1226,7 +1226,7 @@ void S3Bootloader(void) {
   } else if (KernelHeader->StringSectionIndex == 0) {
     Panic("Kernel does not appear to have a proper string table section.", 0);
   } else if ((KernelHeader->ProgramHeaderOffset == 0) || (KernelHeader->NumProgramHeaders == 0)) {
-    Message(Warning, "Kernel does not appear to have any ELF program headers.");
+    Panic("Kernel does not appear to have any ELF program headers.", 0);
   } else if (KernelHeader->Version < 1) {
     Message(Warning, "ELF header version appears to be invalid (%d)", (uint32)KernelHeader->Version);
   } else if (KernelHeader->FileType != 2) {
@@ -1245,72 +1245,197 @@ void S3Bootloader(void) {
   Message(Info, "KernelHeader() | File type %xh | Machine type %xh | Header version %d",
          (uint32)KernelHeader->FileType, (uint32)KernelHeader->MachineType, KernelHeader->Version);
 
-  Message(Info, "Physical address (start of file) at %xh", (uint32)KernelArea);
+  Message(Info, "Physical address (start of file) at %xh", (uint32)KernelImage);
   Message(Info, "Virtual address (entrypoint) at %x:%xh", (uint32)((KernelHeader->Entrypoint) >> 32), (uint32)(KernelHeader->Entrypoint));
 
   Message(Info, "Found %d program header(s) at +%xh.", (uint32)KernelHeader->NumProgramHeaders, (uint32)KernelHeader->ProgramHeaderOffset);
   Message(Info, "Found %d section header(s) at +%xh.", (uint32)KernelHeader->NumSectionHeaders, (uint32)KernelHeader->SectionHeaderOffset);
 
-  // Next, let's search through the section headers and try to find the
-  // .text section within our executable.
+  // Now that we've read through the kernel's main ELF headers, we can
+  // proceed onto the next step: reading through the program headers.
 
-  // Our ELF header already told us how many section headers there are,
-  // and we know they're structured (see elfSectionHeader{} in Elf.h),
-  // so all that's left is to find the correct section.
+  // We do this because the kernel file isn't laid out in the same way it
+  // would be in memory, so we can't safely execute off of it without any
+  // modifications - so, we need to allocate *another* area for the kernel.
 
-  // In order to do so, we need to go through the ELF string section
-  // for each section header, like this:
+  // In order to do that, we need to figure out how much space we need to
+  // allocate, which we can only get from reading the program headers.
 
-  elfSectionHeader* KernelStringHeader = GetSectionHeader(KernelArea, KernelHeader, KernelHeader->StringSectionIndex);
-  elfSectionHeader* KernelTextHeader = NULL;
+  uintptr EarliestVirtualAddress = 0xFFFFFFFF;
+  uintptr LatestVirtualAddress = 0;
 
-  for (uint16 Index = 0; Index < KernelHeader->NumSectionHeaders; Index++) {
+  for (uint16 Index = 0; Index < KernelHeader->NumProgramHeaders; Index++) {
 
-    elfSectionHeader* SectionHeader = GetSectionHeader(KernelArea, KernelHeader, Index);
-    const char* SectionString = GetElfSectionString(KernelArea, KernelStringHeader, SectionHeader->NameOffset);
+    // (Get program header, and make sure that it's loadable (.Type == 1))
 
-    if (Strcmp(".text", SectionString) == true) {
+    elfProgramHeader* Program = GetProgramHeader(KernelImage, KernelHeader, Index);
 
-      KernelTextHeader = SectionHeader;
-      break;
+    if (Program->Type != 1) {
+      continue;
+    }
+
+    // (Make sure that we stay within the 32-bit address space)
+
+    if ((Program->VirtAddress > 0xFFFFFFFF) || (Program->Size > 0xFFFFFFFF) || (Program->PaddedSize > 0xFFFFFFFF)) {
+      Panic("Program header's virtual address is outside the 32-bit address space.", 0);
+    }
+
+    // (Calculate the start and end of this program header, in the virtual
+    // address space, and make sure PaddedSize (p_memsz) and Size (p_filesz)
+    // are both valid)
+
+    uint32 Start = Program->VirtAddress;
+    uint32 End = Start;
+
+    if (Program->PaddedSize != 0) {
+      End += Program->PaddedSize;
+    } else if (Program->Size != 0) {
+      End += Program->Size;
+    } else {
+      continue;
+    }
+
+    // (If the start of a program section isn't page-aligned, then panic)
+
+    if (((Start % 4096) != 0) || (Program->Alignment < 4096)) {
+      Panic("Program header is not page-aligned.", 0);
+    }
+
+    // (Update EarliestVirtualAddress and LatestVirtualAddress)
+
+    if (Start < EarliestVirtualAddress) {
+      EarliestVirtualAddress = Start;
+    }
+
+    if (End > LatestVirtualAddress) {
+      LatestVirtualAddress = End;
+    }
+
+    // (Show information)
+
+    Message(Info, "Found a loadable program header for virtual addresses %xh to %xh", Start, End);
+
+  }
+
+  // (Sanity-check our results, to make sure we *do* have any loadable program
+  // headers)
+
+  if (LatestVirtualAddress < EarliestVirtualAddress) {
+    Panic("Kernel executable doesn't appear to have any loadable program headers.", 0);
+  } else {
+    Message(Ok, "Kernel executable appears to have valid/loadable program headers.");
+  }
+
+
+
+  // [Setup the kernel area]
+
+  // Now that we've allocated enough space, let's copy everything over from
+  // the kernel file. This requires *everything* to be page-aligned, but we
+  // already made sure of that earlier, thankfully.
+
+  Putchar('\n', 0);
+  Message(Boot, "Preparing to setup the kernel area.");
+
+  // The first thing we need to do is to calculate the size needed to actually
+  // store the kernel executable, and allocate it. Thankfully, this is
+  // pretty easy:
+
+  #define AlignDivision(Num, Divisor) ((Num + Divisor - 1) / Divisor)
+
+  uintptr KernelArea;
+  uint64 KernelAreaSize = AlignDivision((LatestVirtualAddress - EarliestVirtualAddress), 4096) * 4096;
+
+  KernelArea = (uintptr)(AllocateFromMmap(Offset, KernelAreaSize, false, UsableMmap, NumUsableMmapEntries));
+
+  if (KernelArea == 0) {
+
+    Panic("Unable to allocate enough space for the kernel area.", 0);
+
+  } else {
+
+    Offset = KernelArea;
+    KernelArea -= KernelAreaSize;
+
+    Message(Ok, "Allocated kernel space between %xh and %xh (in pmem).", KernelArea, (uint32)(Offset));
+
+  }
+
+  // The next thing we need to do then is to go through the (loadable)
+  // program headers again, and manually copy everything. We use SSE
+  // functions here to speed things up.
+
+  // (Additionally, we also need to 'pad' the difference between PaddedSize
+  // (p_memsz) and Size (p_filesz) with zeroes)
+
+  for (uint16 Index = 0; Index < KernelHeader->NumProgramHeaders; Index++) {
+
+    // (Get program header, and make sure that it's loadable (.Type == 1))
+
+    elfProgramHeader* Program = GetProgramHeader(KernelImage, KernelHeader, Index);
+
+    if (Program->Type != 1) {
+      continue;
+    }
+
+    // (Copy Size (p_filesz) bytes from our file (in *Kernel) to our newly
+    // allocated area (in *KernelArea))
+
+    uint32 ProgramAddress = (uint32)Program->VirtAddress;
+    uint32 ProgramOffset = (uint32)Program->Offset;
+    uint32 ProgramSize = (uint32)Program->Size;
+
+    if (ProgramSize > 0) {
+
+      SseMemcpy((void*)(KernelArea + ProgramAddress), (const void*)(KernelImage + ProgramOffset), ProgramSize);
+      Message(Info, "Copied %xh bytes from %xh to %xh", ProgramSize, (KernelImage + ProgramOffset), (KernelArea + ProgramAddress));
+
+    }
+
+    // (Pad PaddedSize minus Size (p_memsz - p_filesz) bytes in our newly
+    // allocated area (in *KernelArea) with zeroes)
+
+    uint32 ProgramPaddedSize = (uint32)Program->PaddedSize;
+
+    if (ProgramPaddedSize > ProgramSize) {
+
+      SseMemset((void*)(KernelArea + ProgramAddress + ProgramSize), 0, (ProgramPaddedSize - ProgramSize));
+      Message(Info, "Padded %xh bytes starting at %xh", (ProgramPaddedSize - ProgramSize), (KernelArea + ProgramAddress + ProgramSize));
 
     }
 
   }
 
-  // Finally, now that we know where our kernel has our .text header,
-  // we can calculate the actual entrypoint address.
+  // Finally, now that we've done that, we can also calculate where the
+  // actual kernel entrypoint is located:
 
-  // Our kernel executable is linked as a position-independent ELF file
-  // with a defined entrypoint, that corresponds to an offset within
-  // the .text section; so, in order to calculate it, we need to sum:
+  KernelEntrypoint = (KernelArea + KernelHeader->Entrypoint);
+  Message(Ok, "Successfully located the kernel entrypoint at %xh.", (uint32)KernelEntrypoint);
 
-  // =((address we loaded to) + (offset of .text section) + (entrypoint))
-
-  if (KernelTextHeader == NULL) {
-
-    Panic("Unable to find .text section of kernel.", 0);
-
-  } else {
-
-    KernelEntrypoint = (KernelArea + KernelTextHeader->Offset + KernelHeader->Entrypoint);
-    CommonInfoTable.Image.Executable.Entrypoint.Address = KernelEntrypoint;
-
-    Message(Ok, "Successfully found actual kernel entrypoint at %xh.", (uint32)KernelEntrypoint);
-
-  }
-
-  // (Set up the stack)
+  // (Set up the kernel stack, as well as the common information table)
 
   KernelStack = (KernelStackArea + KernelStackSize);
-  CommonInfoTable.Image.StackTop.Address = KernelStack;
+  Message(Ok, "Set up the kernel stack (%d KiB) at %xh.", (KernelStackSize / 1024), (uint32)KernelStack);
+
+  CommonInfoTable.Image.Executable.Entrypoint.Address = KernelEntrypoint;
+  CommonInfoTable.Image.Executable.Header.Address = (uintptr)KernelHeader;
+
+  CommonInfoTable.Image.StackTop.Address = (uintptr)KernelStack;
   CommonInfoTable.Image.StackSize = KernelStackSize;
 
-  Message(Ok, "Set up kernel stack (%d KiB) at %xh.", (KernelStackSize / 1024), (uint32)KernelStack);
+  CommonInfoTable.Image.Type = ElfImageType;
 
 
 
-  // [TEST - Inform bios about 64 bit?]
+
+  // [Inform the BIOS about our intended execution mode]
+
+  Putchar('\n', 0);
+  Message(Boot, "Preparing to inform the BIOS about our intended execution mode.");
+
+  // For some reason, some systems recommend a BIOS interrupt call (in
+  // this case, (int 15h, eax EC00h)) in order to notify that we'll
+  // be using protected/long mode
 
   realModeTable* Table = InitializeRealModeTable();
 
@@ -1318,6 +1443,10 @@ void S3Bootloader(void) {
   Table->Ebx = 3; // Both modes will be used (3h); 2h = long-mode only.
 
   Table->Int = 0x15;
+
+  Message(Info, "Executing BIOS interrupt call (int %xh, eax %xh, ebx %xh)",
+          (uint32)Table->Int, Table->Eax, Table->Ebx);
+
   RealMode();
 
 
