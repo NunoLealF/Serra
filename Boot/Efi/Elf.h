@@ -68,7 +68,7 @@
     uint32 Type; // (1 = load, 3 = string, otherwise ignore)
     uint64 Flags; // (Can be ignored)
 
-    uint64 Address; // (Can be ignored)
+    uint64 Address; // (Same as elfProgramHeader->VirtAddress)
     uint64 Offset; // (The offset from which to start reading from, in bytes)
     uint64 Size; // (The size of the section, also in bytes)
 

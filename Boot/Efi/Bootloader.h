@@ -44,6 +44,7 @@
   commonInfoTable CommonInfoTable = {0};
 
   void* Kernel = NULL;
+  void* KernelArea = NULL;
   void* KernelEntrypoint = NULL;
   void* KernelStack = NULL;
 
