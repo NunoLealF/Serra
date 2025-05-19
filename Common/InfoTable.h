@@ -30,6 +30,8 @@
 
   } uptr;
 
+  static_assert((sizeof(uptr) == 8), "`uptr` is not 8 bytes");
+
 
 
   /* (typedef) struct usableMmapEntry{}
@@ -48,6 +50,8 @@
     uint64 Limit;
 
   } __attribute__((packed)) usableMmapEntry;
+
+  static_assert((sizeof(usableMmapEntry) == 16), "`usableMmapEntry` is not 16 bytes");
 
 
 
