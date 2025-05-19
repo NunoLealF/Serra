@@ -99,20 +99,20 @@
 
   #endif
 
-  static_assert((sizeof(bool) != 8), "`bool` is not 8 bits.");
+  static_assert((sizeof(bool) == 1), "`bool` is not 8 bits.");
 
-  static_assert((sizeof(int8) != 8), "`int8` has incorrect size.");
-  static_assert((sizeof(int16) != 16), "`int16` has incorrect size.");
-  static_assert((sizeof(int32) != 32), "`int32` has incorrect size.");
-  static_assert((sizeof(int64) != 64), "`int64` has incorrect size.");
+  static_assert((sizeof(int8) == 1), "`int8` has incorrect size.");
+  static_assert((sizeof(int16) == 2), "`int16` has incorrect size.");
+  static_assert((sizeof(int32) == 4), "`int32` has incorrect size.");
+  static_assert((sizeof(int64) == 8), "`int64` has incorrect size.");
 
-  static_assert((sizeof(uint8) != 8), "`uint8` has incorrect size.");
-  static_assert((sizeof(uint16) != 16), "`uint16` has incorrect size.");
-  static_assert((sizeof(uint32) != 32), "`uint32` has incorrect size.");
-  static_assert((sizeof(uint64) != 64), "`uint64` has incorrect size.");
+  static_assert((sizeof(uint8) == 1), "`uint8` has incorrect size.");
+  static_assert((sizeof(uint16) == 2), "`uint16` has incorrect size.");
+  static_assert((sizeof(uint32) == 4), "`uint32` has incorrect size.");
+  static_assert((sizeof(uint64) == 8), "`uint64` has incorrect size.");
 
-  static_assert((sizeof(intptr) != 32), "`intptr` has incorrect size.");
-  static_assert((sizeof(uintptr) != 32), "`uintptr` has incorrect size.");
+  static_assert((sizeof(intptr) == 4), "`intptr` has incorrect size.");
+  static_assert((sizeof(uintptr) == 4), "`uintptr` has incorrect size.");
 
   // [Other integer/pointer types]
 
