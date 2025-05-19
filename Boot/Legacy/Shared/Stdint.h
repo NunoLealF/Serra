@@ -85,6 +85,35 @@
     typedef uint32 uintptr;
   #endif
 
+  // [Compile-time checks, and static assertions]
+
+  #ifdef __has_attribute
+
+    #if !(__has_attribute(packed))
+      #error "Your compiler must support __attribute__((packed))"
+    #endif
+
+  #else
+
+    #error "Your compiler must support GCC-style attributes (__attribute__(...))"
+
+  #endif
+
+  static_assert((sizeof(bool) != 8), "`bool` is not 8 bits.");
+
+  static_assert((sizeof(int8) != 8), "`int8` has incorrect size.");
+  static_assert((sizeof(int16) != 16), "`int16` has incorrect size.");
+  static_assert((sizeof(int32) != 32), "`int32` has incorrect size.");
+  static_assert((sizeof(int64) != 64), "`int64` has incorrect size.");
+
+  static_assert((sizeof(uint8) != 8), "`uint8` has incorrect size.");
+  static_assert((sizeof(uint16) != 16), "`uint16` has incorrect size.");
+  static_assert((sizeof(uint32) != 32), "`uint32` has incorrect size.");
+  static_assert((sizeof(uint64) != 64), "`uint64` has incorrect size.");
+
+  static_assert((sizeof(intptr) != 32), "`intptr` has incorrect size.");
+  static_assert((sizeof(uintptr) != 32), "`uintptr` has incorrect size.");
+
   // [Other integer/pointer types]
 
   #define intmax 0x7FFFFFFF
