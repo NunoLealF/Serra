@@ -66,11 +66,9 @@ entrypointReturnValue Entrypoint(commonInfoTable* InfoTable) {
 
   } else if (InfoTable->System.Architecture == x64Architecture) {
 
-    // (Check whether CR0 and CR3 both aren't zero)
+    // (Check whether CR0 isn't zero)
 
     if (InfoTable->System.Cpu.x64.Cr0 == 0) {
-      return entrypointSystemInvalidCpuData;
-    } else if (InfoTable->System.Cpu.x64.Cr0 == 0) {
       return entrypointSystemInvalidCpuData;
     }
 
