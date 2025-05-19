@@ -338,9 +338,9 @@ void S3Bootloader(void) {
   // The first step here is to just sort each entry according to
   // its base address, like this:
 
-  for (uint16 Threshold = 1; Threshold < NumMmapEntries; Threshold++) {
+  for (auto Threshold = 1; Threshold < NumMmapEntries; Threshold++) {
 
-    for (uint16 Position = Threshold; Position > 0; Position--) {
+    for (auto Position = Threshold; Position > 0; Position--) {
 
       // (Use insertion sort to sort the entries; while Mmap[n] < Mmap[n-1],
       // swap them both, and decrement n)
@@ -363,11 +363,11 @@ void S3Bootloader(void) {
 
   Message(Ok, "Successfully sorted system memory map entries.");
 
-  for (uint8 Position = 0; Position < NumMmapEntries; Position++) {
+  for (auto Position = 0; Position < NumMmapEntries; Position++) {
 
-    uint64 Start = Mmap[Position].Base;
-    uint64 Size = Mmap[Position].Limit;
-    uint64 End = (Start + Size);
+    auto Start = Mmap[Position].Base;
+    auto Size = Mmap[Position].Limit;
+    auto End = (Start + Size);
 
     Message(Info, "Found type %d memory area from %x:%xh to %x:%xh (%d KiB)", (Mmap[Position].Type),
             (uint32)(Start >> 32), (uint32)Start, (uint32)(End >> 32), (uint32)End, (uint32)(Size / 1024));
@@ -383,12 +383,12 @@ void S3Bootloader(void) {
   uint64 MinStart = 0;
   uint8 UsablePosition = 0;
 
-  for (uint8 Position = 0; Position < NumMmapEntries; Position++) {
+  for (auto Position = 0; Position < NumMmapEntries; Position++) {
 
     // First, get the start and end position of this entry
 
-    uint64 Start = Mmap[Position].Base;
-    uint64 End = (Start + Mmap[Position].Limit);
+    auto Start = Mmap[Position].Base;
+    auto End = (Start + Mmap[Position].Limit);
 
     // Next, update the minimum start, and skip over any entries that
     // end before it (decrementing NumUsableMmapEntries accordingly).
@@ -448,11 +448,11 @@ void S3Bootloader(void) {
 
   Message(Ok, "Successfully processed usable memory map entries.");
 
-  for (uint8 Position = 0; Position < NumUsableMmapEntries; Position++) {
+  for (auto Position = 0; Position < NumUsableMmapEntries; Position++) {
 
-    uint64 Start = UsableMmap[Position].Base;
-    uint64 Size = UsableMmap[Position].Limit;
-    uint64 End = (Start + Size);
+    auto Start = UsableMmap[Position].Base;
+    auto Size = UsableMmap[Position].Limit;
+    auto End = (Start + Size);
 
     Message(Info, "Found usable memory area from %x:%xh to %x:%xh (%d KiB)",
             (uint32)(Start >> 32), (uint32)Start, (uint32)(End >> 32), (uint32)End, (uint32)(Size / 1024));
@@ -1004,7 +1004,7 @@ void S3Bootloader(void) {
 
   uint64 Offset = 0x100000;
 
-  for (uint8 Entry = 0; Entry < NumUsableMmapEntries; Entry++) {
+  for (auto Entry = 0; Entry < NumUsableMmapEntries; Entry++) {
 
     if (UsableMmap[Entry].Base >= 0x100000) {
 
@@ -1115,12 +1115,12 @@ void S3Bootloader(void) {
   // map - this is so the kernel can use it later, and to avoid any crashes
   // if we do allocate something above IdentityMapThreshold.
 
-  for (uint16 Entry = 0; Entry < NumUsableMmapEntries; Entry++) {
+  for (auto Entry = 0; Entry < NumUsableMmapEntries; Entry++) {
 
     // Get variables
 
-    uint64 Start = UsableMmap[Entry].Base;
-    uint64 Size = UsableMmap[Entry].Limit;
+    auto Start = UsableMmap[Entry].Base;
+    auto Size = UsableMmap[Entry].Limit;
 
     // Align to 2MiB (huge page) boundaries; more specifically, align
     // Start *down*, but align Size *up*
@@ -1267,7 +1267,7 @@ void S3Bootloader(void) {
   uintptr EarliestVirtualAddress = 0xFFFFFFFF;
   uintptr LatestVirtualAddress = 0;
 
-  for (uint16 Index = 0; Index < KernelHeader->NumProgramHeaders; Index++) {
+  for (auto Index = 0; Index < KernelHeader->NumProgramHeaders; Index++) {
 
     // (Get program header, and make sure that it's loadable (.Type == 1))
 
@@ -1371,7 +1371,7 @@ void S3Bootloader(void) {
   // (Additionally, we also need to 'pad' the difference between PaddedSize
   // (p_memsz) and Size (p_filesz) with zeroes)
 
-  for (uint16 Index = 0; Index < KernelHeader->NumProgramHeaders; Index++) {
+  for (auto Index = 0; Index < KernelHeader->NumProgramHeaders; Index++) {
 
     // (Get program header, and make sure that it's loadable (.Type == 1))
 
@@ -1468,7 +1468,7 @@ void S3Bootloader(void) {
   uint8* RawCommonInfoTable = (uint8*)(&CommonInfoTable);
   uint16 ChecksumSize = (sizeof(CommonInfoTable) - sizeof(CommonInfoTable.Checksum));
 
-  for (uint16 Offset = 0; Offset < ChecksumSize; Offset++) {
+  for (auto Offset = 0; Offset < ChecksumSize; Offset++) {
     CommonInfoTable.Checksum += RawCommonInfoTable[Offset];
   }
 

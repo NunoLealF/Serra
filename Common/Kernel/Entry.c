@@ -70,9 +70,9 @@ uint64 Entrypoint(commonInfoTable* InfoTable) {
 
     } else {
 
-      for (uint64 y = 0; y < InfoTable->Display.Graphics.LimitY; y++) {
+      for (auto y = 0; y < InfoTable->Display.Graphics.LimitY; y++) {
 
-        for (uint64 x = 0; x < (InfoTable->Display.Graphics.LimitX * InfoTable->Display.Graphics.Bits.PerPixel / 4); x++) {
+        for (auto x = 0; x < (InfoTable->Display.Graphics.LimitX * InfoTable->Display.Graphics.Bits.PerPixel / 4); x++) {
 
           *(uint8*)(InfoTable->Display.Graphics.Framebuffer.Address + (InfoTable->Display.Graphics.Pitch * y) + x) = (y * 255 / InfoTable->Display.Graphics.LimitY);
 
@@ -121,9 +121,9 @@ uint64 Entrypoint(commonInfoTable* InfoTable) {
 
     } else {
 
-      for (uint64 y = 0; y < InfoTable->Display.Graphics.LimitY; y++) {
+      for (auto y = 0; y < InfoTable->Display.Graphics.LimitY; y++) {
 
-        for (uint64 x = 0; x < (InfoTable->Display.Graphics.LimitX * InfoTable->Display.Graphics.Bits.PerPixel / 4); x++) {
+        for (auto x = 0; x < (InfoTable->Display.Graphics.LimitX * InfoTable->Display.Graphics.Bits.PerPixel / 4); x++) {
 
           *(uint8*)(InfoTable->Display.Graphics.Framebuffer.Address + (InfoTable->Display.Graphics.Pitch * y) + x) = (y * 255 / InfoTable->Display.Graphics.LimitY);
 
@@ -131,7 +131,7 @@ uint64 Entrypoint(commonInfoTable* InfoTable) {
 
       }
 
-      for (uint64 a = 0; a < 100000000; a++) {
+      for (auto a = 0; a < 100000000; a++) {
         __asm__ __volatile__ ("nop");
       }
 
