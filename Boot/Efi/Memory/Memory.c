@@ -349,7 +349,7 @@ void SseMemset(void* Buffer, uint8 Character, uint64 Size) {
   // Create a 256-byte buffer, and fill it with our character of
   // choice using the regular Memset function.
 
-  char Temp[256] __attribute__((aligned(16)));
+  alignas(16) uint8 Temp[256];
   Memset(Temp, Character, 256);
 
   // (Declare other variables)
