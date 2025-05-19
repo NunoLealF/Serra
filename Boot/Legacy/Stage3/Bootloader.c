@@ -138,7 +138,6 @@ void S3Bootloader(void) {
   CommonInfoTable.Size = sizeof(commonInfoTable);
 
   CommonInfoTable.Firmware.Type = BiosFirmware;
-  CommonInfoTable.Image.DebugFlag = DebugFlag;
   CommonInfoTable.System.Architecture = x64Architecture;
 
   // (Copy the contents of TerminalTable)

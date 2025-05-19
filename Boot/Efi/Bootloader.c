@@ -35,7 +35,6 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   CommonInfoTable.Firmware.Type = EfiFirmware;
   CommonInfoTable.Firmware.Efi.ImageHandle.Pointer = ImageHandle;
 
-  CommonInfoTable.Image.DebugFlag = DebugFlag;
   CommonInfoTable.System.Architecture = x64Architecture;
 
   // (Prepare local variables)
@@ -82,7 +81,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
     return EfiUnsupported; // We don't support anything below EFI 1.1
   }
 
-  CommonInfoTable.Firmware.Efi.Tables.SystemTable.Pointer = SystemTable;
+  CommonInfoTable.Firmware.Efi.SystemTable.Pointer = SystemTable;
   gST = SystemTable;
 
   // (Check EFI Boot Services table, and update gBS)
@@ -95,7 +94,6 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
     return EfiInvalidParameter;
   }
 
-  CommonInfoTable.Firmware.Efi.Tables.BootServices.Pointer = gST->BootServices;
   gBS = gST->BootServices;
 
   // (Check EFI Runtime Services table, and update gRT)
@@ -108,7 +106,6 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
     return EfiInvalidParameter;
   }
 
-  CommonInfoTable.Firmware.Efi.Tables.RuntimeServices.Pointer = gST->RuntimeServices;
   gRT = gST->RuntimeServices;
 
 
@@ -967,7 +964,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
   void* KernelStackTop = (void*)((uint64)KernelStack + KernelStackSize);
 
-  CommonInfoTable.Image.StackSize = AlignDivision(KernelStackSize, 4096);
+  CommonInfoTable.Image.StackSize = (AlignDivision(KernelStackSize, 4096) * 4096);
   CommonInfoTable.Image.StackTop.Pointer = KernelStackTop;
 
 

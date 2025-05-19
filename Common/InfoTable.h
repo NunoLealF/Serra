@@ -5,6 +5,64 @@
 #ifndef SERRA_COMMON_INFOTABLE_H
 #define SERRA_COMMON_INFOTABLE_H
 
+  /* (typedef) enum:uint64{} entrypointReturnValue
+
+     TODO: ...
+
+  */
+
+  typedef enum : uint64 {
+
+    // (High bit is 0h - application/OS was loaded successfully)
+
+    entrypoint_Success = 0,
+
+    // (High bit is 1h - issue with information table header)
+
+    entrypoint_TableIsNull = 0x100000000,
+
+    entrypoint_InvalidSignature = 0x100000001,
+    entrypoint_InvalidVersion = 0x100000002,
+    entrypoint_InvalidSize = 0x100000003,
+    entrypoint_InvalidChecksum = 0x100000004,
+
+    // (High bit is 2h - issue with information table data)
+
+    entrypoint_Disk_UnknownMethod = 0x200000000,
+    entrypoint_Disk_UnsupportedMethod = 0x200000001,
+    entrypoint_Disk_InvalidData = 0x200000002,
+
+    entrypoint_Display_UnsupportedType = 0x200000003,
+    entrypoint_Display_InvalidEdidData = 0x200000004,
+    entrypoint_Display_InvalidGraphicsData = 0x200000005,
+    entrypoint_Display_InvalidTextData = 0x200000006,
+
+    entrypoint_Firmware_UnknownType = 0x200000007,
+    entrypoint_Firmware_UnsupportedType = 0x200000008,
+    entrypoint_Firmware_InvalidMmapData = 0x200000009,
+    entrypoint_Firmware_InvalidBiosData = 0x20000000A,
+    entrypoint_Firmware_InvalidEfiData = 0x20000000B,
+
+    entrypoint_Image_UnknownType = 0x20000000C,
+    entrypoint_Image_UnsupportedType = 0x20000000D,
+    entrypoint_Image_InvalidStack = 0x20000000E,
+    entrypoint_Image_InvalidData = 0x20000000F,
+
+    entrypoint_Memory_MapHasNoEntries = 0x200000010,
+    entrypoint_Memory_ListIsNull = 0x200000011,
+
+    entrypoint_System_UnknownArchitecture = 0x200000012,
+    entrypoint_System_UnsupportedArchitecture = 0x200000013,
+    entrypoint_System_InvalidAcpiData = 0x200000014,
+    entrypoint_System_InvalidCpuData = 0x200000015,
+    entrypoint_System_InvalidSmbiosData = 0x200000016,
+
+    // (High bit is 3h - issue with kernel?)
+
+  } entrypointReturnValue;
+
+
+
   /* (typedef) union uptr{}
 
      Members: uint64 Address - The address being pointed to;
@@ -83,7 +141,7 @@
   */
 
   #define commonInfoTableSignature 0x7577757E7577757E
-  #define commonInfoTableVersion 4
+  #define commonInfoTableVersion 5
 
   typedef struct _commonInfoTable {
 
@@ -101,7 +159,8 @@
 
         UnknownMethod = 0,
         EfiFsMethod = 1,
-        Int13Method = 2
+        Int13Method = 2,
+        MaxMethod
 
       } AccessMethod;
 
@@ -140,7 +199,8 @@
         VgaDisplay = 1,
         VbeDisplay = 2,
         EfiTextDisplay = 3,
-        GopDisplay = 4
+        GopDisplay = 4,
+        MaxDisplay
 
       } Type;
 
@@ -176,8 +236,10 @@
 
         enum : uint8 {
 
-          AsciiFormat = 0,
-          Utf16Format = 1
+          UnknownFormat = 0,
+          AsciiFormat = 1,
+          Utf16Format = 2,
+          MaxFormat
 
         } Format;
 
@@ -199,7 +261,8 @@
 
         UnknownFirmware = 0,
         BiosFirmware = 1,
-        EfiFirmware = 2
+        EfiFirmware = 2,
+        MaxFirmware
 
       } Type;
 
@@ -210,7 +273,8 @@
           EnabledByUnknown = 0,
           EnabledByDefault = 1,
           EnabledByKeyboard = 2,
-          EnabledByFast = 3
+          EnabledByFast = 3,
+          EnabledByMax
 
         } A20;
 
@@ -250,6 +314,7 @@
       struct {
 
         uptr ImageHandle;
+        uptr SystemTable;
 
         bool SupportsConIn;
         bool SupportsConOut;
@@ -269,14 +334,6 @@
 
         } __attribute__((packed)) Mmap;
 
-        struct {
-
-          uptr BootServices;
-          uptr SystemTable;
-          uptr RuntimeServices;
-
-        } __attribute__((packed)) Tables;
-
       } Efi;
 
     } __attribute__((packed)) Firmware;
@@ -285,16 +342,14 @@
 
     struct {
 
-      bool DebugFlag;
-
       uptr StackTop; // (StackStart + StackSize)
-      uint64 StackSize; // (in bytes)
+      uint64 StackSize; // (in bytes - must be a multiple of 4KiB)
 
       enum {
 
-        RawImageType = 0,
+        UnknownImageType = 0,
         ElfImageType = 1,
-        PeImageType = 2
+        MaxImageType
 
       } Type;
 
@@ -342,7 +397,6 @@
 
           uint64 Cr0, Cr3, Cr4;
           uint64 Efer;
-          uint64 Pml4;
 
         } __attribute__((packed)) x64;
 

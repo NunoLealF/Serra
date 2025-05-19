@@ -3,6 +3,10 @@
 > [!WARNING]
 > *This section is **still** a work in progress, so please don't expect this to be functional or complete*
 
+> [!NOTE]
+> Enums are defined as in C23 (enum : `type`), and all have a Max(something) member that always indicates the maximum
+> For any enum, any value not between ]1, Max?[ is invalid (for instance, in Display.Type, <VgaDisplay is invalid, and >=MaxDisplay is invalid)
+
 ## [N/A]
 
 Signature `uint64 (equals 7577757E7577757Eh)`
@@ -16,7 +20,7 @@ Size `uint16`
 
 ## [Disk | Int13(Edd), EfiFs()]
 
-- Disk.AccessMethod `enum:uint16 ("UnknownMethod", "EfiFsMethod", "Int13Method")`
+- Disk.AccessMethod `enum:uint16 ("UnknownMethod", "EfiFsMethod", "Int13Method", "MaxMethod")`
 
 - - Disk->EfiFs.FileInfo `uptr`
 
@@ -37,7 +41,7 @@ Size `uint16`
 
 ## [Display : Edid(), Graphics(Bits), Text()]
 
-- Display.Type `enum:uint16 ("UnknownDisplay", "VgaDisplay", "VbeDisplay", "EfiTextDisplay", "GopDisplay")`
+- Display.Type `enum:uint16 ("UnknownDisplay", "VgaDisplay", "VbeDisplay", "EfiTextDisplay", "GopDisplay", "MaxDisplay")`
 
 - - Display\~Edid.IsSupported `bool`
 
@@ -61,7 +65,7 @@ Size `uint16`
 
 - - - Display\~Graphics\~Bits.BlueMask `uint64`
 
-- - Display\~Text.Format `enum:uint8 ("AsciiFormat", "Utf16Format")`
+- - Display\~Text.Format `enum:uint8 ("UnknownFormat", "AsciiFormat", "Utf16Format", "MaxFormat")`
 
 - - Display\~Text.XPos `uint16` *optional for EfiTextDisplay*
 
@@ -76,9 +80,9 @@ Size `uint16`
 
 ## [Firmware : Bios(A20,Mmap,Pat,PciBios,Vbe), Efi(Gop,Mmap,Tables)]
 
-- Firmware.Type `enum:uint16 ("UnknownFirmware", "BiosFirmware", "EfiFirmware")`
+- Firmware.Type `enum:uint16 ("UnknownFirmware", "BiosFirmware", "EfiFirmware", "MaxFirmware")`
 
-- - Firmware->Bios.A20 `enum:uint8 ("EnabledByUnknown", "EnabledByDefault", "EnabledByKeyboard", "EnabledByFast")`
+- - Firmware->Bios.A20 `enum:uint8 ("EnabledByUnknown", "EnabledByDefault", "EnabledByKeyboard", "EnabledByFast", "EnabledByMax")`
 
 - - - Firmware->Bios\~Mmap.NumEntries `uint16`
 
@@ -104,6 +108,8 @@ Size `uint16`
 
 - - Firmware->Efi.ImageHandle `uptr`
 
+- - Firmware->Efi.SystemTable `uptr`
+
 - - Firmware->Efi.SupportsConIn `bool`
 
 - - Firmware->Efi.SupportsConOut `bool`
@@ -118,28 +124,20 @@ Size `uint16`
 
 - - - Firmware->Efi\~Mmap.List `uptr` *pointer to a list of efiMmapEntry{}*
 
-- - - Firmware->Efi\~Tables.BootServices `uptr`
-
-- - - Firmware->Efi\~Tables.SystemTable `uptr`
-
-- - - Firmware->Efi\~Tables.RuntimeServices `uptr`
-
 &nbsp;
 
 
 ## [Image : Executable()]
 
-- Image.DebugFlag `bool`
-
 - Image.StackTop `uptr` *StackStart + StackSize*
 
-- Image.StackSize `uint64` *in bytes*
+- Image.StackSize `uint64` *in bytes - must be a multiple of 4KiB!*
 
-- Image.Type `enum:uint8 ("RawImageType", "ElfImageType", "PeImageType")`
+- Image.Type `enum:uint8 ("UnknownImageType", "ElfImageType", "MaxImageType")`
 
 - - Image\~Executable.Entrypoint `uptr`
 
-- - Image\~Executable.Header `uptr` *optional for RawImageType*
+- - Image\~Executable.Header `uptr`
 
 &nbsp;
 
@@ -157,7 +155,7 @@ Size `uint16`
 
 ## [System : Acpi(), Cpu(), Smbios()]
 
-- System.Architecture `enum:uint16 ("UnknownArchitecture", "x64Architecture")`
+- System.Architecture `enum:uint16 ("UnknownArchitecture", "x64Architecture", "MaxArchitecture")`
 
 - - System\~Acpi.IsSupported `bool`
 
@@ -170,8 +168,6 @@ Size `uint16`
 - - - System\~Cpu\~x64.Cr4 `uint64`
 
 - - - System\~Cpu\~x64.Efer `uint64`
-
-- - - System\~Cpu\~x64.Pml4 `uint64`
 
 - - System\~Smbios.IsSupported `bool`
 
