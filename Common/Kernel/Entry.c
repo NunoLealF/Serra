@@ -118,7 +118,7 @@ entrypointReturnValue Entrypoint(commonInfoTable* InfoTable) {
 
     // (Check whether the BIOS (E820) memory map is valid)
 
-    #define biosMmapEntrySize 24 // (TODO - there should be something like a biosMmapEntry{} definition)
+    #define biosMmapEntrySize 20 // (TODO - there should be something like a biosMmapEntry{} definition)
 
     if (InfoTable->Firmware.Bios.Mmap.NumEntries == 0) {
       return entrypointFirmwareInvalidMmapData;
