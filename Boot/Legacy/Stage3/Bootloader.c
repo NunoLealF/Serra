@@ -1543,14 +1543,17 @@ void S3Bootloader(void) {
 
   DebugFlag = true;
 
+  #define HighEntrypointStatus (uint32)(EntrypointStatus >> 32)
+  #define LowEntrypointStatus (uint32)(EntrypointStatus & 0xFFFFFFFF)
+
   Putchar('\n', 0);
   Message(Info, "Entrypoint returned with a status code of (%d:%d)",
-          (uint32)(EntrypointStatus >> 32), (uint32)EntrypointStatus);
+          HighEntrypointStatus, LowEntrypointStatus);
 
   if (EntrypointStatus == entrypointSuccess) {
     Message(Ok, "Kernel entrypoint returned successfully.");
   } else {
-    Panic(EntrypointStatusCodes[EntrypointStatus >> 32][EntrypointStatus & 0xFFFFFFFF], 0);
+    Panic(EntrypointStatusCodes[HighEntrypointStatus][LowEntrypointStatus], 0);
   }
 
   for(;;);

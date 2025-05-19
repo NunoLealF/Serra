@@ -1695,9 +1695,12 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
   DebugFlag = true;
 
+  #define HighEntrypointStatus (uint64)(EntrypointStatus >> 32)
+  #define LowEntrypointStatus (uint64)(EntrypointStatus & 0xFFFFFFFF)
+
   Print(u"\n\r", 0);
   Message(Info, u"Entrypoint returned with a status code of (%d:%d)",
-          (EntrypointStatus >> 32), (EntrypointStatus & 0xFFFFFFFF));
+          HighEntrypointStatus, LowEntrypointStatus);
 
   if (EntrypointStatus == entrypointSuccess) {
 
@@ -1708,10 +1711,12 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
   } else {
 
+    // Get the status code string.
+
+    const char* String = EntrypointStatusCodes[HighEntrypointStatus][LowEntrypointStatus];
+
     // Convert the char8* string from EntrypointStatusCodes[][] into
     // one that can be used with UTF-16 (char16*)
-
-    const char* String = EntrypointStatusCodes[EntrypointStatus >> 32][EntrypointStatus & 0xFFFFFFFF];
 
     int Length = 0;
     while (String[Length] != '\0') Length++;
