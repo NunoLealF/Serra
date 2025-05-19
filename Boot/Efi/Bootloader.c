@@ -1668,7 +1668,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   // Finally, transfer control to the kernel - we keep track of the return
   // status, in case something goes wrong.
 
-  uint64 KernelStatus = TransitionStub(&CommonInfoTable, KernelEntrypoint, KernelStackTop);
+  uint64 EntrypointStatus = TransitionStub(&CommonInfoTable, KernelEntrypoint, KernelStackTop);
 
 
 
@@ -1696,10 +1696,40 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   DebugFlag = true;
 
   Print(u"\n\r", 0);
-  Message(Error, u"Failed to load the kernel entrypoint.");
-  Message(Info, u"Entrypoint returned with a status code of %xh", KernelStatus);
+  Message(Info, u"Entrypoint returned with a status code of (%d:%d)",
+          (EntrypointStatus >> 32), (EntrypointStatus & 0xFFFFFFFF));
 
-  AppStatus = KernelStatus;
+  if (EntrypointStatus == entrypointSuccess) {
+
+    // Show a success message:
+
+    Message(Ok, u"Kernel entrypoint returned successfully.");
+    AppStatus = EfiSuccess;
+
+  } else {
+
+    // Convert the char8* string from EntrypointStatusCodes[][] into
+    // one that can be used with UTF-16 (char16*)
+
+    const char* String = EntrypointStatusCodes[EntrypointStatus >> 32][EntrypointStatus & 0xFFFFFFFF];
+
+    int Length = 0;
+    while (String[Length] != '\0') Length++;
+
+    char16 WideString[Length];
+    Memset(WideString, '\0', (Length * 2));
+
+    for (auto Character = 0; Character < Length; Character++) {
+      WideString[Character] = (char16)String[Character];
+    }
+
+    // Show the intended error message:
+
+    Message(Error, WideString);
+    AppStatus = EfiLoadError;
+
+  }
+
   goto ExitEfiApplication;
 
 

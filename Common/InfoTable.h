@@ -2,8 +2,8 @@
 // This file is part of the Serra project, which is released under the MIT license.
 // For more information, please refer to the accompanying license agreement. <3
 
-#ifndef SERRA_COMMON_INFOTABLE_H
-#define SERRA_COMMON_INFOTABLE_H
+#ifndef SERRA_COMMON_INFOTableH
+#define SERRA_COMMON_INFOTableH
 
   /* (typedef) enum:uint64{} entrypointReturnValue
 
@@ -11,55 +11,105 @@
 
   */
 
+  #define getReturnValue(High, Low) (((1ULL << 32) * High) | Low)
+
   typedef enum : uint64 {
 
     // (High bit is 0h - application/OS was loaded successfully)
 
-    entrypoint_Success = 0,
+    entrypointSuccess = getReturnValue(0, 0),
 
     // (High bit is 1h - issue with information table header)
 
-    entrypoint_TableIsNull = 0x100000000,
+    entrypointTableIsNull = getReturnValue(1, 0),
 
-    entrypoint_InvalidSignature = 0x100000001,
-    entrypoint_InvalidVersion = 0x100000002,
-    entrypoint_InvalidSize = 0x100000003,
-    entrypoint_InvalidChecksum = 0x100000004,
+    entrypointTableInvalidSignature = getReturnValue(1, 1),
+    entrypointTableInvalidVersion = getReturnValue(1, 2),
+    entrypointTableInvalidSize = getReturnValue(1, 3),
+    entrypointTableInvalidChecksum = getReturnValue(1, 4),
 
     // (High bit is 2h - issue with information table data)
 
-    entrypoint_Disk_UnknownMethod = 0x200000000,
-    entrypoint_Disk_UnsupportedMethod = 0x200000001,
-    entrypoint_Disk_InvalidData = 0x200000002,
+    entrypointDiskUnknownMethod = getReturnValue(2, 0),
+    entrypointDiskUnsupportedMethod = getReturnValue(2, 1),
+    entrypointDiskInvalidData = getReturnValue(2, 2),
 
-    entrypoint_Display_UnsupportedType = 0x200000003,
-    entrypoint_Display_InvalidEdidData = 0x200000004,
-    entrypoint_Display_InvalidGraphicsData = 0x200000005,
-    entrypoint_Display_InvalidTextData = 0x200000006,
+    entrypointDisplayUnsupportedType = getReturnValue(2, 3),
+    entrypointDisplayInvalidEdidData = getReturnValue(2, 4),
+    entrypointDisplayInvalidGraphicsData = getReturnValue(2, 5),
+    entrypointDisplayInvalidTextData = getReturnValue(2, 6),
 
-    entrypoint_Firmware_UnknownType = 0x200000007,
-    entrypoint_Firmware_UnsupportedType = 0x200000008,
-    entrypoint_Firmware_InvalidMmapData = 0x200000009,
-    entrypoint_Firmware_InvalidBiosData = 0x20000000A,
-    entrypoint_Firmware_InvalidEfiData = 0x20000000B,
+    entrypointFirmwareUnknownType = getReturnValue(2, 7),
+    entrypointFirmwareUnsupportedType = getReturnValue(2, 8),
+    entrypointFirmwareInvalidMmapData = getReturnValue(2, 9),
+    entrypointFirmwareInvalidBiosData = getReturnValue(2, 10),
+    entrypointFirmwareInvalidEfiData = getReturnValue(2, 11),
 
-    entrypoint_Image_UnknownType = 0x20000000C,
-    entrypoint_Image_UnsupportedType = 0x20000000D,
-    entrypoint_Image_InvalidStack = 0x20000000E,
-    entrypoint_Image_InvalidData = 0x20000000F,
+    entrypointImageUnknownType = getReturnValue(2, 12),
+    entrypointImageUnsupportedType = getReturnValue(2, 13),
+    entrypointImageInvalidStack = getReturnValue(2, 14),
+    entrypointImageInvalidData = getReturnValue(2, 15),
 
-    entrypoint_Memory_MapHasNoEntries = 0x200000010,
-    entrypoint_Memory_ListIsNull = 0x200000011,
+    entrypointMemoryListHasNoEntries = getReturnValue(2, 16),
+    entrypointMemoryListIsNull = getReturnValue(2, 17),
 
-    entrypoint_System_UnknownArchitecture = 0x200000012,
-    entrypoint_System_UnsupportedArchitecture = 0x200000013,
-    entrypoint_System_InvalidAcpiData = 0x200000014,
-    entrypoint_System_InvalidCpuData = 0x200000015,
-    entrypoint_System_InvalidSmbiosData = 0x200000016,
+    entrypointSystemUnknownArchitecture = getReturnValue(2, 18),
+    entrypointSystemUnsupportedArchitecture = getReturnValue(2, 19),
+    entrypointSystemInvalidAcpiData = getReturnValue(2, 20),
+    entrypointSystemInvalidCpuData = getReturnValue(2, 21),
+    entrypointSystemInvalidSmbiosData = getReturnValue(2, 22),
 
     // (High bit is 3h - issue with kernel?)
 
   } entrypointReturnValue;
+
+  const char** EntrypointStatusCodes[3] = {
+
+    (const char*[]){
+
+  		"Kernel entrypoint returned successfully."
+
+  	},
+
+    (const char*[]){
+
+  		"The pointer to the bootloader-provided information table is invalid.",
+  		"The bootloader-provided information table has an invalid signature.",
+  		"The bootloader-provided information table has the wrong version.",
+  		"The bootloader-provided information table has an invalid size.",
+  		"The bootloader-provided information table has an invalid checksum."
+
+  	},
+
+    (const char*[]){
+
+  		"The bootloader uses an unknown disk access method.",
+  		"The bootloader uses an unsupported disk access method.",
+  		"The bootloader-provided disk information appears to be invalid.",
+  		"The bootloader uses an unknown or unsupported display type.",
+  		"The bootloader-provided EDID data appears to be invalid.",
+  		"The bootloader-provided graphics data appears to be invalid.",
+  		"The bootloader-provided text data appears to be invalid.",
+  		"The bootloader uses an unknown firmware type.",
+  		"The bootloader uses an unsupported firmware type.",
+  		"The bootloader-provided memory map appears to be invalid.",
+  		"The bootloader-provided BIOS information appears to be invalid.",
+  		"The bootloader-provided EFI information appears to be invalid.",
+  		"The kernel image uses an unknown executable type.",
+  		"The kernel image uses an unsupported executable type.",
+  		"The kernel stack appears to be invalid.",
+  		"The kernel executable's entrypoint (or header) is invalid.",
+  		"The bootloader-provided memory map appears to be empty.",
+  		"The pointer to the bootloader-provided memory map is invalid.",
+  		"The bootloader-indicated system architecture is unknown.",
+  		"The bootloader-indicated system architecture is unsupported.",
+  		"The bootloader-provided ACPI data appears to be invalid.",
+  		"The bootloader-provided CPU information appears to be invalid.",
+  		"The bootloader-provided SMBIOS data appears to be invalid."
+
+  	}
+
+  };
 
 
 

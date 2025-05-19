@@ -1518,12 +1518,18 @@ void S3Bootloader(void) {
   // (Actually transfer control to the kernel.)
 
   SaveState();
-  uint64 KernelStatus = TransitionStub(&CommonInfoTable, (void*)Pml4);
-
-  // (If we're here, then set text mode again (if we were in VBE), and
-  // show an error message.)
-
+  uint64 EntrypointStatus = TransitionStub(&CommonInfoTable, (void*)Pml4);
   RestoreState();
+
+
+
+  // [Restore the original system state, and display a message]
+
+  // If we're here, then that means the kernel entrypoint returned, which
+  // indicates that something probably went wrong, so we need to
+  // display a message for the user.
+
+  // (If VBE graphics mode is enabled, switch back to text mode)
 
   if (SupportsVbe == true) {
 
@@ -1533,11 +1539,19 @@ void S3Bootloader(void) {
 
   }
 
-  DebugFlag = true;
-  Message(Info, "Entrypoint returned with a status code of %x:%xh",
-          (uint32)(KernelStatus >> 32), (uint32)KernelStatus);
+  // (Display the entrypoint status to the user)
 
-  Panic("Failed to load the kernel entrypoint.", 0);
+  DebugFlag = true;
+
+  Putchar('\n', 0);
+  Message(Info, "Entrypoint returned with a status code of (%d:%d)",
+          (uint32)(EntrypointStatus >> 32), (uint32)EntrypointStatus);
+
+  if (EntrypointStatus == entrypointSuccess) {
+    Message(Ok, "Kernel entrypoint returned successfully.");
+  } else {
+    Panic(EntrypointStatusCodes[EntrypointStatus >> 32][EntrypointStatus & 0xFFFFFFFF], 0);
+  }
 
   for(;;);
 
