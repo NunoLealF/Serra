@@ -29,17 +29,17 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
   // (Check whether the table pointer itself is valid)
 
   if (InfoTable == NULL) {
-    return entrypointTablePointerIsNull;
+    return EntrypointTablePointerIsNull;
   }
 
   // (Check if the table header contains valid values)
 
   if (InfoTable->Signature != commonInfoTableSignature) {
-    return entrypointTableInvalidSignature;
+    return EntrypointTableInvalidSignature;
   } else if (InfoTable->Version != commonInfoTableVersion) {
-    return entrypointTableInvalidVersion;
+    return EntrypointTableInvalidVersion;
   } else if (InfoTable->Size != sizeof(commonInfoTable)) {
-    return entrypointTableInvalidSize;
+    return EntrypointTableInvalidSize;
   }
 
   // (Calculate our own table checksum, and compare it against the table's)
@@ -53,26 +53,26 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
   }
 
   if (InfoTable->Checksum != Checksum) {
-    return entrypointTableInvalidChecksum;
+    return EntrypointTableInvalidChecksum;
   }
 
   // (Check if the system architecture is valid)
 
   if (InfoTable->System.Architecture == UnknownArchitecture) {
 
-    return entrypointSystemUnknownArchitecture;
+    return EntrypointSystemUnknownArchitecture;
 
   } else if (InfoTable->System.Architecture == x64Architecture) {
 
     // (Check whether the value of CR0 is zero)
 
     if (InfoTable->System.Cpu.x64.Cr0 == 0) {
-      return entrypointSystemInvalidCpuData;
+      return EntrypointSystemInvalidCpuData;
     }
 
   } else {
 
-    return entrypointSystemUnsupportedArchitecture;
+    return EntrypointSystemUnsupportedArchitecture;
 
   }
 
@@ -99,7 +99,7 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
 
   if (InfoTable->Firmware.Type == UnknownFirmware) {
 
-    return entrypointFirmwareUnsupportedType;
+    return EntrypointFirmwareUnsupportedType;
 
   } else if (InfoTable->Firmware.Type == BiosFirmware) {
 
@@ -107,23 +107,23 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
     // on any other architecture.
 
     if (InfoTable->System.Architecture != x64Architecture) {
-      return entrypointFirmwareUnsupportedType;
+      return EntrypointFirmwareUnsupportedType;
     }
 
     // (Sanity-check the A20 value given)
 
     if (InfoTable->Firmware.Bios.A20 >= EnabledByMax) {
-      return entrypointFirmwareInvalidBiosData;
+      return EntrypointFirmwareInvalidBiosData;
     }
 
     // (Check whether the BIOS (E820) memory map is valid)
 
     if (InfoTable->Firmware.Bios.Mmap.NumEntries == 0) {
-      return entrypointFirmwareInvalidMmapData;
+      return EntrypointFirmwareInvalidMmapData;
     } else if (InfoTable->Firmware.Bios.Mmap.EntrySize < biosMmapEntrySizeWithoutAcpi) {
-      return entrypointFirmwareInvalidMmapData;
+      return EntrypointFirmwareInvalidMmapData;
     } else if (InfoTable->Firmware.Bios.Mmap.List.Pointer == NULL) {
-      return entrypointFirmwareInvalidMmapData;
+      return EntrypointFirmwareInvalidMmapData;
     }
 
     // (Check whether the PAT value given is valid, if supported)
@@ -149,11 +149,11 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
     if (InfoTable->Firmware.Bios.Vbe.IsSupported == true) {
 
       if (InfoTable->Firmware.Bios.Vbe.InfoBlock.Pointer == NULL) {
-        return entrypointFirmwareInvalidBiosData;
+        return EntrypointFirmwareInvalidBiosData;
       } else if (InfoTable->Firmware.Bios.Vbe.ModeInfo.Pointer == NULL) {
-        return entrypointFirmwareInvalidBiosData;
+        return EntrypointFirmwareInvalidBiosData;
       } else if (InfoTable->Firmware.Bios.Vbe.ModeNumber == 0) {
-        return entrypointFirmwareInvalidBiosData;
+        return EntrypointFirmwareInvalidBiosData;
       }
 
     }
@@ -164,71 +164,71 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
     // both correctly passed on)
 
     if (InfoTable->Firmware.Efi.ImageHandle.Pointer == NULL) {
-      return entrypointFirmwareInvalidEfiData;
+      return EntrypointFirmwareInvalidEfiData;
     }
 
     if (InfoTable->Firmware.Efi.SystemTable.Pointer == NULL) {
-      return entrypointFirmwareInvalidEfiData;
+      return EntrypointFirmwareInvalidEfiData;
     }
 
     // (Check whether the EFI (gBS->GetMemoryMap()) memory map is valid)
 
     if (InfoTable->Firmware.Efi.Mmap.NumEntries == 0) {
-      return entrypointFirmwareInvalidMmapData;
+      return EntrypointFirmwareInvalidMmapData;
     } else if (InfoTable->Firmware.Efi.Mmap.EntrySize < efiMmapEntrySize) {
-      return entrypointFirmwareInvalidMmapData;
+      return EntrypointFirmwareInvalidMmapData;
     } else if (InfoTable->Firmware.Efi.Mmap.List.Pointer == NULL) {
-      return entrypointFirmwareInvalidMmapData;
+      return EntrypointFirmwareInvalidMmapData;
     }
 
     // (Check whether the GOP protocol data is valid, if enabled)
 
     if (InfoTable->Firmware.Efi.Gop.IsSupported == true) {
       if (InfoTable->Firmware.Efi.Gop.Protocol.Pointer == NULL) {
-        return entrypointFirmwareInvalidEfiData;
+        return EntrypointFirmwareInvalidEfiData;
       }
     }
 
   } else {
 
-    return entrypointFirmwareUnsupportedType;
+    return EntrypointFirmwareUnsupportedType;
 
   }
 
   // (Check whether the stack data is valid (page-aligned, non-zero))
 
   if ((InfoTable->Image.StackTop.Address % 4096) != 0) {
-    return entrypointImageMisalignedStack;
+    return EntrypointImageMisalignedStack;
   } else if ((InfoTable->Image.StackSize % 4096) != 0) {
-    return entrypointImageMisalignedStack;
+    return EntrypointImageMisalignedStack;
   }
 
   if (InfoTable->Image.StackTop.Pointer == NULL) {
-    return entrypointImageInvalidStack;
+    return EntrypointImageInvalidStack;
   } else if (InfoTable->Image.StackSize == 0) {
-    return entrypointImageInvalidStack;
+    return EntrypointImageInvalidStack;
   }
 
   // (Check whether the kernel image data is valid)
 
   if (InfoTable->Image.Type == UnknownImageType) {
-    return entrypointImageUnsupportedType;
+    return EntrypointImageUnsupportedType;
   } else if (InfoTable->Image.Type >= MaxImageType) {
-    return entrypointImageUnsupportedType;
+    return EntrypointImageUnsupportedType;
   }
 
   if (InfoTable->Image.Executable.Entrypoint.Pointer == NULL) {
-    return entrypointImageInvalidExecutable;
+    return EntrypointImageInvalidExecutable;
   } else if (InfoTable->Image.Executable.Header.Pointer == NULL) {
-    return entrypointImageInvalidExecutable;
+    return EntrypointImageInvalidExecutable;
   }
 
   // (Check whether the 'usable' memory map is valid)
 
   if (InfoTable->Memory.NumEntries == 0) {
-    return entrypointMemoryMapHasNoEntries;
+    return EntrypointMemoryMapHasNoEntries;
   } else if (InfoTable->Memory.List.Pointer == NULL) {
-    return entrypointMemoryMapIsNull;
+    return EntrypointMemoryMapIsNull;
   }
 
   // (Check that no entries within the 'usable' memory map overlap)
@@ -241,7 +241,7 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
     auto StartOfThisEntry = UsableMmap[Index].Base;
 
     if (StartOfThisEntry < EndOfLastEntry) {
-      return entrypointMemoryMapHasOverlappingEntries;
+      return EntrypointMemoryMapHasOverlappingEntries;
     }
 
   }
@@ -252,7 +252,7 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
   uint64 EndOfUsableMemory = (LastUsableMmapEntry.Base + LastUsableMmapEntry.Limit);
 
   if (EndOfUsableMemory <= InfoTable->Memory.PreserveUntilOffset) {
-    return entrypointMemoryInvalidPreserveOffset;
+    return EntrypointMemoryInvalidPreserveOffset;
   }
 
   // (Taking into account PreserveUntilOffset, calculate the amount of
@@ -279,13 +279,13 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
   // KernelMemoryLimit, then return)
 
   if (UsableMemoryAvailable < KernelMemoryLimit) {
-    return entrypointMemoryUnderLimit;
+    return EntrypointMemoryUnderLimit;
   }
 
   // (Check whether the display data is valid)
 
   if (InfoTable->Display.Type >= MaxDisplay) {
-    return entrypointDisplayUnsupportedType;
+    return EntrypointDisplayUnsupportedType;
   }
 
   if (InfoTable->Display.Edid.IsSupported == true) {
@@ -313,17 +313,17 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
     // (Check whether the text format is supported)
 
     if (InfoTable->Display.Text.Format == UnknownFormat) {
-      return entrypointDisplayInvalidTextData;
+      return EntrypointDisplayInvalidTextData;
     } else if (InfoTable->Display.Text.Format >= MaxFormat) {
-      return entrypointDisplayInvalidTextData;
+      return EntrypointDisplayInvalidTextData;
     }
 
     // (Check whether the limits seem sane - we need at least 80*25.)
 
     if (InfoTable->Display.Text.LimitX < 80) {
-      return entrypointDisplayTooSmall;
+      return EntrypointDisplayTooSmall;
     } else if (InfoTable->Display.Text.LimitY < 25) {
-      return entrypointDisplayTooSmall;
+      return EntrypointDisplayTooSmall;
     }
 
     // (Check whether the X and Y coordinates are within limits; if not,
@@ -344,28 +344,28 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
     // (Check whether the framebuffer exists or not)
 
     if (InfoTable->Display.Graphics.Framebuffer.Pointer == NULL) {
-      return entrypointDisplayInvalidGraphicsData;
+      return EntrypointDisplayInvalidGraphicsData;
     }
 
     // (Check whether the limits seem sane - we need at least 640*480.)
 
     if (InfoTable->Display.Graphics.LimitX < 640) {
-      return entrypointDisplayTooSmall;
+      return EntrypointDisplayTooSmall;
     } else if (InfoTable->Display.Graphics.LimitY < 480) {
-      return entrypointDisplayTooSmall;
+      return EntrypointDisplayTooSmall;
     }
 
     // (Check whether the number of bits per pixel seems sane (between 16
     // and 64 bpp, and must be a multiple of 8)
 
     if ((InfoTable->Display.Graphics.Bits.PerPixel % 8) != 0) {
-      return entrypointDisplayInvalidGraphicsData;
+      return EntrypointDisplayInvalidGraphicsData;
     }
 
     if (InfoTable->Display.Graphics.Bits.PerPixel < 16) {
-      return entrypointDisplayInvalidGraphicsData;
+      return EntrypointDisplayInvalidGraphicsData;
     } else if (InfoTable->Display.Graphics.Bits.PerPixel > 64) {
-      return entrypointDisplayInvalidGraphicsData;
+      return EntrypointDisplayInvalidGraphicsData;
     }
 
     // (Check whether the pitch (number of bytes per scanline) looks sane)
@@ -373,7 +373,7 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
     uint64 MinimumPitch = (InfoTable->Display.Graphics.LimitX * (InfoTable->Display.Graphics.Bits.PerPixel / 8));
 
     if (InfoTable->Display.Graphics.Pitch < MinimumPitch) {
-      return entrypointDisplayInvalidGraphicsData;
+      return EntrypointDisplayInvalidGraphicsData;
     }
 
     // (Check whether any of the bitmasks overlap each other)
@@ -383,11 +383,11 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
     uint64 Blue = InfoTable->Display.Graphics.Bits.BlueMask;
 
     if ((Red & Green) != 0) {
-      return entrypointDisplayInvalidGraphicsData;
+      return EntrypointDisplayInvalidGraphicsData;
     } else if ((Red & Blue) != 0) {
-      return entrypointDisplayInvalidGraphicsData;
+      return EntrypointDisplayInvalidGraphicsData;
     } else if ((Green & Blue) != 0) {
-      return entrypointDisplayInvalidGraphicsData;
+      return EntrypointDisplayInvalidGraphicsData;
     }
 
     // (Manually count the number of bits per pixel, and check if it
@@ -402,7 +402,7 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
     }
 
     if (Bpp > InfoTable->Display.Graphics.Bits.PerPixel) {
-      return entrypointDisplayInvalidGraphicsData;
+      return EntrypointDisplayInvalidGraphicsData;
     }
 
   }
@@ -410,9 +410,9 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
   // (Check whether the disk/filesystem data is valid)
 
   if (InfoTable->Disk.AccessMethod == UnknownMethod) {
-    return entrypointDiskUnsupportedMethod;
+    return EntrypointDiskUnsupportedMethod;
   } else if (InfoTable->Disk.AccessMethod >= MaxMethod) {
-    return entrypointDiskUnsupportedMethod;
+    return EntrypointDiskUnsupportedMethod;
   }
 
   if (InfoTable->Disk.AccessMethod == Int13Method) {
@@ -420,22 +420,22 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
     // (This method is only valid on systems with BIOS firmware)
 
     if (InfoTable->Firmware.Type != BiosFirmware) {
-      return entrypointDiskUnsupportedMethod;
+      return EntrypointDiskUnsupportedMethod;
     }
 
     // (Check if the drive number is valid (00-0Fh, or 80-8Fh)
 
     if ((InfoTable->Disk.Int13.DriveNumber > 0x10) && (InfoTable->Disk.Int13.DriveNumber < 0x80)) {
-      return entrypointDiskInvalidData;
+      return EntrypointDiskInvalidData;
     } else if (InfoTable->Disk.Int13.DriveNumber > 0x90) {
-      return entrypointDiskInvalidData;
+      return EntrypointDiskInvalidData;
     }
 
     // (Check if EDD data is valid)
 
     if (InfoTable->Disk.Int13.Edd.IsEnabled == true) {
       if (InfoTable->Disk.Int13.Edd.Table.Pointer == NULL) {
-        return entrypointDiskInvalidData;
+        return EntrypointDiskInvalidData;
       }
     }
 
@@ -444,19 +444,19 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
     // (This method is only valid on systems with EFI firmware)
 
     if (InfoTable->Firmware.Type != EfiFirmware) {
-      return entrypointDiskUnsupportedMethod;
+      return EntrypointDiskUnsupportedMethod;
     }
 
     // (Check for null pointers)
 
     if (InfoTable->Disk.EfiFs.FileInfo.Pointer == NULL) {
-      return entrypointDiskInvalidData;
+      return EntrypointDiskInvalidData;
     } else if (InfoTable->Disk.EfiFs.HandleList.Pointer == NULL) {
-      return entrypointDiskInvalidData;
+      return EntrypointDiskInvalidData;
     } else if (InfoTable->Disk.EfiFs.Handle.Pointer == NULL) {
-      return entrypointDiskInvalidData;
+      return EntrypointDiskInvalidData;
     } else if (InfoTable->Disk.EfiFs.Protocol.Pointer == NULL) {
-      return entrypointDiskInvalidData;
+      return EntrypointDiskInvalidData;
     }
 
   }
@@ -481,7 +481,7 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
     InitializeEfiTables(InfoTable->Firmware.Efi.SystemTable.Pointer);
 
     if (gST != InfoTable->Firmware.Efi.SystemTable.Pointer) {
-      return entrypointKernelNotPositionIndependent;
+      return EntrypointKernelNotPositionIndependent;
     }
 
   }
@@ -518,6 +518,6 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
 
   // (TODO: ...)
 
-  return entrypointSuccess;
+  return EntrypointSuccess;
 
 }

@@ -1668,7 +1668,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   // Finally, transfer control to the kernel - we keep track of the return
   // status, in case something goes wrong.
 
-  entrypointReturnStatus EntrypointStatus = EfiTransitionStub(&CommonInfoTable, KernelEntrypoint, KernelStackTop);
+  entrypointReturnStatus EntrypointStatusCode = EfiTransitionStub(&CommonInfoTable, KernelEntrypoint, KernelStackTop);
 
 
 
@@ -1695,14 +1695,14 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
   DebugFlag = true;
 
-  #define HighEntrypointStatus (uint64)(EntrypointStatus >> 32)
-  #define LowEntrypointStatus (uint64)(EntrypointStatus & 0xFFFFFFFF)
+  #define HighEntrypointStatus (uint64)(EntrypointStatusCode >> 32)
+  #define LowEntrypointStatus (uint64)(EntrypointStatusCode & 0xFFFFFFFF)
 
   Print(u"\n\r", 0);
   Message(Info, u"Entrypoint returned with a status code of (%d:%d)",
           HighEntrypointStatus, LowEntrypointStatus);
 
-  if (EntrypointStatus == entrypointSuccess) {
+  if (EntrypointStatusCode == EntrypointSuccess) {
 
     // Show a success message:
 

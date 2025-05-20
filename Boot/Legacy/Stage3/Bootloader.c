@@ -1517,7 +1517,7 @@ void S3Bootloader(void) {
 
   // (Actually transfer control to the kernel.)
 
-  entrypointReturnStatus EntrypointStatus = TransitionStub(&CommonInfoTable, (void*)Pml4);
+  entrypointReturnStatus EntrypointStatusCode = TransitionStub(&CommonInfoTable, (void*)Pml4);
 
 
 
@@ -1553,14 +1553,14 @@ void S3Bootloader(void) {
 
   DebugFlag = true;
 
-  #define HighEntrypointStatus (uint32)(EntrypointStatus >> 32)
-  #define LowEntrypointStatus (uint32)(EntrypointStatus & 0xFFFFFFFF)
+  #define HighEntrypointStatus (uint32)(EntrypointStatusCode >> 32)
+  #define LowEntrypointStatus (uint32)(EntrypointStatusCode & 0xFFFFFFFF)
 
   Putchar('\n', 0);
   Message(Info, "Entrypoint returned with a status code of (%d:%d)",
           HighEntrypointStatus, LowEntrypointStatus);
 
-  if (EntrypointStatus == entrypointSuccess) {
+  if (EntrypointStatusCode == EntrypointSuccess) {
 
     Message(Ok, "Kernel entrypoint returned successfully.");
 

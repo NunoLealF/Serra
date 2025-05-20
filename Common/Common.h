@@ -375,60 +375,60 @@
 
     // (High bit is 0h - application/OS was loaded successfully)
 
-    entrypointSuccess = (0ULL << 32),
+    EntrypointSuccess = (0ULL << 32),
 
     // (High bit is 1h - issue with the information table header)
 
-    entrypointTablePointerIsNull = (1ULL << 32),
+    EntrypointTablePointerIsNull = (1ULL << 32),
 
-    entrypointTableInvalidSignature,
-    entrypointTableInvalidVersion,
-    entrypointTableInvalidSize,
-    entrypointTableInvalidChecksum,
+    EntrypointTableInvalidSignature,
+    EntrypointTableInvalidVersion,
+    EntrypointTableInvalidSize,
+    EntrypointTableInvalidChecksum,
 
     // (High bit is 2h - issue with disk- or filesystem-related data)
 
-    entrypointDiskUnsupportedMethod = (2ULL << 32),
-    entrypointDiskInvalidData,
+    EntrypointDiskUnsupportedMethod = (2ULL << 32),
+    EntrypointDiskInvalidData,
 
     // (High bit is 3h - issue with display-related data)
 
-    entrypointDisplayUnsupportedType = (3ULL << 32),
-    entrypointDisplayTooSmall,
-    entrypointDisplayInvalidGraphicsData,
-    entrypointDisplayInvalidTextData,
+    EntrypointDisplayUnsupportedType = (3ULL << 32),
+    EntrypointDisplayTooSmall,
+    EntrypointDisplayInvalidGraphicsData,
+    EntrypointDisplayInvalidTextData,
 
     // (High bit is 4h - issue with firmware-related data)
 
-    entrypointFirmwareUnsupportedType = (4ULL << 32),
-    entrypointFirmwareInvalidMmapData,
-    entrypointFirmwareInvalidBiosData,
-    entrypointFirmwareInvalidEfiData,
+    EntrypointFirmwareUnsupportedType = (4ULL << 32),
+    EntrypointFirmwareInvalidMmapData,
+    EntrypointFirmwareInvalidBiosData,
+    EntrypointFirmwareInvalidEfiData,
 
     // (High bit is 5h - issue with image- or stack-related data)
 
-    entrypointImageUnsupportedType = (5ULL << 32),
-    entrypointImageMisalignedStack,
-    entrypointImageInvalidStack,
-    entrypointImageInvalidExecutable,
+    EntrypointImageUnsupportedType = (5ULL << 32),
+    EntrypointImageMisalignedStack,
+    EntrypointImageInvalidStack,
+    EntrypointImageInvalidExecutable,
 
     // (High bit is 6h - issue with memory map-related data)
 
-    entrypointMemoryMapIsNull = (6ULL << 32),
-    entrypointMemoryMapHasNoEntries,
-    entrypointMemoryMapHasOverlappingEntries,
-    entrypointMemoryInvalidPreserveOffset,
-    entrypointMemoryUnderLimit,
+    EntrypointMemoryMapIsNull = (6ULL << 32),
+    EntrypointMemoryMapHasNoEntries,
+    EntrypointMemoryMapHasOverlappingEntries,
+    EntrypointMemoryInvalidPreserveOffset,
+    EntrypointMemoryUnderLimit,
 
     // (High bit is 7h - issue with system-related data)
 
-    entrypointSystemUnknownArchitecture = (7ULL << 32),
-    entrypointSystemUnsupportedArchitecture,
-    entrypointSystemInvalidCpuData,
+    EntrypointSystemUnknownArchitecture = (7ULL << 32),
+    EntrypointSystemUnsupportedArchitecture,
+    EntrypointSystemInvalidCpuData,
 
     // (High bit is 8h - compile or runtime issue)
 
-    entrypointKernelNotPositionIndependent = (8ULL << 32)
+    EntrypointKernelNotPositionIndependent = (8ULL << 32)
 
   } entrypointReturnStatus;
 
