@@ -1471,7 +1471,7 @@ void S3Bootloader(void) {
     CommonInfoTable.Checksum += RawCommonInfoTable[Offset];
   }
 
-  Message(Ok, "Successfully calculated common info table checksum (%xh).", CommonInfoTable.Checksum);
+  Message(Ok, "Successfully calculated information table checksum (%xh).", CommonInfoTable.Checksum);
 
 
 
@@ -1517,9 +1517,7 @@ void S3Bootloader(void) {
 
   // (Actually transfer control to the kernel.)
 
-  SaveState();
-  uint64 EntrypointStatus = TransitionStub(&CommonInfoTable, (void*)Pml4);
-  RestoreState();
+  entrypointReturnStatus EntrypointStatus = TransitionStub(&CommonInfoTable, (void*)Pml4);
 
 
 
@@ -1529,13 +1527,25 @@ void S3Bootloader(void) {
   // indicates that something probably went wrong, so we need to
   // display a message for the user.
 
+  // (Restore our old IDT, and enable interrupts)
+
+  RestoreState();
+
   // (If VBE graphics mode is enabled, switch back to text mode)
 
   if (SupportsVbe == true) {
 
-    Table->Eax = 0x0003; // AH = 00h, AL = 03h - switch to VGA mode 03h.
-    Table->Int = 0x10; // We need to use int 10h
+    // Switch to VGA mode 03h, which is the 'default' 80-by-25 16-color
+    // text mode, using the (int 10h, ah=00h, al=(mode)) BIOS call
+
+    Table->Eax = 0x03;
+    Table->Int = 0x10;
     RealMode();
+
+    // Reset the terminal, just in case.
+
+    InitializeTerminal(80, 25, 0xB8000);
+    ClearTerminal();
 
   }
 
@@ -1555,6 +1565,8 @@ void S3Bootloader(void) {
   } else {
     Panic(EntrypointStatusCodes[HighEntrypointStatus][LowEntrypointStatus], 0);
   }
+
+  // (Halt)
 
   for(;;);
 

@@ -8,7 +8,7 @@ SECTION .text
 
 EXTERN KernelEntrypoint
 EXTERN KernelStackTop
-GLOBAL TransitionStub
+GLOBAL EfiTransitionStub
 
 ; It's assumed that this stub will behave as a regular 64-bit function (with
 ; the EFI/Microsoft ABI) would, so we need to initialize a new call frame,
@@ -18,7 +18,7 @@ GLOBAL TransitionStub
 ; (We preserve RBX, RDI, RSI, RSP, RBP, R12, R13, R14 and R15.)
 ; (We discard RCX, RDX and R8; and return in RAX.)
 
-TransitionStub:
+EfiTransitionStub:
 
   ; (1) Push all preserved registers.
 

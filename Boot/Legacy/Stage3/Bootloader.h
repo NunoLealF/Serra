@@ -22,7 +22,7 @@
   // Declare functions in Bootloader.c and Stub.asm
 
   void S3Bootloader(void);
-  entrypointReturnValue TransitionStub(commonInfoTable* InfoTable, void* Pml4);
+  entrypointReturnStatus TransitionStub(commonInfoTable* InfoTable, void* Pml4);
 
   // Global variables, for use throughout the entire bootloader
 

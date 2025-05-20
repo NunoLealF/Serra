@@ -1577,7 +1577,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   Print(u"\n\r", 0);
   Message(Boot, u"Preparing to transfer control to the kernel.");
 
-  Message(Info, u"(function) TransitionStub() is at %xh", (uint64)(&TransitionStub));
+  Message(Info, u"(function) EfiTransitionStub() is at %xh", (uint64)(&EfiTransitionStub));
   Message(Info, u"(commonInfoTable*) CommonInfoTable is at %xh", (uint64)(&CommonInfoTable));
   Message(Info, u"(void*) KernelEntrypoint is at %xh", (uint64)KernelEntrypoint);
   Message(Info, u"(void*) KernelStackTop is at %xh \n\r", (uint64)KernelStackTop);
@@ -1668,7 +1668,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   // Finally, transfer control to the kernel - we keep track of the return
   // status, in case something goes wrong.
 
-  uint64 EntrypointStatus = TransitionStub(&CommonInfoTable, KernelEntrypoint, KernelStackTop);
+  entrypointReturnStatus EntrypointStatus = EfiTransitionStub(&CommonInfoTable, KernelEntrypoint, KernelStackTop);
 
 
 
