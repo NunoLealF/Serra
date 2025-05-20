@@ -1713,7 +1713,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
     // Get the status code string.
 
-    const char* String = EntrypointStatusCodes[HighEntrypointStatus][LowEntrypointStatus];
+    const char* String = EntrypointStatusMessage[HighEntrypointStatus][LowEntrypointStatus];
 
     // Convert the char8* string from EntrypointStatusCodes[][] into
     // one that can be used with UTF-16 (char16*)

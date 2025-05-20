@@ -3,14 +3,14 @@
 // For more information, please refer to the accompanying license agreement. <3
 
 #include "Stdint.h"
-#include "Kernel.h"
+#include "Entry.h"
 
-/* uint64 Entrypoint()
+/* entrypointReturnStatus Entrypoint()
 
    Inputs: commonInfoTable* InfoTable - A pointer to the bootloader-provided
            common information table.
 
-   Outputs: entrypointReturnValue - If the kernel can't be initialized for
+   Outputs: entrypointReturnStatus - If the kernel can't be initialized for
             some reason, we return a status code that will then be
             shown to the user.
 
@@ -249,7 +249,7 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
   // (Sanity-check the value of PreserveUntilOffset)
 
   usableMmapEntry LastUsableMmapEntry = UsableMmap[InfoTable->Memory.NumEntries - 1];
-  auto EndOfUsableMemory = (LastUsableMmapEntry.Base + LastUsableMmapEntry.Limit);
+  uint64 EndOfUsableMemory = (LastUsableMmapEntry.Base + LastUsableMmapEntry.Limit);
 
   if (EndOfUsableMemory <= InfoTable->Memory.PreserveUntilOffset) {
     return entrypointMemoryInvalidPreserveOffset;
@@ -470,6 +470,8 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
   // we can move onto preparing the environment for the kernel, by
   // setting up global variables.
 
+  // (If we're booting from EFI, then set up gST/gBS/gRT)
+
   if (InfoTable->Firmware.Type == EfiFirmware) {
 
     gST = InfoTable->Firmware.Efi.SystemTable.Pointer;
@@ -480,106 +482,36 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
 
 
 
-  // [Demo]
 
-  if (InfoTable->Firmware.Type == EfiFirmware) {
+  // [Set up the kernel environment]
 
-    __asm__ __volatile__ ("sti");
+  // (TODO: If we're booting from EFI, set up alternate translations? Or
+  // anything that might require us to restore environment)
 
-    if (InfoTable->Display.Type == EfiTextDisplay) {
+  // (TODO: Set up any essential interfaces, get CPUID data, etc.)
 
-      if (InfoTable->Firmware.Efi.SupportsConOut == true) {
+  // (TODO: Set up video interfaces, for text output and such)
 
-        gST->ConOut->ClearScreen(gST->ConOut);
+  // (TODO: Set up memory management)
 
-        gST->ConOut->SetAttribute(gST->ConOut, 0x0F);
-        gST->ConOut->OutputString(gST->ConOut, u"Hi, this is Serra! <3 \n\r");
+  // (TODO: Set up interrupts - for now, just timers)
 
-        gST->ConOut->SetAttribute(gST->ConOut, 0x3F);
-        gST->ConOut->OutputString(gST->ConOut, u"May 19 2025");
-
-        gST->ConOut->SetAttribute(gST->ConOut, 0x07);
-        gST->ConOut->OutputString(gST->ConOut, u"\n\r");
-
-      }
-
-    } else {
-
-      for (auto y = 0; y < InfoTable->Display.Graphics.LimitY; y++) {
-
-        for (auto x = 0; x < (InfoTable->Display.Graphics.LimitX * InfoTable->Display.Graphics.Bits.PerPixel / 4); x++) {
-
-          *(uint8*)(InfoTable->Display.Graphics.Framebuffer.Address + (InfoTable->Display.Graphics.Pitch * y) + x) = (y * 255 / InfoTable->Display.Graphics.LimitY);
-
-        }
-
-      }
-
-    }
-
-    efiInputKey PhantomKey;
-
-    if (InfoTable->Firmware.Efi.SupportsConIn == false) {
-      while (gST->ConIn->ReadKeyStroke(gST->ConIn, &PhantomKey) == EfiNotReady);
-    }
-
-    return entrypointSuccess;
-
-  } else {
-
-    if (InfoTable->Display.Type == VgaDisplay) {
-
-      char* Test = "Hi, this is Serra! <3";
-      char* Test2 = "May 19 2025";
-
-      uint16* Terminal = (uint16*)(0xB8000);
-      uint16* TestPtr = (uint16*)(0xB8000 + (160*21));
-      uint16* Test2Ptr = (uint16*)(0xB8000 + (160*22));
-
-      for (auto Clear = 0; Clear < (80*25); Clear++) {
-        Terminal[Clear] = 0;
-      }
-
-      int Index = 0;
-      while (Test[Index] != '\0') {
-        TestPtr[Index] = 0x0F00 + Test[Index];
-        Index++;
-      }
-
-      Index = 0;
-      while (Test2[Index] != '\0') {
-        Test2Ptr[Index] = 0x3F00 + Test2[Index];
-        Index++;
-      }
-
-      return entrypointSuccess;
-
-    } else {
-
-      for (auto y = 0; y < InfoTable->Display.Graphics.LimitY; y++) {
-
-        for (auto x = 0; x < (InfoTable->Display.Graphics.LimitX * InfoTable->Display.Graphics.Bits.PerPixel / 4); x++) {
-
-          *(uint8*)(InfoTable->Display.Graphics.Framebuffer.Address + (InfoTable->Display.Graphics.Pitch * y) + x) = (y * 255 / InfoTable->Display.Graphics.LimitY);
-
-        }
-
-      }
-
-      for (auto a = 0; a < 100000000; a++) {
-        __asm__ __volatile__ ("nop");
-      }
-
-    }
-
-    return entrypointSuccess;
-
-  }
+  // (TODO: Set up drivers)
 
 
-  // ...
 
-  for(;;);
-  return 0; // (0:0)
+
+  // [Call the kernel]
+
+  Kernel(InfoTable);
+
+
+
+
+  // [Restore bootloader status, and return]
+
+  // (TODO: ...)
+
+  return entrypointSuccess;
 
 }

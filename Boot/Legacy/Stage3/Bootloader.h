@@ -17,7 +17,9 @@
   #include "Elf.h"
 
   #include "../Shared/InfoTable.h"
+
   #include "../../../Common/InfoTable.h"
+  #include "../../../Common/Status.h"
 
   // Declare functions in Bootloader.c and Stub.asm
 

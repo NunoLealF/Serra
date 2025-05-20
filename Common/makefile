@@ -82,8 +82,12 @@ Kernel/Entry.o:
 	@echo "Building $@"
 	@$(CC) $(CFLAGS) -ffunction-sections -c Kernel/Entry.c -o Kernel/Entry.o
 
+Kernel/Kernel.o:
+	@echo "Building $@"
+	@$(CC) $(CFLAGS) -c Kernel/Kernel.c -o Kernel/Kernel.o
+
 # Link everything into one .elf file
 
-Kernel/Kernel.elf: Kernel/Entry.o
+Kernel/Kernel.elf: Kernel/Entry.o Kernel/Kernel.o
 	@echo "Building $@"
 	@$(CC) -T Linker.ld $(LDFLAGS) -o Kernel/Kernel.elf -ffreestanding -nolibc -nostdlib -lgcc $^

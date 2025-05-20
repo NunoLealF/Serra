@@ -1561,9 +1561,13 @@ void S3Bootloader(void) {
           HighEntrypointStatus, LowEntrypointStatus);
 
   if (EntrypointStatus == entrypointSuccess) {
+
     Message(Ok, "Kernel entrypoint returned successfully.");
+
   } else {
-    Panic(EntrypointStatusCodes[HighEntrypointStatus][LowEntrypointStatus], 0);
+
+    Panic(EntrypointStatusMessage[HighEntrypointStatus][LowEntrypointStatus], 0);
+
   }
 
   // (Halt)

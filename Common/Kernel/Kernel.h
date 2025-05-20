@@ -10,9 +10,9 @@
   #include "../InfoTable.h"
   #include "../../Boot/Efi/Efi/Efi.h"
 
-  // Declare functions in Entry.c (TODO: and Kernel.c)
+  // Declare functions in Kernel.c.
 
-  entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable);
+  void Kernel(commonInfoTable* InfoTable);
 
   // Declare global variables, used throughout the kernel.
 
@@ -24,12 +24,6 @@
     bool DebugFlag = Debug; // Defined by the preprocessor, use -DDebug=true or false.
   #else
     bool DebugFlag = true; // If 'Debug' isn't defined, then assume it's true
-  #endif
-
-  #ifdef KernelMb
-    #define KernelMemoryLimit (1048576ULL * KernelMb) // Defined by the preprocessor, use -DKernelMb=(%d).
-  #else
-    #define KernelMemoryLimit (1048576ULL * 0) // If `KernelMb` isn't defined, assume no limit.
   #endif
 
 #endif
