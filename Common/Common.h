@@ -434,7 +434,7 @@
 
 
 
-  /* const char** EntrypointStatusMessage[n]
+  /* [[maybe_unused]] static const char** EntrypointStatusMessage[n]
 
      Calling convention: [a] -> High bits of entrypointReturnValue
                          [b] -> Low bits of entrypointReturnValue
