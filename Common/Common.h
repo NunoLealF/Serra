@@ -446,8 +446,6 @@
 
   */
 
-  #define GetEntrypointStatus(Value) (EntrypointStatusCodes[Value >> 32][Value & 0xFFFFFFFF])
-
   [[maybe_unused]] static const char** EntrypointStatusMessage[] = {
 
     (const char*[]){
