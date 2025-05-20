@@ -63,8 +63,8 @@
   void* GetSmbiosEntryPointTable(void);
   uint32 GetPciBiosInfoTable(pciBiosInfoTable* PciBiosTable);
 
-  #define patMsr 0x277
-  #define longModeMsr 0xC0000080
+  #define PatMsr 0x277
+  #define LongmodeMsr 0xC0000080
 
   void WriteToMsr(uint32 Msr, uint64 Value);
   uint64 ReadFromMsr(uint32 Msr);

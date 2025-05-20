@@ -68,7 +68,11 @@
 
     entrypointSystemUnknownArchitecture = (7ULL << 32),
     entrypointSystemUnsupportedArchitecture,
-    entrypointSystemInvalidCpuData
+    entrypointSystemInvalidCpuData,
+
+    // (High bit is 8h - compile or runtime issue)
+
+    entrypointKernelNotPositionIndependent = (8ULL << 32)
 
   } entrypointReturnStatus;
 
@@ -88,7 +92,7 @@
 
   #define GetEntrypointStatus(Value) (EntrypointStatusCodes[Value >> 32][Value & 0xFFFFFFFF])
 
-  const char** EntrypointStatusMessage[8] = {
+  [[maybe_unused]] static const char** EntrypointStatusMessage[9] = {
 
     (const char*[]){
 
@@ -154,7 +158,15 @@
 
       "The bootloader-indicated system architecture is unknown.",
       "The bootloader-indicated system architecture is unsupported.",
-      "The bootloader-provided CPU information appears to be invalid.",
+      "The bootloader-provided CPU information appears to be invalid."
+
+    },
+
+    (const char*[]) {
+
+      "The kernel was not compiled as a pure position-independent executable;\n\r"
+      "make sure you're linking with `-pie -Wl,--no-dynamic-linker` (and not \n\r"
+      "`-static-pie`)."
 
     }
 

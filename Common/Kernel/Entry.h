@@ -5,11 +5,20 @@
 #ifndef SERRA_KERNEL_ENTRYPOINT_H
 #define SERRA_KERNEL_ENTRYPOINT_H
 
-  // Import other headers...
+  // Import standard and bootloader-related headers.
 
+  #include "Stdint.h"
   #include "../InfoTable.h"
   #include "../Status.h"
-  #include "../../Boot/Efi/Efi/Efi.h"
+
+  // Import kernel constructors.
+
+  #include "Constructors/Firmware/Firmware.h"
+
+  // Import firmware-specific headers.
+
+  #include "Firmware/Bios/Bios.h"
+  #include "Firmware/Efi/Efi.h"
 
   // Declare functions in Entry.c and Kernel.c.
 
@@ -17,10 +26,6 @@
   void Kernel(commonInfoTable* InfoTable);
 
   // Declare global variables, used throughout the kernel.
-
-  extern efiSystemTable* gST;
-  extern efiBootServices* gBS;
-  extern efiRuntimeServices* gRT;
 
   extern bool DebugFlag;
 

@@ -21,24 +21,30 @@
 
   // Memory-map-related structures, from Mmap/Mmap.c.
 
+  typedef enum _mmapEntryType : uint32 {
+
+    mmapEntryUnknown = 0,
+    mmapEntryFree = 1,
+    mmapEntryReserved = 2,
+    mmapEntryAcpiReclaimable = 3,
+    mmapEntryAcpiNvs = 4,
+    mmapEntryUnusable = 5,
+    mmapEntryDisabled = 6,
+    mmapEntryPersistent = 7,
+    mmapEntryUnaccepted = 8,
+    mmapEntryMax
+
+  } mmapEntryType;
+
   typedef struct _mmapEntry {
 
     uint64 Base;
     uint64 Limit;
-    uint32 Type;
+    mmapEntryType Type;
 
     uint32 Acpi;
 
   } __attribute__((packed)) mmapEntry;
-
-  #define mmapEntryFree 1
-  #define mmapEntryReserved 2
-  #define mmapEntryAcpiReclaimable 3
-  #define mmapEntryAcpiNvs 4
-  #define mmapEntryUnusable 5
-  #define mmapEntryDisabled 6
-  #define mmapEntryPersistent 7
-  #define mmapEntryUnaccepted 8
 
   // Usable memory map-related structures, used in the kernel infotable.
 

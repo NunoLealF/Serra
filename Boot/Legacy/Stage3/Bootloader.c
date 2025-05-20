@@ -1145,7 +1145,7 @@ void S3Bootloader(void) {
 
   if (CommonInfoTable.Firmware.Bios.Pat.IsSupported == true) {
 
-    WriteToMsr(patMsr, PatMsrValue);
+    WriteToMsr(PatMsr, PatMsrValue);
     CommonInfoTable.Firmware.Bios.Pat.Value = PatMsrValue;
 
     Message(Ok, "Updated the PAT MSR to %x:%xh.", (uint32)(PatMsrValue >> 32), (uint32)PatMsrValue);

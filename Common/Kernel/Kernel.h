@@ -5,20 +5,26 @@
 #ifndef SERRA_KERNEL_H
 #define SERRA_KERNEL_H
 
-  // Import other headers...
+  // Import standard and bootloader-related headers.
 
+  #include "Stdint.h"
   #include "../InfoTable.h"
-  #include "../../Boot/Efi/Efi/Efi.h"
+  #include "../Status.h"
+
+  // Import kernel constructors.
+
+  #include "Constructors/Firmware/Firmware.h"
+
+  // Import firmware-specific headers.
+
+  #include "Firmware/Bios/Bios.h"
+  #include "Firmware/Efi/Efi.h"
 
   // Declare functions in Kernel.c.
 
   void Kernel(commonInfoTable* InfoTable);
 
   // Declare global variables, used throughout the kernel.
-
-  efiSystemTable* gST = NULL;
-  efiBootServices* gBS = NULL;
-  efiRuntimeServices* gRT = NULL;
 
   #ifdef Debug
     bool DebugFlag = Debug; // Defined by the preprocessor, use -DDebug=true or false.

@@ -15,7 +15,8 @@ OBJD = x86_64-elf-objdump
 # [Linker flags]
 # -nostdlib: Don't use or link any standard libraries (except for libgcc).
 # -mno-red-zone: Disable the System V ABI 'red zone'; this is necessary for now.
-# -static-pie: Make a *static* position-independent executable (that can relocate itself)
+# -pie: Make a position-independent executable.
+# -Wl,--no-dynamic-linker: Tell the linker to provide its own startup code (no dynamic linker needed).
 
 # [Compiler flags]
 # -funsigned-char: Use unsigned chars for characters.
@@ -31,7 +32,7 @@ OBJD = x86_64-elf-objdump
 # -Wextra: Enable even more warnings. (Not sure why wall doesn't take care of this)
 # -Wpedantic: Be pedantic about the C standard / any possible mistakes
 
-LDFLAGS = -nostdlib -mno-red-zone -static-pie
+LDFLAGS = -nostdlib -mno-red-zone -pie -Wl,--no-dynamic-linker
 CFLAGS = -std=c23 -funsigned-char -ffreestanding -fpie -maccumulate-outgoing-args -march=x86-64 -mmmx -msse -msse2 -mno-red-zone -O3 -Wall -Wextra -Wpedantic
 
 # (Include the build configuration file, from the root directory)
@@ -63,6 +64,10 @@ Clean:
 	@-rm -f Kernel/*.elf
 	@-rm -f Kernel/*.bin
 
+	@-rm -f Kernel/Constructors/Firmware/*.o
+	@-rm -f Kernel/Firmware/Bios/*.o
+	@-rm -f Kernel/Firmware/Efi/*.o
+
 Dump:
 	@$(OBJD) -S Kernel/Kernel.elf
 
@@ -86,8 +91,12 @@ Kernel/Kernel.o:
 	@echo "Building $@"
 	@$(CC) $(CFLAGS) -c Kernel/Kernel.c -o Kernel/Kernel.o
 
+Kernel/Constructors/Firmware/Efi.o:
+	@echo "Building $@"
+	@$(CC) $(CFLAGS) -c Kernel/Constructors/Firmware/Efi.c -o Kernel/Constructors/Firmware/Efi.o
+
 # Link everything into one .elf file
 
-Kernel/Kernel.elf: Kernel/Entry.o Kernel/Kernel.o
+Kernel/Kernel.elf: Kernel/Entry.o Kernel/Kernel.o Kernel/Constructors/Firmware/Efi.o
 	@echo "Building $@"
 	@$(CC) -T Linker.ld $(LDFLAGS) -o Kernel/Kernel.elf -ffreestanding -nolibc -nostdlib -lgcc $^

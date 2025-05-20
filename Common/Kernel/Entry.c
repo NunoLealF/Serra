@@ -120,7 +120,7 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
 
     if (InfoTable->Firmware.Bios.Mmap.NumEntries == 0) {
       return entrypointFirmwareInvalidMmapData;
-    } else if (InfoTable->Firmware.Bios.Mmap.EntrySize < 20) {
+    } else if (InfoTable->Firmware.Bios.Mmap.EntrySize < biosMmapEntrySizeWithoutAcpi) {
       return entrypointFirmwareInvalidMmapData;
     } else if (InfoTable->Firmware.Bios.Mmap.List.Pointer == NULL) {
       return entrypointFirmwareInvalidMmapData;
@@ -175,7 +175,7 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
 
     if (InfoTable->Firmware.Efi.Mmap.NumEntries == 0) {
       return entrypointFirmwareInvalidMmapData;
-    } else if (InfoTable->Firmware.Efi.Mmap.EntrySize < sizeof(efiMemoryDescriptor)) {
+    } else if (InfoTable->Firmware.Efi.Mmap.EntrySize < efiMmapEntrySize) {
       return entrypointFirmwareInvalidMmapData;
     } else if (InfoTable->Firmware.Efi.Mmap.List.Pointer == NULL) {
       return entrypointFirmwareInvalidMmapData;
@@ -466,15 +466,25 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
 
   // [Set up global variables]
 
-  // Now that we've checked that the information table really *is* valid,
-  // we can move onto preparing the environment for the kernel, by
+  // Now that we've checked that the information table really *is* valid, we
+  // can move onto preparing the environment for the kernel, by
   // setting up global variables.
 
-  // (EDIT - Do *not* set up gST/gBS/etc. here, it can only be done once;
-  // C really doesn't like doing that more than once, so just don't)
+  // At this point, some incorrectly compiled position-independent executables
+  // might fail to correctly reference global variables, so we also try
+  // to check for that.
 
-  // (Have a global constructor (like InitializeEfiVars()) or just do it
-  // in Kernel.c, period - I just don't know why GCC doesn't warn for that)
+  // (Set up EFI variables.)
+
+  if (InfoTable->Firmware.Type == EfiFirmware) {
+
+    InitializeEfiTables(InfoTable->Firmware.Efi.SystemTable.Pointer);
+
+    if (gST != InfoTable->Firmware.Efi.SystemTable.Pointer) {
+      return entrypointKernelNotPositionIndependent;
+    }
+
+  }
 
 
 
