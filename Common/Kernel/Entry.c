@@ -470,15 +470,11 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
   // we can move onto preparing the environment for the kernel, by
   // setting up global variables.
 
-  // (If we're booting from EFI, then set up gST/gBS/gRT)
+  // (EDIT - Do *not* set up gST/gBS/etc. here, it can only be done once;
+  // C really doesn't like doing that more than once, so just don't)
 
-  if (InfoTable->Firmware.Type == EfiFirmware) {
-
-    gST = InfoTable->Firmware.Efi.SystemTable.Pointer;
-    gBS = gST->BootServices;
-    gRT = gST->RuntimeServices;
-
-  }
+  // (Have a global constructor (like InitializeEfiVars()) or just do it
+  // in Kernel.c, period - I just don't know why GCC doesn't warn for that)
 
 
 

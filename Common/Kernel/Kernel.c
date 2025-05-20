@@ -9,6 +9,16 @@
 
 void Kernel(commonInfoTable* InfoTable) {
 
+  // (If we're booting from EFI, then set up gST / gBS / gRT)
+
+  if (InfoTable->Firmware.Type == EfiFirmware) {
+
+    gST = InfoTable->Firmware.Efi.SystemTable.Pointer;
+    gBS = gST->BootServices;
+    gRT = gST->RuntimeServices;
+
+  }
+
   // (Depending on the display type, show a graphical demo)
 
   if ((InfoTable->Display.Type == VbeDisplay) || (InfoTable->Display.Type == GopDisplay)) {
