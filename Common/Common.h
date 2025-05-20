@@ -434,7 +434,7 @@
 
 
 
-  /* [[maybe_unused]] static const char** EntrypointStatusMessage[n]
+  /* [[maybe_unused]] static const char** EntrypointStatusMessage[]
 
      Calling convention: [a] -> High bits of entrypointReturnValue
                          [b] -> Low bits of entrypointReturnValue
@@ -448,7 +448,7 @@
 
   #define GetEntrypointStatus(Value) (EntrypointStatusCodes[Value >> 32][Value & 0xFFFFFFFF])
 
-  [[maybe_unused]] static const char** EntrypointStatusMessage[9] = {
+  [[maybe_unused]] static const char** EntrypointStatusMessage[] = {
 
     (const char*[]){
 
