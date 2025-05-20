@@ -13,8 +13,7 @@
   #include "Graphics/Graphics.h"
   #include "Memory/Memory.h"
 
-  #include "../../Common/InfoTable.h"
-  #include "../../Common/Status.h"
+  #include "../../Common/Common.h"
 
   // Declare functions in Bootloader.c and Stub.asm.
 
