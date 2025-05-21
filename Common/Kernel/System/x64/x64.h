@@ -27,5 +27,6 @@
 
   void WriteToControlRegister(uint8 Register, bool IsExtendedRegister, uint64 Value);
   uint64 ReadFromControlRegister(uint8 Register, bool IsExtendedRegister);
+  bool EnableAvx(void);
 
 #endif

@@ -174,3 +174,82 @@ uint64 ReadFromControlRegister(uint8 Register, bool IsExtendedRegister) {
   }
 
 }
+
+
+
+// TODO - Attempt to enable AVX, as well as access to XCRs. Always tries to
+// enable the best AVX mode available (TODO - not yet..)
+
+// Returns true if successful, false if unsuccessful.
+
+bool EnableAvx(void) {
+
+  // First, let's query CPUID (rax = 00000001h, get feature flags) and
+  // see if the AVX (bit 28 of rcx) and XSAVE (bit 26 of rcx)
+  // bits are set.
+
+  cpuidRegisterTable StandardFeatureFlags = QueryCpuid(1, 0);
+
+  // (If it isn't set - or if CPUID didn't even work - then return false.)
+
+  #define XsaveSupportBit (1ULL << 26)
+  #define AvxSupportBit (1ULL << 28)
+
+  if ((StandardFeatureFlags.Rcx & (XsaveSupportBit | AvxSupportBit)) == 0) {
+    return false;
+  }
+
+  // If that bit *is* set, then that means extended control registers are
+  // supported, which is great! We just need to modify CR4 then:
+
+  uint64 Cr4 = ReadFromControlRegister(4, false);
+
+  // (If we weren't able to read from the control register, return false)
+
+  if (Cr4 == 0) {
+    return false;
+  }
+
+  // (Set bit 18 of CR4)
+
+  #define XcrBit (1ULL << 18)
+  Cr4 |= XcrBit;
+
+  // (Write our newly-altered value back to CR4, and see if the write
+  // actually worked or not.)
+
+  WriteToControlRegister(4, false, Cr4);
+
+  if (Cr4 != ReadFromControlRegister(4, false)) {
+    return false;
+  }
+
+  // Now that we've successfully enabled extended control registers,
+  // we can try to enable AVX.
+
+  // First, let's enable base AVX features, by setting bit 1 of XCR0:
+
+  uint64 Xcr0 = ReadFromControlRegister(0, true);
+
+  if (Xcr0 == 0) {
+    return false;
+  }
+
+  // (Set bit 1 of XCR0, enabling AVX)
+
+  #define AvxBit (1ULL << 1)
+  Xcr0 |= AvxBit;
+
+  // (Try to write back to XCR0, and see if the write actually worked.)
+
+  WriteToControlRegister(0, true, Xcr0);
+
+  if (Xcr0 != ReadFromControlRegister(0, true)) {
+    return false;
+  }
+
+  // TODO - Support for AVX2, AVX-512 (requires extra CPUID bits).
+
+  return true;
+
+}

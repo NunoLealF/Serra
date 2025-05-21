@@ -486,6 +486,10 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
 
   }
 
+  // (Enable extended control registers)
+
+  [[maybe_unused]] bool AvxEnabled = EnableAvx();
+
 
 
 
