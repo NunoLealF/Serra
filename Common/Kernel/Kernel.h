@@ -19,6 +19,10 @@
   #include "Firmware/Bios/Bios.h"
   #include "Firmware/Efi/Efi.h"
 
+  // Import system-specific headers.
+
+  #include "System/x64/x64.h"
+
   // Declare functions in Kernel.c.
 
   void Kernel(commonInfoTable* InfoTable);

@@ -65,8 +65,11 @@ Clean:
 	@-rm -f Kernel/*.bin
 
 	@-rm -f Kernel/Constructors/Firmware/*.o
+
 	@-rm -f Kernel/Firmware/Bios/*.o
 	@-rm -f Kernel/Firmware/Efi/*.o
+
+	@-rm -f Kernel/System/x64/*.o
 
 Dump:
 	@$(OBJD) -S Kernel/Kernel.elf
@@ -95,8 +98,12 @@ Kernel/Constructors/Firmware/Efi.o:
 	@echo "Building $@"
 	@$(CC) $(CFLAGS) -c Kernel/Constructors/Firmware/Efi.c -o Kernel/Constructors/Firmware/Efi.o
 
+Kernel/System/x64/Cpu.o:
+	@echo "Building $@"
+	@$(CC) $(CFLAGS) -c Kernel/System/x64/Cpu.c -o Kernel/System/x64/Cpu.o
+
 # Link everything into one .elf file
 
-Kernel/Kernel.elf: Kernel/Entry.o Kernel/Kernel.o Kernel/Constructors/Firmware/Efi.o
+Kernel/Kernel.elf: Kernel/Entry.o Kernel/Kernel.o Kernel/Constructors/Firmware/Efi.o Kernel/System/x64/Cpu.o
 	@echo "Building $@"
 	@$(CC) -T Linker.ld $(LDFLAGS) -o Kernel/Kernel.elf -ffreestanding -nolibc -nostdlib -lgcc $^
