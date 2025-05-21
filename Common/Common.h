@@ -420,11 +420,12 @@
     EntrypointMemoryInvalidPreserveOffset,
     EntrypointMemoryUnderLimit,
 
-    // (High bit is 7h - issue with system-related data)
+    // (High bit is 7h - issue with architecture- or system-related data)
 
     EntrypointSystemUnknownArchitecture = (7ULL << 32),
     EntrypointSystemUnsupportedArchitecture,
     EntrypointSystemInvalidCpuData,
+    EntrypointSystemDoesntSupportCpuid,
 
     // (High bit is 8h - compile or runtime issue)
 
@@ -512,7 +513,8 @@
 
       "The bootloader-indicated system architecture is unknown.",
       "The bootloader-indicated system architecture is unsupported.",
-      "The bootloader-provided CPU information appears to be invalid."
+      "The bootloader-provided CPU information appears to be invalid.",
+      "The system doesn't appear to support the CPUID instruction."
 
     },
 

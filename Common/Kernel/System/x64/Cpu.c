@@ -2,10 +2,21 @@
 // This file is part of the Serra project, which is released under the MIT license.
 // For more information, please refer to the accompanying license agreement. <3
 
+#if !defined(__amd64__) && !defined(__x86_64__)
+  #error "This code must be compiled with an x64 cross compiler."
+#endif
+
 #include "../../Libraries/Stdint.h"
 #include "x64.h"
 
-/* cpuidRegisterTable QueryCpuid()
+// TODO: Global variable that has the list of supported CPU features
+// (See definition in x64.h)
+
+cpuFeaturesAvailable CpuFeaturesAvailable_x64 = {false};
+
+
+
+/* cpuidRegisterTable QueryCpuid_x64()
 
    Inputs: uint64 Rax - The rax/eax value you want to call CPUID with.
            uint64 Rcx - The rcx/ecx value you want to call CPUID with.
@@ -35,7 +46,7 @@
 
 */
 
-cpuidRegisterTable QueryCpuid(uint64 Rax, uint64 Rcx) {
+cpuidRegisterTable QueryCpuid_x64(uint64 Rax, uint64 Rcx) {
 
   // Declare a cpuidRegisterTable{}, and execute the `cpuid` instruction,
   // storing the necessary values in Table.
@@ -53,7 +64,7 @@ cpuidRegisterTable QueryCpuid(uint64 Rax, uint64 Rcx) {
 
 
 
-/* void WriteToControlRegister()
+/* void WriteToControlRegister_x64()
 
    Inputs: uint8 Register - The control register you want to write to (for
            example, 0 writes to CR0, 4 to CR4, etc.); 255 represents XCR0.
@@ -67,11 +78,11 @@ cpuidRegisterTable QueryCpuid(uint64 Rax, uint64 Rcx) {
    `mov $Value, %%cr?` (or `xsetbv`).
 
    For example, to clear everything in the CR8 register, you could do:
-   -> WriteToControlRegister(8, false, 0x00000000);
+   -> WriteToControlRegister_x64(8, false, 0x00000000);
 
 */
 
-void WriteToControlRegister(uint8 Register, bool IsExtendedRegister, uint64 Value) {
+void WriteToControlRegister_x64(uint8 Register, bool IsExtendedRegister, uint64 Value) {
 
   // Regular and extended control registers have different access
   // mechanisms (either `mov` or `xsetbv`):
@@ -93,6 +104,12 @@ void WriteToControlRegister(uint8 Register, bool IsExtendedRegister, uint64 Valu
 
   } else {
 
+    // If extended control registers are not available, then return early.
+
+    if (CpuFeaturesAvailable_x64.Xcr == false) {
+      return;
+    }
+
     // Attempt to write a value using `xsetbv`, which reads 32-bits each
     // from edx:eax, and writes it to the control register at XCR(ecx).
 
@@ -109,7 +126,7 @@ void WriteToControlRegister(uint8 Register, bool IsExtendedRegister, uint64 Valu
 
 
 
-/* uint64 ReadFromControlRegister()
+/* uint64 ReadFromControlRegister_x64()
 
    Inputs: uint8 Register - The control register you want to read from (for
            example, 0 writes to CR0, 4 to CR4, etc.);
@@ -117,19 +134,19 @@ void WriteToControlRegister(uint8 Register, bool IsExtendedRegister, uint64 Valu
            bool IsExtendedRegister - Whether you want to read from an
            *extended* control register (like XCR0) or not;
 
-   Outputs: uint64 Value - The value of that control register, or 0 if the
-            control register is unusable, or if we couldn't read from it.
+   Outputs: uint64 Value - The value of that control register, or uintmax if
+            the control register is unusable (or non-readable).
 
    This function attempts to read the current value of an accessible control
    register (either CR0, CR2, CR3, CR4, CR8 or XCR0) into Value, serving
    as a wrapper around `mov %%cr?, Value` (or `xgetbv`).
 
    For example, to read the current value of the XCR0 register, you could do:
-   -> uint64 Xcr0 = ReadFromControlRegister(0, true);
+   -> uint64 Xcr0 = ReadFromControlRegister_x64(0, true);
 
 */
 
-uint64 ReadFromControlRegister(uint8 Register, bool IsExtendedRegister) {
+uint64 ReadFromControlRegister_x64(uint8 Register, bool IsExtendedRegister) {
 
   // Regular and extended control registers have different access
   // mechanisms (either `mov` or `xgetbv`):
@@ -137,7 +154,7 @@ uint64 ReadFromControlRegister(uint8 Register, bool IsExtendedRegister) {
   if (IsExtendedRegister == false) {
 
     // Depending on the register type, either read value (if possible), or
-    // return zero (CR1 and CR5-7 aren't accessible, for example).
+    // return uintmax (CR1 and CR5-7 aren't accessible, for example).
 
     uint64 Value = 0;
 
@@ -151,6 +168,8 @@ uint64 ReadFromControlRegister(uint8 Register, bool IsExtendedRegister) {
       __asm__ __volatile__ ("mov %%cr4, %0" : "=r"(Value));
     } else if (Register == 8) {
       __asm__ __volatile__ ("mov %%cr8, %0" : "=r"(Value));
+    } else {
+      return uintmax;
     }
 
     // Return that value.
@@ -158,6 +177,13 @@ uint64 ReadFromControlRegister(uint8 Register, bool IsExtendedRegister) {
     return Value;
 
   } else {
+
+    // If extended control registers are not available, then return
+    // uintmax.
+
+    if (CpuFeaturesAvailable_x64.Xcr == false) {
+      return uintmax;
+    }
 
     // Attempt to read a value using `xgetbv`, which reads 32-bits each
     // to edx:eax, from the control register at XCR(ecx).
@@ -177,79 +203,30 @@ uint64 ReadFromControlRegister(uint8 Register, bool IsExtendedRegister) {
 
 
 
-// TODO - Attempt to enable AVX, as well as access to XCRs. Always tries to
-// enable the best AVX mode available (TODO - not yet..)
+// TODO - Function that initializes the CpuFeaturesAvailable global
+// variable; this is necessary before we call most constructors.
 
-// Returns true if successful, false if unsuccessful.
+void InitializeCpuFeatures_x64(void) {
 
-bool EnableAvx(void) {
+  // First, let's call CPUID with (rax = 00000001h); this should be supported
+  // on essentially every x64 processor, and it returns a number of useful
+  // feature flags that will be useful for us later on.
 
-  // First, let's query CPUID (rax = 00000001h, get feature flags) and
-  // see if the AVX (bit 28 of rcx) and XSAVE (bit 26 of rcx)
-  // bits are set.
+  cpuidRegisterTable StandardFeatureFlags = QueryCpuid_x64(1, 0);
 
-  cpuidRegisterTable StandardFeatureFlags = QueryCpuid(1, 0);
+  // Additionally, let's also obtain the value of the CR0 and CR4 control
+  // registers, since these tell us which features are *enabled*.
 
-  // (If it isn't set - or if CPUID didn't even work - then return false.)
+  uint64 Cr0 = ReadFromControlRegister_x64(0, false);
+  uint64 Cr4 = ReadFromControlRegister_x64(4, false);
 
-  #define XsaveSupportBit (1ULL << 26)
-  #define AvxSupportBit (1ULL << 28)
+  // Now that we've done that, let's check which features are actually
+  // supported:
 
-  if ((StandardFeatureFlags.Rcx & (XsaveSupportBit | AvxSupportBit)) == 0) {
-    return false;
-  }
+  
 
-  // If that bit *is* set, then that means extended control registers are
-  // supported, which is great! We just need to modify CR4 then:
+  // Return.
 
-  uint64 Cr4 = ReadFromControlRegister(4, false);
-
-  // (If we weren't able to read from the control register, return false)
-
-  if (Cr4 == 0) {
-    return false;
-  }
-
-  // (Set bit 18 of CR4)
-
-  #define XcrBit (1ULL << 18)
-  Cr4 |= XcrBit;
-
-  // (Write our newly-altered value back to CR4, and see if the write
-  // actually worked or not.)
-
-  WriteToControlRegister(4, false, Cr4);
-
-  if (Cr4 != ReadFromControlRegister(4, false)) {
-    return false;
-  }
-
-  // Now that we've successfully enabled extended control registers,
-  // we can try to enable AVX.
-
-  // First, let's enable base AVX features, by setting bit 1 of XCR0:
-
-  uint64 Xcr0 = ReadFromControlRegister(0, true);
-
-  if (Xcr0 == 0) {
-    return false;
-  }
-
-  // (Set bit 1 of XCR0, enabling AVX)
-
-  #define AvxBit (1ULL << 1)
-  Xcr0 |= AvxBit;
-
-  // (Try to write back to XCR0, and see if the write actually worked.)
-
-  WriteToControlRegister(0, true, Xcr0);
-
-  if (Xcr0 != ReadFromControlRegister(0, true)) {
-    return false;
-  }
-
-  // TODO - Support for AVX2, AVX-512 (requires extra CPUID bits).
-
-  return true;
+  return;
 
 }

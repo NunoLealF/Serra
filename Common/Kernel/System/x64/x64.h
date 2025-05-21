@@ -1,10 +1,6 @@
 // Copyright (C) 2025 NunoLealF
 // This file is part of the Serra project, which is released under the MIT license.
-// For more information, please refer to the accompanying license agreement. <3
-
-#if !defined(__amd64__) && !defined(__x86_64__)
-  #error "This code must be compiled with an x64 cross compiler."
-#endif
+// For more information, please refer to the accompanying license agreement. <
 
 #ifndef SERRA_KERNEL_SYSTEM_X64_H
 #define SERRA_KERNEL_SYSTEM_X64_H
@@ -13,20 +9,38 @@
 
   #include "../../Libraries/Stdint.h"
 
-  // Include structures from Cpu.c
+  // Include structures and global variables from Cpu.c
 
-  typedef struct _registerTable {
+  typedef struct _cpuidRegisterTable {
 
     uint64 Rax, Rbx, Rcx, Rdx;
 
   } __attribute__ ((packed)) cpuidRegisterTable;
 
+  typedef struct _cpuFeaturesAvailable {
+
+    bool Sse : 1; // Are (base) SSE features available?
+    bool Sse2 : 1; // Are SSE 2 features available?
+    bool Sse3 : 1; // Are SSE 3 features available?
+    bool Ssse3 : 1; // Are SSSE 3 features available?
+    bool Sse4 : 1; // Are SSE4.1 features available?
+
+    bool Xcr : 1; // Are extended control registers available?
+    bool Avx : 1; // Are (base) AVX features available?
+    bool Avx2 : 1; // Are (base) AVX2 features available?
+    bool Avx512 : 1; // Are (foundational) AVX512 features available?
+
+  } cpuFeaturesAvailable;
+
+  extern cpuFeaturesAvailable CpuFeaturesAvailable_x64;
+
   // Include functions from Cpu.c
 
-  cpuidRegisterTable QueryCpuid(uint64 Rax, uint64 Rcx);
+  cpuidRegisterTable QueryCpuid_x64(uint64 Rax, uint64 Rcx);
 
-  void WriteToControlRegister(uint8 Register, bool IsExtendedRegister, uint64 Value);
-  uint64 ReadFromControlRegister(uint8 Register, bool IsExtendedRegister);
-  bool EnableAvx(void);
+  void WriteToControlRegister_x64(uint8 Register, bool IsExtendedRegister, uint64 Value);
+  uint64 ReadFromControlRegister_x64(uint8 Register, bool IsExtendedRegister);
+
+  void InitializeCpuFeatures_x64(void);
 
 #endif

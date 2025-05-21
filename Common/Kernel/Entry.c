@@ -463,12 +463,46 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
 
 
 
+  // [Run platform-specific checks and initialize relevant variables]
 
-  // [Set up global variables]
+  // We've managed to validate the bootloader-provided information table,
+  // which is great, but we may still need to validate a couple more
+  // things, depending on the platform we're compiling for.
+
+  // (TODO: Something like "for the x64 architecture...")
+
+  #if defined(__amd64__) || defined(__x86_64__)
+
+    // (Sanity-check the architecture indicated by the information table)
+
+    if (InfoTable->System.Architecture != x64Architecture) {
+      return EntrypointSystemUnsupportedArchitecture;
+    }
+
+  #endif
+
+  if (InfoTable->System.Architecture == x64Architecture) {
+
+    // (Check that the CPUID instruction is supported)
+
+    if (QueryCpuid_x64(0, 0).Rax == 0) {
+      return EntrypointSystemDoesntSupportCpuid;
+    }
+
+    // (Set up platform-specific variables)
+
+    InitializeCpuFeatures_x64();
+
+  }
+
+
+
+
+  // [Initialize non-platform-specific global variables]
 
   // Now that we've checked that the information table really *is* valid, we
   // can move onto preparing the environment for the kernel, by
-  // setting up global variables.
+  // setting up global variables. (TODO, rewrite this..)
 
   // At this point, some incorrectly compiled position-independent executables
   // might fail to correctly reference global variables, so we also try
@@ -485,11 +519,6 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
     }
 
   }
-
-  // (Enable extended control registers)
-
-  [[maybe_unused]] bool AvxEnabled = EnableAvx();
-
 
 
 
