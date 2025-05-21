@@ -2,7 +2,8 @@
 // This file is part of the Serra project, which is released under the MIT license.
 // For more information, please refer to the accompanying license agreement. <3
 
-// (32-bit Stdint.h; do not use with 16- or 64-bit code.)
+// [32-bit Stdint.h - do not use with 16- or 64-bit code.]
+// [Built for i686 (x86, Pentium Pro+); compatible with ILP32]
 
 #ifndef __i686__
   #error "This code must be compiled with an i686-elf cross-compiler"

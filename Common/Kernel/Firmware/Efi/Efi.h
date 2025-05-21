@@ -7,7 +7,7 @@
 
   // Import standard headers.
 
-  #include "../../Stdint.h"
+  #include "../../Libraries/Stdint.h"
 
   // Import EFI headers from ../../../../Boot/Efi/Efi/
   // (These are from the EFI bootloader stage)

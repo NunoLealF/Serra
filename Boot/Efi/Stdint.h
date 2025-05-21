@@ -2,9 +2,10 @@
 // This file is part of the Serra project, which is released under the MIT license.
 // For more information, please refer to the accompanying license agreement. <3
 
-// (64-bit Stdint.h; do not use with 16- or 32-bit code; made for mingw/EFI.)
+// [64-bit Stdint.h - do not use with 16- or 32-bit code.]
+// [Built for x64 (AMD64); compatible with both LP64 and LLP64]
 
-#if !defined(__amd64__) || !defined(__x86_64__)
+#if !defined(__amd64__) && !defined(__x86_64__)
   #error "This code must be compiled with an x86_64-elf cross-compiler"
 #endif
 

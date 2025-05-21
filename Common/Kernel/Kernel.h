@@ -7,7 +7,7 @@
 
   // Import standard and bootloader-related headers.
 
-  #include "Stdint.h"
+  #include "Libraries/Stdint.h"
   #include "../Common.h"
 
   // Import kernel constructors.
@@ -21,7 +21,7 @@
 
   // Import system-specific headers.
 
-  #include "System/x64/x64.h"
+  #include "System/System.h"
 
   // Declare functions in Kernel.c.
 

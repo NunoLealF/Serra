@@ -2,7 +2,7 @@
 // This file is part of the Serra project, which is released under the MIT license.
 // For more information, please refer to the accompanying license agreement. <3
 
-#if !defined(__amd64__) || !defined(__x86_64__)
+#if !defined(__amd64__) && !defined(__x86_64__)
   #error "This code must be compiled with an x64 cross compiler."
 #endif
 
@@ -11,7 +11,7 @@
 
   // Include standard and/or necessary headers.
 
-  #include "../../Stdint.h"
+  #include "../../Libraries/Stdint.h"
 
   // Include structures from Cpu.c
 

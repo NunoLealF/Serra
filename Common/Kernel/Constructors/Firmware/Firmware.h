@@ -7,7 +7,7 @@
 
   // Include standard and/or necessary headers.
 
-  #include "../../Stdint.h"
+  #include "../../Libraries/Stdint.h"
   #include "../../Firmware/Bios/Bios.h"
   #include "../../Firmware/Efi/Efi.h"
 

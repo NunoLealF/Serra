@@ -2,11 +2,8 @@
 // This file is part of the Serra project, which is released under the MIT license.
 // For more information, please refer to the accompanying license agreement. <3
 
-// (64-bit Stdint.h; do not use with 16- or 32-bit code.)
-
-#if !defined(__amd64__) || !defined(__x86_64__)
-  #error "This code must be compiled with an x86_64-elf cross-compiler"
-#endif
+// [64-bit Stdint.h - do not use with 16- or 32-bit code]
+// [Platform agnostic; compatible with both LP64 and LLP64]
 
 #ifndef SERRA_STDINT_H
 #define SERRA_STDINT_H
