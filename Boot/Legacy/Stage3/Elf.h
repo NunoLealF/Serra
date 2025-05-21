@@ -7,6 +7,16 @@
 
   // ELF-related structures, from Elf.c
 
+  typedef enum _elfFileType : uint16 {
+
+    EtNone = 0,
+    EtRel = 1,
+    EtExec = 2,
+    EtDyn = 3,
+    EtCore = 4
+
+  } elfFileType;
+
   typedef struct _elfHeader {
 
     // (This part is called 'e_ident' in the ELF documentation)
@@ -25,7 +35,7 @@
 
     // (The rest of the header)
 
-    uint16 FileType; // (This should *probably* be 02h / executable)
+    elfFileType FileType; // (This should be EtDyn (for PIE code), or EtExec.
     uint16 MachineType; // (Must be 3Eh for x86_64)
     uint32 Version; // (Same as in ident)
 

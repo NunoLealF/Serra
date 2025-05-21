@@ -7,7 +7,7 @@ ENTRY(Entrypoint) /* The entrypoint of our kernel. */
 SECTIONS
 {
 
-  . = 0; /* This is mandatory for the position-independent code to work */
+  /* (Regular executable sections; these should all be page-aligned) */
 
   .text : ALIGN(4K)
 	{
@@ -30,6 +30,14 @@ SECTIONS
 		*(COMMON)
 		*(.bss)
 	}
+
+  /* As we're compiling a position-independent executable, we also have a
+  `.dynamic` section, that needs to be page-aligned as with any other */
+
+  .dynamic : ALIGN(4K)
+  {
+    *(.dynamic)
+  }
 
 }
 

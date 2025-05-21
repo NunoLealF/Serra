@@ -1000,8 +1000,8 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
     KernelHasValidElf = false;
   } else if (KernelHeader->Version < 1) {
     Message(Warning, u"ELF header version appears to be invalid (%d)", (uint64)KernelHeader->Version);
-  } else if (KernelHeader->FileType != 2) {
-    Message(Warning, u"ELF header appears to have a non-executable file type (%d)", (uint64)KernelHeader->FileType);
+  } else if (KernelHeader->FileType != EtDyn) {
+    Message(Warning, u"ELF header appears to have a non-dynamic file type (%d)", (uint64)KernelHeader->FileType);
   }
 
   // (Show messages, and debug information)
@@ -1053,13 +1053,16 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   uint64 EarliestVirtualAddress = uintmax;
   uint64 LatestVirtualAddress = 0;
 
+  bool FoundLoadable = false;
+
   for (uint16 Index = 0; Index < NumProgramHdrs; Index++) {
 
-    // (Get program header, and make sure that it's loadable (.Type == 1))
+    // (Get program header, and make sure that it's loadable (.Type == 1)
+    // or dynamic (.Type == 2))
 
     elfProgramHeader* Program = GetProgramHeader((uint64)KernelHeader, Index);
 
-    if (Program->Type != 1) {
+    if ((Program->Type != 1) && (Program->Type != 2)) {
       continue;
     }
 
@@ -1101,16 +1104,30 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
     // (Show information)
 
-    Message(Info, u"Found a loadable program header for virtual addresses %xh to %xh", Start, End);
+    if (Program->Type == 1) {
+
+      Message(Info, u"Found a loadable section for virtual addresses %xh to %xh", Start, End);
+      FoundLoadable = true;
+
+    } else if (Program->Type == 2) {
+
+      Message(Info, u"Found a dynamic section for virtual addresses %xh to %xh", Start, End);
+
+    }
 
   }
 
-  // (Sanity-check our results, to make sure we do have any loadable program
-  // headers)
+  // (Sanity-check our results, to make sure we do have any loadable and/or
+  // dynamic program headers)
 
   if (LatestVirtualAddress < EarliestVirtualAddress) {
 
-    Message(Error, u"Kernel executable doesn't appear to have any loadable program headers.");
+    Message(Error, u"Kernel executable doesn't appear to have any usable program headers.");
+    goto ExitEfiApplication;
+
+  } else if (FoundLoadable == false) {
+
+    Message(Error, u"Kernel executable doesn't appear to have any dynamic program headers.");
     goto ExitEfiApplication;
 
   } else {

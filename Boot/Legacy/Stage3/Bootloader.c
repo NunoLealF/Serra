@@ -1231,8 +1231,8 @@ void S3Bootloader(void) {
     Panic("Kernel does not appear to have any ELF program headers.", 0);
   } else if (KernelHeader->Version < 1) {
     Message(Warning, "ELF header version appears to be invalid (%d)", (uint32)KernelHeader->Version);
-  } else if (KernelHeader->FileType != 2) {
-    Message(Warning, "ELF header appears to have a non-executable file type (%d)", (uint32)KernelHeader->FileType);
+  } else if (KernelHeader->FileType != EtDyn) {
+    Message(Warning, "ELF header appears to have a non-dynamic file type (%d)", (uint32)KernelHeader->FileType);
   } else {
     Message(Ok, "Kernel appears to be a valid ELF executable.");
   }
@@ -1266,13 +1266,16 @@ void S3Bootloader(void) {
   uintptr EarliestVirtualAddress = 0xFFFFFFFF;
   uintptr LatestVirtualAddress = 0;
 
+  bool FoundLoadable = false;
+
   for (auto Index = 0; Index < KernelHeader->NumProgramHeaders; Index++) {
 
-    // (Get program header, and make sure that it's loadable (.Type == 1))
+    // (Get program header, and make sure that it's loadable (.Type == 1)
+    // or dynamic (.Type == 2))
 
     elfProgramHeader* Program = GetProgramHeader(KernelImage, KernelHeader, Index);
 
-    if (Program->Type != 1) {
+    if ((Program->Type != 1) && (Program->Type != 2)) {
       continue;
     }
 
@@ -1315,14 +1318,25 @@ void S3Bootloader(void) {
 
     // (Show information)
 
-    Message(Info, "Found a loadable program header for virtual addresses %xh to %xh", Start, End);
+    if (Program->Type == 1) {
+
+      Message(Info, "Found a loadable section for virtual addresses %xh to %xh", Start, End);
+      FoundLoadable = true;
+
+    } else if (Program->Type == 2) {
+
+      Message(Info, "Found a dynamic section for virtual addresses %xh to %xh", Start, End);
+
+    }
 
   }
 
-  // (Sanity-check our results, to make sure we *do* have any loadable program
-  // headers)
+  // (Sanity-check our results, to make sure we do have any loadable and/or
+  // dynamic program headers)
 
   if (LatestVirtualAddress < EarliestVirtualAddress) {
+    Panic("Kernel executable doesn't appear to have any usable program headers.", 0);
+  } else if (FoundLoadable == false) {
     Panic("Kernel executable doesn't appear to have any loadable program headers.", 0);
   } else {
     Message(Ok, "Kernel executable appears to have valid/loadable program headers.");
