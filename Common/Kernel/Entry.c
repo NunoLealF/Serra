@@ -491,7 +491,22 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
 
     // (Set up platform-specific variables)
 
+    // TODO - This essentially shows the 'best' feature set supported
+
+    // Works fine, though I haven't been able to test for AVX512 because
+    // it's *so* new it's literally not on anything I own.
+
     InitializeCpuFeatures_x64();
+
+    if (CpuFeaturesAvailable_x64.Avx512f == true) return 512;
+    if (CpuFeaturesAvailable_x64.Avx2 == true) return 384;
+    if (CpuFeaturesAvailable_x64.Avx == true) return 256;
+
+    if (CpuFeaturesAvailable_x64.Sse4 == true) return 5;
+    if (CpuFeaturesAvailable_x64.Ssse3 == true) return 4;
+    if (CpuFeaturesAvailable_x64.Sse3 == true) return 3;
+    if (CpuFeaturesAvailable_x64.Sse2 == true) return 2;
+    if (CpuFeaturesAvailable_x64.Sse == true) return 1;
 
   }
 

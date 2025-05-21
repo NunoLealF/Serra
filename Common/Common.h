@@ -514,7 +514,7 @@
       "The bootloader-indicated system architecture is unknown.",
       "The bootloader-indicated system architecture is unsupported.",
       "The bootloader-provided CPU information appears to be invalid.",
-      "The system doesn't appear to support the CPUID instruction."
+      "The system doesn't appear to properly support the CPUID instruction."
 
     },
 
