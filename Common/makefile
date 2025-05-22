@@ -70,6 +70,8 @@ Clean:
 	@-rm -f Kernel/Firmware/Bios/*.o
 	@-rm -f Kernel/Firmware/Efi/*.o
 
+	@-rm -f Kernel/Libraries/Memory/*.o
+
 	@-rm -f Kernel/System/x64/*.o
 
 Dump:
@@ -87,6 +89,8 @@ dump: Dump
 
 # [The files themselves]
 
+# (Entrypoint and core files)
+
 Kernel/Entry.o:
 	@echo "Building $@"
 	@$(CC) $(CFLAGS) -ffunction-sections -c Kernel/Entry.c -o Kernel/Entry.o
@@ -94,6 +98,8 @@ Kernel/Entry.o:
 Kernel/Core.o:
 	@echo "Building $@"
 	@$(CC) $(CFLAGS) -c Kernel/Core.c -o Kernel/Core.o
+
+# (Constructors - these set up the kernel libraries)
 
 Kernel/Constructors/Firmware/Efi.o:
 	@echo "Building $@"
@@ -103,12 +109,24 @@ Kernel/Constructors/System/x64.o:
 	@echo "Building $@"
 	@$(CC) $(CFLAGS) -c Kernel/Constructors/System/x64.c -o Kernel/Constructors/System/x64.o
 
+# (Kernel libraries)
+
+Kernel/Libraries/Memory/Memcpy.o:
+	@echo "Building $@"
+	@$(CC) $(CFLAGS) -c Kernel/Libraries/Memory/Memcpy.c -o Kernel/Libraries/Memory/Memcpy.o
+
+Kernel/Libraries/Memory/Memset.o:
+	@echo "Building $@"
+	@$(CC) $(CFLAGS) -c Kernel/Libraries/Memory/Memset.c -o Kernel/Libraries/Memory/Memset.o
+
+# (System/platform-specific files)
+
 Kernel/System/x64/Cpu.o:
 	@echo "Building $@"
 	@$(CC) $(CFLAGS) -c Kernel/System/x64/Cpu.c -o Kernel/System/x64/Cpu.o
 
 # Link everything into one .elf file
 
-Kernel/Kernel.elf: Kernel/Entry.o Kernel/Core.o Kernel/Constructors/Firmware/Efi.o Kernel/Constructors/System/x64.o Kernel/System/x64/Cpu.o
+Kernel/Kernel.elf: Kernel/Entry.o Kernel/Core.o Kernel/Constructors/Firmware/Efi.o Kernel/Constructors/System/x64.o Kernel/Libraries/Memory/Memcpy.o Kernel/Libraries/Memory/Memset.o Kernel/System/x64/Cpu.o
 	@echo "Building $@"
 	@$(CC) -T Linker.ld $(LDFLAGS) -o Kernel/Kernel.elf -ffreestanding -nolibc -nostdlib -lgcc $^

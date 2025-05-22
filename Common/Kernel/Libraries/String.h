@@ -8,6 +8,30 @@
 #ifndef SERRA_KERNEL_STRING_H
 #define SERRA_KERNEL_STRING_H
 
-  // (TODO: Memcpy/memset)
+  // Include standard and/or necessary headers.
+
+  #include "Stdint.h"
+  #include "../Constructors/System/System.h"
+
+  // Include functions provided by Memory/Memcpy.c (TODO)
+
+  void Memcpy(void* Destination, const void* Source, uint64 Size);
+  void* memcpy(void* Destination, const void* Source, uint64 Size);
+
+  // Include functions provided by Memory/Memset.c (TODO)
+
+  void _Memset8(void* Buffer, uint8 Character, uint64 Size);
+  void _Memset16(void* Buffer, uint16 Value, uint64 Size);
+  void _Memset32(void* Buffer, uint32 Value, uint64 Size);
+  void _Memset64(void* Buffer, uint64 Value, uint64 Size);
+
+  #define Memset(Buffer, Character, Size) _Generic(Character, \
+                                                   uint8: _Memset8, \
+                                                   uint16: _Memset16, \
+                                                   uint32: _Memset32, \
+                                                   uint64: _Memset64 \
+                                                  )(Buffer, Character, Size)
+
+  void* memset(void* Buffer, uint8 Character, uint64 Size);
 
 #endif

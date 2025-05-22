@@ -40,6 +40,10 @@ void KernelCore(commonInfoTable* InfoTable) {
                             "jne _SseLoop;"
                             ".att_syntax prefix" :: "r"(&Intensity16), "r"(Buffer), "r"(Size) : "memory", "xmm0");
 
+      // (Copy the first 256 bytes from this fn's code, just to see if it works)
+
+      Memcpy((void*)Buffer, (const void*)KernelCore, 256);
+
     }
 
   }
