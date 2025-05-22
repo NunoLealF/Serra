@@ -24,9 +24,9 @@ _MemcpyBase:
 
   and rdx, 7
 
-  ; (Set the direction flag, so we 'move' in reverse)
+  ; (Clear the direction flag, just in case)
 
-  std
+  cld
 
   ; (Move 8-byte blocks from Source to Destination, using `rep movsq`,
   ; and then move the remainder using `rep movsb`
@@ -36,9 +36,8 @@ _MemcpyBase:
   mov rcx, rdx
   rep movsb
 
-  ; (Clear the direction flag, and return.)
-
-  cld
+  ; (Return.)
+  
   ret
 
 

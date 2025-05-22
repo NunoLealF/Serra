@@ -23,7 +23,7 @@
       bool Sse2 : 1; // Are SSE 2 features available?
       bool Sse3 : 1; // Are SSE 3 features available?
       bool Ssse3 : 1; // Are SSSE 3 features available?
-      bool Sse4 : 1; // Are SSE4a/4.1/4.2 features available?
+      bool Sse4 : 1; // Are SSE4.1/4.2 (not SSE4a!) features available?
 
       bool Xsave : 1; // Are `xsave` instructions and extended control registers available?
       bool Avx : 1; // Are (base) AVX features available?

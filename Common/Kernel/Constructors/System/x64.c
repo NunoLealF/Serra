@@ -57,11 +57,40 @@ void InitializeCpuFeatures(void) {
   // Now that we've done that, let's check which features are actually
   // supported by reading through CPUID:
 
+  // (Check for `fxsave`/`fxrstor` and `xsave`/`xrstor` support)
+
   #define FxsaveBit (1ULL << 24) // (Within rdx)
   #define XsaveBit (1ULL << 26) // (Within rcx)
 
   CpuFeaturesAvailable.Fxsave = ((StandardFeatureFlags.Rdx & FxsaveBit) != 0);
   CpuFeaturesAvailable.Xsave = ((StandardFeatureFlags.Rcx & XsaveBit) != 0);
+
+  // (If `xsave` is supported, check for `xsetbv`/`xgetbv` support as well)
+  // This may be necessary on some *really* broken configurations
+
+  #define MiscEnableMsr 0x000001A0
+  #define LcmvBit (1ULL << 22) // (Within MISC_ENABLE)
+
+  bool LcmvBitHasBeenCleared = false;
+
+  if (CpuFeaturesAvailable.Xsave == true) {
+
+    // (Unlock access to higher CPUID 'leaves' (functions, basically))
+
+    x64_WriteToMsr(MiscEnableMsr, (x64_ReadFromMsr(MiscEnableMsr) & ~LcmvBit));
+    LcmvBitHasBeenCleared = true;
+
+    // (Call CPUID leaf (rax = 0000000Dh, rcx = 1)), and check whether
+    // bit 2 (support for the `xgetbv` instruction) is set)
+
+    x64_cpuidRegisterTable ExtendedState = x64_QueryCpuid(0x0D, 1);
+    #define XgetbvBit (1ULL << 2) // (Within rax)
+
+    CpuFeaturesAvailable.Xsave = ((ExtendedState.Rax & XgetbvBit) != 0);
+
+  }
+
+  // (Check for SSE support)
 
   #define SseBit (1ULL << 25) // (Within rdx)
   #define Sse2Bit (1ULL << 26) // (Within rdx)
@@ -81,11 +110,41 @@ void InitializeCpuFeatures(void) {
 
   }
 
+  // (Check for *actual* SSE4 support - some SSE4a CPUs incorrectly *also*
+  // report the same CPUID bit as SSE4.1, so we need to check for that)
+
+  #define Sse4Bit2 (1ULL << 20) // (Within 01h.rcx)
+  #define Sse4aBit (1ULL << 6) // (Within 80000001h.rcx)
+
+  if (CpuFeaturesAvailable.Sse4 == true) {
+
+    // If SSE4.2 is supported, then we don't have to check for SSE4a
+    // support, since it was only intended to replace SSE4.1.
+
+    if ((StandardFeatureFlags.Rcx & Sse4Bit2) == 0) {
+
+      // The bit for SSE4a is located in another CPUID leaf, which is
+      // (rax = 80000001h), so let's query that first.
+
+      x64_cpuidRegisterTable ExtendedFeatureFlags = x64_QueryCpuid(0x80000001, 0);
+
+      // (Check for SSE4a support, and unset .Sse4 if it is supported)
+
+      CpuFeaturesAvailable.Sse4 = ((ExtendedFeatureFlags.Rcx & Sse4aBit) == 0);
+
+    }
+
+  }
+
+  // (Check for base AVX support)
+
   if (CpuFeaturesAvailable.Xsave == true) {
 
     CpuFeaturesAvailable.Avx = ((StandardFeatureFlags.Rcx & AvxBit) != 0);
 
   }
+
+  // (Check for AVX2 and AVX512f support)
 
   // AVX2 and AVX512 feature flags reside in another CPUID leaf, (rax =
   // 00000007h, so if AVX appears to be supported, check that as well.
@@ -99,10 +158,13 @@ void InitializeCpuFeatures(void) {
     // (MISC_ENABLE is a model-specific register with the ID 000001A0h)
     // (.LCMV is a bit that limits the maximum CPUID leaf)
 
-    #define MiscEnableMsr 0x000001A0
-    #define LcmvBit (1ULL << 22) // (Within MISC_ENABLE)
+    if (LcmvBitHasBeenCleared == false) {
 
-    x64_WriteToMsr(MiscEnableMsr, (x64_ReadFromMsr(MiscEnableMsr) & ~LcmvBit));
+      x64_WriteToMsr(MiscEnableMsr, (x64_ReadFromMsr(MiscEnableMsr) & ~LcmvBit));
+      LcmvBitHasBeenCleared = true;
+
+    }
+
     x64_cpuidRegisterTable AvxRelevantFeatureFlags = x64_QueryCpuid(7, 0);
 
     // Now that we're done, we can analyze the information we were given
