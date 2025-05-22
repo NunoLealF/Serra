@@ -13,36 +13,16 @@ void KernelCore(commonInfoTable* InfoTable) {
 
   if ((InfoTable->Display.Type == VbeDisplay) || (InfoTable->Display.Type == GopDisplay)) {
 
-    for (auto Y = 0; Y < InfoTable->Display.Graphics.LimitY; Y++) {
+    for (auto Y = 0; Y < (InfoTable->Display.Graphics.LimitY-2); Y++) {
 
       // (Get necessary addresses and values)
 
       auto Buffer = (InfoTable->Display.Graphics.Framebuffer.Address + (InfoTable->Display.Graphics.Pitch * Y));
       auto Size = (InfoTable->Display.Graphics.LimitX * InfoTable->Display.Graphics.Bits.PerPixel / 8);
-      uint8 Intensity8 = (Y * 255 / InfoTable->Display.Graphics.LimitY);
 
-      // (Use SSE to display a gradient, 16 bytes at a time why not)
+      // (Copy the first Size bytes from this fn's code, just to see if it works)
 
-      while ((Buffer % 16) != 0) {
-        *(uint8*)(Buffer) = Intensity8;
-        Buffer++; Size--;
-      }
-
-      alignas(16) uint16 Intensity16 = ((uint16)Intensity8 << 8) | Intensity8;
-
-      __asm__ __volatile__ (".intel_syntax noprefix;"
-                            "pshuflw xmm0, [%0], 0;"
-                            "punpcklwd xmm0, xmm0;"
-                            "_SseLoop:"
-                            "movntdq [%1], xmm0;"
-                            "add %1, 16; dec %2;"
-                            "cmp %2, 0;"
-                            "jne _SseLoop;"
-                            ".att_syntax prefix" :: "r"(&Intensity16), "r"(Buffer), "r"(Size) : "memory", "xmm0");
-
-      // (Copy the first 256 bytes from this fn's code, just to see if it works)
-
-      Memcpy((void*)Buffer, (const void*)KernelCore, 256);
+      Memcpy((void*)Buffer, (const void*)KernelCore, (Size*3));
 
     }
 
