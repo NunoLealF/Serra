@@ -485,7 +485,7 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
 
     // (Check that the CPUID instruction is supported)
 
-    if (QueryCpuid_x64(0, 0).Rax == 0) {
+    if (x64_QueryCpuid(0, 0).Rax == 0) {
       return EntrypointSystemDoesntSupportCpuid;
     }
 
@@ -496,17 +496,17 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
     // Works fine, though I haven't been able to test for AVX512 because
     // it's *so* new it's literally not on anything I own.
 
-    InitializeCpuFeatures_x64();
+    InitializeCpuFeatures();
 
-    if (CpuFeaturesAvailable_x64.Avx512f == true) return 512;
-    if (CpuFeaturesAvailable_x64.Avx2 == true) return 384;
-    if (CpuFeaturesAvailable_x64.Avx == true) return 256;
+    if (CpuFeaturesAvailable.Avx512f == true) return 512;
+    if (CpuFeaturesAvailable.Avx2 == true) return 384;
+    if (CpuFeaturesAvailable.Avx == true) return 256;
 
-    if (CpuFeaturesAvailable_x64.Sse4 == true) return 5;
-    if (CpuFeaturesAvailable_x64.Ssse3 == true) return 4;
-    if (CpuFeaturesAvailable_x64.Sse3 == true) return 3;
-    if (CpuFeaturesAvailable_x64.Sse2 == true) return 2;
-    if (CpuFeaturesAvailable_x64.Sse == true) return 1;
+    if (CpuFeaturesAvailable.Sse4 == true) return 5;
+    if (CpuFeaturesAvailable.Ssse3 == true) return 4;
+    if (CpuFeaturesAvailable.Sse3 == true) return 3;
+    if (CpuFeaturesAvailable.Sse2 == true) return 2;
+    if (CpuFeaturesAvailable.Sse == true) return 1;
 
   }
 

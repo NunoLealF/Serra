@@ -9,24 +9,17 @@
 #include "../../Libraries/Stdint.h"
 #include "x64.h"
 
-// TODO: Global variable that has the list of supported CPU features
-// (See definition in x64.h)
-
-cpuFeaturesAvailable CpuFeaturesAvailable_x64 = {false};
-
-
-
-/* cpuidRegisterTable QueryCpuid_x64()
+/* x64_cpuidRegisterTable x64_QueryCpuid()
 
    Inputs: uint64 Rax - The rax/eax value you want to call CPUID with.
            uint64 Rcx - The rcx/ecx value you want to call CPUID with.
 
-   Outputs: cpuidRegisterTable{} - A table with the value of the rax,
+   Outputs: x64_cpuidRegisterTable{} - A table with the value of the rax,
    rbx, rcx and rdx registers after the call.
 
    This function essentially serves as a wrapper around the `cpuid`
    instruction - it takes in values for the rax and rcx registers (which
-   are equivalent to eax and ecx), and returns a cpuidRegisterTable{}.
+   are equivalent to eax and ecx), and returns a x64_cpuidRegisterTable{}.
 
    CPUID is guaranteed* to be supported on all 64-bit x86 CPUs, and even
    most 32-bit CPUs; depending on the system, it can support a *wide*
@@ -46,12 +39,12 @@ cpuFeaturesAvailable CpuFeaturesAvailable_x64 = {false};
 
 */
 
-cpuidRegisterTable QueryCpuid_x64(uint64 Rax, uint64 Rcx) {
+x64_cpuidRegisterTable x64_QueryCpuid(uint64 Rax, uint64 Rcx) {
 
-  // Declare a cpuidRegisterTable{}, and execute the `cpuid` instruction,
+  // Declare a x64_cpuidRegisterTable{}, and execute the `cpuid` instruction,
   // storing the necessary values in Table.
 
-  cpuidRegisterTable Table = {0};
+  x64_cpuidRegisterTable Table = {0};
 
   __asm__ __volatile__ ("cpuid" : "=a"(Table.Rax), "=b"(Table.Rbx),
                         "=c"(Table.Rcx), "=d"(Table.Rdx) : "a"(Rax), "c"(Rcx));
@@ -64,7 +57,7 @@ cpuidRegisterTable QueryCpuid_x64(uint64 Rax, uint64 Rcx) {
 
 
 
-/* void WriteToControlRegister_x64()
+/* void x64_WriteToControlRegister()
 
    Inputs: uint8 Register - The control register you want to write to (for
            example, 0 writes to CR0, 4 to CR4, etc.); 255 represents XCR0.
@@ -78,11 +71,11 @@ cpuidRegisterTable QueryCpuid_x64(uint64 Rax, uint64 Rcx) {
    `mov $Value, %%cr?` (or `xsetbv`).
 
    For example, to clear everything in the CR8 register, you could do:
-   -> WriteToControlRegister_x64(8, false, 0x00000000);
+   -> x64_WriteToControlRegister(8, false, 0x00000000);
 
 */
 
-void WriteToControlRegister_x64(uint8 Register, bool IsExtendedRegister, uint64 Value) {
+void x64_WriteToControlRegister(uint8 Register, bool IsExtendedRegister, uint64 Value) {
 
   // Regular and extended control registers have different access
   // mechanisms (either `mov` or `xsetbv`):
@@ -106,7 +99,7 @@ void WriteToControlRegister_x64(uint8 Register, bool IsExtendedRegister, uint64 
 
     // If extended control registers are not available, then return early.
 
-    if (CpuFeaturesAvailable_x64.Xsave == false) {
+    if (CpuFeaturesAvailable.Xsave == false) {
       return;
     }
 
@@ -126,7 +119,7 @@ void WriteToControlRegister_x64(uint8 Register, bool IsExtendedRegister, uint64 
 
 
 
-/* uint64 ReadFromControlRegister_x64()
+/* uint64 x64_ReadFromControlRegister()
 
    Inputs: uint8 Register - The control register you want to read from (for
            example, 0 writes to CR0, 4 to CR4, etc.);
@@ -142,11 +135,11 @@ void WriteToControlRegister_x64(uint8 Register, bool IsExtendedRegister, uint64 
    as a wrapper around `mov %%cr?, Value` (or `xgetbv`).
 
    For example, to read the current value of the XCR0 register, you could do:
-   -> uint64 Xcr0 = ReadFromControlRegister_x64(0, true);
+   -> uint64 Xcr0 = x64_ReadFromControlRegister(0, true);
 
 */
 
-uint64 ReadFromControlRegister_x64(uint8 Register, bool IsExtendedRegister) {
+uint64 x64_ReadFromControlRegister(uint8 Register, bool IsExtendedRegister) {
 
   // Regular and extended control registers have different access
   // mechanisms (either `mov` or `xgetbv`):
@@ -181,7 +174,7 @@ uint64 ReadFromControlRegister_x64(uint8 Register, bool IsExtendedRegister) {
     // If extended control registers are not available, then return
     // uintmax.
 
-    if (CpuFeaturesAvailable_x64.Xsave == false) {
+    if (CpuFeaturesAvailable.Xsave == false) {
       return uintmax;
     }
 
@@ -203,7 +196,7 @@ uint64 ReadFromControlRegister_x64(uint8 Register, bool IsExtendedRegister) {
 
 
 
-/* void WriteToMsr_x64()
+/* void x64_WriteToMsr()
 
    Inputs: uint32 Msr - The MSR number you want to write to.
            uint64 Value - The value you want to update the MSR with.
@@ -216,7 +209,7 @@ uint64 ReadFromControlRegister_x64(uint8 Register, bool IsExtendedRegister) {
 
 */
 
-void WriteToMsr_x64(uint32 Msr, uint64 Value) {
+void x64_WriteToMsr(uint32 Msr, uint64 Value) {
 
   // Execute the wrmsr instruction ([ecx] and [edx:eax] input)
 
@@ -233,7 +226,7 @@ void WriteToMsr_x64(uint32 Msr, uint64 Value) {
 
 
 
-/* uint64 ReadFromMsr_x64()
+/* uint64 x64_ReadFromMsr()
 
    Inputs: uint32 Msr - The MSR number you want to read from.
    Outputs: uint64 - The value of that MSR.
@@ -244,7 +237,7 @@ void WriteToMsr_x64(uint32 Msr, uint64 Value) {
 
 */
 
-uint64 ReadFromMsr_x64(uint32 Msr) {
+uint64 x64_ReadFromMsr(uint32 Msr) {
 
   // Execute the rdmsr instruction ([ecx] input, [edx:eax] output)
 
@@ -255,178 +248,5 @@ uint64 ReadFromMsr_x64(uint32 Msr) {
 
   uint64 Value = ((uint64)Edx << 32) + Eax;
   return Value;
-
-}
-
-
-
-// TODO - Function that initializes the CpuFeaturesAvailable global
-// variable; this is necessary before we call most constructors.
-
-void InitializeCpuFeatures_x64(void) {
-
-  // First, let's call CPUID with (rax = 00000001h); this should be supported
-  // on essentially every x64 processor, and it returns a number of useful
-  // feature flags that will be useful for us later on.
-
-  cpuidRegisterTable StandardFeatureFlags = QueryCpuid_x64(1, 0);
-
-  // Additionally, let's also obtain the value of the CR0 and CR4 control
-  // registers, since these tell us which features are *enabled*.
-
-  uint64 Cr0 = ReadFromControlRegister_x64(0, false);
-  uint64 Cr4 = ReadFromControlRegister_x64(4, false);
-  [[maybe_unused]] uint64 Xcr0 = 0;
-
-  // Now that we've done that, let's check which features are actually
-  // supported by reading through CPUID:
-
-  #define FxsaveBit (1ULL << 24) // (Within rdx)
-  #define XsaveBit (1ULL << 26) // (Within rcx)
-
-  CpuFeaturesAvailable_x64.Fxsave = ((StandardFeatureFlags.Rdx & FxsaveBit) != 0);
-  CpuFeaturesAvailable_x64.Xsave = ((StandardFeatureFlags.Rcx & XsaveBit) != 0);
-
-  #define SseBit (1ULL << 25) // (Within rdx)
-  #define Sse2Bit (1ULL << 26) // (Within rdx)
-  #define Sse3Bit (1ULL << 0) // (Within rcx)
-  #define Ssse3Bit (1ULL << 9) // (Within rcx)
-  #define Sse4Bit (1ULL << 19) // (Within rcx)
-  #define AvxBit (1ULL << 28) // (Within rcx)
-
-  if (CpuFeaturesAvailable_x64.Fxsave == true) {
-
-    CpuFeaturesAvailable_x64.Sse = ((StandardFeatureFlags.Rdx & SseBit) != 0);
-    CpuFeaturesAvailable_x64.Sse2 = ((StandardFeatureFlags.Rdx & Sse2Bit) != 0);
-
-    CpuFeaturesAvailable_x64.Sse3 = ((StandardFeatureFlags.Rcx & Sse3Bit) != 0);
-    CpuFeaturesAvailable_x64.Ssse3 = ((StandardFeatureFlags.Rcx & Ssse3Bit) != 0);
-    CpuFeaturesAvailable_x64.Sse4 = ((StandardFeatureFlags.Rcx & Sse4Bit) != 0);
-
-  }
-
-  if (CpuFeaturesAvailable_x64.Xsave == true) {
-
-    CpuFeaturesAvailable_x64.Avx = ((StandardFeatureFlags.Rcx & AvxBit) != 0);
-
-  }
-
-  // AVX2 and AVX512 feature flags reside in another CPUID leaf, (rax =
-  // 00000007h, so if AVX appears to be supported, check that as well.
-
-  if (CpuFeaturesAvailable_x64.Avx == true) {
-
-    // Due to a Windows NT bug, Intel explicitly specifies that the CPUID
-    // leaf we're trying to access is only accessible when MISC_ENABLE.LCMV
-    // is equal to 0, so let's take care of that first.
-
-    // (MISC_ENABLE is a model-specific register with the ID 000001A0h)
-    // (.LCMV is a bit that limits the maximum CPUID leaf)
-
-    #define MiscEnableMsr 0x000001A0
-    #define LcmvBit (1ULL << 22) // (Within MISC_ENABLE)
-
-    WriteToMsr_x64(MiscEnableMsr, (ReadFromMsr_x64(MiscEnableMsr) & ~LcmvBit));
-    cpuidRegisterTable AvxRelevantFeatureFlags = QueryCpuid_x64(7, 0);
-
-    // Now that we're done, we can analyze the information we were given
-    // by CPUID for any relevant AVX feature flags.
-
-    #define Avx2Bit (1ULL << 5) // (Within rbx)
-    #define Avx512fBit (1ULL << 16) // (Within rbx)
-
-    CpuFeaturesAvailable_x64.Avx2 = ((AvxRelevantFeatureFlags.Rbx & Avx2Bit) != 0);
-    CpuFeaturesAvailable_x64.Avx512f = ((AvxRelevantFeatureFlags.Rbx & Avx512fBit) != 0);
-
-  }
-
-  // Okay - now that we've successfully analyzed the CPU's *supported* feature
-  // set, we can move onto enabling any supported features.
-
-  // (Enable `fxsave` *and* SSE instructions, if supported)
-
-  if (CpuFeaturesAvailable_x64.Sse == true) {
-
-    // (Set up CR0, by clearing the EM bit and setting the MP bit)
-
-    #define EmBit (1ULL << 2) // (In cr0)
-    #define MpBit (1ULL << 1) // (In cr0)
-
-    Cr0 &= ~EmBit;
-    Cr0 |= MpBit;
-
-    WriteToControlRegister_x64(0, false, Cr0);
-
-    // (Set up CR4, by setting the OSFXSR and OSXMMEXCPT bits)
-
-    #define OsFsxrBit (1ULL << 9)
-    #define OsXmmExcptBit (1ULL << 10)
-
-    Cr4 |= (OsFsxrBit | OsXmmExcptBit);
-    WriteToControlRegister_x64(4, false, Cr4);
-
-    // (Refresh both CR0 and CR4, in case we reuse it later on)
-
-    Cr0 = ReadFromControlRegister_x64(0, false);
-    Cr4 = ReadFromControlRegister_x64(4, false);
-
-  }
-
-  // (Enable `xsave` *and* extended control registers, if supported)
-
-  if (CpuFeaturesAvailable_x64.Xsave == true) {
-
-    // (Set up CR4, by setting the OSXSAVE bit)
-
-    #define OsXsaveBit (1ULL << 18)
-
-    Cr4 |= OsXsaveBit;
-    WriteToControlRegister_x64(4, false, Cr4);
-
-    // (Refresh CR4)
-
-    Cr4 = ReadFromControlRegister_x64(4, false);
-
-    // (Also set up XCR0, by setting the MMX/FPU and SSE/XMM bits)
-
-    #define FpuBit (1ULL << 0) // (In xcr0)
-    #define XmmBit (1ULL << 1) // (In xcr0)
-
-    Xcr0 = ReadFromControlRegister_x64(0, true);
-
-    Xcr0 |= (FpuBit | XmmBit);
-    WriteToControlRegister_x64(0, true, Xcr0);
-
-  }
-
-  // (Enable AVX instructions, if supported)
-
-  if (CpuFeaturesAvailable_x64.Avx == true) {
-
-    // (Set up XCR0, by setting the AVX/YMM bit)
-
-    #define YmmBit (1ULL << 2) // (In xcr0)
-
-    Xcr0 |= YmmBit;
-    WriteToControlRegister_x64(0, true, Xcr0);
-
-    // (Additionally, if AVX-512f is enabled, set both ZMM bits)
-
-    if (CpuFeaturesAvailable_x64.Avx512f == true) {
-
-      #define OpmaskBit (1ULL << 5) // (In xcr0 - idfk)
-      #define ZmmSizeBit (1ULL << 6) // (In xcr0 - enables upper zmm bits)
-      #define ZmmAccessBit (1ULL << 7) // (In xcr0 - enables zmm16 ~ zmm31)
-
-      Xcr0 |= (OpmaskBit | ZmmSizeBit | ZmmAccessBit);
-      WriteToControlRegister_x64(0, true, Xcr0);
-
-    }
-
-  }
-
-  // Now that we've finished everything, return.
-
-  return;
 
 }

@@ -11,15 +11,13 @@
   #include "../../Firmware/Bios/Bios.h"
   #include "../../Firmware/Efi/Efi.h"
 
-  // Include global variables defined in Bios.c (TODO)
+  // Include functions and global variables from Bios.c (TODO)
 
-  // Include global variables defined in Efi.c
+  // Include functions and global variables from Efi.c
 
   extern efiSystemTable* gST;
   extern efiBootServices* gBS;
   extern efiRuntimeServices* gRT;
-
-  // Include functions from Bios.c and Efi.c
 
   uint64 InitializeEfiTables(efiSystemTable* SystemTable);
 
