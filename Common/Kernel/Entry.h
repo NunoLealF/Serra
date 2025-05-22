@@ -25,10 +25,10 @@
 
   #include "System/System.h"
 
-  // Declare functions in Entry.c and Kernel.c.
+  // Declare functions in Entry.c and Core.c.
 
   entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable);
-  void Kernel(commonInfoTable* InfoTable);
+  void KernelCore(commonInfoTable* InfoTable);
 
   // Declare global variables, used throughout the kernel.
 

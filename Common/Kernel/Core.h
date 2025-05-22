@@ -2,8 +2,8 @@
 // This file is part of the Serra project, which is released under the MIT license.
 // For more information, please refer to the accompanying license agreement. <3
 
-#ifndef SERRA_KERNEL_MAIN_H
-#define SERRA_KERNEL_MAIN_H
+#ifndef SERRA_KERNEL_CORE_H
+#define SERRA_KERNEL_CORE_H
 
   // Import standard and bootloader-related headers.
 
@@ -24,9 +24,9 @@
 
   #include "System/System.h"
 
-  // Declare functions in Kernel.c.
+  // Declare functions in Core.c.
 
-  void Kernel(commonInfoTable* InfoTable);
+  void KernelCore(commonInfoTable* InfoTable);
 
   // Declare global variables, used throughout the kernel.
 

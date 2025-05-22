@@ -3,11 +3,11 @@
 // For more information, please refer to the accompanying license agreement. <3
 
 #include "Libraries/Stdint.h"
-#include "Kernel.h"
+#include "Core.h"
 
 // TODO - Write documentation
 
-void Kernel(commonInfoTable* InfoTable) {
+void KernelCore(commonInfoTable* InfoTable) {
 
   // (Depending on the display type, show a graphical demo)
 

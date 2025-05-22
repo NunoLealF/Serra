@@ -489,25 +489,6 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
       return EntrypointSystemDoesntSupportCpuid;
     }
 
-    // (Set up platform-specific variables)
-
-    // TODO - This essentially shows the 'best' feature set supported
-
-    // Works fine, though I haven't been able to test for AVX512 because
-    // it's *so* new it's literally not on anything I own.
-
-    InitializeCpuFeatures();
-
-    if (CpuFeaturesAvailable.Avx512f == true) return 512;
-    if (CpuFeaturesAvailable.Avx2 == true) return 384;
-    if (CpuFeaturesAvailable.Avx == true) return 256;
-
-    if (CpuFeaturesAvailable.Sse4 == true) return 5;
-    if (CpuFeaturesAvailable.Ssse3 == true) return 4;
-    if (CpuFeaturesAvailable.Sse3 == true) return 3;
-    if (CpuFeaturesAvailable.Sse2 == true) return 2;
-    if (CpuFeaturesAvailable.Sse == true) return 1;
-
   }
 
 
@@ -535,6 +516,13 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
 
   }
 
+  // (Set up platform-specific constructors)
+
+  if (InfoTable->System.Architecture == x64Architecture) {
+    InitializeCpuFeatures();
+  }
+
+
 
 
   // [Set up the kernel environment]
@@ -557,7 +545,7 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
 
   // [Call the kernel]
 
-  Kernel(InfoTable);
+  KernelCore(InfoTable);
 
 
 
