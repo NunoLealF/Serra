@@ -8,6 +8,7 @@
   // Import standard and bootloader-related headers.
 
   #include "Libraries/Stdint.h"
+  #include "Libraries/String.h"
   #include "../Common.h"
 
   // Import kernel constructors.

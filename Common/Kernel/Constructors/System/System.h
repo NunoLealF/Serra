@@ -14,7 +14,7 @@
 
   #if defined(__amd64__) || defined(__x86_64__)
 
-    typedef struct _cpuFeaturesAvailable {
+    typedef struct _x64_cpuFeaturesAvailable {
 
       // (SIMD- and register-specific features)
 
@@ -30,9 +30,9 @@
       bool Avx2 : 1; // Are (base) AVX2 features available?
       bool Avx512f : 1; // Are (foundational) AVX512 features available?
 
-    } cpuFeaturesAvailable;
+    } x64_cpuFeaturesAvailable;
 
-    extern cpuFeaturesAvailable CpuFeaturesAvailable;
+    extern x64_cpuFeaturesAvailable CpuFeaturesAvailable;
 
     void InitializeCpuFeatures(void);
 

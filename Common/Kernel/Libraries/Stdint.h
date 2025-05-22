@@ -5,8 +5,8 @@
 // [64-bit Stdint.h - do not use with 16- or 32-bit code]
 // [Platform agnostic; compatible with both LP64 and LLP64]
 
-#ifndef SERRA_STDINT_H
-#define SERRA_STDINT_H
+#ifndef SERRA_KERNEL_STDINT_H
+#define SERRA_KERNEL_STDINT_H
 
   // Many compilers have support for __(U)INT(SIZE)_TYPE__ macros, and if
   // those are defined, we can use those.

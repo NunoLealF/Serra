@@ -9,15 +9,35 @@
 #include "../../Libraries/Stdint.h"
 #include "System.h"
 
+/* x64_cpuFeaturesAvailable CpuFeaturesAvailable{}
 
-// TODO: Global variable that has the list of supported CPU features;
-// for now, we initialize it to false.
+   Members: (See definition in System.h)
 
-cpuFeaturesAvailable CpuFeaturesAvailable = {false};
+   A table that contains the list of CPU features available on the current
+   system, on x64 platforms.
+
+   This table can be accessed by any code that includes System.h, but it's
+   only meant to be initialized or modified by InitializeCpuFeatures().
+
+*/
+
+x64_cpuFeaturesAvailable CpuFeaturesAvailable = {false};
 
 
-// TODO - Function that initializes the CpuFeaturesAvailable global
-// variable; this is necessary before we call most constructors.
+
+/* void InitializeCpuFeatures(void)
+
+   Inputs: (none)
+   Outputs: (modifies CpuFeaturesAvailable{})
+
+   (TODO: An introduction like "This is a function that initializes the list
+   of available CPU features on x64 platforms")
+
+   (TODO: Something that explains *what* it does, why it's important, etc.)
+
+   (IMPORTANT: When to use this (?))
+
+*/
 
 void InitializeCpuFeatures(void) {
 
