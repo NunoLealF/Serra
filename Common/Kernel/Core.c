@@ -22,8 +22,48 @@ void KernelCore(commonInfoTable* InfoTable) {
 
       // (Calculate the necessary value, and try to fill this line)
 
-      uint8 Intensity = (Y * 255 / InfoTable->Display.Graphics.LimitY);
-      Memset((void*)Buffer, Intensity, Size);
+      uint64 RedMask = ((InfoTable->Display.Graphics.Bits.RedMask >> 3) & InfoTable->Display.Graphics.Bits.RedMask);
+      uint64 GreenMask = ((InfoTable->Display.Graphics.Bits.GreenMask >> 1) & InfoTable->Display.Graphics.Bits.GreenMask);
+      uint64 BlueMask = ((InfoTable->Display.Graphics.Bits.BlueMask >> 0) & InfoTable->Display.Graphics.Bits.BlueMask);
+
+      auto RedI = (Y * RedMask / InfoTable->Display.Graphics.LimitY) & InfoTable->Display.Graphics.Bits.RedMask;
+      auto GreenI = (Y * GreenMask / InfoTable->Display.Graphics.LimitY) & InfoTable->Display.Graphics.Bits.GreenMask;
+      auto BlueI = (Y * BlueMask / InfoTable->Display.Graphics.LimitY) & InfoTable->Display.Graphics.Bits.BlueMask;
+
+      auto Intensity = 0;
+
+      // (This shows the CPU features)
+
+      if (CpuFeaturesAvailable.Avx512f == true) {
+
+        Intensity |= InfoTable->Display.Graphics.Bits.RedMask;
+        Intensity |= InfoTable->Display.Graphics.Bits.GreenMask;
+        Intensity |= InfoTable->Display.Graphics.Bits.BlueMask;
+
+        Intensity /= InfoTable->Display.Graphics.LimitY;
+        Intensity *= Y;
+
+      } else if (Y % 2 == 0) {
+
+        if (CpuFeaturesAvailable.Sse2 == true) Intensity |= RedI;
+        if (CpuFeaturesAvailable.Ssse3 == true) Intensity |= GreenI;
+        if (CpuFeaturesAvailable.Avx == true) Intensity |= BlueI;
+
+      } else {
+
+        if (CpuFeaturesAvailable.Sse3 == true) Intensity |= RedI;
+        if (CpuFeaturesAvailable.Sse4 == true) Intensity |= GreenI;
+        if (CpuFeaturesAvailable.Avx2 == true) Intensity |= BlueI;
+
+      }
+
+      if (InfoTable->Display.Graphics.Bits.PerPixel <= 16) {
+        Memset((void*)Buffer, (uint16)Intensity, Size);
+      } else if (InfoTable->Display.Graphics.Bits.PerPixel <= 32) {
+        Memset((void*)Buffer, (uint32)Intensity, Size);
+      } else if (InfoTable->Display.Graphics.Bits.PerPixel <= 64) {
+        Memset((void*)Buffer, (uint64)Intensity, Size);
+      }
 
     }
 
