@@ -9,16 +9,16 @@ SECTION .text
 
 EXTERN _SimdRegisterArea
 
-GLOBAL _Memcpy_Base
+GLOBAL _Memcpy_RepMovsb
 GLOBAL _Memcpy_Sse2
-
+GLOBAL _Memcpy_Avx
+GLOBAL _Memcpy_Avx512f
 
 
 ; TODO - In theory this shouldn't alter any preserved registers.
-
 ; (void* Destination (RDI), const void* Source (RSI), uint64 Size (RDX))
 
-_Memcpy_Base:
+_Memcpy_RepMovsb:
 
   ; (Calculate the number of 8-byte blocks we need to move (in RCX), as well
   ; as the remainder (in RDX))
@@ -156,3 +156,23 @@ _Memcpy_Sse2:
     ; (Return.)
 
     ret
+
+
+
+; TODO - In theory this shouldn't alter any non-SIMD preserved registers,
+; but we need to push YMM(n) still.
+
+; (void* Destination (RDI), const void* Source (RSI), uint64 Size (RDX))
+
+_Memcpy_Avx:
+  jmp _Memcpy_Sse2
+
+
+
+; TODO - In theory this shouldn't alter any non-SIMD preserved registers,
+; but we need to push ZMM(n) still.
+
+; (void* Destination (RDI), const void* Source (RSI), uint64 Size (RDX))
+
+_Memcpy_Avx512f:
+  jmp _Memcpy_Avx

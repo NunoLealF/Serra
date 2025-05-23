@@ -38,14 +38,18 @@ static inline void _Memcpy(void* Destination, const void* Source, uint64 Size) {
 
   // Optimized Memcpy() functions for x64 platforms, from x64/Memcpy.asm
 
-  extern void _Memcpy_Base(void* Destination, const void* Source, uint64 Size);
+  extern void _Memcpy_RepMovsb(void* Destination, const void* Source, uint64 Size);
   extern void _Memcpy_Sse2(void* Destination, const void* Source, uint64 Size);
+  extern void _Memcpy_Avx(void* Destination, const void* Source, uint64 Size);
+  extern void _Memcpy_Avx512f(void* Destination, const void* Source, uint64 Size);
 
   // Optimized Memset() functions for x64 platforms, from x64/Memset.asm
   // (Width *must* be one of 1, 2, 4 or 8.)
 
-  extern void _Memset_Base(void* Buffer, uint64 Value, uint8 Width, uint64 Size);
-  extern void _Memset_Sse2(void* Buffer, uint64 Value, uint8 Width, uint64 Size);
+  extern void _Memset_RepStosb(void* Buffer, uint64 Value, uint64 Size);
+  extern void _Memset_Sse2(void* Buffer, uint64 Value, uint64 Size);
+  extern void _Memset_Avx(void* Buffer, uint64 Value, uint64 Size);
+  extern void _Memset_Avx512f(void* Buffer, uint64 Value, uint64 Size);
 
 #endif
 
@@ -82,10 +86,20 @@ void Memcpy(void* Destination, const void* Source, uint64 Size) {
 
   #if defined(__amd64__) || defined(__x86_64__)
 
-    if (CpuFeaturesAvailable.Sse2 == true) {
-      _Memcpy_Sse2(Destination, Source, Size);
+    if ((Size < 1024) || (CpuFeaturesAvailable.Erms == true)) {
+
+      _Memcpy_RepMovsb(Destination, Source, Size);
+
     } else {
-      _Memcpy_Base(Destination, Source, Size);
+
+      if (CpuFeaturesAvailable.Avx512f == true) {
+        _Memcpy_Avx512f(Destination, Source, Size);
+      } else if (CpuFeaturesAvailable.Avx == true) {
+        _Memcpy_Avx(Destination, Source, Size);
+      } else {
+        _Memcpy_Sse2(Destination, Source, Size);
+      }
+
     }
 
   #endif
@@ -102,133 +116,53 @@ void* memcpy(void* Destination, const void* Source, uint64 Size) {
 
 
 
-/* static void _Memset8(), _Memset16(), _Memset32(), _Memset64()
+/* static void Memset(), void* memset()
 
    Inputs: void* Buffer - The buffer you want to write to.
-           uint? Value - The value you want to fill with.
+           uint8 Character - The character you want to write with.
            uint64 Size - The size of the buffer, *in bytes*.
 
-   Outputs: (None)
+   Outputs: (None, or value of `Destination`)
 
-   This group of functions fills a memory area / buffer (Buffer) of a
-   certain size (Size) with a specific value (Value), which is sized
-   accordingly:
-
-   - _Memset8() only accepts 8-bit (uint8) values for `Value`;
-   - _Memset16() only accepts 16-bit (uint16) values for `Value`;
-   - _Memset32() only accepts 32-bit (uint32) values for `Value`;
-   - _Memset64() only accepts 64-bit (uint64) values for `Value`.
+   This function fills a memory area/buffer (Buffer) of a certain size (Size)
+   with a specific value (Character), although without any hardware
+   acceleration (like MMX, SSE or AVX).
 
    (TODO: Something about platform-specific optimizations)
-
-   (TODO: Something that explains what happens with misaligned Size
-   values (like, what happens if you _Memset64())
-
-*/
-
-void _Memset8(void* Buffer, uint8 Value, uint64 Size) {
-
-  // (Routines specific to x64 platforms)
-
-  #if defined(__amd64__) || defined(__x86_64__)
-
-    if (CpuFeaturesAvailable.Sse2 == true) {
-      _Memset_Sse2(Buffer, Value, sizeof(Value), Size);
-    } else {
-      _Memset_Base(Buffer, Value, sizeof(Value), Size);
-    }
-
-  #endif
-
-  // Now that we're done, we can just return
-
-  return;
-
-}
-
-void _Memset16(void* Buffer, uint16 Value, uint64 Size) {
-
-  // (Routines specific to x64 platforms)
-
-  #if defined(__amd64__) || defined(__x86_64__)
-
-    if (CpuFeaturesAvailable.Sse2 == true) {
-      _Memset_Sse2(Buffer, Value, sizeof(Value), Size);
-    } else {
-      _Memset_Base(Buffer, Value, sizeof(Value), Size);
-    }
-
-  #endif
-
-  // Now that we're done, we can just return
-
-  return;
-
-}
-
-void _Memset32(void* Buffer, uint32 Value, uint64 Size) {
-
-  // (Routines specific to x64 platforms)
-
-  #if defined(__amd64__) || defined(__x86_64__)
-
-    if (CpuFeaturesAvailable.Sse2 == true) {
-      _Memset_Sse2(Buffer, Value, sizeof(Value), Size);
-    } else {
-      _Memset_Base(Buffer, Value, sizeof(Value), Size);
-    }
-
-  #endif
-
-  // Now that we're done, we can just return
-
-  return;
-
-}
-
-void _Memset64(void* Buffer, uint64 Value, uint64 Size) {
-
-  // (Routines specific to x64 platforms)
-
-  #if defined(__amd64__) || defined(__x86_64__)
-
-    if (CpuFeaturesAvailable.Sse2 == true) {
-      _Memset_Sse2(Buffer, Value, sizeof(Value), Size);
-    } else {
-      _Memset_Base(Buffer, Value, sizeof(Value), Size);
-    }
-
-  #endif
-
-  // Now that we're done, we can just return
-
-  return;
-
-}
-
-
-
-/* macro _Generic::Value Memset(), void* memset()
-
-   Inputs: void* Buffer - The buffer you want to write to.
-           uint? Value - The value you want to fill with.
-           uint64 Size - The size of the buffer, *in bytes*.
-
-   Outputs: (None, or value of `Buffer`)
-
-   (TODO: Something explaining how this works - more specifically,
-   something that explains _Generic()'s function overloading)
 
    (TODO: Something about GCC's insistence on memset() existing)
 
 */
 
-#define Memset(Buffer, Value, Size) _Generic((Value), \
-                                              uint64: _Memset64, \
-                                              uint32: _Memset32, \
-                                              uint16: _Memset16, \
-                                              default: _Memset8 \
-                                            )(Buffer, Value, Size)
+void Memset(void* Buffer, uint8 Character, uint64 Size) {
+
+  // (Routines specific to x64 platforms)
+
+  #if defined(__amd64__) || defined(__x86_64__)
+
+    if ((Size < 1024) || (CpuFeaturesAvailable.Erms == true)) {
+
+      _Memset_RepStosb(Buffer, Character, Size);
+
+    } else {
+
+      if (CpuFeaturesAvailable.Avx512f == true) {
+        _Memset_Avx512f(Buffer, Character, Size);
+      } else if (CpuFeaturesAvailable.Avx == true) {
+        _Memset_Avx(Buffer, Character, Size);
+      } else {
+        _Memset_Sse2(Buffer, Character, Size);
+      }
+
+    }
+
+  #endif
+
+  // (Return, now that we're done)
+
+  return;
+
+}
 
 void* memset(void* Buffer, uint8 Value, uint64 Size) {
   Memset(Buffer, Value, Size); return Buffer;

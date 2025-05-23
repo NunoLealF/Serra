@@ -20,18 +20,7 @@
 
   // Include functions provided by Memory/Memset.c (TODO)
 
-  void _Memset8(void* Buffer, uint8 Value, uint64 Size);
-  void _Memset16(void* Buffer, uint16 Value, uint64 Size);
-  void _Memset32(void* Buffer, uint32 Value, uint64 Size);
-  void _Memset64(void* Buffer, uint64 Value, uint64 Size);
-
-  #define Memset(Buffer, Value, Size) _Generic((Value), \
-                                                uint64: _Memset64, \
-                                                uint32: _Memset32, \
-                                                uint16: _Memset16, \
-                                                default: _Memset8 \
-                                              )(Buffer, Value, Size)
-
+  void Memset(void* Buffer, uint8 Character, uint64 Size);
   void* memset(void* Buffer, uint8 Character, uint64 Size);
 
 #endif

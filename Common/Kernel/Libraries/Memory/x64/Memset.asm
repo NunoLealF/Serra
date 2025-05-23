@@ -9,109 +9,57 @@ SECTION .text
 
 EXTERN _SimdRegisterArea
 
-GLOBAL _Memset_Base
+GLOBAL _Memset_RepStosb
 GLOBAL _Memset_Sse2
+GLOBAL _Memset_Avx
+GLOBAL _Memset_Avx512f
 
 
 ; This function shouldn't change any preserved registers.
-; (void* Buffer (RDI), uint? Value (RSI), uint8 Width (RDX), uint64 Size (RCX))
+; (void* Buffer (RDI), uint8 Character (RSI), uint64 Size (RDX))
 
-_Memset_Base:
+_Memset_RepStosb:
 
-  ; Calculate the number of 8-byte blocks we need to set in R8, and store
-  ; the remainder of that calculation (number of 1-byte blocks?) in R9.
+  ; `rep stosb` is an instruction that fills RCX bytes at [RDI] with the
+  ; value specified in AL, so let's map our registers accordingly:
 
-  ; (In other words, r8 => (Size / 8), r9 => (Size % 8))
+  mov rax, rsi
+  mov rcx, rdx
 
-  mov r8, rcx
-  shr r8, 3
+  ; At this point, we're almost ready to fill bytes; we just need to
+  ; align the buffer address (in RDI) to 16 bytes, if applicable.
 
-  and r9, 7
+  ; (Calculate (Size % 16) in R8 - if it's zero, then we already have
+  ; an aligned address, but otherwise, jump to .FillUnalignedData)
 
-  ; Depending on the value of Width ( = sizeof(Value)), broadcast the
-  ; rest of Value into RSI (using R10 as a scratch register).
+  mov r9, rdi
+  and r9, (16 - 1)
 
-  ; (For reference, broadcasting just means filling out the unused 'parts'
-  ; of a register with the used 'parts', like in A1h -> A1A1A1A1A1A1A1A1h)
+  cmp r9, 0
+  je .FillAlignedData
 
-  cmp rdx, 1
-  je .BroadcastByte
+  ; If the buffer address isn't 16-byte-aligned, copy the remainder
+  ; (also using `rep stosb`, but *only* for the remainder)
 
-  cmp rdx, 2
-  je .BroadcastWord
+  .FillUnalignedData:
 
-  cmp rdx, 4
-  je .BroadcastDword
-
-  cmp rdx, 8
-  je .BlockFill
-
-  ; (Broadcast 8-bits to 16-bits, then move onto .BroadcastWord)
-
-  .BroadcastByte:
-    mov r10, rsi
-    shl r10, 8
-    or rsi, r10
-
-  ; (Broadcast 16-bits to 32-bits, then move onto .BroadcastDword)
-
-  .BroadcastWord:
-    mov r10, rsi
-    shl r10, 16
-    or rsi, r10
-
-  ; (Broadcast 32-bits to 64-bits, then move onto .BlockFill)
-
-  .BroadcastDword:
-    mov r10, rsi
-    shl r10, 32
-    or rsi, r10
-
-  ; Once we're done with that, we can prepare to start storing blocks,
-  ; using the `rep stosq` instruction.
-
-  .BlockFill:
-
-    ; (Store our value in RAX, our buffer in RDI, and the number of
-    ; blocks to fill in RCX)
-
-    mov rax, rsi
-    mov rcx, r8
-
-    ; (Use `rep stosq` to store RCX 8-byte blocks (of value RAX) at [RSI])
+    push rcx
+    mov rcx, r9
 
     cld
-    rep stosq
+    rep stosb
 
-  ; Since the Size variable isn't guaranteed to be a multiple of eight, we
-  ; also have a remainder number of bytes that we need to store, so let's
-  ; deal with those using `stosb`.
+    pop rcx
+    sub rcx, r9
 
-  .RemainderFill:
+  ; Now that we know that Buffer is 16-byte-aligned, we can safely
+  ; use `rep stosb` to copy everything else, before returning.
 
-    ; (While R9 (the remainder) isn't zero, run this loop)
-
-    cmp r9, 0
-    je .Cleanup
-
-    ; (Store the 'current' byte (AL) in [RSI] using `stosb`)
-
-    mov rcx, 1
+  .FillAlignedData:
 
     cld
-    stosb
+    rep stosb
 
-    ; (Move to the next byte, and decrement R9 (the number of bytes left
-    ; to copy, before continuing the loop)
-
-    shr rsi, 8
-    dec r9
-
-    jmp .RemainderFill
-
-  ; (Now that we're done, we can return)
-
-  .Cleanup:
     ret
 
 
@@ -119,110 +67,71 @@ _Memset_Base:
 ; This function shouldn't change any preserved registers, other than XMM
 ; ones, which requires `fxsave` support.
 
-; (void* Buffer (RDI), uint? Value (RSI), uint8 Width (RDX), uint64 Size (RCX))
+; (void* Buffer (RDI), uint8 Character (RSI), uint64 Size (RDX))
 
 _Memset_Sse2:
 
-  ; Before we do anything else, we need to make sure that the address we're
-  ; using is 16-byte-aligned; we'll store the remainder in R8.
+  ; First, let's check to see if the buffer address is 16-byte-aligned;
+  ; and if not, use `rep stosb` to fill it out. (R8 == (Size % 16))
 
   mov r8, rdi
-  and r8, 15
+  and r8, (16 - 1)
 
-  ; (If it's already aligned, skip trying to align it)
+  ; (Store `Character` (RSI) in RAX)
+
+  mov rax, rsi
+
+  ; (If it's already aligned, then we don't need to align it)
 
   cmp r8, 0
-  je .AfterAlignment
+  je .FillAlignedData
 
-  ; (Use _Memset_Base to fill the non-aligned bytes (R10) - this discards
-  ; RCX, RDI, RSI and R8, so we need to save those on the stack)
+  ; If the buffer address isn't 16-byte-aligned, copy the remainder
+  ; (also using `rep stosb`, but *only* for the remainder)
 
-  .AlignBuffer:
+  .FillUnalignedData:
 
     push rcx
-    push rdi
-    push rsi
-    push r8
-
     mov rcx, r8
-    call _Memset_Base
 
-    pop r8
-    pop rsi
-    pop rdi
+    cld
+    rep stosb
+
     pop rcx
-
-    ; (Update Size (RCX) and Buffer (RDI) to take into account the
-    ; remainder we just copied (R8)).
-
-    add rdi, 16
-    sub rdi, r8
     sub rcx, r8
 
-  ; (Prepare the environment for SSE)
+  ; If it is, then prepare the environment for SSE.
 
-  .AfterAlignment:
+  .FillAlignedData:
 
-    ; Calculate the number of 256-byte blocks we need to fill in R9, and store
-    ; the remainder (the number of bytes *after*) in RCX.
+    ; (Save the current state of the SSE registers, using `fxsave`)
+
+    fxsave [_SimdRegisterArea]
+
+    ; (Calculate the amount of 256-byte blocks we'll need to fill out
+    ; in R9, and leave the remainder in RCX.)
 
     mov r9, rcx
     shr r9, 8
 
-    and rcx, 255
+    and rcx, (256 - 1)
 
-    ; Save the current state of the SSE registers, using `fxsave`.
+    ; (Broadcast AL to the rest of RAX, using R10 as a scratch register;
+    ; this essentially means "copy the value of AL to all other bytes")
 
-    fxsave [_SimdRegisterArea]
+    mov r10, rax
+    mov rax, 0101010101010101h
+    imul rax, r10
 
-    ; Depending on the value of Width, broadcast Value to the lower half
-    ; of the XMM0 register.
+    ; (Move RAX to the lower half of XMM0, and broadcast it to its
+    ; higher half as well (using `punpcklqdq`))
 
-    cmp rdx, 1
-    je .BroadcastByte
-
-    movq xmm0, rsi
-
-    cmp rdx, 2
-    je .BroadcastWord
-
-    cmp rdx, 4
-    je .BroadcastDword
-
-    cmp rdx, 8
-    je .BroadcastQword
-
-  ; (Broadcast 8-bits to 16-bits in RSI -> XMM0, and move onto .BroadcastWord)
-
-  .BroadcastByte:
-    mov r10, rsi
-    shl r10, 8
-    or rsi, r10
-
-    movq xmm0, rsi
-    jmp .BroadcastWord
-
-  ; (Broadcast 16-bits to 64-bits in XMM0, and move onto .BroadcastQword)
-
-  .BroadcastWord:
-    pshuflw xmm0, xmm0, 0b00000000
-    jmp .BroadcastQword
-
-  ; (Broadcast 32-bits to 64-bits in XMM0, and move onto .BroadcastQword)
-
-  .BroadcastDword:
-    pshuflw xmm0, xmm0, 0b01000100
-    jmp .BroadcastQword
-
-  ; (Broadcast 64-bits to 128-bits in XMM0, and move onto .BroadcastXmm)
-
-  .BroadcastQword:
+    movq xmm0, rax
     punpcklqdq xmm0, xmm0
-    jmp .BroadcastXmm
 
-  ; (Broadcast to the full set of XMM registers, and move onto .SseBlockFill)
+    ; (Use the `movdqa` instruction to copy XMM0's value to every
+    ; other SSE register.)
 
-  .BroadcastXmm:
     movdqa xmm1, xmm0
     movdqa xmm2, xmm0
     movdqa xmm3, xmm0
@@ -239,16 +148,15 @@ _Memset_Sse2:
     movdqa xmm14, xmm0
     movdqa xmm15, xmm0
 
-  ; Earlier on, we calculated that we'd need to fill R9 256-byte blocks;
-  ; now that we've broadcasted Value to every XMM register, we can start
-  ; filling them.
+  ; Fill each 256-byte block with SSE registers, using R9 as a
+  ; counter (R9 == (Size / 256)).
 
-  .SseBlockFill:
+  .FillBlockData:
 
     ; (If we've filled all necessary blocks, exit the loop)
 
     cmp r9, 0
-    je .RemainderFill
+    je .FillRemainder
 
     ; (Otherwise, use the `movdqa` instruction to fill the next 256 bytes,
     ; while keeping XMM0 ~ XMM15 in cache (this is a temporal move))
@@ -275,26 +183,38 @@ _Memset_Sse2:
     add rdi, 256
     dec r9
 
-    jmp .SseBlockFill
+    jmp .FillBlockData
 
-  ; After that, use `rep stosq` to fill the remaining (RCX) bytes (in this
-  ; case, we can assume that RDI and RCX are both 8-byte aligned).
+  ; Fill out the remainder of the data, using `rep stosb` again.
 
-  .RemainderFill:
-
-    ; (Set up RAX and RCX so we can properly use `rep stosq`, and
-    ; call it; this should fill the remainder of our buffer.)
-
-    movq rax, xmm0
-    shr rcx, 3
+  .FillRemainder:
 
     cld
-    rep stosq
+    rep stosb
+
+  ; Restore the previous state of the SSE registers, and return.
 
   .Cleanup:
 
-    ; (Restore the previous state of the SSE registers, using `fxrstor`,
-    ; and return)
-
     fxrstor [_SimdRegisterArea]
     ret
+
+
+
+; This function shouldn't change any preserved registers, other than YMM
+; ones, which requires `xsave` support.
+
+; (void* Buffer (RDI), uint8 Character (RSI), uint64 Size (RDX))
+
+_Memset_Avx:
+  jmp _Memset_Sse2
+
+
+
+; This function shouldn't change any preserved registers, other than ZMM
+; ones, which requires `xsave` support.
+
+; (void* Buffer (RDI), uint8 Character (RSI), uint64 Size (RDX))
+
+_Memset_Avx512f:
+  jmp _Memset_Avx
