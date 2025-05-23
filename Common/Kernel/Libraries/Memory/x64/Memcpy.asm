@@ -8,13 +8,17 @@ DEFAULT REL
 SECTION .text
 
 EXTERN _SimdRegisterArea
-GLOBAL _MemcpyBase
-GLOBAL _MemcpySse2
 
-; TODO - In theory this shouldn't even alter any preserved registers.
-; (void* Source (RSI), const void* Destination (RDI), uint64 Size (RDX))
+GLOBAL _Memcpy_Base
+GLOBAL _Memcpy_Sse2
 
-_MemcpyBase:
+
+
+; TODO - In theory this shouldn't alter any preserved registers.
+
+; (void* Destination (RDI), const void* Source (RSI), uint64 Size (RDX))
+
+_Memcpy_Base:
 
   ; (Calculate the number of 8-byte blocks we need to move (in RCX), as well
   ; as the remainder (in RDX))
@@ -37,7 +41,7 @@ _MemcpyBase:
   rep movsb
 
   ; (Return.)
-  
+
   ret
 
 
@@ -45,9 +49,9 @@ _MemcpyBase:
 ; TODO - In theory this shouldn't alter any non-SIMD preserved registers,
 ; but we need to push XMM(n) still.
 
-; (void* Source (RSI), const void* Destination (RDI), uint64 Size (RDX))
+; (void* Destination (RDI), const void* Source (RSI), uint64 Size (RDX))
 
-_MemcpySse2:
+_Memcpy_Sse2:
 
   .BeforeLoop:
 
@@ -63,6 +67,7 @@ _MemcpySse2:
 
     sub rdx, rcx
 
+    cld
     rep movsb
 
     ; (Calculate the number of 256-byte 'blocks' we need to move in R8)
@@ -141,6 +146,7 @@ _MemcpySse2:
     and rcx, 255
     shr rcx, 3
 
+    cld
     rep movsq
 
     ; (Restore SSE registers, using `fxrstor`)

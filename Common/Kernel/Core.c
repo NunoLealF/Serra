@@ -20,9 +20,10 @@ void KernelCore(commonInfoTable* InfoTable) {
       auto Buffer = (InfoTable->Display.Graphics.Framebuffer.Address + (InfoTable->Display.Graphics.Pitch * Y));
       auto Size = (InfoTable->Display.Graphics.LimitX * InfoTable->Display.Graphics.Bits.PerPixel / 8);
 
-      // (Copy the first Size bytes from this fn's code, just to see if it works)
+      // (Calculate the necessary value, and try to fill this line)
 
-      Memcpy((void*)Buffer, (const void*)KernelCore, (Size*3));
+      uint8 Intensity = (Y * 255 / InfoTable->Display.Graphics.LimitY);
+      Memset((void*)Buffer, Intensity, Size);
 
     }
 
