@@ -26,6 +26,7 @@
       bool Sse4 : 1; // Are SSE4.1/4.2 (not SSE4a!) features available?
 
       bool Xsave : 1; // Are `xsave` instructions and extended control registers available?
+      bool Erms : 1; // Is Enhanced REP MOVS*/STOS* (ERMS) being used?
       bool Avx : 1; // Are (base) AVX features available?
       bool Avx2 : 1; // Are (base) AVX2 features available?
       bool Avx512f : 1; // Are (foundational) AVX512 features available?

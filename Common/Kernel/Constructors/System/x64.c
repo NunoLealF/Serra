@@ -70,6 +70,7 @@ void InitializeCpuFeatures(void) {
 
   #define MiscEnableMsr 0x000001A0
   #define LcmvBit (1ULL << 22) // (Within MISC_ENABLE)
+  #define FseBit (1ULL << 0) // (Within MISC_ENABLE)
 
   bool LcmvBitHasBeenCleared = false;
 
@@ -77,7 +78,7 @@ void InitializeCpuFeatures(void) {
 
     // (Unlock access to higher CPUID 'leaves' (functions, basically))
 
-    x64_WriteToMsr(MiscEnableMsr, (x64_ReadFromMsr(MiscEnableMsr) & ~LcmvBit));
+    x64_WriteToMsr(MiscEnableMsr, (x64_ReadFromMsr(MiscEnableMsr) & ~LcmvBit | FseBit));
     LcmvBitHasBeenCleared = true;
 
     // (Call CPUID leaf (rax = 0000000Dh, rcx = 1)), and check whether
@@ -160,7 +161,7 @@ void InitializeCpuFeatures(void) {
 
     if (LcmvBitHasBeenCleared == false) {
 
-      x64_WriteToMsr(MiscEnableMsr, (x64_ReadFromMsr(MiscEnableMsr) & ~LcmvBit));
+      x64_WriteToMsr(MiscEnableMsr, (x64_ReadFromMsr(MiscEnableMsr) & ~LcmvBit | FseBit));
       LcmvBitHasBeenCleared = true;
 
     }
@@ -171,8 +172,10 @@ void InitializeCpuFeatures(void) {
     // by CPUID for any relevant AVX feature flags.
 
     #define Avx2Bit (1ULL << 5) // (Within rbx)
+    #define ErmsBit (1ULL << 9) // (Within rbx)
     #define Avx512fBit (1ULL << 16) // (Within rbx)
 
+    CpuFeaturesAvailable.Erms = ((AvxRelevantFeatureFlags.Rbx & ErmsBit) != 0);
     CpuFeaturesAvailable.Avx2 = ((AvxRelevantFeatureFlags.Rbx & Avx2Bit) != 0);
     CpuFeaturesAvailable.Avx512f = ((AvxRelevantFeatureFlags.Rbx & Avx512fBit) != 0);
 
