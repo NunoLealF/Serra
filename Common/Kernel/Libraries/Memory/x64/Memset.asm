@@ -29,13 +29,13 @@ _Memset_RepStosb:
   ; At this point, we're almost ready to fill bytes; we just need to
   ; align the buffer address (in RDI) to 16 bytes, if applicable.
 
-  ; (Calculate (Size % 16) in R8 - if it's zero, then we already have
-  ; an aligned address, but otherwise, jump to .FillUnalignedData)
+  ; (Calculate (Buffer % 16) in R8 - if it's zero, then we already have
+  ; an aligned address, otherwise, continue onto .FillUnalignedData)
 
-  mov r9, rdi
-  and r9, (16 - 1)
+  mov r8, rdi
+  and r8, (16 - 1)
 
-  cmp r9, 0
+  cmp r8, 0
   je .FillAlignedData
 
   ; If the buffer address isn't 16-byte-aligned, copy the remainder
@@ -44,13 +44,13 @@ _Memset_RepStosb:
   .FillUnalignedData:
 
     push rcx
-    mov rcx, r9
+    mov rcx, r8
 
     cld
     rep stosb
 
     pop rcx
-    sub rcx, r9
+    sub rcx, r8
 
   ; Now that we know that Buffer is 16-byte-aligned, we can safely
   ; use `rep stosb` to copy everything else, before returning.
@@ -72,10 +72,15 @@ _Memset_RepStosb:
 _Memset_Sse2:
 
   ; First, let's check to see if the buffer address is 16-byte-aligned;
-  ; and if not, use `rep stosb` to fill it out. (R8 == (Size % 16))
+  ; and if not, use `rep stosb` to fill it out.)
 
-  mov r8, rdi
-  and r8, (16 - 1)
+  ; (We store the remainder in R8, and use R9 as a scratch register)
+
+  mov r9, rdi
+  and r9, (16 - 1)
+
+  mov r8, 16
+  sub r8, r9
 
   ; (Store `Character` (RSI) in RAX)
 

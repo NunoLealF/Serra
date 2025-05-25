@@ -20,29 +20,46 @@ GLOBAL _Memcpy_Avx512f
 
 _Memcpy_RepMovsb:
 
-  ; (Calculate the number of 8-byte blocks we need to move (in RCX), as well
-  ; as the remainder (in RDX))
+  ; `rep movsb` is an instruction that copies RCX bytes from [RSI] to
+  ; [RDI], so let's map our registers accordingly:
 
   mov rcx, rdx
-  shr rcx, 3
 
-  and rdx, 7
+  ; At this point, we're almost ready to fill bytes; we just need to align
+  ; the destination address (in RDI) to 16 bytes, if possible.
 
-  ; (Clear the direction flag, just in case)
+  ; (Calculate (Destination % 16) in R8 - if it's zero, then we already have
+  ; an aligned address, but otherwise, continue onto .MoveUnalignedData)
 
-  cld
+  mov r8, rdi
+  and r8, (16 - 1)
 
-  ; (Move 8-byte blocks from Source to Destination, using `rep movsq`,
-  ; and then move the remainder using `rep movsb`
+  cmp r8, 0
+  je .MoveAlignedData
 
-  rep movsq
+  ; If the destination address isn't 16-byte-aligned, copy the remainder
+  ; (also using `rep movsb` (and *only* the remainder))
 
-  mov rcx, rdx
-  rep movsb
+  .MoveUnalignedData:
 
-  ; (Return.)
+    push rcx
+    mov rcx, r8
 
-  ret
+    cld
+    rep movsb
+
+    pop rcx
+    sub rcx, r8
+
+  ; Now that we know that Destination is 16-byte-aligned, we can safely
+  ; use `rep movsb` to copy everything else, before returning.
+
+  .MoveAlignedData:
+
+    cld
+    rep movsb
+
+    ret
 
 
 
@@ -53,57 +70,85 @@ _Memcpy_RepMovsb:
 
 _Memcpy_Sse2:
 
-  .BeforeLoop:
+  ; First, let's check to see if the destination addresses is 16-byte-
+  ; -aligned, and if not, use `rep movsb` to copy the remainder.
+
+  ; (We store the remainder in R8, and use R9 as a scratch register)
+
+  mov r9, rdi
+  and r9, (16 - 1)
+
+  mov r8, 16
+  sub r8, r9
+
+  ; (Store `Size` (RDX) in RCX, since it's used for `rep movsb`)
+
+  mov rcx, rdx
+
+  ; (If it's already aligned, then we don't need to align it)
+
+  cmp r8, 16
+  je .MoveAlignedData
+
+  ; If the destination address isn't 16-byte-aligned, copy the remainder
+  ; (also using `rep movsb`, but *only* for the remainder)
+
+  .MoveUnalignedData:
+
+    push rcx
+    mov rcx, r8
+
+    cld
+    rep movsb
+
+    pop rcx
+    sub rcx, r8
+
+  ; If it is, then prepare the environment for SSE.
+
+  .MoveAlignedData:
 
     ; (Save the current state of the SSE registers, using `fxsave`)
 
     fxsave [_SimdRegisterArea]
 
-    ; (Deal with non-16-byte aligned addresses - we do this by calculating
-    ; the remainder in RCX, and using rep movsb)
+    ; (Calculate the number of 256-byte 'blocks' we need to move in R9)
 
-    mov rcx, rdx
-    and rcx, 15
+    mov r9, rcx
+    shr r9, 8
 
-    sub rdx, rcx
+  ; Move each 256-byte block using SSE registers, using R9 as a counter,
+  ; and the `movdqu` and `movntdq` instructions
 
-    cld
-    rep movsb
+  .MoveBlockData:
 
-    ; (Calculate the number of 256-byte 'blocks' we need to move in R8)
-
-    mov r8, rdx
-    shr r8, 8
-
-  .Loop:
-
-    ; (The number of 256-byte blocks left to copy is stored in R8, and
+    ; (The number of 256-byte blocks left to copy is stored in R9, and
     ; decremented with each loop count; if it's zero, that means we're
     ; done, so exit the loop)
 
-    cmp r8, 0
-    je .AfterLoop
+    cmp r9, 0
+    je .MoveRemainder
 
-    ; (Read sixteen aligned double quadwords (16-byte blocks) into each XMM
-    ; register, using the `movdqa` instruction - keep in mind that we're
-    ; reading from [RSI+n], which is the same as (*Source + n))
+    ; (Read sixteen unaligned double quadwords (16-byte blocks) into each
+    ; XMM register, using the `movdqu` instruction - keep in mind that
+    ; we're reading from [RSI+n], which is the same as (*Source + n))
 
-    movdqa xmm0, [rsi+0]
-    movdqa xmm1, [rsi+16]
-    movdqa xmm2, [rsi+32]
-    movdqa xmm3, [rsi+48]
-    movdqa xmm4, [rsi+64]
-    movdqa xmm5, [rsi+80]
-    movdqa xmm6, [rsi+96]
-    movdqa xmm7, [rsi+112]
-    movdqa xmm8, [rsi+128]
-    movdqa xmm9, [rsi+144]
-    movdqa xmm10, [rsi+160]
-    movdqa xmm11, [rsi+176]
-    movdqa xmm12, [rsi+192]
-    movdqa xmm13, [rsi+208]
-    movdqa xmm14, [rsi+224]
-    movdqa xmm15, [rsi+240]
+    movdqu xmm0, [rsi+0]
+    movdqu xmm1, [rsi+16]
+    movdqu xmm2, [rsi+32]
+    movdqu xmm3, [rsi+48]
+    movdqu xmm4, [rsi+64]
+    movdqu xmm5, [rsi+80]
+    movdqu xmm6, [rsi+96]
+    movdqu xmm7, [rsi+112]
+    movdqu xmm8, [rsi+128]
+    movdqu xmm9, [rsi+144]
+    movdqu xmm10, [rsi+160]
+    movdqu xmm11, [rsi+176]
+    movdqu xmm12, [rsi+192]
+    movdqu xmm13, [rsi+208]
+    movdqu xmm14, [rsi+224]
+    movdqu xmm15, [rsi+240]
 
     ; (Write those values back to memory, using the `movntdq` instruction;
     ; this time, we're writing to [RDI+n], or (*Destination + n))
@@ -131,30 +176,25 @@ _Memcpy_Sse2:
     add rsi, 256
     add rdi, 256
 
-    ; (Repeat the loop, decrementing our counter (R8))
+    sub rcx, 256
 
-    dec r8
-    jmp .Loop
+    ; (Repeat the loop, decrementing our counter (R9))
 
-  .AfterLoop:
+    dec r9
+    jmp .MoveBlockData
 
-    ; (Unless our data was 256-byte aligned already, we most likely still
-    ; have some data left to copy, so let's use `rep movsq` for that.)
+  ; Move the remainder of the data, using `rep movsb` again.
 
-    mov rcx, rdx
-
-    and rcx, 255
-    shr rcx, 3
+  .MoveRemainder:
 
     cld
-    rep movsq
+    rep movsb
 
-    ; (Restore SSE registers, using `fxrstor`)
+  ; Restore the previous state of the SSE registers, and return.
+
+  .Cleanup:
 
     fxrstor [_SimdRegisterArea]
-
-    ; (Return.)
-
     ret
 
 
