@@ -7,6 +7,7 @@
 
   // Import standard and bootloader-related headers.
 
+  #include "Libraries/Graphics/Graphics.h"
   #include "Libraries/Stdint.h"
   #include "Libraries/String.h"
   #include "../Common.h"
