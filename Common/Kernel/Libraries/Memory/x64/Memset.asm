@@ -82,9 +82,10 @@ _Memset_Sse2:
   mov r8, 16
   sub r8, r9
 
-  ; (Store `Character` (RSI) in RAX)
+  ; (Store `Character` in RAX, and `Size` in RCX)
 
   mov rax, rsi
+  mov rcx, rdx
 
   ; (If it's already aligned, then we don't need to align it)
 
@@ -135,7 +136,7 @@ _Memset_Sse2:
     punpcklqdq xmm0, xmm0
 
     ; (Use the `movdqa` instruction to copy XMM0's value to every
-    ; other SSE register.)
+    ; other XMM register.)
 
     movdqa xmm1, xmm0
     movdqa xmm2, xmm0
@@ -212,7 +213,159 @@ _Memset_Sse2:
 ; (void* Buffer (RDI), uint8 Character (RSI), uint64 Size (RDX))
 
 _Memset_Avx:
-  jmp _Memset_Sse2
+
+  ; First, let's check to see if the buffer address is 32-byte-aligned;
+  ; and if not, use `rep stosb` to fill it out.)
+
+  ; (We store the remainder in R8, and use R9 as a scratch register)
+
+  mov r9, rdi
+  and r9, (32 - 1)
+
+  mov r8, 32
+  sub r8, r9
+
+  ; (Store `Character` in RAX, and `Size` in RCX)
+
+  mov rax, rsi
+  mov rcx, rdx
+
+  ; (If it's already aligned, then we don't need to align it)
+
+  cmp r8, 0
+  je .FillAlignedData
+
+  ; If the buffer address isn't 32-byte-aligned, copy the remainder
+  ; (also using `rep stosb`, but *only* for the remainder)
+
+  .FillUnalignedData:
+
+    push rcx
+    mov rcx, r8
+
+    cld
+    rep stosb
+
+    pop rcx
+    sub rcx, r8
+
+  ; If it is, then prepare the environment for AVX.
+
+  .FillAlignedData:
+
+    ; (Save the current state of the AVX registers, using `xsave`)
+
+    push rax
+    push rdx
+
+    mov rax, 0FFFFFFFFFFFFFFFFh
+    mov rdx, 0FFFFFFFFFFFFFFFFh
+
+    xsave [_SimdRegisterArea]
+
+    pop rdx
+    pop rax
+
+    ; (Calculate the amount of 512-byte blocks we'll need to fill out
+    ; in R9, and leave the remainder in RCX.)
+
+    mov r9, rcx
+    shr r9, 9
+
+    and rcx, (512 - 1)
+
+    ; (Broadcast AL to the rest of RAX, using R10 as a scratch register;
+    ; this essentially means "copy the value of AL to all other bytes")
+
+    mov r10, rax
+    mov rax, 0101010101010101h
+    imul rax, r10
+
+    ; (Broadcast RAX to the rest of YMM0 (using `vbroadcastsd`))
+
+    push rax
+    vbroadcastsd ymm0, [rsp]
+    pop rax
+
+    ; (Use the `vmovdqa` instruction to copy YMM0's value to every
+    ; other YMM register.)
+
+    vmovdqa ymm1, ymm0
+    vmovdqa ymm2, ymm0
+    vmovdqa ymm3, ymm0
+    vmovdqa ymm4, ymm0
+    vmovdqa ymm5, ymm0
+    vmovdqa ymm6, ymm0
+    vmovdqa ymm7, ymm0
+    vmovdqa ymm8, ymm0
+    vmovdqa ymm9, ymm0
+    vmovdqa ymm10, ymm0
+    vmovdqa ymm11, ymm0
+    vmovdqa ymm12, ymm0
+    vmovdqa ymm13, ymm0
+    vmovdqa ymm14, ymm0
+    vmovdqa ymm15, ymm0
+
+  ; Fill each 512-byte block using AVX registers, using R9 as a
+  ; counter (R9 == (Size / 512)).
+
+  .FillBlockData:
+
+    ; (If we've filled all necessary blocks, exit the loop)
+
+    cmp r9, 0
+    je .FillRemainder
+
+    ; (Otherwise, use the `vmovdqa` instruction to fill the next 512 bytes,
+    ; while keeping YMM0 ~ XMM15 in cache (this is a temporal move))
+
+    vmovdqa [rdi+0], ymm0
+    vmovdqa [rdi+32], ymm1
+    vmovdqa [rdi+64], ymm2
+    vmovdqa [rdi+96], ymm3
+    vmovdqa [rdi+128], ymm4
+    vmovdqa [rdi+160], ymm5
+    vmovdqa [rdi+192], ymm6
+    vmovdqa [rdi+224], ymm7
+    vmovdqa [rdi+256], ymm8
+    vmovdqa [rdi+288], ymm9
+    vmovdqa [rdi+320], ymm10
+    vmovdqa [rdi+352], ymm11
+    vmovdqa [rdi+384], ymm12
+    vmovdqa [rdi+416], ymm13
+    vmovdqa [rdi+448], ymm14
+    vmovdqa [rdi+480], ymm15
+
+    ; (Move to the next 512-byte block, and repeat the loop)
+
+    add rdi, 512
+    dec r9
+
+    jmp .FillBlockData
+
+  ; Fill out the remainder of the data, using `rep stosb` again.
+
+  .FillRemainder:
+
+    cld
+    rep stosb
+
+  ; Restore the previous state of the AVX registers, and return.
+
+  .Cleanup:
+
+    push rax
+    push rdx
+
+    mov rax, 0FFFFFFFFFFFFFFFFh
+    mov rdx, 0FFFFFFFFFFFFFFFFh
+
+    xrstor [_SimdRegisterArea]
+
+    pop rdx
+    pop rax
+
+    ret
 
 
 

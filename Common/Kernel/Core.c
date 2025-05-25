@@ -24,6 +24,12 @@ void KernelCore(commonInfoTable* InfoTable) {
 
       Memset((void*)Buffer, (uint8)(Y * 255 / InfoTable->Display.Graphics.LimitY), Size);
 
+      if (Y < 100) {
+        Memcpy((void*)Buffer, (const void*)(&InfoTable + Y*16), Size);
+      } else {
+        Memset((void*)Buffer, (uint8)(Y * 255 / InfoTable->Display.Graphics.LimitY), Size);
+      }
+
     }
 
   }

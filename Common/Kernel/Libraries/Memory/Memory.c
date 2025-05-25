@@ -34,7 +34,7 @@ static inline void _Memcpy(void* Destination, const void* Source, uint64 Size) {
   // Initialize an area for `fxsave`/`fxrstor` and `xsave`/`xrstor`
   // instructions to save data to.
 
-  volatile uint8 _SimdRegisterArea[3072];
+  volatile alignas(64) uint8 _SimdRegisterArea[3072];
 
   // Optimized Memcpy() functions for x64 platforms, from x64/Memcpy.asm
 
