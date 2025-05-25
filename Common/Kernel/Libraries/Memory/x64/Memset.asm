@@ -26,14 +26,23 @@ _Memset_RepStosb:
   mov rax, rsi
   mov rcx, rdx
 
+  ; If our size is less than 16 bytes, then not only is there little
+  ; benefit to aligning to 16-byte boundaries, but we can also crash
+  ; the system if Size > (Buffer % 16).
+
+  cmp rdx, 16
+  jl .FillAlignedData
+
   ; At this point, we're almost ready to fill bytes; we just need to
   ; align the buffer address (in RDI) to 16 bytes, if applicable.
 
-  ; (Calculate (Buffer % 16) in R8 - if it's zero, then we already have
-  ; an aligned address, otherwise, continue onto .FillUnalignedData)
+  ; (We store the remainder in R8, and use R9 as a scratch register)
 
-  mov r8, rdi
-  and r8, (16 - 1)
+  mov r9, rdi
+  and r9, (16 - 1)
+
+  mov r8, 16
+  sub r8, r9
 
   cmp r8, 0
   je .FillAlignedData
@@ -65,7 +74,7 @@ _Memset_RepStosb:
 
 
 ; This function shouldn't change any preserved registers, other than XMM
-; ones, which requires `fxsave` support.
+; ones, which requires `fxsave` support. (Size >= 256)
 
 ; (void* Buffer (RDI), uint8 Character (RSI), uint64 Size (RDX))
 
@@ -208,7 +217,7 @@ _Memset_Sse2:
 
 
 ; This function shouldn't change any preserved registers, other than YMM
-; ones, which requires `xsave` support.
+; ones, which requires `xsave` support. (Size >= 512)
 
 ; (void* Buffer (RDI), uint8 Character (RSI), uint64 Size (RDX))
 
@@ -307,7 +316,7 @@ _Memset_Avx:
     vmovdqa ymm15, ymm0
 
   ; Fill each 512-byte block using AVX registers, using R9 as a
-  ; counter (R9 == (Size / 512)).
+  ; counter (R9 == (Size / 512)). (Size >= 2048)
 
   .FillBlockData:
 

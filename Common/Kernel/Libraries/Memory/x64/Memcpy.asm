@@ -25,6 +25,13 @@ _Memcpy_RepMovsb:
 
   mov rcx, rdx
 
+  ; If our size is less than 16 bytes, then not only is there little
+  ; benefit to aligning to 16-byte boundaries, but we can also crash
+  ; the system if Size > (Buffer % 16).
+
+  cmp rdx, 16
+  jl .MoveAlignedData
+
   ; At this point, we're almost ready to fill bytes; we just need to align
   ; the destination address (in RDI) to 16 bytes, if possible.
 
@@ -64,7 +71,7 @@ _Memcpy_RepMovsb:
 
 
 ; TODO - In theory this shouldn't alter any non-SIMD preserved registers,
-; but we need to push XMM(n) still.
+; but we need to push XMM(n) still. (Size >= 256)
 
 ; (void* Destination (RDI), const void* Source (RSI), uint64 Size (RDX))
 
@@ -200,7 +207,7 @@ _Memcpy_Sse2:
 
 
 ; TODO - In theory this shouldn't alter any non-SIMD preserved registers,
-; but we need to push YMM(n) still.
+; but we need to push YMM(n) still. (Size >= 512)
 
 ; (void* Destination (RDI), const void* Source (RSI), uint64 Size (RDX))
 
@@ -355,7 +362,7 @@ _Memcpy_Avx:
 
 
 ; TODO - In theory this shouldn't alter any non-SIMD preserved registers,
-; but we need to push ZMM(n) still.
+; but we need to push ZMM(n) still. (Size >= 2048)
 
 ; (void* Destination (RDI), const void* Source (RSI), uint64 Size (RDX))
 
