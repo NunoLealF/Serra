@@ -86,7 +86,7 @@ void Memcpy(void* Destination, const void* Source, uint64 Size) {
 
   #if defined(__amd64__) || defined(__x86_64__)
 
-    if ((Size < 1024) || (CpuFeaturesAvailable.Erms == true)) {
+    if ((Size < 2048) || (CpuFeaturesAvailable.Erms == true)) {
 
       _Memcpy_RepMovsb(Destination, Source, Size);
 
@@ -140,7 +140,7 @@ void Memset(void* Buffer, uint8 Character, uint64 Size) {
 
   #if defined(__amd64__) || defined(__x86_64__)
 
-    if ((Size < 1024) || (CpuFeaturesAvailable.Erms == true)) {
+    if ((Size < 2048) || (CpuFeaturesAvailable.Erms == true)) {
 
       _Memset_RepStosb(Buffer, Character, Size);
 
