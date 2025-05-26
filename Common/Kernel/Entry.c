@@ -516,6 +516,12 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
 
   }
 
+  // (Set up graphics-specific constructors (?))
+
+  if (CheckConsoleFont() == false) {
+    return EntrypointFontHasNoPsfHeader;
+  }
+
   // (Set up platform-specific constructors)
 
   if (InfoTable->System.Architecture == x64Architecture) {

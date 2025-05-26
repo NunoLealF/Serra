@@ -429,7 +429,8 @@
 
     // (High bit is 8h - compile or runtime issue)
 
-    EntrypointKernelNotPositionIndependent = (8ULL << 32)
+    EntrypointKernelNotPositionIndependent = (8ULL << 32),
+    EntrypointFontHasNoPsfHeader
 
   } entrypointReturnStatus;
 
@@ -522,7 +523,9 @@
 
       "The kernel was not compiled as a pure position-independent executable;\n\r"
       "make sure you're linking with `-pie -Wl,--no-dynamic-linker` (and not \n\r"
-      "`-static-pie`)."
+      "`-static-pie`).",
+
+      "The kernel's built-in font doesn't appear to have a valid PSF header."
 
     }
 
