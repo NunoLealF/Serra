@@ -8,6 +8,8 @@
 // (TODO: Font, uses #embed; in PSF1 *or* PSF2 format)
 // (TODO: Also, global variables)
 
+// (WARNING: Fonts must not exceed 8px width with initial driver (!))
+
 const uint8 BitmapFont[] = {
   #embed "Font.psf"
 };

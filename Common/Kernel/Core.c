@@ -27,6 +27,7 @@ void KernelCore(commonInfoTable* InfoTable) {
     }
 
     // (Display font characters)
+    // (WARNING: Fonts must not exceed 8px width with initial driver (!))
 
     uintptr GlyphData = (uintptr)BitmapFontData.GlyphData;
 
@@ -38,11 +39,14 @@ void KernelCore(commonInfoTable* InfoTable) {
 
         // Get a glyph
 
+        #define RealWidth ((BitmapFontData.Width + 7) / 8)
+        #define RealPixelWidth (RealWidth * 8)
+
         char Character = TestString[Thing];
         if (Thing >= 47) break;
 
-        uint8* Glyph = (uint8*)(GlyphData + (Character * BitmapFontData.GlyphSize) + (Thingy * ((BitmapFontData.Width + 7) / 8)));
-        uint8 ThisGlyph = *Glyph;
+        uint64* Glyph = (uint64*)(GlyphData + (Character * BitmapFontData.GlyphSize) + (Thingy * RealWidth));
+        uint64 ThisGlyph = *Glyph;
 
         // Get colors for that glyph
 
@@ -57,11 +61,13 @@ void KernelCore(commonInfoTable* InfoTable) {
         for (uint32 Bit = 0; Bit < BitmapFontData.Width; Bit++) {
 
           auto Size = (InfoTable->Display.Graphics.Bits.PerPixel / 8);
-          uint64 Ptr = (InfoTable->Display.Graphics.Framebuffer.Address + (InfoTable->Display.Graphics.Pitch * Thingy) + (Size * ((Thing * BitmapFontData.Width) + ((BitmapFontData.Width - 1) - Bit))));
+          uint64 Ptr = (InfoTable->Display.Graphics.Framebuffer.Address + (InfoTable->Display.Graphics.Pitch * Thingy) + (Size * ((Thing * BitmapFontData.Width) + (BitmapFontData.Width - 1 - Bit))));
+
+          #define Offset (RealPixelWidth - BitmapFontData.Width)
 
           if (Thing < 36) {
 
-            if ((ThisGlyph & (1ULL << Bit)) != 0) {
+            if ((ThisGlyph & (1ULL << (Bit+Offset))) != 0) {
               Memcpy((void*)Ptr, (const void*)&EnabledMask_s1, Size);
             } else {
               Memcpy((void*)Ptr, (const void*)&DisabledMask_s1, Size);
@@ -69,7 +75,7 @@ void KernelCore(commonInfoTable* InfoTable) {
 
           } else {
 
-            if ((ThisGlyph & (1ULL << Bit)) != 0) {
+            if ((ThisGlyph & (1ULL << (Bit+Offset))) != 0) {
               Memcpy((void*)Ptr, (const void*)&EnabledMask_s2, Size);
             } else {
               Memcpy((void*)Ptr, (const void*)&DisabledMask_s2, Size);
