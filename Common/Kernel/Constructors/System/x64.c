@@ -78,7 +78,7 @@ void InitializeCpuFeatures(void) {
 
     // (Unlock access to higher CPUID 'leaves' (functions, basically))
 
-    x64_WriteToMsr(MiscEnableMsr, (x64_ReadFromMsr(MiscEnableMsr) & ~LcmvBit | FseBit));
+    x64_WriteToMsr(MiscEnableMsr, (x64_ReadFromMsr(MiscEnableMsr) & (~LcmvBit | FseBit)));
     LcmvBitHasBeenCleared = true;
 
     // (Call CPUID leaf (rax = 0000000Dh, rcx = 1)), and check whether
@@ -161,7 +161,7 @@ void InitializeCpuFeatures(void) {
 
     if (LcmvBitHasBeenCleared == false) {
 
-      x64_WriteToMsr(MiscEnableMsr, (x64_ReadFromMsr(MiscEnableMsr) & ~LcmvBit | FseBit));
+      x64_WriteToMsr(MiscEnableMsr, (x64_ReadFromMsr(MiscEnableMsr) & (~LcmvBit | FseBit)));
       LcmvBitHasBeenCleared = true;
 
     }
