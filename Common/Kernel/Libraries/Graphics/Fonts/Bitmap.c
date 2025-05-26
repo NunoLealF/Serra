@@ -6,29 +6,104 @@
 #include "../Graphics.h"
 
 // (TODO: Font, uses #embed; in PSF1 *or* PSF2 format)
+// (TODO: Also, global variables)
 
 const uint8 BitmapFont[] = {
   #embed "Font.psf"
 };
 
+bitmapFontData BitmapFontData = {0};
 
 
-// (TODO: Something to validate the PSF header.. this should be a
-// constructor somewhere)
 
-bool BitmapFontHasPsfHeader(void) {
+// TODO: A function that checks whether BitmapFont[] is valid (returning
+// true or false), and initializes BitmapFontData.
 
-  // Check if the font has a PSF1 or PS2 header, and if so, return true;
-  // otherwise, return false.
+// (This is essentially a constructor, but it makes sense here.. at least,
+// for now (TODO))
 
-  uint16 PossiblePsf1Signature = *(uint16*)(BitmapFont);
-  uint32 PossiblePsf2Signature = *(uint32*)(BitmapFont);
+bool InitializeBitmapFont(void) {
 
-  if (PossiblePsf1Signature == psf1HeaderSignature) {
+  // Try to figure out what the font type is (PSF1 or PSF2), and depending
+  // on the type, fill out BitmapFontData.
+
+  if (((const psf1Header*)BitmapFont)->Signature == psf1HeaderSignature) {
+
+    // We've found a PSF1 bitmap font, which is always 8 pixels wide, and
+    // which has support for either 256 or 512 glyphs (+ Unicode table).
+
+    // (Define variables)
+
+    const psf1Header* Header = (const psf1Header*)BitmapFont;
+
+    // (Fill out BitmapFontData{})
+
+    BitmapFontData.Header = (const void*)Header;
+    BitmapFontData.Type = Psf1Bitmap;
+
+    if ((Header->HdrFlags & psf1HeaderHasUnicodeTable) != 0) {
+      BitmapFontData.HasUnicodeTable = true;
+    } else {
+      BitmapFontData.HasUnicodeTable = false;
+    }
+
+    BitmapFontData.GlyphData = (const void*)((uintptr)BitmapFont + sizeof(psf1Header));
+    BitmapFontData.GlyphSize = Header->Size;
+
+    if ((Header->HdrFlags & psf1HeaderHas512Glyphs) != 0) {
+      BitmapFontData.NumGlyphs = 512;
+    } else {
+      BitmapFontData.NumGlyphs = 256;
+    }
+
+    BitmapFontData.Width = 8;
+    BitmapFontData.Height = Header->Size;
+
+    // (Return true, to indicate that we found a valid bitmap font)
+
     return true;
-  } else if (PossiblePsf2Signature == psf2HeaderSignature) {
+
+  } else if (((const psf2Header*)BitmapFont)->Signature == psf2HeaderSignature) {
+
+    // We've found a PSF2 bitmap font, which can be any number of pixels
+    // wide (although always padded to 8-bit boundaries), and which has
+    // support for an arbitrary amount of glyphs (+ Unicode table).
+
+    // (Define variables, and check that the header appears to be valid)
+
+    const psf2Header* Header = (const psf2Header*)BitmapFont;
+
+    if (Header->HdrSize < sizeof(psf2Header)) {
+      return false;
+    } else if (Header->NumGlyphs < 256) {
+      return false;
+    }
+
+    // (Fill out BitmapFontData{})
+
+    BitmapFontData.Header = (const void*)Header;
+    BitmapFontData.Type = Psf2Bitmap;
+
+    if ((Header->HdrFlags & psf2HeaderHasUnicodeTable) != 0) {
+      BitmapFontData.HasUnicodeTable = true;
+    } else {
+      BitmapFontData.HasUnicodeTable = false;
+    }
+
+    BitmapFontData.GlyphData = (const void*)((uintptr)BitmapFont + sizeof(psf2Header));
+    BitmapFontData.GlyphSize = Header->Size;
+    BitmapFontData.NumGlyphs = Header->NumGlyphs;
+
+    BitmapFontData.Width = Header->Width;
+    BitmapFontData.Height = Header->Height;
+
+    // (Return true, to indicate that we found a valid bitmap font)
+
     return true;
+
   }
+
+  // Return false, if we haven't been able to figure out what it is.
 
   return false;
 
@@ -36,5 +111,11 @@ bool BitmapFontHasPsfHeader(void) {
 
 
 
-// (TODO: Something to read PSF files; in theory, this shouldn't be too,
+// (TODO: Something to read PSF glyphs; in theory, this shouldn't be too,
 // hard, I hope)
+
+inline void* ReadBitmapFontGlyph(char8 Glyph) {
+
+  return NULL; // TODO
+
+}

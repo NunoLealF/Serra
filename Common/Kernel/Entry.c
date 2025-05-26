@@ -518,8 +518,10 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
 
   // (Set up graphics-specific constructors (?))
 
-  if (BitmapFontHasPsfHeader() == false) {
-    return EntrypointFontHasNoPsfHeader;
+  if (InitializeBitmapFont() == false) {
+    return EntrypointBitmapFontIsInvalid;
+  } else if (BitmapFontData.Type == UnknownBitmap) {
+    return EntrypointBitmapFontIsInvalid;
   }
 
   // (Set up platform-specific constructors)

@@ -47,11 +47,35 @@
 
   } __attribute__((packed)) psf2Header;
 
+  typedef enum _bitmapFontType : uint8 {
+
+    UnknownBitmap = 0,
+    Psf1Bitmap = 1,
+    Psf2Bitmap = 2
+
+  } bitmapFontType;
+
+  typedef struct _bitmapFontData {
+
+    const void* Header; // Pointer to the font header (can be psf1Header, psf2Header..)
+    bitmapFontType Type; // The type of this bitmap font.
+    bool HasUnicodeTable; // Whether this font has a Unicode table or not.
+
+    const void* GlyphData; // A pointer to the start of the glyph data.
+    uint32 GlyphSize; // The size of each glyph, in bytes.
+    uint32 NumGlyphs; // The amount of glyphs in the bitmap font.
+
+    uint32 Width; // The width of each glyph, in pixels.
+    uint32 Height; // The height of each glyph, in pixels.
+
+  } bitmapFontData;
+
   extern const uint8 BitmapFont[];
+  extern bitmapFontData BitmapFontData;
 
   // Include functions from Fonts/Bitmap.c (TODO)
 
-  bool BitmapFontHasPsfHeader(void);
+  bool InitializeBitmapFont(void);
 
   // Include functions from Graphics.c (TODO)
 
