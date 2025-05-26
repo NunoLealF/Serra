@@ -2,11 +2,11 @@
 // This file is part of the Serra project, which is released under the MIT license.
 // For more information, please refer to the accompanying license agreement. <3
 
-#include "../Stdint.h"
+#include "../../Libraries/Stdint.h"
 #include "Graphics.h"
 
 // (TODO - Some sort of common.. console subsystem, maybe? I just need a
 // printf that will work nearly universally, I guess)
 
-// (TODO - This relies upon the constructors in ../../Constructors/Graphics/*
-// to initialize the console, before being able to use it)
+// (TODO - This is the constructor, so it *prepares* the environment for
+// ../../Libraries/Graphics/*)
