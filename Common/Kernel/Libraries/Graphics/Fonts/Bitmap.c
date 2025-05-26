@@ -19,9 +19,6 @@ bitmapFontData BitmapFontData = {0};
 // TODO: A function that checks whether BitmapFont[] is valid (returning
 // true or false), and initializes BitmapFontData.
 
-// (This is essentially a constructor, but it makes sense here.. at least,
-// for now (TODO))
-
 bool InitializeBitmapFont(void) {
 
   // Try to figure out what the font type is (PSF1 or PSF2), and depending
@@ -106,16 +103,5 @@ bool InitializeBitmapFont(void) {
   // Return false, if we haven't been able to figure out what it is.
 
   return false;
-
-}
-
-
-
-// (TODO: Something to read PSF glyphs; in theory, this shouldn't be too,
-// hard, I hope)
-
-inline void* ReadBitmapFontGlyph(char8 Glyph) {
-
-  return NULL; // TODO
 
 }

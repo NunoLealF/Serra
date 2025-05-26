@@ -26,31 +26,60 @@ void KernelCore(commonInfoTable* InfoTable) {
 
     }
 
-    // (Draw a bezier curve)
+    // (Display font characters)
 
-    uint16 Width = 480;
-    uint16 Height = 480;
+    uintptr GlyphData = (uintptr)BitmapFontData.GlyphData;
 
-    uint16 WidthOffset = (InfoTable->Display.Graphics.LimitX - Width) / 2;
-    uint16 HeightOffset = (InfoTable->Display.Graphics.LimitY - Height) / 2;
+    const char* TestString = "Hi, this is graphics-mode Serra! <3 May 26 2025"; // [48]
 
-    double Points[3][2] = {{0, 0.5}, {0, 0}, {0.5, 0}};
+    for (uint16 Thingy = 0; Thingy < BitmapFontData.Height; Thingy++) {
 
-    for (auto j = 0; j < 1024; j++) {
+      for (uint16 Thing = 0; Thing < (InfoTable->Display.Graphics.LimitX / BitmapFontData.Width); Thing++) {
 
-      uint16 Bezier[2];
+        // Get a glyph
 
-      double a = j / 1024.f;
-      double b = (1024-j) / 1024.f;
+        char Character = TestString[Thing];
+        if (Thing >= 47) break;
 
-      Bezier[0] = (uint16)((double)Width * ((a * a * Points[0][0]) + (2 * a * b * Points[1][0]) + (b * b * Points[2][0]))) + WidthOffset;
-      Bezier[1] = (uint16)((double)Height * ((a * a * Points[0][1]) + (2 * a * b * Points[1][1]) + (b * b * Points[2][1]))) + HeightOffset;
+        uint8* Glyph = (uint8*)(GlyphData + (Character * BitmapFontData.GlyphSize) + (Thingy * ((BitmapFontData.Width + 7) / 8)));
+        uint8 ThisGlyph = *Glyph;
 
-      uint64 Addr = InfoTable->Display.Graphics.Framebuffer.Address;
-      Addr += (Bezier[1] * InfoTable->Display.Graphics.Pitch);
-      Addr += (Bezier[0] * InfoTable->Display.Graphics.Bits.PerPixel / 8);
+        // Get colors for that glyph
 
-      Memset((void*)Addr, 0xFF, (InfoTable->Display.Graphics.Bits.PerPixel / 8));
+        uint64 EnabledMask_s1 = ~0ULL;
+        uint64 DisabledMask_s1 = 0ULL;
+
+        uint64 EnabledMask_s2 = ~0ULL;
+        uint64 DisabledMask_s2 = (InfoTable->Display.Graphics.Bits.GreenMask | InfoTable->Display.Graphics.Bits.BlueMask) & 0xAAAAAAAAAAAAAAAA;
+
+        // Draw that glyph
+
+        for (uint32 Bit = 0; Bit < BitmapFontData.Width; Bit++) {
+
+          auto Size = (InfoTable->Display.Graphics.Bits.PerPixel / 8);
+          uint64 Ptr = (InfoTable->Display.Graphics.Framebuffer.Address + (InfoTable->Display.Graphics.Pitch * Thingy) + (Size * ((Thing * BitmapFontData.Width) + ((BitmapFontData.Width - 1) - Bit))));
+
+          if (Thing < 36) {
+
+            if ((ThisGlyph & (1ULL << Bit)) != 0) {
+              Memcpy((void*)Ptr, (const void*)&EnabledMask_s1, Size);
+            } else {
+              Memcpy((void*)Ptr, (const void*)&DisabledMask_s1, Size);
+            }
+
+          } else {
+
+            if ((ThisGlyph & (1ULL << Bit)) != 0) {
+              Memcpy((void*)Ptr, (const void*)&EnabledMask_s2, Size);
+            } else {
+              Memcpy((void*)Ptr, (const void*)&DisabledMask_s2, Size);
+            }
+
+          }
+
+        }
+
+      }
 
     }
 
