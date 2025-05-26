@@ -65,7 +65,6 @@ Clean:
 	@-rm -f Kernel/*.bin
 
 	@-rm -f Kernel/Constructors/Firmware/*.o
-	@-rm -f Kernel/Constructors/Graphics/*.o
 	@-rm -f Kernel/Constructors/System/*.o
 
 	@-rm -f Kernel/Firmware/Bios/*.o
@@ -109,10 +108,6 @@ Kernel/Constructors/Firmware/Efi.o:
 	@echo "Building $@"
 	@$(CC) $(CFLAGS) -c Kernel/Constructors/Firmware/Efi.c -o Kernel/Constructors/Firmware/Efi.o
 
-Kernel/Constructors/Graphics/Console.o:
-	@echo "Building $@"
-	@$(CC) $(CFLAGS) -c Kernel/Constructors/Graphics/Console.c -o Kernel/Constructors/Graphics/Console.o
-
 Kernel/Constructors/System/x64.o:
 	@echo "Building $@"
 	@$(CC) $(CFLAGS) -c Kernel/Constructors/System/x64.c -o Kernel/Constructors/System/x64.o
@@ -147,6 +142,6 @@ Kernel/System/x64/Cpu.o:
 
 # Link everything into one .elf file
 
-Kernel/Kernel.elf: Kernel/Entry.o Kernel/Core.o Kernel/Constructors/Firmware/Efi.o Kernel/Constructors/Graphics/Console.o Kernel/Constructors/System/x64.o Kernel/Libraries/Graphics/Graphics.o Kernel/Libraries/Graphics/Fonts/Bitmap.o Kernel/Libraries/Memory/Memory.o Kernel/Libraries/Memory/x64/Memcpy.o Kernel/Libraries/Memory/x64/Memset.o Kernel/System/x64/Cpu.o
+Kernel/Kernel.elf: Kernel/Entry.o Kernel/Core.o Kernel/Constructors/Firmware/Efi.o Kernel/Constructors/System/x64.o Kernel/Libraries/Graphics/Graphics.o Kernel/Libraries/Graphics/Fonts/Bitmap.o Kernel/Libraries/Memory/Memory.o Kernel/Libraries/Memory/x64/Memcpy.o Kernel/Libraries/Memory/x64/Memset.o Kernel/System/x64/Cpu.o
 	@echo "Building $@"
 	@$(CC) -T Linker.ld $(LDFLAGS) -o Kernel/Kernel.elf -ffreestanding -nolibc -nostdlib -lgcc $^

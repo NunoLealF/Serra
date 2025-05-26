@@ -11,7 +11,6 @@
   // Include standard and/or necessary headers.
 
   #include "../Stdint.h"
-  #include "../../Constructors/Graphics/Graphics.h"
   #include "../../Constructors/System/System.h"
 
   // Include definitions used in Fonts/Bitmap.c (TODO)
@@ -48,9 +47,11 @@
 
   } __attribute__((packed)) psf2Header;
 
-  extern const uint8 ConsoleFont[];
+  extern const uint8 BitmapFont[];
 
   // Include functions from Fonts/Bitmap.c (TODO)
+
+  bool BitmapFontHasPsfHeader(void);
 
   // Include functions from Graphics.c (TODO)
 

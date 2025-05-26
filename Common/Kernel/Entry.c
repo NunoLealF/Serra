@@ -518,7 +518,7 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
 
   // (Set up graphics-specific constructors (?))
 
-  if (CheckConsoleFont() == false) {
+  if (BitmapFontHasPsfHeader() == false) {
     return EntrypointFontHasNoPsfHeader;
   }
 

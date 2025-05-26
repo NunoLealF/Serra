@@ -7,9 +7,32 @@
 
 // (TODO: Font, uses #embed; in PSF1 *or* PSF2 format)
 
-const uint8 ConsoleFont[] = {
+const uint8 BitmapFont[] = {
   #embed "Font.psf"
 };
+
+
+
+// (TODO: Something to validate the PSF header.. this should be a
+// constructor somewhere)
+
+bool BitmapFontHasPsfHeader(void) {
+
+  // Check if the font has a PSF1 or PS2 header, and if so, return true;
+  // otherwise, return false.
+
+  uint16 PossiblePsf1Signature = *(uint16*)(BitmapFont);
+  uint32 PossiblePsf2Signature = *(uint32*)(BitmapFont);
+
+  if (PossiblePsf1Signature == psf1HeaderSignature) {
+    return true;
+  } else if (PossiblePsf2Signature == psf2HeaderSignature) {
+    return true;
+  }
+
+  return false;
+
+}
 
 
 
