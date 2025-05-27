@@ -11,18 +11,18 @@ void KernelCore(commonInfoTable* InfoTable) {
 
   // (Depending on the display type, show a graphical demo)
 
-  if ((InfoTable->Display.Type == VbeDisplay) || (InfoTable->Display.Type == GopDisplay)) {
+  if (GraphicsData.IsSupported == true) {
 
-    for (auto Y = 0; Y < (InfoTable->Display.Graphics.LimitY); Y++) {
+    for (auto Y = 0; Y < GraphicsData.LimitY; Y++) {
 
       // (Get necessary addresses and values)
 
-      auto Buffer = (InfoTable->Display.Graphics.Framebuffer.Address + (InfoTable->Display.Graphics.Pitch * Y));
-      auto Size = (InfoTable->Display.Graphics.LimitX * InfoTable->Display.Graphics.Bits.PerPixel / 8);
+      auto Buffer = ((uintptr)GraphicsData.Framebuffer + (GraphicsData.Pitch * Y));
+      auto Size = (GraphicsData.LimitX * GraphicsData.Bpp);
 
       // (Use memset to display a pretty gradient)
 
-      Memset((void*)Buffer, (uint8)(Y * 255 / InfoTable->Display.Graphics.LimitY), Size);
+      Memset((void*)Buffer, (uint8)(Y * 256 / GraphicsData.LimitY), Size);
 
     }
 
@@ -35,7 +35,7 @@ void KernelCore(commonInfoTable* InfoTable) {
 
     for (uint16 Thingy = 0; Thingy < BitmapFontData.Height; Thingy++) {
 
-      for (uint16 Thing = 0; Thing < (InfoTable->Display.Graphics.LimitX / BitmapFontData.Width); Thing++) {
+      for (uint16 Thing = 0; Thing < (GraphicsData.LimitX / BitmapFontData.Width); Thing++) {
 
         // Get a glyph
 
@@ -56,29 +56,31 @@ void KernelCore(commonInfoTable* InfoTable) {
         uint64 EnabledMask_s2 = TranslateRgbColorValue(0xFFFFFF);
         uint64 DisabledMask_s2 = TranslateRgbColorValue(0x41BCCB);
 
-        // Draw that glyph
+        // Draw said glyph
 
         for (uint32 Bit = 0; Bit < BitmapFontData.Width; Bit++) {
 
-          auto Size = (InfoTable->Display.Graphics.Bits.PerPixel / 8);
-          uint64 Ptr = (InfoTable->Display.Graphics.Framebuffer.Address + (InfoTable->Display.Graphics.Pitch * Thingy) + (Size * ((Thing * BitmapFontData.Width) + (BitmapFontData.Width - 1 - Bit))));
+          uint64 Ptr = ((uintptr)GraphicsData.Framebuffer
+                        + (GraphicsData.Pitch * Thingy)
+                        + (GraphicsData.Bpp * ((Thing * BitmapFontData.Width)
+                        + (BitmapFontData.Width - 1 - Bit))));
 
           #define Offset (RealPixelWidth - BitmapFontData.Width)
 
           if (Thing < 36) {
 
             if ((ThisGlyph & (1ULL << (Bit+Offset))) != 0) {
-              Memcpy((void*)Ptr, (const void*)&EnabledMask_s1, Size);
+              Memcpy((void*)Ptr, (const void*)&EnabledMask_s1, GraphicsData.Bpp);
             } else {
-              Memcpy((void*)Ptr, (const void*)&DisabledMask_s1, Size);
+              Memcpy((void*)Ptr, (const void*)&DisabledMask_s1, GraphicsData.Bpp);
             }
 
           } else {
 
             if ((ThisGlyph & (1ULL << (Bit+Offset))) != 0) {
-              Memcpy((void*)Ptr, (const void*)&EnabledMask_s2, Size);
+              Memcpy((void*)Ptr, (const void*)&EnabledMask_s2, GraphicsData.Bpp);
             } else {
-              Memcpy((void*)Ptr, (const void*)&DisabledMask_s2, Size);
+              Memcpy((void*)Ptr, (const void*)&DisabledMask_s2, GraphicsData.Bpp);
             }
 
           }
