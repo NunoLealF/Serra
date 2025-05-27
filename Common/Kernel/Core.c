@@ -26,6 +26,8 @@ void KernelCore(commonInfoTable* InfoTable) {
 
     }
 
+    DrawBitmapFont("DrawBitmapFont() -> test", &BitmapFontData, 0xFFFFFF, 0x41BCCB, false, 0, 0);
+
     // (Draw a window in the middle)
 
     uint16 WindowSize[2] = {400, 32};

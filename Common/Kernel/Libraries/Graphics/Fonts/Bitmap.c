@@ -8,7 +8,7 @@
 // (TODO: Font, uses #embed; in PSF1 *or* PSF2 format)
 // (TODO: Also, global variables)
 
-// (WARNING: Fonts must not exceed 8px width with initial driver (!))
+// (WARNING: Fonts must not exceed 64px width with new driver (!))
 
 const uint8 BitmapFont[] = {
   #embed "Font.psf"
@@ -75,6 +75,8 @@ bool InitializeBitmapFont(void) {
     if (Header->HdrSize < sizeof(psf2Header)) {
       return false;
     } else if (Header->NumGlyphs < 256) {
+      return false;
+    } else if (Header->Width >= 64) {
       return false;
     }
 
