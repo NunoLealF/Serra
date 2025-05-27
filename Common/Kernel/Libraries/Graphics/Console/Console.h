@@ -2,8 +2,13 @@
 // This file is part of the Serra project, which is released under the MIT license.
 // For more information, please refer to the accompanying license agreement. <3
 
-#include "../../Libraries/Stdint.h"
-#include "../../../Common.h"
-#include "Graphics.h"
+#ifndef SERRA_KERNEL_GRAPHICS_CONSOLE_H
+#define SERRA_KERNEL_GRAPHICS_CONSOLE_H
 
-// (TODO - Functions that initialize/prepare the graphics subsystem)
+  // Include standard headers.
+
+  #include "../../Stdint.h"
+
+  // Include functions from Console.c (TODO)
+
+#endif

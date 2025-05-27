@@ -525,23 +525,6 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
     return EntrypointCouldntInitializeBitmapFont;
   }
 
-  bool ConsoleInitialized = InitializeConsole(InfoTable);
-  bool GraphicsInitialized = InitializeGraphics(InfoTable);
-
-  if (ConsoleInitialized == false) {
-
-    if (InfoTable->Display.Type != UnknownDisplay) {
-      return EntrypointCouldntInitializeConsole;
-    }
-
-  } else if (GraphicsInitialized == false) {
-
-    if (ConsoleInfo.Type == GraphicalConsole) {
-      return EntrypointCouldntInitializeGraphics;
-    }
-
-  }
-
   // (Set up platform-specific constructors)
 
   if (InfoTable->System.Architecture == x64Architecture) {

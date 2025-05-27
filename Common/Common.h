@@ -430,9 +430,7 @@
     // (High bit is 8h - compile or runtime issue)
 
     EntrypointKernelNotPositionIndependent = (8ULL << 32),
-    EntrypointCouldntInitializeBitmapFont,
-    EntrypointCouldntInitializeConsole,
-    EntrypointCouldntInitializeGraphics
+    EntrypointCouldntInitializeBitmapFont
 
   } entrypointReturnStatus;
 
@@ -527,9 +525,7 @@
       "make sure you're linking with `-pie -Wl,--no-dynamic-linker` (and not \n\r"
       "`-static-pie`).",
 
-      "The kernel's built-in bitmap font doesn't appear to be valid.",
-      "The kernel failed to initialize the console subsystem.",
-      "The kernel failed to initialize the graphics subsystem."
+      "The kernel's built-in bitmap font doesn't appear to be valid."
 
     }
 

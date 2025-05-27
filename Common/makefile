@@ -71,6 +71,7 @@ Clean:
 	@-rm -f Kernel/Firmware/Efi/*.o
 
 	@-rm -f Kernel/Libraries/Graphics/*.o
+	@-rm -f Kernel/Libraries/Graphics/Console/*.o
 	@-rm -f Kernel/Libraries/Graphics/Fonts/*.o
 	@-rm -f Kernel/Libraries/Memory/*.o
 	@-rm -f Kernel/Libraries/Memory/x64/*.o
@@ -114,17 +115,17 @@ Kernel/Constructors/System/x64.o:
 
 # (Kernel libraries)
 
-Kernel/Libraries/Graphics/Console.o:
+Kernel/Libraries/Graphics/Graphics.o:
 	@echo "Building $@"
-	@$(CC) $(CFLAGS) -c Kernel/Libraries/Graphics/Console.c -o Kernel/Libraries/Graphics/Console.o
+	@$(CC) $(CFLAGS) -c Kernel/Libraries/Graphics/Graphics.c -o Kernel/Libraries/Graphics/Graphics.o
+
+Kernel/Libraries/Graphics/Console/Console.o:
+	@echo "Building $@"
+	@$(CC) $(CFLAGS) -c Kernel/Libraries/Graphics/Console/Console.c -o Kernel/Libraries/Graphics/Console/Console.o
 
 Kernel/Libraries/Graphics/Fonts/Bitmap.o:
 	@echo "Building $@"
 	@$(CC) $(CFLAGS) -c Kernel/Libraries/Graphics/Fonts/Bitmap.c -o Kernel/Libraries/Graphics/Fonts/Bitmap.o
-
-Kernel/Libraries/Graphics/Graphics.o:
-	@echo "Building $@"
-	@$(CC) $(CFLAGS) -c Kernel/Libraries/Graphics/Graphics.c -o Kernel/Libraries/Graphics/Graphics.o
 
 Kernel/Libraries/Memory/Memory.o:
 	@echo "Building $@"
@@ -146,6 +147,6 @@ Kernel/System/x64/Cpu.o:
 
 # Link everything into one .elf file
 
-Kernel/Kernel.elf: Kernel/Entry.o Kernel/Core.o Kernel/Constructors/Firmware/Efi.o Kernel/Constructors/System/x64.o Kernel/Libraries/Graphics/Console.o Kernel/Libraries/Graphics/Fonts/Bitmap.o Kernel/Libraries/Graphics/Graphics.o Kernel/Libraries/Memory/Memory.o Kernel/Libraries/Memory/x64/Memcpy.o Kernel/Libraries/Memory/x64/Memset.o Kernel/System/x64/Cpu.o
+Kernel/Kernel.elf: Kernel/Entry.o Kernel/Core.o Kernel/Constructors/Firmware/Efi.o Kernel/Constructors/System/x64.o Kernel/Libraries/Graphics/Graphics.o Kernel/Libraries/Graphics/Console/Console.o Kernel/Libraries/Graphics/Fonts/Bitmap.o Kernel/Libraries/Memory/Memory.o Kernel/Libraries/Memory/x64/Memcpy.o Kernel/Libraries/Memory/x64/Memset.o Kernel/System/x64/Cpu.o
 	@echo "Building $@"
 	@$(CC) -T Linker.ld $(LDFLAGS) -o Kernel/Kernel.elf -ffreestanding -nolibc -nostdlib -lgcc $^
