@@ -145,8 +145,8 @@ void S3Bootloader(void) {
   CommonInfoTable.Display.Type = VgaDisplay;
   CommonInfoTable.Display.Text.Format = AsciiFormat;
 
-  CommonInfoTable.Display.Text.XPos = TerminalTable.PosX;
-  CommonInfoTable.Display.Text.YPos = TerminalTable.PosY;
+  CommonInfoTable.Display.Text.PosX = TerminalTable.PosX;
+  CommonInfoTable.Display.Text.PosY = TerminalTable.PosY;
   CommonInfoTable.Display.Text.LimitX = TerminalTable.LimitX;
   CommonInfoTable.Display.Text.LimitY = TerminalTable.LimitY;
 

@@ -329,12 +329,12 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
     // (Check whether the X and Y coordinates are within limits; if not,
     // set them to zero)
 
-    if (InfoTable->Display.Text.XPos > InfoTable->Display.Text.LimitX) {
-      InfoTable->Display.Text.XPos = 0;
+    if (InfoTable->Display.Text.PosX > InfoTable->Display.Text.LimitX) {
+      InfoTable->Display.Text.PosX = 0;
     }
 
-    if (InfoTable->Display.Text.YPos > InfoTable->Display.Text.LimitY) {
-      InfoTable->Display.Text.YPos = 0;
+    if (InfoTable->Display.Text.PosY > InfoTable->Display.Text.LimitY) {
+      InfoTable->Display.Text.PosY = 0;
     }
 
   }

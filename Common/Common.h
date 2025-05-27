@@ -185,8 +185,8 @@
 
         } Format;
 
-        uint16 XPos; // (optional for EfiTextDisplayType)
-        uint16 YPos; // (optional for EfiTextDisplayType)
+        uint16 PosX; // (optional for EfiTextDisplayType)
+        uint16 PosY; // (optional for EfiTextDisplayType)
 
         uint16 LimitX;
         uint16 LimitY;
