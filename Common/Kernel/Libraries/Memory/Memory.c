@@ -82,9 +82,12 @@ void Memcpy(void* Destination, const void* Source, uint64 Size) {
   // -specific Assembly code, so we need to call different functions
   // depending on the system architecture...
 
-  // (Routines specific to x64 platforms)
-
   #if defined(__amd64__) || defined(__x86_64__)
+
+    // (Routines specific to x64 platforms)
+
+    // We take into account feature support, as well as size; in this
+    // case, ERMS systems always use `rep movsb`)
 
     if ((Size < 2048) || (CpuFeaturesAvailable.Erms == true)) {
 
@@ -99,6 +102,24 @@ void Memcpy(void* Destination, const void* Source, uint64 Size) {
       } else {
         _Memcpy_Sse2(Destination, Source, Size);
       }
+
+    }
+
+  #else
+
+    // (Routines for other platforms)
+
+    // These are not optimized by default, but should work on any
+    // platform this is compiled for.
+
+    uintptr Source = (uintptr)Source;
+    uintptr Destination = (uintptr)Destination;
+    uintptr Threshold = (Destination + Size);
+
+    while (Destination < Threshold) {
+
+      *(uint8*)Destination = *(uint8*)Source;
+      Destination++;
 
     }
 
@@ -136,9 +157,16 @@ void* memcpy(void* Destination, const void* Source, uint64 Size) {
 
 void Memset(void* Buffer, uint8 Character, uint64 Size) {
 
-  // (Routines specific to x64 platforms)
+  // For the most part, our memory filling routines are written in platform-
+  // -specific Assembly code, so we need to call different functions
+  // depending on the system architecture...
 
   #if defined(__amd64__) || defined(__x86_64__)
+
+    // (Routines specific to x64 platforms)
+
+    // We take into account feature support, as well as size; in this
+    // case, ERMS systems always use `rep stosb`)
 
     if ((Size < 2048) || (CpuFeaturesAvailable.Erms == true)) {
 
@@ -153,6 +181,23 @@ void Memset(void* Buffer, uint8 Character, uint64 Size) {
       } else {
         _Memset_Sse2(Buffer, Character, Size);
       }
+
+    }
+
+  #else
+
+    // (Routines for other platforms)
+
+    // These are not optimized by default, but should work on any
+    // platform this is compiled for.
+
+    uintptr Destination = (uintptr)Buffer;
+    uintptr Threshold = (Destination + Size);
+
+    while (Destination < Threshold) {
+
+      *(uint8*)Destination = *(uint8*)Block;
+      Destination++;
 
     }
 
@@ -182,24 +227,70 @@ void* memset(void* Buffer, uint8 Value, uint64 Size) {
    (TODO: This is essentially Memset(), but for values (or 'blocks')
    larger than one byte)
 
-   (TODO: Something about platform-specific optimizations)
+   (TODO: Something about block-size-specific optimizations)
 
 */
 
-void MemsetBlock(void* Buffer, void* Block, uint64 Size, uint64 BlockSize) {
+void MemsetBlock(void* Buffer, const void* Block, uint64 Size, uint64 BlockSize) {
 
-  // (Routines specific to x64 platforms)
+  // (Routines for block sizes between 1 and 8 bytes)
+  // (TODO - This could be optimized further..)
 
-  #if defined(__amd64__) || defined(__x86_64__)
+  uintptr Destination = (uintptr)Buffer;
+  uintptr Threshold = (Destination + Size);
 
-    // (TODO - This could really be optimized further..)
+  if (BlockSize <= 1) {
 
-    while (Size > 0) {
-      _Memcpy_RepMovsb(Buffer, (const void*)Block, BlockSize);
-      Size -= BlockSize;
+    // (Use Memset to fill everything in one go.)
+
+    Memset(Buffer, *(uint8*)Block, Size);
+
+  } else if (BlockSize <= 2) {
+
+    // (Manually fill 2 bytes at a time.)
+
+    while (Destination < Threshold) {
+
+      *(uint16*)Destination = *(uint16*)Block;
+      Destination += BlockSize;
+
     }
 
-  #endif
+  } else if (BlockSize <= 4) {
+
+    // (Manually fill 4 bytes at a time.)
+
+    while (Destination < Threshold) {
+
+      *(uint32*)Destination = *(uint32*)Block;
+      Destination += BlockSize;
+
+    }
+
+  } else if (BlockSize <= 8) {
+
+    // (Manually fill 8 bytes at a time.)
+
+    while (Destination < Threshold) {
+
+      *(uint64*)Destination = *(uint64*)Block;
+      Destination += BlockSize;
+
+    }
+
+  } else {
+
+    // (Manually fill `BlockSize` bytes at a time, with Memcpy)
+    // This may be inefficient
+
+    while (Destination < Threshold) {
+
+      Memcpy((void*)Destination, Block, BlockSize);
+      Destination += BlockSize;
+
+    }
+
+  }
 
   // (Return, now that we're done)
 
