@@ -324,10 +324,9 @@ void DrawBitmapFont(const char* String, const bitmapFontData* Font, uint32 Foreg
 
         for (auto Index = 0; Index < Length; Index++) {
 
-          uint64 Character = *(uint64*)((uintptr)CharacterList[Index] + (Line * ByteWidth)) >> WidthDifference;
+          uint8 Character = *(uint8*)((uintptr)CharacterList[Index] + (Line * ByteWidth)) >> WidthDifference;
 
           // (For each bit in our bitmap.. (we iterate in reverse order))
-          // (TODO - This still doesn't work with width > 8 pixels, wtf?)
 
           auto Bit = FontWidth;
 

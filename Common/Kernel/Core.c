@@ -26,7 +26,10 @@ void KernelCore(commonInfoTable* InfoTable) {
 
     }
 
-    DrawBitmapFont("DrawBitmapFont() -> test", &BitmapFontData, 0xFFFFFF, 0x41BCCB, false, 0, 0);
+    for (auto Y2 = 0; Y2 < (GraphicsData.LimitY - BitmapFontData.Height) / 32; Y2++) {
+      DrawBitmapFont("Hi, this is graphics-mode Serra! <3", &BitmapFontData, 0xFFFFFF, 0, true, 0, Y2*32);
+      DrawBitmapFont("May 27 2025", &BitmapFontData, 0xFFFFFF, 0x41BCCB, false, 0, (Y2*32)+16);
+    }
 
     // (Draw a window in the middle)
 
