@@ -3,7 +3,7 @@
 // For more information, please refer to the accompanying license agreement. <3
 
 #include "../../Stdint.h"
-#include "../Graphics.h"
+#include "Fonts.h"
 
 // (TODO: Font, uses #embed; in PSF1 *or* PSF2 format)
 // (TODO: Also, global variables)
