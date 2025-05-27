@@ -8,61 +8,41 @@
   // Include standard and/or necessary headers.
 
   #include "../Stdint.h"
-  #include "../../../Common.h"
-
   #include "Console/Console.h"
   #include "Fonts/Fonts.h"
 
   // Include definitions used throughout the graphics subsystem.
 
-  typedef enum _consoleType : uint8 {
+  typedef struct _graphicsData {
 
-    UnknownConsole = 0, // (Unknown or unsupported console)
+    // (Mode information)
 
-    VgaConsole = 1, // (Uses framebuffer, 16-bit characters with ((Color << 8) | Char))
-    EfiConsole = 2, // (Uses gST->ConOut, or efiSimpleTextOutputProtocol)
+    bool IsSupported; // (Does this system support graphics mode?)
 
-    GraphicalConsole = 3 // (Uses graphics mode, check for bitmap font.)
-
-  } consoleType;
-
-  typedef struct _consoleInfo {
-
-    bool Supported; // (Does this system support a console?)
-
-    void* Framebuffer; // (A pointer to the 'framebuffer', if used)
-    consoleType Type; // (What type of console is this?)
-
-    uint16 LimitX; // (Horizontal/X resolution, in *characters*)
-    uint16 LimitY; // (Vertical/Y resolution, in *characters*)
-
-    uint16 PosX; // (The current horizontal position)
-    uint16 PosY; // (The current vertical position)
-
-  } consoleInfo;
-
-  typedef struct _graphicsColorInfo {
-
-    uint8 Width; // (Width, in bits)
-    uint8 Offset; // (Offset (shift left), in bits)
-
-  } graphicsColorInfo;
-
-  typedef struct _graphicsInfo {
-
-    bool Supported; // (Does this system support graphics mode?)
-
-    uint8 BytesPerPixel; // (Bytes per pixel)
+    uint8 Bpp; // (Bytes per pixel (not bits!); .Bits.PerPixel / 8)
     void* Framebuffer; // (A pointer to the framebuffer)
     uint64 Pitch; // (Bytes per row, including padding)
 
     uint16 LimitX; // (Horizontal/X resolution, in pixels)
     uint16 LimitY; // (Vertical/Y resolution, in pixels)
 
-    graphicsColorInfo Colors[3]; // (Colors[0] is red, Colors[1] is green, Colors[2] is blue)
+    // (Color information; [0] is red, [1] is green, [2] is blue)
 
-  } graphicsInfo;
+    struct {
+
+      uint8 Width; // (Width, in bits)
+      uint8 Offset; // (Offset (shift left), in bits)
+
+      uint64 Lut[256]; // (Lookup table, for intensities 0-255)
+
+    } Colors[3];
+
+  } graphicsData;
 
   // Include functions and global variables from Graphics.c (TODO)
+
+  extern graphicsData GraphicsData;
+  void InitializeGraphicsSubsystem(void* InfoTable);
+  uint64 TranslateRgbColorValue(uint32 Color) [[reproducible]];
 
 #endif

@@ -525,6 +525,8 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
     return EntrypointCouldntInitializeBitmapFont;
   }
 
+  InitializeGraphicsSubsystem(InfoTable);
+
   // (Set up platform-specific constructors)
 
   if (InfoTable->System.Architecture == x64Architecture) {

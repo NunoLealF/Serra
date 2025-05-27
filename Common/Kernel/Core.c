@@ -50,11 +50,11 @@ void KernelCore(commonInfoTable* InfoTable) {
 
         // Get colors for that glyph
 
-        uint64 EnabledMask_s1 = ~0ULL;
-        uint64 DisabledMask_s1 = 0ULL;
+        uint64 EnabledMask_s1 = TranslateRgbColorValue(0xFFFFFF);
+        uint64 DisabledMask_s1 = TranslateRgbColorValue(0x000000);
 
-        uint64 EnabledMask_s2 = ~0ULL;
-        uint64 DisabledMask_s2 = (InfoTable->Display.Graphics.Bits.GreenMask | InfoTable->Display.Graphics.Bits.BlueMask) & 0xAAAAAAAAAAAAAAAA;
+        uint64 EnabledMask_s2 = TranslateRgbColorValue(0xFFFFFF);
+        uint64 DisabledMask_s2 = TranslateRgbColorValue(0x41BCCB);
 
         // Draw that glyph
 
