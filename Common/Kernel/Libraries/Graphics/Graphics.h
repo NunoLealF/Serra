@@ -43,6 +43,8 @@
 
   extern graphicsData GraphicsData;
   void InitializeGraphicsSubsystem(void* InfoTable);
-  uint64 TranslateRgbColorValue(uint32 Color) [[reproducible]];
+
+  void DrawPixel(uint32 Color, uint16 PosX, uint16 PosY);
+  void DrawRectangle(uint32 Color, uint16 PosX, uint16 PosY, uint16 Width, uint16 Height);
 
 #endif

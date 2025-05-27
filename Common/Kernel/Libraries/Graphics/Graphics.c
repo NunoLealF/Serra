@@ -2,7 +2,8 @@
 // This file is part of the Serra project, which is released under the MIT license.
 // For more information, please refer to the accompanying license agreement. <3
 
-#include "../../Libraries/Stdint.h"
+#include "../Stdint.h"
+#include "../String.h"
 #include "../../../Common.h"
 #include "Graphics.h"
 
@@ -75,7 +76,7 @@ void InitializeGraphicsSubsystem(void* InfoTable) {
         GraphicsData.Colors[Index].Offset++;
       }
 
-      GraphicsData.Colors[Index].Offset++; // (Needed)
+      GraphicsData.Colors[Index].Width++; // (This is necessary)
 
       while ((ColorMasks[Index] & (1ULL << Bit++)) != 0) {
         GraphicsData.Colors[Index].Width++;
@@ -87,7 +88,7 @@ void InitializeGraphicsSubsystem(void* InfoTable) {
       const uint64 WidthMask = (1ULL << GraphicsData.Colors[Index].Width) - 1;
 
       for (auto Intensity = 0; Intensity < 256; Intensity++) {
-        GraphicsData.Colors[Index].Lut[Intensity] = (((WidthMask * Intensity) / 256) << GraphicsData.Colors[Index].Offset);
+        GraphicsData.Colors[Index].Lut[Intensity] = (((WidthMask * Intensity) / 255) << GraphicsData.Colors[Index].Offset);
       }
 
     }
@@ -103,10 +104,27 @@ void InitializeGraphicsSubsystem(void* InfoTable) {
 
 
 
-// (TODO - A function that translates an RGB color value into one accepted
-// by the framebuffer)
+// (TODO - A function that checks whether we're within bounds *and* that
+// whatever we're trying to draw to is within bounds)
 
-uint64 TranslateRgbColorValue(uint32 Color) [[reproducible]] {
+static inline bool CanExecuteOperation(uint16 PosX, uint16 PosY) {
+
+  if (GraphicsData.IsSupported == false) {
+    return false;
+  } else if ((PosX >= GraphicsData.LimitX) || (PosY >= GraphicsData.LimitY)) {
+    return false;
+  }
+
+  return true;
+
+}
+
+
+
+// (TODO - A static function that translates an RGB color value into one
+// accepted by the framebuffer)
+
+static inline uint64 TranslateRgbColorValue(uint32 Color) [[reproducible]] {
 
   // This uses the lookup tables we computed earlier (in GraphicsData{})
   // to help speed things up.
@@ -119,4 +137,94 @@ uint64 TranslateRgbColorValue(uint32 Color) [[reproducible]] {
 
 
 
-// (TODO - A function to write a pixel)
+// (TODO - A function to put a pixel on the screen)
+
+// You probably shouldn't use this for anything 'large', this is just for
+// single pixels and demos which really can't afford anything more.
+
+void DrawPixel(uint32 Color, uint16 PosX, uint16 PosY) {
+
+  // First, let's make sure that we're in a graphics mode, and that
+  // the positions we were given don't go out of bounds.
+
+  if (CanExecuteOperation(PosX, PosY) == true) {
+
+    // Now that we know we are, let's calculate the specific address
+    // within the framebuffer we need to write to
+
+    uintptr Address = ((uintptr)GraphicsData.Framebuffer
+                       + (GraphicsData.Bpp * PosX)
+                       + (GraphicsData.Pitch * PosY));
+
+    // Copy it to the framebuffer using Memcpy() - this is *not* the
+    // most efficient solution, but it'll work fine for simple
+    // operations.
+
+    auto FbColor = TranslateRgbColorValue(Color);
+    Memcpy((void*)Address, (const void*)&FbColor, GraphicsData.Bpp);
+
+  }
+
+  // Return.
+
+  return;
+
+}
+
+
+
+// (TODO - A function to put a bitmap on the screen)
+
+void DrawRectangle(uint32 Color, uint16 PosX, uint16 PosY, uint16 Width, uint16 Height) {
+
+  // First, let's make sure that we're in a graphics mode, and that
+  // we won't draw anywhere 'out of bounds'.
+
+  if (CanExecuteOperation((PosX + Width), (PosY + Height)) == true) {
+
+    // Now that we know we can safely draw this rectangle, let's do
+    // exactly that!
+
+    // (Allocate a buffer (from the stack) the size of one line)
+
+    auto FbColor = TranslateRgbColorValue(Color);
+    auto FbWidth = (GraphicsData.Bpp * Width);
+
+    uint8 Buffer[FbWidth];
+
+    // (Fill out the buffer, hopefully somewhat efficiently)
+
+    uint16 Counter = 0;
+    uint64 Data = FbColor;
+
+    while (Counter < Width) {
+
+      Memcpy((void*)&Buffer[GraphicsData.Bpp * Counter],
+             (const void*)&Data,
+             (uint64)GraphicsData.Bpp);
+
+      Counter++;
+
+    }
+
+    // Now that we've filled out the buffer, we can copy it to the
+    // framebuffer, one line at a time.
+
+    uintptr Address = ((uintptr)GraphicsData.Framebuffer
+                       + (GraphicsData.Bpp * PosX)
+                       + (GraphicsData.Pitch * PosY));
+
+    for (auto Line = 0; Line < Height; Line++) {
+
+      Memcpy((void*)Address, (const void*)Buffer, FbWidth);
+      Address += GraphicsData.Pitch; // Move to the next line
+
+    }
+
+  }
+
+  // Return.
+
+  return;
+
+}

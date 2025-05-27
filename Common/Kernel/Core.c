@@ -26,16 +26,28 @@ void KernelCore(commonInfoTable* InfoTable) {
 
     }
 
+    // (Draw a window in the middle)
+
+    uint16 WindowSize[2] = {400, 32};
+    uint16 StartWinSz[2] = {((GraphicsData.LimitX - WindowSize[0]) / 2), ((GraphicsData.LimitY - WindowSize[1]) / 2)};
+
+    DrawRectangle(0, StartWinSz[0], StartWinSz[1], WindowSize[0], WindowSize[1]);
+
     // (Display font characters)
     // (WARNING: Fonts must not exceed 8px width with initial driver (!))
+    // (WARNING: This is kind of a mess)
 
     uintptr GlyphData = (uintptr)BitmapFontData.GlyphData;
 
-    const char* TestString = "Hi, this is graphics-mode Serra! <3 May 26 2025"; // [48]
+    const char* TestString = "Hi, this is graphics-mode Serra! <3 May 27 2025"; // [48]
 
     for (uint16 Thingy = 0; Thingy < BitmapFontData.Height; Thingy++) {
 
-      for (uint16 Thing = 0; Thing < (GraphicsData.LimitX / BitmapFontData.Width); Thing++) {
+      #define Tslen 47
+      #define Cutoff 36
+      uint16 ThingLimit = (Tslen*BitmapFontData.Width);
+
+      for (uint16 Thing = 0; Thing < ThingLimit; Thing++) {
 
         // Get a glyph
 
@@ -43,44 +55,34 @@ void KernelCore(commonInfoTable* InfoTable) {
         #define RealPixelWidth (RealWidth * 8)
 
         char Character = TestString[Thing];
-        if (Thing >= 47) break;
+        if (Thing >= Tslen) break;
 
         uint64* Glyph = (uint64*)(GlyphData + (Character * BitmapFontData.GlyphSize) + (Thingy * RealWidth));
         uint64 ThisGlyph = *Glyph;
-
-        // Get colors for that glyph
-
-        uint64 EnabledMask_s1 = TranslateRgbColorValue(0xFFFFFF);
-        uint64 DisabledMask_s1 = TranslateRgbColorValue(0x000000);
-
-        uint64 EnabledMask_s2 = TranslateRgbColorValue(0xFFFFFF);
-        uint64 DisabledMask_s2 = TranslateRgbColorValue(0x41BCCB);
 
         // Draw said glyph
 
         for (uint32 Bit = 0; Bit < BitmapFontData.Width; Bit++) {
 
-          uint64 Ptr = ((uintptr)GraphicsData.Framebuffer
-                        + (GraphicsData.Pitch * Thingy)
-                        + (GraphicsData.Bpp * ((Thing * BitmapFontData.Width)
-                        + (BitmapFontData.Width - 1 - Bit))));
-
           #define Offset (RealPixelWidth - BitmapFontData.Width)
 
-          if (Thing < 36) {
+          #define ThisX ((Thing * BitmapFontData.Width) + (BitmapFontData.Width - Bit - 1) + StartWinSz[0] + (WindowSize[0] - ThingLimit) / 2)
+          #define ThisY (Thingy + StartWinSz[1] + (WindowSize[1] - BitmapFontData.Height) / 2)
+
+          if (Thing < Cutoff) {
 
             if ((ThisGlyph & (1ULL << (Bit+Offset))) != 0) {
-              Memcpy((void*)Ptr, (const void*)&EnabledMask_s1, GraphicsData.Bpp);
+              DrawPixel(0xFFFFFF, ThisX, ThisY);
             } else {
-              Memcpy((void*)Ptr, (const void*)&DisabledMask_s1, GraphicsData.Bpp);
+              DrawPixel(0, ThisX, ThisY);
             }
 
           } else {
 
             if ((ThisGlyph & (1ULL << (Bit+Offset))) != 0) {
-              Memcpy((void*)Ptr, (const void*)&EnabledMask_s2, GraphicsData.Bpp);
+              DrawPixel(0xFFFFFF, ThisX, ThisY);
             } else {
-              Memcpy((void*)Ptr, (const void*)&DisabledMask_s2, GraphicsData.Bpp);
+              DrawPixel(0x41BCCB, ThisX, ThisY);
             }
 
           }
