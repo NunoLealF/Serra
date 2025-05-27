@@ -2,8 +2,7 @@
 // This file is part of the Serra project, which is released under the MIT license.
 // For more information, please refer to the accompanying license agreement. <3
 
-#include "../Firmware/Firmware.h"
-#include "../../Libraries/Stdint.h"
+#include "../Stdint.h"
 #include "../../../Common.h"
 #include "Graphics.h"
 
@@ -27,7 +26,7 @@ bool InitializeConsole(commonInfoTable* Table) {
     // the table.)
 
     ConsoleInfo.Supported = false;
-    ConsoleInfo.Type = UnknownConsoleType;
+    ConsoleInfo.Type = UnknownConsole;
 
   } else if (Table->Display.Type == VgaDisplay) {
 
@@ -36,7 +35,7 @@ bool InitializeConsole(commonInfoTable* Table) {
 
     ConsoleInfo.Supported = true;
     ConsoleInfo.Framebuffer = (void*)0xB8000;
-    ConsoleInfo.Type = VgaConsoleType;
+    ConsoleInfo.Type = VgaConsole;
 
     ConsoleInfo.LimitX = Table->Display.Text.LimitX;
     ConsoleInfo.LimitY = Table->Display.Text.LimitY;
@@ -51,18 +50,22 @@ bool InitializeConsole(commonInfoTable* Table) {
     // have to keep track of the position.)
 
     ConsoleInfo.Supported = true;
-    ConsoleInfo.Type = EfiConsoleType;
+    ConsoleInfo.Type = EfiConsole;
 
     ConsoleInfo.LimitX = Table->Display.Text.LimitX;
     ConsoleInfo.LimitY = Table->Display.Text.LimitY;
 
   } else if ((Table->Display.Type == VbeDisplay) || (Table->Display.Type == GopDisplay)) {
 
+    // (If we're in a graphics mode, then we have to provide our own
+    // bitmap font, so we'll fill out ConsoleInfo{} based on the values
+    // provided in BitmapFontData{})
+
     // (If we're using a graphics mode, then that means we have to
     // provide a console ourselves, so let's initialize the bitmap
     // font in Fonts/Font.psf)
 
-    if (InitializeBitmapFont() == false) {
+    if ((BitmapFontData.Width == 0) || (BitmapFontData.Height == 0)) {
 
       ConsoleInfo.Supported = false;
       return false;
@@ -74,7 +77,7 @@ bool InitializeConsole(commonInfoTable* Table) {
 
     ConsoleInfo.Supported = true;
     ConsoleInfo.Framebuffer = Table->Display.Graphics.Framebuffer.Pointer;
-    ConsoleInfo.Type = GraphicalConsoleType;
+    ConsoleInfo.Type = GraphicalConsole;
 
     ConsoleInfo.LimitX = (Table->Display.Graphics.LimitX / BitmapFontData.Width);
     ConsoleInfo.LimitY = (Table->Display.Graphics.LimitY / BitmapFontData.Height);

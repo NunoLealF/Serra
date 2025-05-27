@@ -15,7 +15,6 @@
   // Import kernel constructors.
 
   #include "Constructors/Firmware/Firmware.h"
-  #include "Constructors/Graphics/Graphics.h"
 
   // Import firmware-specific headers.
 

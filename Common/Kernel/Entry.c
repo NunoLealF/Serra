@@ -519,6 +519,12 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
   // (Set up graphics-specific constructors (?))
   // TODO - This is incredibly messy and badly documented (!!!!!!!)
 
+  bool FontInitialized = InitializeBitmapFont();
+
+  if (FontInitialized == false) {
+    return EntrypointCouldntInitializeBitmapFont;
+  }
+
   bool ConsoleInitialized = InitializeConsole(InfoTable);
   bool GraphicsInitialized = InitializeGraphics(InfoTable);
 
@@ -530,7 +536,7 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
 
   } else if (GraphicsInitialized == false) {
 
-    if (ConsoleInfo.Type == GraphicalConsoleType) {
+    if (ConsoleInfo.Type == GraphicalConsole) {
       return EntrypointCouldntInitializeGraphics;
     }
 

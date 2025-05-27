@@ -2,7 +2,7 @@
 // This file is part of the Serra project, which is released under the MIT license.
 // For more information, please refer to the accompanying license agreement. <3
 
-#include "../../../Libraries/Stdint.h"
+#include "../../Stdint.h"
 #include "../Graphics.h"
 
 // (TODO: Font, uses #embed; in PSF1 *or* PSF2 format)
