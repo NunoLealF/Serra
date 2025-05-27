@@ -210,14 +210,123 @@ void DrawRectangle(uint32 Color, uint16 PosX, uint16 PosY, uint16 Width, uint16 
     // Now that we've filled out the buffer, we can copy it to the
     // framebuffer, one line at a time.
 
-    uintptr Address = ((uintptr)GraphicsData.Framebuffer
-                       + (GraphicsData.Bpp * PosX)
-                       + (GraphicsData.Pitch * PosY));
+    uintptr Framebuffer = ((uintptr)GraphicsData.Framebuffer
+                            + (GraphicsData.Bpp * PosX)
+                            + (GraphicsData.Pitch * PosY));
 
     for (auto Line = 0; Line < Height; Line++) {
 
-      Memcpy((void*)Address, (const void*)Buffer, FbWidth);
-      Address += GraphicsData.Pitch; // Move to the next line
+      Memcpy((void*)Framebuffer, (const void*)Buffer, FbWidth);
+      Framebuffer += GraphicsData.Pitch; // Move onto the next line
+
+    }
+
+  }
+
+  // Return.
+
+  return;
+
+}
+
+
+
+// (TODO - A function that draws a bitmap font, with optional transparency)
+
+// (WARNING - This is a good start, hopefully.. but it's only really
+// suitable for large operations, certainly not individual letters)
+
+// As with PSF2 bitmaps, 'Width' is padded out as necessary; for example,
+// a 5-bit bitmap is drawn as if it were an 8-bit one
+
+void DrawBitmap(void* Bitmap, uint32 ForegroundColor, [[maybe_unused]] uint32 BackgroundColor, bool UseTransparency, uint16 PosX, uint16 PosY, uint16 Width, uint16 Height) {
+
+  // First, let's make sure that we're in a graphics mode, and that
+  // we won't draw anywhere 'out of bounds'.
+
+  if (CanExecuteOperation((PosX + Width), (PosY + Height)) == true) {
+
+    // Next, let's make sure that the pointer to the bitmap is valid.
+
+    if (Bitmap != NULL) {
+
+      // Okay - now that we know both are valid, we can start drawing it.
+
+      // Let's start by allocating a buffer (the size of one line) from
+      // the stack, that we'll continuously update as needed.
+
+      auto FbWidth = (GraphicsData.Bpp * Width);
+      uint8 Buffer[FbWidth];
+
+      // (If we're not using transparency, create a "background buffer"
+      // in regular memory that we can copy from each time)
+
+      // (TODO: There needs to be something like a 'Memset_Framebuffer' or
+      // whatever, just a fast way to copy either 16/24/32/40/48/... bits)
+
+      [[maybe_unused]] uint8 BackgroundBuffer[FbWidth];
+
+      if (UseTransparency == false) {
+
+        uint16 Counter = 0;
+        uint64 Data = TranslateRgbColorValue(BackgroundColor);
+
+        while (Counter < Width) {
+
+          Memcpy((void*)&BackgroundBuffer[GraphicsData.Bpp * Counter],
+                 (const void*)&Data,
+                 (uint64)GraphicsData.Bpp);
+
+          Counter++;
+
+        }
+
+      }
+
+      // (Calculate the address we need to copy to (and possibly, from))
+
+      uintptr Framebuffer = ((uintptr)GraphicsData.Framebuffer
+                              + (GraphicsData.Bpp * PosX)
+                              + (GraphicsData.Pitch * PosY));
+
+      // Deal with each individual line:
+
+      for (auto Line = 0; Line < Height; Line++) {
+
+        // Depending on whether we're using transparency or not, either
+        // copy the background from the framebuffer, or the background
+        // buffer we defined earlier on.
+
+        if (UseTransparency == true) {
+          Memcpy((void*)Buffer, (const void*)Framebuffer, FbWidth);
+        } else {
+          Memcpy((void*)Buffer, (const void*)BackgroundBuffer, FbWidth);
+        }
+
+        // Read through the bitmap and fill out our buffer.
+
+        auto ActualWidth = ((Width + 7) / 8); // (Same as ceil(Width / 8))
+        auto BitmapOffset = ActualWidth * Height;
+
+        for (auto Byte = 0; Byte < ((Width + 7) / 8); Byte++) {
+
+          // (TODO: Finish this / TODO TODO TODO TODO TODO TODO TODO TODO )
+          // (TODO: Finish this / TODO TODO TODO TODO TODO TODO TODO TODO )
+          // (TODO: Finish this / TODO TODO TODO TODO TODO TODO TODO TODO )
+          // (TODO: Finish this / TODO TODO TODO TODO TODO TODO TODO TODO )
+          // (TODO: Finish this / TODO TODO TODO TODO TODO TODO TODO TODO )
+          // (TODO: Finish this / TODO TODO TODO TODO TODO TODO TODO TODO )
+          // (TODO: Finish this / TODO TODO TODO TODO TODO TODO TODO TODO )
+          // (TODO: Finish this / TODO TODO TODO TODO TODO TODO TODO TODO )
+          // (TODO: Finish this / TODO TODO TODO TODO TODO TODO TODO TODO )
+
+        }
+
+        // Update our framebuffer pointer to move onto the next line.
+
+        Framebuffer += GraphicsData.Pitch;
+
+      }
 
     }
 

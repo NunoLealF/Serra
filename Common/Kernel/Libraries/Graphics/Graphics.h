@@ -46,5 +46,6 @@
 
   void DrawPixel(uint32 Color, uint16 PosX, uint16 PosY);
   void DrawRectangle(uint32 Color, uint16 PosX, uint16 PosY, uint16 Width, uint16 Height);
+  void DrawBitmap(void* Bitmap, uint32 ForegroundColor, [[maybe_unused]] uint32 BackgroundColor, bool UseTransparency, uint16 PosX, uint16 PosY, uint16 Width, uint16 Height);
 
 #endif
