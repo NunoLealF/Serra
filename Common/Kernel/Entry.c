@@ -517,11 +517,23 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
   }
 
   // (Set up graphics-specific constructors (?))
+  // TODO - This is incredibly messy and badly documented (!!!!!!!)
 
-  if (InitializeBitmapFont() == false) {
-    return EntrypointBitmapFontIsInvalid;
-  } else if (BitmapFontData.Type == UnknownBitmap) {
-    return EntrypointBitmapFontIsInvalid;
+  bool ConsoleInitialized = InitializeConsole(InfoTable);
+  bool GraphicsInitialized = InitializeGraphics(InfoTable);
+
+  if (ConsoleInitialized == false) {
+
+    if (InfoTable->Display.Type != UnknownDisplay) {
+      return EntrypointCouldntInitializeConsole;
+    }
+
+  } else if (GraphicsInitialized == false) {
+
+    if (ConsoleInfo.Type == GraphicalConsoleType) {
+      return EntrypointCouldntInitializeGraphics;
+    }
+
   }
 
   // (Set up platform-specific constructors)
