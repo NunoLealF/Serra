@@ -17,6 +17,7 @@
 
   // Include functions provided by Memory/Memset.c (TODO)
 
+  void MemsetBlock(void* Buffer, void* Block, uint64 Size, uint64 BlockSize);
   void Memset(void* Buffer, uint8 Character, uint64 Size);
   void* memset(void* Buffer, uint8 Character, uint64 Size);
 

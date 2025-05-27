@@ -46,10 +46,10 @@ static inline void _Memcpy(void* Destination, const void* Source, uint64 Size) {
   // Optimized Memset() functions for x64 platforms, from x64/Memset.asm
   // (Width *must* be one of 1, 2, 4 or 8.)
 
-  extern void _Memset_RepStosb(void* Buffer, uint64 Value, uint64 Size);
-  extern void _Memset_Sse2(void* Buffer, uint64 Value, uint64 Size);
-  extern void _Memset_Avx(void* Buffer, uint64 Value, uint64 Size);
-  extern void _Memset_Avx512f(void* Buffer, uint64 Value, uint64 Size);
+  extern void _Memset_RepStosb(void* Buffer, uint8 Value, uint64 Size);
+  extern void _Memset_Sse2(void* Buffer, uint8 Value, uint64 Size);
+  extern void _Memset_Avx(void* Buffer, uint8 Value, uint64 Size);
+  extern void _Memset_Avx512f(void* Buffer, uint8 Value, uint64 Size);
 
 #endif
 
@@ -116,7 +116,7 @@ void* memcpy(void* Destination, const void* Source, uint64 Size) {
 
 
 
-/* static void Memset(), void* memset()
+/* void Memset(), void* memset()
 
    Inputs: void* Buffer - The buffer you want to write to.
            uint8 Character - The character you want to write with.
@@ -166,4 +166,43 @@ void Memset(void* Buffer, uint8 Character, uint64 Size) {
 
 void* memset(void* Buffer, uint8 Value, uint64 Size) {
   Memset(Buffer, Value, Size); return Buffer;
+}
+
+
+
+/* void MemsetBlock()
+
+   Inputs: void* Buffer - The buffer you want to write to.
+           void* Block - A pointer to the block you want to write with.
+           uint64 Size - The size of the (destination) buffer, *in bytes*.
+           uint64 BlockSize - The size of the block you want to write with.
+
+   Outputs: (None)
+
+   (TODO: This is essentially Memset(), but for values (or 'blocks')
+   larger than one byte)
+
+   (TODO: Something about platform-specific optimizations)
+
+*/
+
+void MemsetBlock(void* Buffer, void* Block, uint64 Size, uint64 BlockSize) {
+
+  // (Routines specific to x64 platforms)
+
+  #if defined(__amd64__) || defined(__x86_64__)
+
+    // (TODO - This could really be optimized further..)
+
+    while (Size > 0) {
+      _Memcpy_RepMovsb(Buffer, (const void*)Block, BlockSize);
+      Size -= BlockSize;
+    }
+
+  #endif
+
+  // (Return, now that we're done)
+
+  return;
+
 }

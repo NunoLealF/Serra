@@ -187,25 +187,13 @@ void DrawRectangle(uint32 Color, uint16 PosX, uint16 PosY, uint16 Width, uint16 
 
     // (Allocate a buffer (from the stack) the size of one line)
 
-    auto FbColor = TranslateRgbColorValue(Color);
     auto FbWidth = (GraphicsData.Bpp * Width);
-
     uint8 Buffer[FbWidth];
 
     // (Fill out the buffer, hopefully somewhat efficiently)
 
-    uint16 Counter = 0;
-    uint64 Data = FbColor;
-
-    while (Counter < Width) {
-
-      Memcpy((void*)&Buffer[GraphicsData.Bpp * Counter],
-             (const void*)&Data,
-             (uint64)GraphicsData.Bpp);
-
-      Counter++;
-
-    }
+    auto FbColor = TranslateRgbColorValue(Color);
+    MemsetBlock(Buffer, &FbColor, FbWidth, GraphicsData.Bpp);
 
     // Now that we've filled out the buffer, we can copy it to the
     // framebuffer, one line at a time.
@@ -268,18 +256,8 @@ void DrawBitmap(void* Bitmap, uint32 ForegroundColor, [[maybe_unused]] uint32 Ba
 
       if (UseTransparency == false) {
 
-        uint16 Counter = 0;
-        uint64 Data = TranslateRgbColorValue(BackgroundColor);
-
-        while (Counter < Width) {
-
-          Memcpy((void*)&BackgroundBuffer[GraphicsData.Bpp * Counter],
-                 (const void*)&Data,
-                 (uint64)GraphicsData.Bpp);
-
-          Counter++;
-
-        }
+        uint64 Pixel = TranslateRgbColorValue(BackgroundColor);
+        MemsetBlock(BackgroundBuffer, &Pixel, FbWidth, GraphicsData.Bpp);
 
       }
 
