@@ -10,7 +10,12 @@
   #include "Stdint.h"
   #include "../Constructors/System/System.h"
 
-  // Include functions provided by Memory/Memory.c (TODO)
+  // Include formatting and string-related functions from String.c
+
+  int Strlen(const char* String);
+  int StrlenWide(const char16* String);
+
+  // Include memory-related functions from Memory/Memory.c
 
   void Memcpy(void* Destination, const void* Source, uint64 Size);
   void* memcpy(void* Destination, const void* Source, uint64 Size);
@@ -19,5 +24,5 @@
   void* memset(void* Buffer, uint8 Character, uint64 Size);
 
   void MemsetBlock(void* Buffer, const void* Block, uint64 Size, uint64 BlockSize);
-  
+
 #endif

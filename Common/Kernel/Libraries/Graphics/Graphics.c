@@ -236,8 +236,7 @@ void DrawBitmapFont(const char* String, const bitmapFontData* Font, uint32 Foreg
 
   // First, let's calculate the length of the string we were given.
 
-  auto Length = 0;
-  while (String[Length] != '\0') Length++;
+  auto Length = Strlen(String);
 
   // Second, let's make sure that the pointer to the bitmap font is
   // even valid in the first place.

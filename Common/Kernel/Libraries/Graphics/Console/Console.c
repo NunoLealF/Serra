@@ -170,15 +170,6 @@ bool InitializeConsoleSubsystem(void* InfoTable) {
 // (EFI) -> convert to char16, check if EFI subsystem is ok, use ConOut
 // (Graphical) -> use DrawBitmapFont()
 
-static void Scroll_Vga();
-static void Putchar_Vga();
-static void Print_Vga();
-
-static void Print_Efi();
-
-static void Scroll_Graphical();
-static void Print_Graphical();
-
 void Print(const char* String, bool Important, uint32 Color) {
 
   // (If the console is disabled, or both the Debug flag and
