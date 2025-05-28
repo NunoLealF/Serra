@@ -519,13 +519,13 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
   // (Set up graphics-specific constructors (?))
   // TODO - This is incredibly messy and badly documented (!!!!!!!)
 
-  bool FontInitialized = InitializeBitmapFont();
-
-  if (FontInitialized == false) {
+  if (InitializeBitmapFont() == false) {
     return EntrypointCouldntInitializeBitmapFont;
+  } else if (InitializeGraphicsSubsystem(InfoTable) == false) {
+    return EntrypointCouldntInitializeGraphicsSubsystem;
+  } else if (InitializeConsoleSubsystem(InfoTable) == false) {
+    return EntrypointCouldntInitializeConsoleSubsystem;
   }
-
-  InitializeGraphicsSubsystem(InfoTable);
 
   // (Set up platform-specific constructors)
 

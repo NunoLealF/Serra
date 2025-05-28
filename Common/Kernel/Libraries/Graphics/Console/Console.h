@@ -9,6 +9,34 @@
 
   #include "../../Stdint.h"
 
-  // Include functions from Console.c (TODO)
+  // Include console-related definitions
+
+  typedef struct _consoleSubsystemData {
+
+    // (Mode and positioning information)
+
+    bool IsSupported; // (Does this system support a graphics mode?)
+
+    enum : uint8 {
+
+      UnknownConsole = 0, // (Not defined)
+      GraphicalConsole = 1, // (Uses the graphics subsystem to display text)
+      VgaConsole = 2, // (Uses the VGA text buffer at B8000h)
+      EfiConsole = 3 // (Uses efiSimpleTextOutputProtocol)
+
+    } Type;
+
+    uint16 PosX; // (The current horizontal/X position, in characters - optional for EfiConsole)
+    uint16 PosY; // (The current vertical/Y position, in characters - optional for EfiConsole)
+
+    uint16 LimitX; // (The horizontal/X resolution, in characters)
+    uint16 LimitY; // (The vertical/Y resolution, in characters)
+
+  } consoleSubsystemData;
+
+  // Include functions and global variables from Console.c
+
+  extern consoleSubsystemData ConsoleData;
+  bool InitializeConsoleSubsystem(void* InfoTable);
 
 #endif

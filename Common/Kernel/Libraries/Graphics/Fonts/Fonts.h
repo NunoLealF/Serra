@@ -21,6 +21,8 @@
 
   typedef struct _bitmapFontData {
 
+    bool IsSupported; // (Whether InitializeBitmapFont() has been called yet)
+
     const void* Header; // Pointer to the font header (can be psf1Header, psf2Header..)
     bitmapFontType Type; // The type of this bitmap font.
     bool HasUnicodeTable; // Whether this font has a Unicode table or not.

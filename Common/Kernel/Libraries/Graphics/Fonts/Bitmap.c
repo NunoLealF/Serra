@@ -38,6 +38,7 @@ bool InitializeBitmapFont(void) {
 
     // (Fill out BitmapFontData{})
 
+    BitmapFontData.IsSupported = true;
     BitmapFontData.Header = (const void*)Header;
     BitmapFontData.Type = Psf1Bitmap;
 
@@ -83,6 +84,7 @@ bool InitializeBitmapFont(void) {
 
     // (Fill out BitmapFontData{})
 
+    BitmapFontData.IsSupported = true;
     BitmapFontData.Header = (const void*)Header;
     BitmapFontData.Type = Psf2Bitmap;
 

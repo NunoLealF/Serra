@@ -13,7 +13,7 @@
 
   // Include definitions used throughout the graphics subsystem.
 
-  typedef struct _graphicsData {
+  typedef struct _graphicsSubsystemData {
 
     // (Mode information)
 
@@ -37,12 +37,12 @@
 
     } Colors[3];
 
-  } graphicsData;
+  } graphicsSubsystemData;
 
   // Include functions and global variables from Graphics.c (TODO)
 
-  extern graphicsData GraphicsData;
-  void InitializeGraphicsSubsystem(void* InfoTable);
+  extern graphicsSubsystemData GraphicsData;
+  bool InitializeGraphicsSubsystem(void* InfoTable);
 
   void DrawPixel(uint32 Color, uint16 PosX, uint16 PosY);
   void DrawRectangle(uint32 Color, uint16 PosX, uint16 PosY, uint16 Width, uint16 Height);

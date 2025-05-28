@@ -9,14 +9,16 @@
 
 // (TODO - Variables)
 
-graphicsData GraphicsData = {0};
+graphicsSubsystemData GraphicsData = {0};
 
 
 
 // (TODO - A function to initialize the graphics subsystem)
 // (This is required for the console subsystem later on.)
 
-void InitializeGraphicsSubsystem(void* InfoTable) {
+// Returns true if okay, false if not.
+
+bool InitializeGraphicsSubsystem(void* InfoTable) {
 
   // Before we do anything else, let's check that the pointer we were
   // given actually matches a commonInfoTable{} structure.
@@ -24,7 +26,7 @@ void InitializeGraphicsSubsystem(void* InfoTable) {
   commonInfoTable* Table = (commonInfoTable*)InfoTable;
 
   if (Table->Signature != commonInfoTableSignature) {
-    return;
+    return false;
   }
 
   // Next, let's check to see if we're in a graphics mode or not.
@@ -98,7 +100,7 @@ void InitializeGraphicsSubsystem(void* InfoTable) {
   // Return - the caller can check whether the graphics subsystem was
   // initialized correctly by checking GraphicsData.IsSupported.
 
-  return;
+  return true;
 
 }
 
