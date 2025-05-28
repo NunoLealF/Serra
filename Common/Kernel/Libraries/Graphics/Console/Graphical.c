@@ -132,7 +132,7 @@ void Print_Graphical(const char* String, uint8 Attribute) {
     // for*, as well as the amount of lines we need to *scroll*.
     // as well as the amount of lines we need to *clear*.
 
-    auto ClearLines = min((PosY - ConsoleData.LimitY + 1), (ConsoleData.LimitY - 1));
+    auto ClearLines = min((PosY + 1 - ConsoleData.LimitY), ConsoleData.LimitY);
     auto OffsetLines = (ConsoleData.LimitY - ClearLines);
 
     // Scroll every line back by `ClearLines`, using Memcpy().
@@ -151,7 +151,8 @@ void Print_Graphical(const char* String, uint8 Attribute) {
 
     // (Update the real PosY accordingly)
 
-    ConsoleData.PosY -= (ClearLines+1);
+    ConsoleData.PosY -= ClearLines;
+    PosY -= ClearLines;
 
   }
 
@@ -160,15 +161,14 @@ void Print_Graphical(const char* String, uint8 Attribute) {
 
   uint16 InitialPosition[2] = {ConsoleData.PosX, ConsoleData.PosY};
 
-  int TempIndex = 0;
-  char TempString[Index];
+  auto LineIndex = 0;
+  char LineString[Index];
 
   for (auto Character = 0; Character <= Index; Character++) {
 
     // (Iterate through the current character)
 
     bool DrawLine = false;
-    bool OverflowCharacter = false;
 
     switch (String[Character]) {
 
@@ -189,12 +189,12 @@ void Print_Graphical(const char* String, uint8 Attribute) {
 
       default:
         ConsoleData.PosX++;
-        TempString[TempIndex++] = String[Character];
+        LineString[LineIndex++] = String[Character];
 
     }
 
     // (If we've exceeded the current line's boundaries, move to the
-    // next line; otherwise, commit the current character to TempString.)
+    // next line; otherwise, commit the current character to LineString.)
 
     if (DrawLine == false) {
 
@@ -204,7 +204,6 @@ void Print_Graphical(const char* String, uint8 Attribute) {
         ConsoleData.PosY++;
 
         DrawLine = true;
-        OverflowCharacter = true;
 
       }
 
@@ -218,13 +217,12 @@ void Print_Graphical(const char* String, uint8 Attribute) {
       // (Commit the string (corresponding to the line we just finished)
       // to the framebuffer.)
 
-      TempString[TempIndex] = '\0';
-      DrawBitmapFont(TempString, &BitmapFontData, ForegroundColor, BackgroundColor, false, (InitialPosition[0] * BitmapFontData.Width), (InitialPosition[1] * BitmapFontData.Height));
+      LineString[LineIndex] = '\0';
+      DrawBitmapFont(LineString, &BitmapFontData, ForegroundColor, BackgroundColor, false, (InitialPosition[0] * BitmapFontData.Width), (InitialPosition[1] * BitmapFontData.Height));
 
-      // (Reset TempIndex, and if OverflowCharacter == true, then add
-      // the current character to TempString as well.)
+      // (Reset LineIndex, to start a new line.)
 
-      TempIndex = 0;
+      LineIndex = 0;
 
       // (Update InitialPosition[] to correspond to the start of the next
       // line's string, if applicable.)
