@@ -170,7 +170,7 @@ bool InitializeConsoleSubsystem(void* InfoTable) {
 // (EFI) -> convert to char16, check if EFI subsystem is ok, use ConOut
 // (Graphical) -> use DrawBitmapFont()
 
-void Print(const char* String, bool Important, uint32 BackgroundColor, uint32 ForegroundColor) {
+void Print(const char* String, bool Important, uint8 Attribute) {
 
   // (If the console is disabled, or both the Debug flag and `Important`
   // is false, return)
@@ -184,11 +184,11 @@ void Print(const char* String, bool Important, uint32 BackgroundColor, uint32 Fo
   // (Depending on the console type, pick the right function to print with)
 
   if (ConsoleData.Type == EfiConsole) {
-    PrintEfi(String, BackgroundColor, ForegroundColor);
+    PrintEfi(String, Attribute);
   } else if (ConsoleData.Type == GraphicalConsole) {
-    PrintGraphical(String, BackgroundColor, ForegroundColor);
+    PrintGraphical(String, Attribute);
   } else if (ConsoleData.Type == VgaConsole) {
-    PrintVga(String, BackgroundColor, ForegroundColor);
+    PrintVga(String, Attribute);
   }
 
   // (Return.)
