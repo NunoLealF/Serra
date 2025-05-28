@@ -9,16 +9,16 @@ SECTION .text
 
 EXTERN _SimdRegisterArea
 
-GLOBAL _Memcpy_RepMovsb
-GLOBAL _Memcpy_Sse2
-GLOBAL _Memcpy_Avx
-GLOBAL _Memcpy_Avx512f
+GLOBAL Memcpy_RepMovsb
+GLOBAL Memcpy_Sse2
+GLOBAL Memcpy_Avx
+GLOBAL Memcpy_Avx512f
 
 
 ; TODO - In theory this shouldn't alter any preserved registers.
 ; (void* Destination (RDI), const void* Source (RSI), uint64 Size (RDX))
 
-_Memcpy_RepMovsb:
+Memcpy_RepMovsb:
 
   ; `rep movsb` is an instruction that copies RCX bytes from [RSI] to
   ; [RDI], so let's map our registers accordingly:
@@ -75,7 +75,7 @@ _Memcpy_RepMovsb:
 
 ; (void* Destination (RDI), const void* Source (RSI), uint64 Size (RDX))
 
-_Memcpy_Sse2:
+Memcpy_Sse2:
 
   ; First, let's check if the destination addresses is 16-byte-
   ; -aligned, and if not, use `rep movsb` to copy the remainder.
@@ -211,7 +211,7 @@ _Memcpy_Sse2:
 
 ; (void* Destination (RDI), const void* Source (RSI), uint64 Size (RDX))
 
-_Memcpy_Avx:
+Memcpy_Avx:
 
   ; First, let's check if the destination address is 32-byte-aligned,
   ; and if not, use `rep movsb` to copy the remainder.
@@ -366,7 +366,7 @@ _Memcpy_Avx:
 
 ; (void* Destination (RDI), const void* Source (RSI), uint64 Size (RDX))
 
-_Memcpy_Avx512f:
+Memcpy_Avx512f:
 
   ; First, let's check if the destination address is 64-byte-aligned,
   ; and if not, use `rep movsb` to copy the remainder.

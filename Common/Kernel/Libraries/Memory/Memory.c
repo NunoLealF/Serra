@@ -6,28 +6,7 @@
 #include "../String.h"
 
 // (TODO - Write documentation)
-// [Platform-agnostic Memcpy - this should work everywhere]
-
-static inline void _Memcpy(void* Destination, const void* Source, uint64 Size) {
-
-  uint64 SourceAddress = (uint64)Source;
-  uint64 DestinationAddress = (uint64)Destination;
-
-  while (Size > 0) {
-
-    *(uint8*)(DestinationAddress++) = *(uint8*)(SourceAddress++);
-    Size--;
-
-  }
-
-  return;
-
-}
-
-
-
-// (TODO - Write documentation)
-// [Architecture-specific Memcpy - ...]
+// [Platform-specific Memcpy - for x64]
 
 #if defined(__amd64__) || defined(__x86_64__)
 
@@ -38,18 +17,18 @@ static inline void _Memcpy(void* Destination, const void* Source, uint64 Size) {
 
   // Optimized Memcpy() functions for x64 platforms, from x64/Memcpy.asm
 
-  extern void _Memcpy_RepMovsb(void* Destination, const void* Source, uint64 Size);
-  extern void _Memcpy_Sse2(void* Destination, const void* Source, uint64 Size);
-  extern void _Memcpy_Avx(void* Destination, const void* Source, uint64 Size);
-  extern void _Memcpy_Avx512f(void* Destination, const void* Source, uint64 Size);
+  extern void Memcpy_RepMovsb(void* Destination, const void* Source, uint64 Size);
+  extern void Memcpy_Sse2(void* Destination, const void* Source, uint64 Size);
+  extern void Memcpy_Avx(void* Destination, const void* Source, uint64 Size);
+  extern void Memcpy_Avx512f(void* Destination, const void* Source, uint64 Size);
 
   // Optimized Memset() functions for x64 platforms, from x64/Memset.asm
   // (Width *must* be one of 1, 2, 4 or 8.)
 
-  extern void _Memset_RepStosb(void* Buffer, uint8 Value, uint64 Size);
-  extern void _Memset_Sse2(void* Buffer, uint8 Value, uint64 Size);
-  extern void _Memset_Avx(void* Buffer, uint8 Value, uint64 Size);
-  extern void _Memset_Avx512f(void* Buffer, uint8 Value, uint64 Size);
+  extern void Memset_RepStosb(void* Buffer, uint8 Value, uint64 Size);
+  extern void Memset_Sse2(void* Buffer, uint8 Value, uint64 Size);
+  extern void Memset_Avx(void* Buffer, uint8 Value, uint64 Size);
+  extern void Memset_Avx512f(void* Buffer, uint8 Value, uint64 Size);
 
 #endif
 
@@ -91,16 +70,16 @@ void Memcpy(void* Destination, const void* Source, uint64 Size) {
 
     if ((Size < 2048) || (CpuFeaturesAvailable.Erms == true)) {
 
-      _Memcpy_RepMovsb(Destination, Source, Size);
+      Memcpy_RepMovsb(Destination, Source, Size);
 
     } else {
 
       if (CpuFeaturesAvailable.Avx512f == true) {
-        _Memcpy_Avx512f(Destination, Source, Size);
+        Memcpy_Avx512f(Destination, Source, Size);
       } else if (CpuFeaturesAvailable.Avx == true) {
-        _Memcpy_Avx(Destination, Source, Size);
+        Memcpy_Avx(Destination, Source, Size);
       } else {
-        _Memcpy_Sse2(Destination, Source, Size);
+        Memcpy_Sse2(Destination, Source, Size);
       }
 
     }
@@ -170,16 +149,16 @@ void Memset(void* Buffer, uint8 Character, uint64 Size) {
 
     if ((Size < 2048) || (CpuFeaturesAvailable.Erms == true)) {
 
-      _Memset_RepStosb(Buffer, Character, Size);
+      Memset_RepStosb(Buffer, Character, Size);
 
     } else {
 
       if (CpuFeaturesAvailable.Avx512f == true) {
-        _Memset_Avx512f(Buffer, Character, Size);
+        Memset_Avx512f(Buffer, Character, Size);
       } else if (CpuFeaturesAvailable.Avx == true) {
-        _Memset_Avx(Buffer, Character, Size);
+        Memset_Avx(Buffer, Character, Size);
       } else {
-        _Memset_Sse2(Buffer, Character, Size);
+        Memset_Sse2(Buffer, Character, Size);
       }
 
     }

@@ -9,16 +9,16 @@ SECTION .text
 
 EXTERN _SimdRegisterArea
 
-GLOBAL _Memset_RepStosb
-GLOBAL _Memset_Sse2
-GLOBAL _Memset_Avx
-GLOBAL _Memset_Avx512f
+GLOBAL Memset_RepStosb
+GLOBAL Memset_Sse2
+GLOBAL Memset_Avx
+GLOBAL Memset_Avx512f
 
 
 ; This function shouldn't change any preserved registers.
 ; (void* Buffer (RDI), uint8 Character (RSI), uint64 Size (RDX))
 
-_Memset_RepStosb:
+Memset_RepStosb:
 
   ; `rep stosb` is an instruction that fills RCX bytes at [RDI] with the
   ; value specified in AL, so let's map our registers accordingly:
@@ -78,7 +78,7 @@ _Memset_RepStosb:
 
 ; (void* Buffer (RDI), uint8 Character (RSI), uint64 Size (RDX))
 
-_Memset_Sse2:
+Memset_Sse2:
 
   ; First, let's check to see if the buffer address is 16-byte-aligned;
   ; and if not, use `rep stosb` to fill it out.)
@@ -221,7 +221,7 @@ _Memset_Sse2:
 
 ; (void* Buffer (RDI), uint8 Character (RSI), uint64 Size (RDX))
 
-_Memset_Avx:
+Memset_Avx:
 
   ; First, let's check to see if the buffer address is 32-byte-aligned;
   ; and if not, use `rep stosb` to fill it out.)
@@ -383,7 +383,7 @@ _Memset_Avx:
 
 ; (void* Buffer (RDI), uint8 Character (RSI), uint64 Size (RDX))
 
-_Memset_Avx512f:
+Memset_Avx512f:
 
   ; First, let's check to see if the buffer address is 64-byte-aligned;
   ; and if not, use `rep stosb` to fill it out.)
