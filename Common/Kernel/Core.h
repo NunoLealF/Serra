@@ -31,10 +31,4 @@
 
   // Declare global variables, used throughout the kernel.
 
-  #ifdef Debug
-    bool DebugFlag = Debug; // Defined by the preprocessor, use -DDebug=true or false.
-  #else
-    bool DebugFlag = true; // If 'Debug' isn't defined, then assume it's true
-  #endif
-
 #endif

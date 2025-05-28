@@ -33,8 +33,6 @@
 
   // Declare global variables, used throughout the kernel.
 
-  extern bool DebugFlag;
-
   #ifdef KernelMb
     #define KernelMemoryLimit (1048576ULL * KernelMb) // Defined by the preprocessor, use -DKernelMb=(%d).
   #else

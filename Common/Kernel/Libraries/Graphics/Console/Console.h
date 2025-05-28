@@ -37,6 +37,16 @@
   // Include functions and global variables from Console.c
 
   extern consoleSubsystemData ConsoleData;
+  extern bool ConsoleEnabled;
+  extern bool DebugFlag;
+
   bool InitializeConsoleSubsystem(void* InfoTable);
+  void Print(const char* String, bool Important, uint32 Color);
+
+  // Include functions from Efi.c (TODO)
+
+  // Include functions from Graphical.c (TODO)
+
+  // Include functions from Vga.c (TODO)
 
 #endif

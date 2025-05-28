@@ -7,9 +7,16 @@
 #include "../Graphics.h"
 #include "Console.h"
 
-// (TODO - Global variable)
+// (TODO - Global variables)
 
 consoleSubsystemData ConsoleData = {0};
+bool ConsoleEnabled = false;
+
+#ifdef Debug
+  bool DebugFlag = Debug; // Defined by the preprocessor, use -DDebug=true or false.
+#else
+  bool DebugFlag = true; // If 'Debug' isn't defined, then assume it's true
+#endif
 
 
 
@@ -134,8 +141,45 @@ bool InitializeConsoleSubsystem(void* InfoTable) {
 
   }
 
-  // (Return true.)
+  // (Enable the console (if applicable), and return true.)
 
+  ConsoleEnabled = ConsoleData.IsSupported;
   return true;
+
+}
+
+
+
+// (TODO: Something to print a string on the screen.)
+// (Not supported or DebugFlag == true) -> exit
+// (VGA) -> individual putc
+// (EFI) -> convert to char16, check if EFI subsystem is ok, use ConOut
+// (Graphical) -> use DrawBitmapFont()
+
+static void Scroll_Vga();
+static void Putchar_Vga();
+static void Print_Vga();
+
+static void Print_Efi();
+
+static void Scroll_Graphical();
+static void Print_Graphical();
+
+void Print(const char* String, bool Important, uint32 Color) {
+
+  // (If the console is disabled, or both the Debug flag and
+  // `Important` is false, return.)
+
+  if (ConsoleEnabled == false) {
+    return;
+  } else if ((DebugFlag == false) && (Important == false)) {
+    return;
+  }
+
+  // (Depending on the console type, pick the right function.)
+
+
+
+  // (Return.)
 
 }
