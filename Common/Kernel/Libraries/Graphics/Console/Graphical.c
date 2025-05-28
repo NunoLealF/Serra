@@ -44,7 +44,7 @@ static inline uint32 ConvertAttributeToRgb(uint8 Attribute) [[reproducible]] {
 // (TODO - Add a simple Print function, that interfaces with DrawBitmapFont(),
 // and breaks up the input stream into lines that can be written all at once)
 
-void PrintGraphical(const char* String, uint8 Attribute) {
+void Print_Graphical(const char* String, uint8 Attribute) {
 
   // (Convert our 'standard' 8-bit background+foreground color attribute
   // into their respective RGB values, like this)

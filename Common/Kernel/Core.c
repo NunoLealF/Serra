@@ -100,6 +100,10 @@ void KernelCore(commonInfoTable* InfoTable) {
 
   }
 
+  // (Test Print)
+
+  Print("\n\r[Testing text output 12345]", true, 0x0F);
+
   // (Depending on the system type, either wait for a keypress or just
   // stall the system for a while)
 

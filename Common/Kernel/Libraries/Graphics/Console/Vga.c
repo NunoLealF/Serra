@@ -12,7 +12,7 @@
 
 // (TODO - Add a simple Putchar/Print function, as in the BIOS loader)
 
-void PrintVga(const char* String, uint8 Attribute) {
+void Print_Vga(const char* String, uint8 Attribute) {
 
   // (TODO TODO TODO TODO / Display something / TODO TODO TODO TODO TODO TODO)
 

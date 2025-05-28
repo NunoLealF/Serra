@@ -45,14 +45,15 @@
 
   // Include functions from Efi.c (TODO)
 
-  void PrintEfi(const char* String, uint8 Attribute);
+  void Putchar_Efi(const char Character, int32 Attribute);
+  void Print_Efi(const char* String, int32 Attribute);
 
   // Include functions from Graphical.c (TODO)
 
-  void PrintGraphical(const char* String, uint8 Attribute);
+  void Print_Graphical(const char* String, uint8 Attribute);
 
   // Include functions from Vga.c (TODO)
 
-  void PrintVga(const char* String, uint8 Attribute);
+  void Print_Vga(const char* String, uint8 Attribute);
 
 #endif

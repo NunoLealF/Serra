@@ -184,11 +184,17 @@ void Print(const char* String, bool Important, uint8 Attribute) {
   // (Depending on the console type, pick the right function to print with)
 
   if (ConsoleData.Type == EfiConsole) {
-    PrintEfi(String, Attribute);
+
+    Print_Efi(String, (int32)Attribute);
+
   } else if (ConsoleData.Type == GraphicalConsole) {
-    PrintGraphical(String, Attribute);
+
+    Print_Graphical(String, Attribute);
+
   } else if (ConsoleData.Type == VgaConsole) {
-    PrintVga(String, Attribute);
+    
+    Print_Vga(String, Attribute);
+
   }
 
   // (Return.)
