@@ -155,8 +155,8 @@ void Print_Graphical(const char* String, uint8 Attribute) {
 
   }
 
-  // (Now, that we've scrolled, we can call DrawBitmapFont() to draw each
-  // line as needed.)
+  // (Now that we've finished scrolling, we can call DrawBitmapFont() to
+  // draw each line as needed.)
 
   uint16 InitialPosition[2] = {ConsoleData.PosX, ConsoleData.PosY};
 
@@ -165,23 +165,81 @@ void Print_Graphical(const char* String, uint8 Attribute) {
 
   for (auto Character = 0; Character <= Index; Character++) {
 
-    // (TODO - I need to essentially go through String again until I need
-    // to show a new line, etc. again.. I apologize if this doesnt make
-    // sense, I'm really tired)
+    // (Iterate through the current character)
 
-    // (TODO: Actually do this properly)
-    // (TODO: Actually do this properly)
-    // (TODO: Actually do this properly)
-    // (TODO: Actually do this properly)
-    // (TODO: Actually do this properly)
-    // (TODO: Actually do this properly)
-    // (TODO: Actually do this properly)
-    // (TODO: Actually do this properly)
-    // (TODO: Actually do this properly)
-    // (TODO: Actually do this properly)
-    // (TODO: Actually do this properly)
-    // (TODO: Actually do this properly)
-    // (TODO: Actually do this properly)
+    bool DrawLine = false;
+    bool OverflowCharacter = false;
+
+    switch (String[Character]) {
+
+      // (Handle special characters - these need `DrawLine` to be
+      // set to true.)
+
+      case '\n':
+        ConsoleData.PosY++;
+        [[fallthrough]];
+      case '\r':
+        ConsoleData.PosX = 0;
+        [[fallthrough]];
+      case '\0':
+        DrawLine = true;
+        break;
+
+      // (Handle regular characters)
+
+      default:
+        ConsoleData.PosX++;
+
+    }
+
+    // (If we've exceeded the current line's boundaries, move to the
+    // next line; otherwise, commit the current character to TempString.)
+
+    if (DrawLine == false) {
+
+      if (ConsoleData.PosX >= ConsoleData.LimitX) {
+
+        ConsoleData.PosX -= ConsoleData.LimitX;
+        ConsoleData.PosY++;
+
+        DrawLine = true;
+        OverflowCharacter = true;
+
+      } else {
+
+        TempString[TempIndex++] = String[Character];
+
+      }
+
+    }
+
+    // (If `DrawLine` is true, draw the line we just finished, and move
+    // onto the next line (if applicable))
+
+    if (DrawLine == true) {
+
+      // (Commit the string (corresponding to the line we just finished)
+      // to the framebuffer.)
+
+      TempString[TempIndex] = '\0';
+      DrawBitmapFont(TempString, &BitmapFontData, ForegroundColor, BackgroundColor, false, (InitialPosition[0] * BitmapFontData.Width), (InitialPosition[1] * BitmapFontData.Height));
+
+      // (Reset TempIndex, and if OverflowCharacter == true, then add
+      // the current character to TempString as well.)
+
+      TempIndex = 0;
+
+      if (OverflowCharacter == true) {
+        TempString[TempIndex++] = String[Character];
+      }
+
+      // (Update InitialPosition[] to correspond to the start of the next
+      // line's string, if applicable.)
+
+      InitialPosition[0] = ConsoleData.PosX;
+      InitialPosition[1] = ConsoleData.PosY;
+
+    }
 
   }
 
