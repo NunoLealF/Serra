@@ -177,6 +177,14 @@
   #define null 0
   #define NULL null
 
+  // [Useful macros/definitions]
+
+  #define Min(a, b) ((a < b) ? a : b)
+  #define min(a, b) (Min(a, b))
+
+  #define Max(a, b) ((a > b) ? a : b)
+  #define max(a, b) (Max(a, b))
+
   // [Macros/definitions for variadic functions]
 
   // (We just use <stdarg.h> because this is difficult to implement, and
