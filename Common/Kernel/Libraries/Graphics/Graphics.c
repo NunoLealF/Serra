@@ -126,7 +126,7 @@ static inline bool CanExecuteOperation(uint16 PosX, uint16 PosY) {
 // (TODO - A static function that translates an RGB color value into one
 // accepted by the framebuffer)
 
-static inline uint64 TranslateRgbColorValue(uint32 Color) {
+static inline uint64 TranslateRgbColorValue(uint32 Color) [[reproducible]] {
 
   // This uses the lookup tables we computed earlier (in GraphicsData{})
   // to help speed things up.

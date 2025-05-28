@@ -41,12 +41,18 @@
   extern bool DebugFlag;
 
   bool InitializeConsoleSubsystem(void* InfoTable);
-  void Print(const char* String, bool Important, uint32 Color);
+  void Print(const char* String, bool Important, uint32 BackgroundColor, uint32 ForegroundColor);
 
   // Include functions from Efi.c (TODO)
 
+  void PrintEfi(const char* String, uint32 BackgroundColor, uint32 ForegroundColor);
+
   // Include functions from Graphical.c (TODO)
 
+  void PrintGraphical(const char* String, uint32 BackgroundColor, uint32 ForegroundColor);
+
   // Include functions from Vga.c (TODO)
+
+  void PrintVga(const char* String, uint32 BackgroundColor, uint32 ForegroundColor);
 
 #endif
