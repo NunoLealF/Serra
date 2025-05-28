@@ -246,7 +246,7 @@ void DrawBitmapFont(const char* String, const bitmapFontData* Font, uint32 Foreg
     // Finally, let's make sure that we're in a graphics mode, and that
     // we won't draw anywhere "out of bounds".
 
-    uint16 LimitX = (PosX + (Font->Width * Length));
+    uint16 LimitX = (PosX + (Font->Width * (Length - 1)));
     uint16 LimitY = (PosY + (Font->Height));
 
     if (CanExecuteOperation(LimitX, LimitY) == true) {
