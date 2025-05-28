@@ -3,6 +3,7 @@
 // For more information, please refer to the accompanying license agreement. <3
 
 #include "../../Stdint.h"
+#include "../../../Constructors/Firmware/Firmware.h"
 #include "../../../../Common.h"
 #include "../Graphics.h"
 #include "Console.h"
@@ -133,6 +134,19 @@ bool InitializeConsoleSubsystem(void* InfoTable) {
     // If we're in an EFI text mode, then that means we have a hardware-
     // -supported framebuffer that displays characters for us, with a well-
     // -defined limit, and with no need to keep track of the position.
+
+    // (Check that EFI tables have been initialized; if not, try to
+    /// initialize it ourselves, and if that fails, return)
+
+    if (gST == NULL) {
+
+      InitializeEfiTables(Table->Firmware.Efi.SystemTable.Pointer);
+
+      if (gST != Table->Firmware.Efi.SystemTable.Pointer) {
+        return false;
+      }
+
+    }
 
     // (Set the limits to what's specified by commonInfoTable{})
 
