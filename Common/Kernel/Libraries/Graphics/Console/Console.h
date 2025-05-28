@@ -50,10 +50,12 @@
 
   // Include functions from Graphical.c (TODO)
 
+  void Putchar_Graphical(const char Character, uint8 Attribute);
   void Print_Graphical(const char* String, uint8 Attribute);
 
   // Include functions from Vga.c (TODO)
 
+  void Putchar_Vga(const char Character, uint8 Attribute);
   void Print_Vga(const char* String, uint8 Attribute);
 
 #endif

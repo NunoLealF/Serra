@@ -10,6 +10,20 @@
 
 
 
+// (TODO - Putchar)
+
+void Putchar_Vga(const char Character, uint8 Attribute) {
+
+  // (TODO TODO TODO TODO / Display something / TODO TODO TODO TODO TODO TODO)
+
+  // (Return.)
+
+  return;
+
+}
+
+
+
 // (TODO - Add a simple Putchar/Print function, as in the BIOS loader)
 
 void Print_Vga(const char* String, uint8 Attribute) {

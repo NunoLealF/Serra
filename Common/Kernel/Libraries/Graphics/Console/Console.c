@@ -192,7 +192,7 @@ void Print(const char* String, bool Important, uint8 Attribute) {
     Print_Graphical(String, Attribute);
 
   } else if (ConsoleData.Type == VgaConsole) {
-    
+
     Print_Vga(String, Attribute);
 
   }

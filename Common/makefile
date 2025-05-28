@@ -134,7 +134,7 @@ Kernel/Libraries/Graphics/Console/Efi.o:
 
 Kernel/Libraries/Graphics/Console/Graphical.o:
 	@echo "Building $@"
-	@$(CC) $(CFLAGS) -c Kernel/Libraries/Graphics/Console/Graphical.c -o Kernel/Libraries/Graphics/Console/Graphical.o
+	@$(CC) $(CFLAGS) -Wno-sign-compare -c Kernel/Libraries/Graphics/Console/Graphical.c -o Kernel/Libraries/Graphics/Console/Graphical.o
 
 Kernel/Libraries/Graphics/Console/Vga.o:
 	@echo "Building $@"
