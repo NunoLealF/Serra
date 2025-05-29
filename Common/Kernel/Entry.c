@@ -494,17 +494,22 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
 
 
 
-  // [Initialize non-platform-specific global variables]
+  // [Initialize the kernel environment]
 
   // Now that we've checked that the information table really *is* valid, we
-  // can move onto preparing the environment for the kernel, by
-  // setting up global variables. (TODO, rewrite this..)
+  // can move onto preparing the environment for the kernel.
 
-  // At this point, some incorrectly compiled position-independent executables
+  // (At this point, some incorrectly compiled position-independent executables
   // might fail to correctly reference global variables, so we also try
-  // to check for that.
+  // to check for that.)
 
-  // (Set up EFI variables.)
+  // (Set up platform-specific constructors)
+
+  if (InfoTable->System.Architecture == x64Architecture) {
+    InitializeCpuFeatures();
+  }
+
+  // (Set up EFI-specific global variables)
 
   if (InfoTable->Firmware.Type == EfiFirmware) {
 
@@ -516,8 +521,7 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
 
   }
 
-  // (Set up graphics-specific constructors (?))
-  // TODO - This is incredibly messy and badly documented (!!!!!!!)
+  // (Initialize the console and graphics subsystems)
 
   if (InitializeBitmapFont() == false) {
     return EntrypointCouldntInitializeBitmapFont;
@@ -527,34 +531,19 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
     return EntrypointCouldntInitializeConsoleSubsystem;
   }
 
-  // (Set up platform-specific constructors)
+  // (TODO - Initialize the memory management subsystem)
 
-  if (InfoTable->System.Architecture == x64Architecture) {
-    InitializeCpuFeatures();
-  }
+  // (TODO - Initialize timing and interrupt subsystems)
 
-
-
-
-  // [Set up the kernel environment]
-
-  // (TODO: If we're booting from EFI, set up alternate translations? Or
-  // anything that might require us to restore environment)
-
-  // (TODO: Set up any essential interfaces, get CPUID data, etc.)
-
-  // (TODO: Set up video interfaces, for text output and such)
-
-  // (TODO: Set up memory management)
-
-  // (TODO: Set up interrupts - for now, just timers)
-
-  // (TODO: Set up drivers)
+  // (TODO - Initialize filesystem drivers)
 
 
 
 
-  // [Call the kernel]
+  // [Call the main kernel function]
+
+  // Now that we've finished setting up the kernel environment, we can
+  // safely call KernelCore().
 
   KernelCore(InfoTable);
 
@@ -563,7 +552,18 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
 
   // [Restore bootloader status, and return]
 
-  // (TODO: ...)
+  // (TODO - This basically just tells the bootloader the correct
+  // console position by updating `InfoTable`)
+
+  if (ConsoleData.IsSupported == true) {
+
+    InfoTable->Display.Text.PosX = ConsoleData.PosX;
+    InfoTable->Display.Text.PosY = ConsoleData.PosY;
+
+  }
+
+  // Now that we're done, we can return and transfer control back
+  // to the bootloader.
 
   return EntrypointSuccess;
 

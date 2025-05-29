@@ -1469,7 +1469,7 @@ void S3Bootloader(void) {
 
 
 
-  // [Prepare kernel environment]
+  // [Prepare the kernel environment, and transfer control]
 
   Putchar('\n', 0);
   Message(Boot, "Preparing the kernel environment.");
@@ -1478,33 +1478,15 @@ void S3Bootloader(void) {
 
   CommonInfoTable.Memory.PreserveUntilOffset = Offset;
 
-  uint8* RawCommonInfoTable = (uint8*)(&CommonInfoTable);
-  uint16 ChecksumSize = (sizeof(CommonInfoTable) - sizeof(CommonInfoTable.Checksum));
-
-  for (auto Offset = 0; Offset < ChecksumSize; Offset++) {
-    CommonInfoTable.Checksum += RawCommonInfoTable[Offset];
-  }
-
-  Message(Ok, "Successfully calculated information table checksum (%xh).", CommonInfoTable.Checksum);
-
-
-
-
-  // [Transferring control to the kernel]
-
-  Putchar('\n', 0);
-  Message(Boot, "Transferring control to the kernel.");
-
-  Message(Info, "Preparing to call TransitionStub() at %xh", &TransitionStub);
+  Message(Info, "Calling TransitionStub() at %xh", &TransitionStub);
   Message(Info, "(commonInfoTable*) InfoTable -> %xh", (uint32)(&CommonInfoTable));
   Message(Info, "(void*) Pml4 -> %xh", (uint32)Pml4);
 
-
-  // (TODO: Wait until we have a proper graphics implementation set up.)
+  // (Set up graphics mode, if applicable.)
 
   if (SupportsVbe == true) {
 
-    Message(Info, "Setting VBE mode %d.", BestVbeMode);
+    Message(Boot, "Setting VBE mode %d.", BestVbeMode);
     uint32 VbeStatusCode = SetVbeMode(BestVbeMode, false, true, true, NULL);
 
     // (If it didn't correctly set the VBE mode, switch back to text mode
@@ -1527,11 +1509,39 @@ void S3Bootloader(void) {
 
   }
 
+  // (Set up text mode, if applicable.)
+
+  if (SupportsVbe == false) {
+
+    CommonInfoTable.Display.Type = VgaDisplay;
+
+    CommonInfoTable.Display.Text.LimitX = TerminalTable.LimitX;
+    CommonInfoTable.Display.Text.LimitY = TerminalTable.LimitY;
+
+    CommonInfoTable.Display.Text.PosX = TerminalTable.PosX;
+    CommonInfoTable.Display.Text.PosY = TerminalTable.PosY;
+
+  }
+
+  // (Update any additional fields within the information table.)
+
+  CommonInfoTable.Memory.PreserveUntilOffset = Offset;
+
+  // (Calculate the information table checksum.)
+
+  uint8* RawInfoTable = (uint8*)(&CommonInfoTable);
+  uint16 ChecksumSize = (sizeof(CommonInfoTable) - sizeof(CommonInfoTable.Checksum));
+
+  for (auto Offset = 0; Offset < ChecksumSize; Offset++) {
+    CommonInfoTable.Checksum += RawInfoTable[Offset];
+  }
+
   Putchar('\n', 0);
 
   // (Actually transfer control to the kernel.)
 
   entrypointReturnStatus EntrypointStatusCode = TransitionStub(&CommonInfoTable, (void*)Pml4);
+
 
 
 
@@ -1545,7 +1555,8 @@ void S3Bootloader(void) {
 
   RestoreState();
 
-  // (If VBE graphics mode is enabled, switch back to text mode)
+  // (Depending on whether graphics mode is enabled, either switch back
+  // to text mode, or update the console/terminal position.)
 
   if (SupportsVbe == true) {
 
@@ -1560,6 +1571,14 @@ void S3Bootloader(void) {
 
     InitializeTerminal(80, 25, 0xB8000);
     ClearTerminal();
+
+  } else {
+
+    // Update TerminalTable to contain updated positions; this helps
+    // sync the kernel console with the bootloader terminal.
+
+    TerminalTable.PosX = CommonInfoTable.Display.Text.PosX;
+    TerminalTable.PosX = CommonInfoTable.Display.Text.PosY;
 
   }
 
