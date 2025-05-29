@@ -15,6 +15,9 @@
   int Strlen(const char* String);
   int StrlenWide(const char16* String);
 
+  char* Strrev(char* String);
+  char* Itoa(uint64 Number, char* Buffer, uint8 Base);
+
   // Include memory-related functions from Memory/Memory.c
 
   void Memcpy(void* Destination, const void* Source, uint64 Size);

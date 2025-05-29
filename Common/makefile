@@ -132,6 +132,14 @@ Kernel/Libraries/Graphics/Console/Efi.o:
 	@echo "Building $@"
 	@$(CC) $(CFLAGS) -c Kernel/Libraries/Graphics/Console/Efi.c -o Kernel/Libraries/Graphics/Console/Efi.o
 
+Kernel/Libraries/Graphics/Console/Exceptions.o:
+	@echo "Building $@"
+	@$(CC) $(CFLAGS) -c Kernel/Libraries/Graphics/Console/Exceptions.c -o Kernel/Libraries/Graphics/Console/Exceptions.o
+
+Kernel/Libraries/Graphics/Console/Format.o:
+	@echo "Building $@"
+	@$(CC) $(CFLAGS) -c Kernel/Libraries/Graphics/Console/Format.c -o Kernel/Libraries/Graphics/Console/Format.o
+
 Kernel/Libraries/Graphics/Console/Graphical.o:
 	@echo "Building $@"
 	@$(CC) $(CFLAGS) -Wno-sign-compare -c Kernel/Libraries/Graphics/Console/Graphical.c -o Kernel/Libraries/Graphics/Console/Graphical.o
@@ -164,6 +172,6 @@ Kernel/System/x64/Cpu.o:
 
 # Link everything into one .elf file
 
-Kernel/Kernel.elf: Kernel/Entry.o Kernel/Core.o Kernel/Constructors/Firmware/Efi.o Kernel/Constructors/System/x64.o Kernel/Libraries/String.o Kernel/Libraries/Graphics/Graphics.o Kernel/Libraries/Graphics/Console/Console.o Kernel/Libraries/Graphics/Console/Efi.o Kernel/Libraries/Graphics/Console/Graphical.o Kernel/Libraries/Graphics/Console/Vga.o Kernel/Libraries/Graphics/Fonts/Bitmap.o Kernel/Libraries/Memory/Memory.o Kernel/Libraries/Memory/x64/Memcpy.o Kernel/Libraries/Memory/x64/Memset.o Kernel/System/x64/Cpu.o
+Kernel/Kernel.elf: Kernel/Entry.o Kernel/Core.o Kernel/Constructors/Firmware/Efi.o Kernel/Constructors/System/x64.o Kernel/Libraries/String.o Kernel/Libraries/Graphics/Graphics.o Kernel/Libraries/Graphics/Console/Console.o Kernel/Libraries/Graphics/Console/Efi.o Kernel/Libraries/Graphics/Console/Exceptions.o Kernel/Libraries/Graphics/Console/Format.o Kernel/Libraries/Graphics/Console/Graphical.o Kernel/Libraries/Graphics/Console/Vga.o Kernel/Libraries/Graphics/Fonts/Bitmap.o Kernel/Libraries/Memory/Memory.o Kernel/Libraries/Memory/x64/Memcpy.o Kernel/Libraries/Memory/x64/Memset.o Kernel/System/x64/Cpu.o
 	@echo "Building $@"
 	@$(CC) -T Linker.ld $(LDFLAGS) -o Kernel/Kernel.elf -ffreestanding -nolibc -nostdlib -lgcc $^

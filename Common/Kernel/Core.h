@@ -9,6 +9,7 @@
 
   #include "Libraries/Stdint.h"
   #include "Libraries/String.h"
+  #include "Libraries/Stdio.h"
   #include "Libraries/Graphics/Graphics.h"
   #include "../Common.h"
 
