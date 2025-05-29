@@ -1469,10 +1469,10 @@ void S3Bootloader(void) {
 
 
 
-  // [Prepare the kernel environment, and transfer control]
+  // [Prepare to transfer control to the kernel]
 
   Putchar('\n', 0);
-  Message(Boot, "Preparing the kernel environment.");
+  Message(Boot, "Preparing to transfer control to the kernel.");
 
   // Let's set up the remaining bits of the information table.
 
