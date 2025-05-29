@@ -28,15 +28,192 @@ void KernelCore(commonInfoTable* InfoTable) {
 
   }
 
-  // (Test Print)
+  // (Test out Message())
 
-  Print("Hi, this is graphics-mode Serra! <3\n\r", true, 0x0F);
+  Message(Kernel, "Hi, welcome to kernel-mode Serra! <3\n\r");
 
-  for (uint8 Attribute = 0; Attribute < 0x0F; Attribute++) {
-    Print("May 29 2025", true, 0x3F);
-    Putchar(' ', true, 0);
-    Print("[Attribute]\n\r", true, Attribute);
+  Message(Info, "InfoTable->Version = %d | InfoTable->Size = %d bytes", InfoTable->Version, InfoTable->Size);
+
+  if (InfoTable->Disk.AccessMethod == UnknownMethod) {
+
+    Message(Info, "InfoTable::Disk.AccessMethod = 0 (`UnknownMethod`)");
+
+  } else if (InfoTable->Disk.AccessMethod == EfiFsMethod) {
+
+    Message(Info, "InfoTable::Disk.AccessMethod = 1 (`EfiFsMethod`)");
+
+    Message(Info, "InfoTable::Disk::EfiFs @ (FileInfo = %xh, HandleList = %xh, Handle = %xh, Protocol = %xh)",
+                   InfoTable->Disk.EfiFs.FileInfo.Address, InfoTable->Disk.EfiFs.HandleList.Address,
+                   InfoTable->Disk.EfiFs.Handle.Address, InfoTable->Disk.EfiFs.Protocol.Address);
+
+  } else if (InfoTable->Disk.AccessMethod == Int13Method) {
+
+    Message(Info, "InfoTable::Disk.AccessMethod = 2 (`Int13Method`)");
+
+    Message(Info, "InfoTable::Disk::Int13.DriveNumber = %xh", InfoTable->Disk.Int13.DriveNumber);
+    Message(Info, "InfoTable::Disk::Int13::Edd @ (IsEnabled = `%s`, Table = %xh)",
+                  (InfoTable->Disk.Int13.Edd.IsEnabled ? "true" : "false"),
+                   InfoTable->Disk.Int13.Edd.Table.Address);
+
   }
+
+  if (InfoTable->Display.Type == VgaDisplay) {
+    Message(Info, "InfoTable::Display.Type = 1 (`VgaDisplay`)");
+  } else if (InfoTable->Display.Type == VbeDisplay) {
+    Message(Info, "InfoTable::Display.Type = 2 (`VbeDisplay`)");
+  } else if (InfoTable->Display.Type == EfiTextDisplay) {
+    Message(Info, "InfoTable::Display.Type = 3 (`EfiTextDisplay`)");
+  } else if (InfoTable->Display.Type == GopDisplay) {
+    Message(Info, "InfoTable::Display.Type = 4 (`GopDisplay`)");
+  }
+
+  if (GraphicsData.IsSupported == true) {
+
+    Message(Info, "InfoTable::Display::Edid.IsSupported = `%s`",
+                  (InfoTable->Display.Edid.IsSupported ? "true" : "false"));
+
+    Message(Info, "InfoTable::Display::Edid.PreferredResolution = [%d, %d]",
+                   InfoTable->Display.Edid.PreferredResolution[0],
+                   InfoTable->Display.Edid.PreferredResolution[1]);
+
+    Message(Info, "InfoTable::Display::Edid.Table = %xh", InfoTable->Display.Edid.Table.Address);
+
+    Message(Info, "InfoTable::Display::Graphics @ (Framebuffer = %xh, Pitch = %d)",
+                   InfoTable->Display.Graphics.Framebuffer.Address,
+                   InfoTable->Display.Graphics.Pitch);
+
+    Message(Info, "InfoTable::Display::Graphics @ (LimitX = %d, LimitY = %d)",
+                   InfoTable->Display.Graphics.LimitX, InfoTable->Display.Graphics.LimitY);
+
+    Message(Info, "InfoTable::Display::Graphics::Bits.PerPixel = %d", InfoTable->Display.Graphics.Bits.PerPixel);
+    Message(Info, "InfoTable::Display::Graphics::Bits @ (RedMask = %xh, GreenMask = %xh, BlueMask = %xh)",
+                   InfoTable->Display.Graphics.Bits.RedMask, InfoTable->Display.Graphics.Bits.GreenMask,
+                   InfoTable->Display.Graphics.Bits.BlueMask);
+
+
+  } else if (ConsoleData.IsSupported == true) {
+
+    if (InfoTable->Display.Text.Format == AsciiFormat) {
+      Message(Info, "InfoTable::Display::Text.Format = 1 (`AsciiFormat`)");
+    } else if (InfoTable->Display.Text.Format == Utf16Format) {
+      Message(Info, "InfoTable::Display::Text.Format = 2 (`Utf16Format`)");
+    }
+
+    Message(Info, "InfoTable::Display::Text @ (PosX = %d, PosY = %d)",
+                   InfoTable->Display.Text.PosX, InfoTable->Display.Text.PosY);
+
+    Message(Info, "InfoTable::Display::Text @ (LimitX = %d, LimitY = %d)",
+                   InfoTable->Display.Text.LimitX, InfoTable->Display.Text.LimitY);
+
+  }
+
+
+  if (InfoTable->Firmware.Type == UnknownFirmware) {
+
+    Message(Info, "InfoTable::Firmware.Type = 0 (`UnknownFirmware`)");
+
+  } else if (InfoTable->Firmware.Type == BiosFirmware) {
+
+    Message(Info, "InfoTable::Firmware.Type = 1 (`BiosFirmware`)");
+
+    if (InfoTable->Firmware.Bios.A20 == EnabledByUnknown) {
+      Message(Info, "InfoTable::Firmware::Bios.A20 = 0 (`EnabledByUnknown`)");
+    } else if (InfoTable->Firmware.Bios.A20 == EnabledByDefault) {
+      Message(Info, "InfoTable::Firmware::Bios.A20 = 1 (`EnabledByDefault`)");
+    } else if (InfoTable->Firmware.Bios.A20 == EnabledByKeyboard) {
+      Message(Info, "InfoTable::Firmware::Bios.A20 = 2 (`EnabledByKeyboard`)");
+    } else if (InfoTable->Firmware.Bios.A20 == EnabledByFast) {
+      Message(Info, "InfoTable::Firmware::Bios.A20 = 3 (`EnabledByFast`)");
+    }
+
+    Message(Info, "InfoTable::Firmware::Bios::Mmap @ (NumEntries = %d, EntrySize = %d)",
+                   InfoTable->Firmware.Bios.Mmap.NumEntries, InfoTable->Firmware.Bios.Mmap.EntrySize);
+
+    Message(Info, "InfoTable::Firmware::Bios::Mmap.List = %xh", InfoTable->Firmware.Bios.Mmap.List.Address);
+
+    Message(Info, "InfoTable::Firmware::Bios::Pat @ (IsSupported = `%s`, Value = %xh)",
+                  (InfoTable->Firmware.Bios.Pat.IsSupported == true ? "true" : "false"),
+                   InfoTable->Firmware.Bios.Pat.Value);
+
+    Message(Info, "InfoTable::Firmware::Bios::PciBios @ (IsSupported = `%s`, Table = %xh)",
+                  (InfoTable->Firmware.Bios.PciBios.IsSupported == true ? "true" : "false"),
+                   InfoTable->Firmware.Bios.PciBios.Table.Address);
+
+    Message(Info, "InfoTable::Firmware::Bios::Vbe @ (IsSupported = `%s`, ModeNumber = %d)",
+                  (InfoTable->Firmware.Bios.Vbe.IsSupported == true ? "true" : "false"),
+                   InfoTable->Firmware.Bios.Vbe.ModeNumber);
+
+    Message(Info, "InfoTable::Firmware::Bios::Vbe @ (InfoBlock = %xh, ModeInfo = %xh)",
+                   InfoTable->Firmware.Bios.Vbe.InfoBlock.Address,
+                   InfoTable->Firmware.Bios.Vbe.ModeInfo.Address);
+
+  } else if (InfoTable->Firmware.Type == EfiFirmware) {
+
+    Message(Info, "InfoTable::Firmware.Type = 2 (`EfiFirmware`)");
+
+    Message(Info, "InfoTable::Firmware::Efi @ (ImageHandle = %xh, SystemTable = %xh)",
+                   InfoTable->Firmware.Efi.ImageHandle.Address,
+                   InfoTable->Firmware.Efi.SystemTable.Address);
+
+    Message(Info, "InfoTable::Firmware::Efi @ (SupportsConIn = `%s`, SupportsConOut = `%s`)",
+                   (InfoTable->Firmware.Efi.SupportsConIn == true ? "true" : "false"),
+                   (InfoTable->Firmware.Efi.SupportsConOut == true ? "true" : "false"));
+
+    Message(Info, "InfoTable::Firmware::Efi::Gop @ (IsSupported = `%s`, Protocol = %xh)",
+                  (InfoTable->Firmware.Efi.Gop.IsSupported == true ? "true" : "false"),
+                   InfoTable->Firmware.Efi.Gop.Protocol.Address);
+
+    Message(Info, "InfoTable::Firmware::Efi::Mmap @ (NumEntries = %d, EntrySize = %d)",
+                   InfoTable->Firmware.Efi.Mmap.NumEntries, InfoTable->Firmware.Efi.Mmap.EntrySize);
+
+    Message(Info, "InfoTable::Firmware::Efi::Mmap.List = %xh", InfoTable->Firmware.Efi.Mmap.List.Address);
+
+  }
+
+  Message(Info, "InfoTable::Image @ (StackTop = %xh, StackSize = %d)",
+                 InfoTable->Image.StackTop.Address, InfoTable->Image.StackSize);
+
+  if (InfoTable->Image.Type == ElfImageType) {
+    Message(Info, "InfoTable::Image.Type = 1 (`ElfImageType`)");
+  }
+
+  Message(Info, "InfoTable::Image::Executable @ (Entrypoint = %xh, Header = %xh)",
+                 InfoTable->Image.Executable.Entrypoint.Address,
+                 InfoTable->Image.Executable.Header.Address);
+
+  Message(Info, "InfoTable::Memory @ (NumEntries = %d, List = %xh)",
+                 InfoTable->Memory.NumEntries, InfoTable->Memory.List.Address);
+
+  Message(Info, "InfoTable::Memory.PreserveUntilOffset = %xh",
+                 InfoTable->Memory.PreserveUntilOffset);
+
+  if (InfoTable->System.Architecture == UnknownArchitecture) {
+    Message(Info, "InfoTable::System.Architecture = 0 (`UnknownArchitecture`)");
+  } else if (InfoTable->System.Architecture == x64Architecture) {
+    Message(Info, "InfoTable::System.Architecture = 1 (`x64Architecture`)");
+  }
+
+  Message(Info, "InfoTable::System::Acpi @ (IsSupported = `%s`, Table = %xh)",
+                (InfoTable->System.Acpi.IsSupported == true ? "true" : "false"),
+                 InfoTable->System.Acpi.Table.Address);
+
+  if (InfoTable->System.Architecture == x64Architecture) {
+
+    Message(Info, "InfoTable::System::Cpu::x64 @ (Cr0 = %xh, Cr3 = %xh)",
+                   InfoTable->System.Cpu.x64.Cr0, InfoTable->System.Cpu.x64.Cr3);
+
+    Message(Info, "InfoTable::System::Cpu::x64 @ (Cr4 = %xh, Efer = %xh)",
+                   InfoTable->System.Cpu.x64.Cr4, InfoTable->System.Cpu.x64.Efer);
+
+  }
+
+  Message(Info, "InfoTable::System::Smbios @ (IsSupported = `%s`, Table = %xh)",
+                (InfoTable->System.Smbios.IsSupported == true ? "true" : "false"),
+                 InfoTable->System.Smbios.Table.Address);
+
+  Message(Info, "InfoTable->Checksum = %xh", InfoTable->Checksum);
+
+
 
   // (Depending on the system type, either wait for a keypress or just
   // stall the system for a while)
