@@ -19,8 +19,18 @@ my goal is to have it ready by **early June**.
 &nbsp;
 
 <p align="center">
-  <img src="Branding/Boot-process.png" alt="A write-up of Serra's boot process"></img>
+  <img src="Branding/Boot-process2.png"></img>
 </p>
+
+<details>
+
+  <summary>An older write-up of Serra's boot process</summary>
+
+  <p align="center">
+    <img src="Branding/Boot-process.png" alt="A write-up of Serra's boot process"></img>
+  </p>
+
+</details>
 
 &nbsp;
 
