@@ -41,6 +41,8 @@
   extern bool DebugFlag;
 
   bool InitializeConsoleSubsystem(void* InfoTable);
+
+  void Putchar(const char Character, bool Important, uint8 Attribute);
   void Print(const char* String, bool Important, uint8 Attribute);
 
   // Include functions from Efi.c (TODO)

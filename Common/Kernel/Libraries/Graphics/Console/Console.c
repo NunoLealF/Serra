@@ -164,11 +164,38 @@ bool InitializeConsoleSubsystem(void* InfoTable) {
 
 
 
-// (TODO: Something to print a string on the screen.)
-// (Not supported or DebugFlag == true) -> exit
-// (VGA) -> individual putc
-// (EFI) -> convert to char16, check if EFI subsystem is ok, use ConOut
-// (Graphical) -> use DrawBitmapFont()
+// (TODO: Like Print(), but for characters)
+
+void Putchar(const char Character, bool Important, uint8 Attribute) {
+
+  // (If the console is disabled, or both the Debug flag and `Important`
+  // is false, return)
+
+  if (ConsoleEnabled == false) {
+    return;
+  } else if ((DebugFlag == false) && (Important == false)) {
+    return;
+  }
+
+  // (Depending on the console type, pick the right function to print with)
+
+  if (ConsoleData.Type == EfiConsole) {
+    Putchar_Efi(Character, (int32)Attribute);
+  } else if (ConsoleData.Type == GraphicalConsole) {
+    Putchar_Graphical(Character, Attribute);
+  } else if (ConsoleData.Type == VgaConsole) {
+    Putchar_Vga(Character, Attribute);
+  }
+
+  // (Return.)
+
+  return;
+
+}
+
+
+
+// (TODO: Something to print a string on the screen - can be VGA/EFI/graphical)
 
 void Print(const char* String, bool Important, uint8 Attribute) {
 
@@ -184,19 +211,15 @@ void Print(const char* String, bool Important, uint8 Attribute) {
   // (Depending on the console type, pick the right function to print with)
 
   if (ConsoleData.Type == EfiConsole) {
-
     Print_Efi(String, (int32)Attribute);
-
   } else if (ConsoleData.Type == GraphicalConsole) {
-
     Print_Graphical(String, Attribute);
-
   } else if (ConsoleData.Type == VgaConsole) {
-
     Print_Vga(String, Attribute);
-
   }
 
   // (Return.)
+
+  return;
 
 }

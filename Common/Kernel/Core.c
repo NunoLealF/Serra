@@ -31,10 +31,11 @@ void KernelCore(commonInfoTable* InfoTable) {
   // (Test Print)
 
   Print("Hi, this is graphics-mode Serra! <3\n\r", true, 0x0F);
-  Print("May 28 2025\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\r", true, 0x3F);
 
-  for (uint8 Attribute = 0; Attribute < 0xFF; Attribute++) {
-    Print("[Attribute test lorem ipsum dor sit amet]", true, Attribute);
+  for (uint8 Attribute = 0; Attribute < 0x0F; Attribute++) {
+    Print("May 29 2025", true, 0x3F);
+    Putchar(' ', true, 0);
+    Print("[Attribute]\n\r", true, Attribute);
   }
 
   // (Depending on the system type, either wait for a keypress or just

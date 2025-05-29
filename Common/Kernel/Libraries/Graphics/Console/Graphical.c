@@ -67,11 +67,11 @@ void Print_Graphical(const char* String, uint8 Attribute) {
   uint32 BackgroundColor = ConvertAttributeToRgb(Attribute >> 4);
   uint32 ForegroundColor = ConvertAttributeToRgb(Attribute & 0x0F);
 
-  // (Iterate through the string, and try to figure out the necessary
-  // "displacement" - this lets us scroll enough in advance, and as
-  // a bonus, we also calculate the length through `Index`)
+  // Iterate through the string, and try to figure out the necessary
+  // "displacement" - this lets us scroll enough in advance (and as
+  // a bonus, we also calculate the length through `Index`).
 
-  int Index = 0;
+  auto Index = 0;
 
   uint32 PosX = ConsoleData.PosX;
   uint32 PosY = ConsoleData.PosY;
@@ -123,8 +123,8 @@ void Print_Graphical(const char* String, uint8 Attribute) {
 
   }
 
-  // (If `PosY` >= `ConsoleData.LimitY`, then that means we need to
-  // scroll before we can continue, so let's do that)
+  // Now that we know the displacement of our string, let's check whether
+  // we need to scroll (PosY >= ConsoleData.LimitY), and if so, do that.
 
   if (PosY >= ConsoleData.LimitY) {
 
@@ -133,7 +133,7 @@ void Print_Graphical(const char* String, uint8 Attribute) {
     // as well as the amount of lines we need to *clear*.
 
     auto ClearLines = min((PosY + 1 - ConsoleData.LimitY), ConsoleData.LimitY);
-    auto OffsetLines = (ConsoleData.LimitY - ClearLines);
+    auto ScrollLines = (ConsoleData.LimitY - ClearLines);
 
     // Scroll every line back by `ClearLines`, using Memcpy().
     // (TODO - This would benefit from double buffering, it's slow)
@@ -143,37 +143,35 @@ void Print_Graphical(const char* String, uint8 Attribute) {
 
     Memcpy((void*)Framebuffer,
            (const void*)(Framebuffer + (ClearLines * Multiplier)),
-           (uint64)(OffsetLines * Multiplier));
+           (uint64)(ScrollLines * Multiplier));
 
-    // (Clear out the last few lines, using Memset())
+    // (Clear out the last few lines, using Memset(), and update PosY
+    // to correspond to the start of those lines)
 
-    Memset((void*)(Framebuffer + (OffsetLines * Multiplier)), 0, (ClearLines * Multiplier));
-
-    // (Update the real PosY accordingly)
+    Memset((void*)(Framebuffer + (ScrollLines * Multiplier)),
+           (uint8)0x00,
+           (ClearLines * Multiplier));
 
     ConsoleData.PosY -= ClearLines;
-    PosY -= ClearLines;
 
   }
 
-  // (Now that we've finished scrolling, we can call DrawBitmapFont() to
-  // draw each line as needed.)
+  // Finally, now that we've finished scrolling, we can call DrawBitmapFont()
+  // to draw each line as needed.
 
   uint16 InitialPosition[2] = {ConsoleData.PosX, ConsoleData.PosY};
 
   auto LineIndex = 0;
   char LineString[Index];
 
-  for (auto Character = 0; Character <= Index; Character++) {
-
-    // (Iterate through the current character)
+  for (auto Position = 0; Position <= Index; Position++) {
 
     bool DrawLine = false;
 
-    switch (String[Character]) {
+    switch (String[Position]) {
 
       // (Handle special characters - these need `DrawLine` to be
-      // set to true.)
+      // set to true)
 
       case '\n':
         ConsoleData.PosY++;
@@ -189,7 +187,7 @@ void Print_Graphical(const char* String, uint8 Attribute) {
 
       default:
         ConsoleData.PosX++;
-        LineString[LineIndex++] = String[Character];
+        LineString[LineIndex++] = String[Position];
 
     }
 
