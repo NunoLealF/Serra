@@ -7,7 +7,7 @@
 DEFAULT REL
 SECTION .text
 
-EXTERN _SimdRegisterArea
+EXTERN SimdRegisterArea
 
 GLOBAL Memset_RepStosb
 GLOBAL Memset_Sse2
@@ -121,7 +121,7 @@ Memset_Sse2:
 
     ; (Save the current state of the SSE registers, using `fxsave`)
 
-    fxsave [_SimdRegisterArea]
+    fxsave [SimdRegisterArea]
 
     ; (Calculate the amount of 256-byte blocks we'll need to fill out
     ; in R9, and leave the remainder in RCX.)
@@ -211,7 +211,7 @@ Memset_Sse2:
 
   .Cleanup:
 
-    fxrstor [_SimdRegisterArea]
+    fxrstor [SimdRegisterArea]
     ret
 
 
@@ -270,7 +270,7 @@ Memset_Avx:
     mov rax, 0FFFFFFFFFFFFFFFFh
     mov rdx, 0FFFFFFFFFFFFFFFFh
 
-    xsave [_SimdRegisterArea]
+    xsave [SimdRegisterArea]
 
     pop rdx
     pop rax
@@ -369,7 +369,7 @@ Memset_Avx:
     mov rax, 0FFFFFFFFFFFFFFFFh
     mov rdx, 0FFFFFFFFFFFFFFFFh
 
-    xrstor [_SimdRegisterArea]
+    xrstor [SimdRegisterArea]
 
     pop rdx
     pop rax
@@ -432,7 +432,7 @@ Memset_Avx512f:
     mov rax, 0FFFFFFFFFFFFFFFFh
     mov rdx, 0FFFFFFFFFFFFFFFFh
 
-    xsave [_SimdRegisterArea]
+    xsave [SimdRegisterArea]
 
     pop rdx
     pop rax
@@ -561,7 +561,7 @@ Memset_Avx512f:
     mov rax, 0FFFFFFFFFFFFFFFFh
     mov rdx, 0FFFFFFFFFFFFFFFFh
 
-    xrstor [_SimdRegisterArea]
+    xrstor [SimdRegisterArea]
 
     pop rdx
     pop rax

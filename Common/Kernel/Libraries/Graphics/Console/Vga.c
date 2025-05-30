@@ -6,29 +6,6 @@
 #include "../../String.h"
 #include "Console.h"
 
-// (TODO - Add a function to scroll the framebuffer, that hopefully isn't
-// extremely slow (hopefully my optimized Memcpy shines here))
-
-
-
-// (TODO - Putchar)
-
-void Putchar_Vga(const char Character, uint8 Attribute) {
-
-  // Construct a temporary string with our character, and call
-  // Print_Graphical with it.
-
-  char String[] = {Character, '\0'};
-  Print_Vga(String, Attribute);
-
-  // Now that we're done, return.
-
-  return;
-
-}
-
-
-
 // (TODO - Add a simple Putchar/Print function, as in the BIOS loader)
 
 void Print_Vga(const char* String, uint8 Attribute) {
@@ -180,6 +157,24 @@ void Print_Vga(const char* String, uint8 Attribute) {
   }
 
   // (Return.)
+
+  return;
+
+}
+
+
+
+// (TODO - Putchar)
+
+void Putchar_Vga(const char Character, uint8 Attribute) {
+
+  // Construct a temporary string with our character, and call
+  // Print_Graphical with it.
+
+  char String[] = {Character, '\0'};
+  Print_Vga(String, Attribute);
+
+  // Now that we're done, return.
 
   return;
 

@@ -45,11 +45,6 @@
   void Putchar(const char Character, bool Important, uint8 Attribute);
   void Print(const char* String, bool Important, uint8 Attribute);
 
-  // Include platform-specific functions from Efi.c
-
-  void Putchar_Efi(const char Character, int32 Attribute);
-  void Print_Efi(const char* String, int32 Attribute);
-
   // Include message functions and data structures from Exceptions.c
 
   typedef enum _messageType : int8 {
@@ -71,15 +66,4 @@
 
   void Printf(const char* String, bool Important, uint8 Color, ...);
   void vPrintf(const char* String, bool Important, uint8 Color, va_list Arguments);
-
-  // Include platform-specific functions from Graphical.c
-
-  void Putchar_Graphical(const char Character, uint8 Attribute);
-  void Print_Graphical(const char* String, uint8 Attribute);
-
-  // Includeplatform-specific  functions from Vga.c
-
-  void Putchar_Vga(const char Character, uint8 Attribute);
-  void Print_Vga(const char* String, uint8 Attribute);
-
 #endif

@@ -38,24 +38,6 @@ static inline uint32 ConvertAttributeToRgb(uint8 Attribute) [[reproducible]] {
 
 
 
-// (TODO - Like Print but for a single character)
-
-void Putchar_Graphical(const char Character, uint8 Attribute) {
-
-  // Construct a temporary string with our character, and call
-  // Print_Graphical with it.
-
-  char String[] = {Character, '\0'};
-  Print_Graphical(String, Attribute);
-
-  // Now that we're done, return.
-
-  return;
-
-}
-
-
-
 // (TODO - Add a simple Print function, that interfaces with DrawBitmapFont(),
 // and breaks up the input stream into lines that can be written all at once)
 
@@ -231,6 +213,24 @@ void Print_Graphical(const char* String, uint8 Attribute) {
     }
 
   }
+
+  return;
+
+}
+
+
+
+// (TODO - Like Print but for a single character)
+
+void Putchar_Graphical(const char Character, uint8 Attribute) {
+
+  // Construct a temporary string with our character, and call
+  // Print_Graphical with it.
+
+  char String[] = {Character, '\0'};
+  Print_Graphical(String, Attribute);
+
+  // Now that we're done, return.
 
   return;
 

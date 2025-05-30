@@ -7,7 +7,7 @@
 DEFAULT REL
 SECTION .text
 
-EXTERN _SimdRegisterArea
+EXTERN SimdRegisterArea
 
 GLOBAL Memcpy_RepMovsb
 GLOBAL Memcpy_Sse2
@@ -117,7 +117,7 @@ Memcpy_Sse2:
 
     ; (Save the current state of the SSE registers, using `fxsave`)
 
-    fxsave [_SimdRegisterArea]
+    fxsave [SimdRegisterArea]
 
     ; (Calculate the number of 256-byte 'blocks' we need to move in R9)
 
@@ -201,7 +201,7 @@ Memcpy_Sse2:
 
   .Cleanup:
 
-    fxrstor [_SimdRegisterArea]
+    fxrstor [SimdRegisterArea]
     ret
 
 
@@ -259,7 +259,7 @@ Memcpy_Avx:
     mov rax, 0FFFFFFFFFFFFFFFFh
     mov rdx, 0FFFFFFFFFFFFFFFFh
 
-    xsave [_SimdRegisterArea]
+    xsave [SimdRegisterArea]
 
     pop rdx
     pop rax
@@ -352,7 +352,7 @@ Memcpy_Avx:
     mov rax, 0FFFFFFFFFFFFFFFFh
     mov rdx, 0FFFFFFFFFFFFFFFFh
 
-    xrstor [_SimdRegisterArea]
+    xrstor [SimdRegisterArea]
 
     pop rdx
     pop rax
@@ -414,7 +414,7 @@ Memcpy_Avx512f:
     mov rax, 0FFFFFFFFFFFFFFFFh
     mov rdx, 0FFFFFFFFFFFFFFFFh
 
-    xsave [_SimdRegisterArea]
+    xsave [SimdRegisterArea]
 
     pop rdx
     pop rax
@@ -539,7 +539,7 @@ Memcpy_Avx512f:
     mov rax, 0FFFFFFFFFFFFFFFFh
     mov rdx, 0FFFFFFFFFFFFFFFFh
 
-    xrstor [_SimdRegisterArea]
+    xrstor [SimdRegisterArea]
 
     pop rdx
     pop rax

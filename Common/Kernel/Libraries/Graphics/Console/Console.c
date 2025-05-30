@@ -166,6 +166,10 @@ bool InitializeConsoleSubsystem(void* InfoTable) {
 
 // (TODO: Like Print(), but for characters)
 
+extern void Putchar_Efi(const char Character, int32 Attribute);
+extern void Putchar_Graphical(const char Character, uint8 Attribute);
+extern void Putchar_Vga(const char Character, uint8 Attribute);
+
 void Putchar(const char Character, bool Important, uint8 Attribute) {
 
   // (If the console is disabled, or both the Debug flag and `Important`
@@ -196,6 +200,10 @@ void Putchar(const char Character, bool Important, uint8 Attribute) {
 
 
 // (TODO: Something to print a string on the screen - can be VGA/EFI/graphical)
+
+extern void Print_Efi(const char* String, int32 Attribute);
+extern void Print_Graphical(const char* String, uint8 Attribute);
+extern void Print_Vga(const char* String, uint8 Attribute);
 
 void Print(const char* String, bool Important, uint8 Attribute) {
 

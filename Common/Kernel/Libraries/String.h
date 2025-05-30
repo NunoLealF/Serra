@@ -8,9 +8,8 @@
   // Include standard and/or necessary headers.
 
   #include "Stdint.h"
-  #include "../Constructors/System/System.h"
 
-  // Include formatting and string-related functions from String.c
+  // Include formatting and string-related functions from String/String.c
 
   int Strlen(const char* String);
   int StrlenWide(const char16* String);
@@ -18,7 +17,7 @@
   char* Strrev(char* String);
   char* Itoa(uint64 Number, char* Buffer, uint8 Base);
 
-  // Include memory-related functions from Memory/Memory.c
+  // Include memory-related functions from String/Memory.c
 
   void Memcpy(void* Destination, const void* Source, uint64 Size);
   void* memcpy(void* Destination, const void* Source, uint64 Size);

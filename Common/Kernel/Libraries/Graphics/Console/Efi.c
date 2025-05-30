@@ -26,31 +26,6 @@ static char16* ConvertToWideString(char16* Buffer, const char* String) {
 
 
 
-// (TODO - Interfaces with gST->ConOut, prints a single character)
-
-void Putchar_Efi(const char Character, int32 Attribute) {
-
-  // Temporarily store the current color attribute, and set the
-  // one we were given.
-
-  int32 SaveAttribute = gST->ConOut->Mode->Attribute;
-  gST->ConOut->SetAttribute(gST->ConOut, Attribute);
-
-  // Create a 'wide' string (one character long) with our character,
-  // and display it using ..->OutputString()
-
-  char16 String[] = {(char16)Character, u'\0'};
-  gST->ConOut->OutputString(gST->ConOut, String);
-
-  // (Restore the previous color attribute, and return)
-
-  gST->ConOut->SetAttribute(gST->ConOut, SaveAttribute);
-  return;
-
-}
-
-
-
 // (TODO - Interfaces with gST->ConOut, prints a string)
 
 void Print_Efi(const char* String, int32 Attribute) {
@@ -73,6 +48,31 @@ void Print_Efi(const char* String, int32 Attribute) {
   // position and scrolling, so we don't have to do anything else)
 
   gST->ConOut->OutputString(gST->ConOut, WideString);
+
+  // (Restore the previous color attribute, and return)
+
+  gST->ConOut->SetAttribute(gST->ConOut, SaveAttribute);
+  return;
+
+}
+
+
+
+// (TODO - Interfaces with gST->ConOut, prints a single character)
+
+void Putchar_Efi(const char Character, int32 Attribute) {
+
+  // Temporarily store the current color attribute, and set the
+  // one we were given.
+
+  int32 SaveAttribute = gST->ConOut->Mode->Attribute;
+  gST->ConOut->SetAttribute(gST->ConOut, Attribute);
+
+  // Create a 'wide' string (one character long) with our character,
+  // and display it using ..->OutputString()
+
+  char16 String[] = {(char16)Character, u'\0'};
+  gST->ConOut->OutputString(gST->ConOut, String);
 
   // (Restore the previous color attribute, and return)
 
