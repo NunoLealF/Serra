@@ -189,8 +189,8 @@ void Memset(void* Buffer, uint8 Character, uint64 Size) {
 
 }
 
-void* memset(void* Buffer, uint8 Value, uint64 Size) {
-  Memset(Buffer, Value, Size); return Buffer;
+void* memset(void* Buffer, int Value, uint64 Size) {
+  Memset(Buffer, (uint8)Value, Size); return Buffer;
 }
 
 

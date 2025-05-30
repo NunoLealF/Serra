@@ -191,7 +191,7 @@ uint32 GetFatEntry(uint32 ClusterNum, uint32 PartitionOffset, uint32 FatOffset, 
   uint8 Buffer[LogicalSectorSize];
   Memset(&Buffer[0], '\0', LogicalSectorSize);
 
-  realModeTable* Table = ReadFatSector(1, (uint32)(int)&Buffer[0], SectorOffset);
+  const realModeTable* Table = ReadFatSector(1, (uint32)(int)&Buffer[0], SectorOffset);
 
   // Finally, we want to see if it succeeded, and if it did, return the corresponding entry
   // from the FAT; otherwise, return zero.
@@ -481,7 +481,7 @@ bool ReadFile(void* Address, fatDirectory Entry, uint8 SectorsPerCluster, uint32
 
       // Read from the disk, and see if it failed
 
-      realModeTable* Table = ReadFatSector(SectorsToRead, (uint32)((int)Address + Offset), (PartitionOffset + DataOffset + ClusterOffset + SectorNum));
+      const realModeTable* Table = ReadFatSector(SectorsToRead, (uint32)((int)Address + Offset), (PartitionOffset + DataOffset + ClusterOffset + SectorNum));
       Offset += (LogicalSectorSize * SectorsToRead);
 
       if (hasFlag(Table->Eflags, CarryFlag)) {

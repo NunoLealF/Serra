@@ -8,7 +8,7 @@
 /* elfProgramHeader* GetProgramHeader()
 
    Inputs: uintptr Start - The start of the file in memory;
-           elfHeader* ElfHeader - A pointer to the file's ELF header;
+           const elfHeader* ElfHeader - A pointer to the file's ELF header;
            uint16 Index - The index of the program header you want to get.
 
    Outputs: elfProgramHeader* - A pointer to the program header (if it was
@@ -27,7 +27,7 @@
 
 */
 
-elfProgramHeader* GetProgramHeader(uintptr Start, elfHeader* ElfHeader, uint16 Index) {
+elfProgramHeader* GetProgramHeader(uintptr Start, const elfHeader* ElfHeader, uint16 Index) {
 
   // First, does the index even make sense?
 
@@ -46,7 +46,7 @@ elfProgramHeader* GetProgramHeader(uintptr Start, elfHeader* ElfHeader, uint16 I
 /* elfSectionHeader* GetSectionHeader()
 
    Inputs: uintptr Start - The start of the file in memory;
-           elfHeader* ElfHeader - A pointer to the file's ELF header;
+           const elfHeader* ElfHeader - A pointer to the file's ELF header;
            uint16 Index - The index of the section header you want to get.
 
    Outputs: elfSectionHeader* - A pointer to the section header (if it was
@@ -65,7 +65,7 @@ elfProgramHeader* GetProgramHeader(uintptr Start, elfHeader* ElfHeader, uint16 I
 
 */
 
-elfSectionHeader* GetSectionHeader(uintptr Start, elfHeader* ElfHeader, uint16 Index) {
+elfSectionHeader* GetSectionHeader(uintptr Start, const elfHeader* ElfHeader, uint16 Index) {
 
   // First, does the index even make sense?
 
@@ -85,7 +85,7 @@ elfSectionHeader* GetSectionHeader(uintptr Start, elfHeader* ElfHeader, uint16 I
 
    Inputs: uintptr Start - The start of the file in memory;
 
-           elfSectionHeader* StringSection - A pointer to the file's ELF
+           const elfSectionHeader* StringSection - A pointer to the file's ELF
            section header (you can use GetSectionHeader() for this);
 
            uint32 NameOffset - The offset of the section name within the
@@ -107,7 +107,7 @@ elfSectionHeader* GetSectionHeader(uintptr Start, elfHeader* ElfHeader, uint16 I
 
 */
 
-const char* GetElfSectionString(uintptr Start, elfSectionHeader* StringSection, uint32 NameOffset) {
+const char* GetElfSectionString(uintptr Start, const elfSectionHeader* StringSection, uint32 NameOffset) {
 
   // Are we actually looking at a string section?
 

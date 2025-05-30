@@ -46,10 +46,10 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
 
   uint16 Checksum = 0;
   uint16 ChecksumSize = (InfoTable->Size - sizeof(InfoTable->Checksum));
-  uint8* RawData = (uint8*)InfoTable;
+  const uint8* RawInfoTable = (const uint8*)InfoTable;
 
-  for (auto Offset = 0; Offset < ChecksumSize; Offset++) {
-    Checksum += RawData[Offset];
+  for (auto Position = 0; Position < ChecksumSize; Position++) {
+    Checksum += RawInfoTable[Position];
   }
 
   if (InfoTable->Checksum != Checksum) {
@@ -374,9 +374,9 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
 
     // (Check whether the pitch (number of bytes per scanline) looks sane)
 
-    uint64 MinimumPitch = (InfoTable->Display.Graphics.LimitX * (InfoTable->Display.Graphics.Bits.PerPixel / 8));
+    uint64 MinPitch = (InfoTable->Display.Graphics.LimitX * (InfoTable->Display.Graphics.Bits.PerPixel / 8));
 
-    if (InfoTable->Display.Graphics.Pitch < MinimumPitch) {
+    if (InfoTable->Display.Graphics.Pitch < MinPitch) {
       return EntrypointDisplayInvalidGraphicsData;
     }
 

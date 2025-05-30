@@ -1060,7 +1060,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
     // (Get program header, and make sure that it's loadable (.Type == 1)
     // or dynamic (.Type == 2))
 
-    elfProgramHeader* Program = GetProgramHeader((uint64)KernelHeader, Index);
+    const elfProgramHeader* Program = GetProgramHeader((uint64)KernelHeader, Index);
 
     if ((Program->Type != 1) && (Program->Type != 2)) {
       continue;
@@ -1468,7 +1468,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
     if (MmapPositionThreshold < NumMmapEntries) {
 
-      efiMemoryDescriptor* NextEntry = GetMmapEntry(Mmap, MmapDescriptorSize, MmapPositionThreshold);
+      const efiMemoryDescriptor* NextEntry = GetMmapEntry(Mmap, MmapDescriptorSize, MmapPositionThreshold);
 
       if (NextEntry->PhysicalStart < (Start + Size)) {
 
@@ -1732,10 +1732,10 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   // byte in the table, up to the Checksum element)
 
   uint16 ChecksumSize = CommonInfoTable.Size - sizeof(CommonInfoTable.Checksum);
-  uint8* RawCommonInfoTable = (uint8*)(&CommonInfoTable);
+  const uint8* RawInfoTable = (const uint8*)(&CommonInfoTable);
 
-  for (uint16 Offset = 0; Offset < ChecksumSize; Offset++) {
-    CommonInfoTable.Checksum += RawCommonInfoTable[Offset];
+  for (auto Position = 0; Position < ChecksumSize; Position++) {
+    CommonInfoTable.Checksum += RawInfoTable[Position];
   }
 
   // Finally, transfer control to the kernel - we keep track of the return

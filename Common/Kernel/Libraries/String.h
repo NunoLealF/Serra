@@ -20,11 +20,16 @@
   // Include memory-related functions from Memory/Memory.c
 
   void Memcpy(void* Destination, const void* Source, uint64 Size);
-  void* memcpy(void* Destination, const void* Source, uint64 Size);
-
   void Memset(void* Buffer, uint8 Character, uint64 Size);
-  void* memset(void* Buffer, uint8 Character, uint64 Size);
-
   void MemsetBlock(void* Buffer, const void* Block, uint64 Size, uint64 BlockSize);
+
+  // Even in a freestanding environment, compilers will sometimes still
+  // emit calls to memcpy, memcmp, memset and memmove, so we need to
+  // provide wrappers for those.
+
+  // (It's true they already exist, but they aren't named identically)
+
+  void* memcpy(void*, const void*, uint64);
+  void* memset(void*, int, uint64);
 
 #endif

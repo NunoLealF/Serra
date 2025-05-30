@@ -62,7 +62,7 @@ bool memcmp(const void* BufferA, const void* BufferB, uint32 Size) {
 /* void Memcpy()
 
    Inputs:  void* Destination - The memory area you want to copy data to.
-            void* Source - The memory area you want to copy data from.
+            const void* Source - The memory area you want to copy data from.
             uint32 Size - The size of both memory areas, in bytes.
 
    Outputs: (None)
@@ -80,7 +80,7 @@ bool memcmp(const void* BufferA, const void* BufferB, uint32 Size) {
 
 */
 
-void Memcpy(void* Destination, void* Source, uint32 Size) {
+void Memcpy(void* Destination, const void* Source, uint32 Size) {
 
   // Translate each (const) void* pointer into a (const) uint8* pointer.
 

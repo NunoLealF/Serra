@@ -269,7 +269,6 @@ uint16 FindBestVbeMode(uint16* VbeModeList, uint16 PreferredX_Resolution, uint16
   bool Supports24bColor = false;
 
   vbeModeInfoBlock VbeModeInfo;
-  uint32 VbeReturnStatus;
 
   // Then, let's just go through each mode until we reach FFFFh (which indicates that we're
   // at the end of the list)
@@ -280,7 +279,7 @@ uint16 FindBestVbeMode(uint16* VbeModeList, uint16 PreferredX_Resolution, uint16
     // out anything that doesn't have bit 0 (supported) and 7 (uses linear
     // framebuffer) set, as well as any non-direct (MemoryModel != 6) modes.
 
-    VbeReturnStatus = GetVbeModeInfo(&VbeModeInfo, *VbeModeList);
+    uint32 VbeReturnStatus = GetVbeModeInfo(&VbeModeInfo, *VbeModeList);
 
     if (VbeReturnStatus != 0x004F) {
 

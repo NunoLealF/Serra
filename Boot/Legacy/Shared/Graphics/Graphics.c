@@ -92,7 +92,7 @@ static void Scroll(void) {
   uint32 Offset = 2 * TerminalTable.LimitX;
 
   void* Destination = (void*)(TerminalTable.Framebuffer);
-  void* Source = (void*)(TerminalTable.Framebuffer + Offset);
+  const void* Source = (const void*)(TerminalTable.Framebuffer + Offset);
 
   Memmove(Destination, Source, Size);
 

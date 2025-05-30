@@ -227,7 +227,7 @@ void Putchar_Graphical(const char Character, uint8 Attribute) {
   // Construct a temporary string with our character, and call
   // Print_Graphical with it.
 
-  char String[] = {Character, '\0'};
+  const char String[] = {Character, '\0'};
   Print_Graphical(String, Attribute);
 
   // Now that we're done, return.

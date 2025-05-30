@@ -376,7 +376,7 @@ void S3Bootloader(void) {
   // Next, we just need to isolate all the usable entries, and deal
   // with overlapping entries.
 
-  uint8 UsableMmapBuffer[sizeof(usableMmapEntry) * NumUsableMmapEntries];
+  uint8 UsableMmapBuffer[sizeof(usableMmapEntry) * NumUsableMmapEntries] = {};
   usableMmapEntry* UsableMmap = (usableMmapEntry*)UsableMmapBuffer;
 
   uint64 MinStart = 0;
@@ -1300,7 +1300,7 @@ void S3Bootloader(void) {
     // (Get program header, and make sure that it's loadable (.Type == 1)
     // or dynamic (.Type == 2))
 
-    elfProgramHeader* Program = GetProgramHeader(KernelImage, KernelHeader, Index);
+    const elfProgramHeader* Program = GetProgramHeader(KernelImage, KernelHeader, Index);
 
     if ((Program->Type != 1) && (Program->Type != 2)) {
       continue;
@@ -1603,11 +1603,11 @@ void S3Bootloader(void) {
 
   // (Calculate the information table checksum.)
 
-  uint8* RawInfoTable = (uint8*)(&CommonInfoTable);
   uint16 ChecksumSize = (sizeof(CommonInfoTable) - sizeof(CommonInfoTable.Checksum));
+  const uint8* RawInfoTable = (const uint8*)(&CommonInfoTable);
 
-  for (auto Offset = 0; Offset < ChecksumSize; Offset++) {
-    CommonInfoTable.Checksum += RawInfoTable[Offset];
+  for (auto Position = 0; Position < ChecksumSize; Position++) {
+    CommonInfoTable.Checksum += RawInfoTable[Position];
   }
 
   Putchar('\n', 0);

@@ -92,8 +92,8 @@
 
   // ELF-related functions, from Elf.c
 
-  elfProgramHeader* GetProgramHeader(uintptr Start, elfHeader* ElfHeader, uint16 Index);
-  elfSectionHeader* GetSectionHeader(uintptr Start, elfHeader* ElfHeader, uint16 Index);
-  const char* GetElfSectionString(uintptr Start, elfSectionHeader* StringSection, uint32 NameOffset);
+  elfProgramHeader* GetProgramHeader(uintptr Start, const elfHeader* ElfHeader, uint16 Index);
+  elfSectionHeader* GetSectionHeader(uintptr Start, const elfHeader* ElfHeader, uint16 Index);
+  const char* GetElfSectionString(uintptr Start, const elfSectionHeader* StringSection, uint32 NameOffset);
 
 #endif
