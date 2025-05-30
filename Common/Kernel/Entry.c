@@ -483,17 +483,13 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
       return EntrypointSystemUnsupportedArchitecture;
     }
 
-  #endif
-
-  if (InfoTable->System.Architecture == x64Architecture) {
-
     // (Check that the CPUID instruction is supported)
 
     if (QueryCpuid(0, 0).Rax == 0) {
       return EntrypointSystemDoesntSupportCpuid;
     }
 
-  }
+  #endif
 
 
 
@@ -509,9 +505,9 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
 
   // (Set up platform-specific constructors)
 
-  if (InfoTable->System.Architecture == x64Architecture) {
+  #if defined(__amd64__) || defined(__x86_64__)
     InitializeCpuFeatures();
-  }
+  #endif
 
   // (Set up EFI-specific global variables)
 

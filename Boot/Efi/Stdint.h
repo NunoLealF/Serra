@@ -158,9 +158,9 @@
   static_assert((sizeof(uint32) == 4), "`uint32` has incorrect size.");
   static_assert((sizeof(uint64) == 8), "`uint64` has incorrect size.");
 
-  static_assert((sizeof(intptr) == 8), "`intptr` has incorrect size.");
-  static_assert((sizeof(uintptr) == 8), "`uintptr` has incorrect size.");
-
+  static_assert((sizeof(intptr) == 8), "`intptr` has incorrect size - are you on a 64-bit platform?");
+  static_assert((sizeof(uintptr) == 8), "`uintptr` has incorrect size - are you on a 64-bit platform?");
+  
   // [Other integer/pointer types]
 
   #define intmax 0x7FFFFFFFFFFFFFFF

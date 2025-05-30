@@ -112,8 +112,8 @@
   static_assert((sizeof(uint32) == 4), "`uint32` has incorrect size.");
   static_assert((sizeof(uint64) == 8), "`uint64` has incorrect size.");
 
-  static_assert((sizeof(intptr) == 4), "`intptr` has incorrect size.");
-  static_assert((sizeof(uintptr) == 4), "`uintptr` has incorrect size.");
+  static_assert((sizeof(intptr) == 4), "`intptr` has incorrect size - are you on a 32-bit platform?");
+  static_assert((sizeof(uintptr) == 4), "`uintptr` has incorrect size - are you on a 32-bit platform?");
 
   // [Other integer/pointer types]
 
