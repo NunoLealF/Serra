@@ -9,7 +9,7 @@
 
   #if defined(__amd64__) || defined(__x86_64__)
 
-    // Include definitions and structures from x64.c
+    // Include definitions and structures from Amd64.c
 
     #define SystemPageSize 4096
 
@@ -36,7 +36,7 @@
       uint64 Rax, Rbx, Rcx, Rdx;
     } __attribute__ ((packed)) cpuidRegisterTable;
 
-    // Include functions and global variables from x64.c
+    // Include functions and global variables from Amd64.c
 
     extern cpuFeaturesAvailable CpuFeaturesAvailable;
     void InitializeCpuFeatures(void);

@@ -7,7 +7,7 @@
 #include "../../System/System.h"
 
 // (TODO - Write documentation)
-// [Platform-specific Memcpy - for x64]
+// [Platform-specific Memcpy - for AMD64/x64]
 
 #if defined(__amd64__) || defined(__x86_64__)
 
@@ -16,14 +16,14 @@
 
   volatile alignas(64) uint8 SimdRegisterArea[3072];
 
-  // Optimized Memcpy() functions for x64 platforms, from x64/Memcpy.asm
+  // Optimized Memcpy() functions for x64 platforms, from Amd64/Memcpy.asm
 
   extern void Memcpy_RepMovsb(void* Destination, const void* Source, uint64 Size);
   extern void Memcpy_Sse2(void* Destination, const void* Source, uint64 Size);
   extern void Memcpy_Avx(void* Destination, const void* Source, uint64 Size);
   extern void Memcpy_Avx512f(void* Destination, const void* Source, uint64 Size);
 
-  // Optimized Memset() functions for x64 platforms, from x64/Memset.asm
+  // Optimized Memset() functions for x64 platforms, from Amd64/Memset.asm
   // (Width *must* be one of 1, 2, 4 or 8.)
 
   extern void Memset_RepStosb(void* Buffer, uint8 Value, uint64 Size);

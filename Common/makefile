@@ -24,7 +24,7 @@ OBJD = x86_64-elf-objdump
 # -fpie: Compile our code into a position-independent executable.
 # -std=c23: Use the regular C23 standard (GCC 15+, Clang 20+)
 # -maccumulate-outgoing-args: Necessary for the EFI/Microsoft ABI on GCC.
-# -march=x86-64: Make sure only base x64 instructions are used.
+# -march=x86-64: Make sure only base x86-64 (AMD64) instructions are used.
 # -mmmx, -msse, -msse2: Make sure to *enable* MMX, SSE and SSE2 instructions.
 # -mno-red-zone: Disable the System V ABI 'red zone'; this is necessary for now.
 # -O3: Optimize the resulting file/binary for *speed*.
@@ -73,7 +73,7 @@ Clean:
 
 	@-rm -f Kernel/Libraries/*.o
 	@-rm -f Kernel/Libraries/Memory/*.o
-	@-rm -f Kernel/Libraries/Memory/x64/*.o
+	@-rm -f Kernel/Libraries/Memory/Amd64/*.o
 
 	@-rm -f Kernel/System/*.o
 
@@ -150,22 +150,22 @@ Kernel/Libraries/Memory/String.o:
 	@echo "Building $@"
 	@$(CC) $(CFLAGS) -c Kernel/Libraries/Memory/String.c -o Kernel/Libraries/Memory/String.o
 
-Kernel/Libraries/Memory/x64/Memcpy.o:
+Kernel/Libraries/Memory/Amd64/Memcpy.o:
 	@echo "Building $@"
-	@$(AS) Kernel/Libraries/Memory/x64/Memcpy.asm -f elf64 -o Kernel/Libraries/Memory/x64/Memcpy.o
+	@$(AS) Kernel/Libraries/Memory/Amd64/Memcpy.asm -f elf64 -o Kernel/Libraries/Memory/Amd64/Memcpy.o
 
-Kernel/Libraries/Memory/x64/Memset.o:
+Kernel/Libraries/Memory/Amd64/Memset.o:
 	@echo "Building $@"
-	@$(AS) Kernel/Libraries/Memory/x64/Memset.asm -f elf64 -o Kernel/Libraries/Memory/x64/Memset.o
+	@$(AS) Kernel/Libraries/Memory/Amd64/Memset.asm -f elf64 -o Kernel/Libraries/Memory/Amd64/Memset.o
 
 # (System/platform-specific files)
 
-Kernel/System/x64.o:
+Kernel/System/Amd64.o:
 	@echo "Building $@"
-	@$(CC) $(CFLAGS) -c Kernel/System/x64.c -o Kernel/System/x64.o
+	@$(CC) $(CFLAGS) -c Kernel/System/Amd64.c -o Kernel/System/Amd64.o
 
 # Link everything into one .elf file
 
-Kernel/Kernel.elf: Kernel/Entry.o Kernel/Core.o Kernel/Firmware/Efi.o Kernel/Graphics/Graphics.o Kernel/Graphics/Console/Console.o Kernel/Graphics/Console/Efi.o Kernel/Graphics/Console/Exceptions.o Kernel/Graphics/Console/Format.o Kernel/Graphics/Console/Graphical.o Kernel/Graphics/Console/Vga.o Kernel/Graphics/Fonts/Bitmap.o Kernel/Libraries/Memory/Memory.o Kernel/Libraries/Memory/x64/Memcpy.o Kernel/Libraries/Memory/x64/Memset.o Kernel/Libraries/Memory/String.o Kernel/System/x64.o
+Kernel/Kernel.elf: Kernel/Entry.o Kernel/Core.o Kernel/Firmware/Efi.o Kernel/Graphics/Graphics.o Kernel/Graphics/Console/Console.o Kernel/Graphics/Console/Efi.o Kernel/Graphics/Console/Exceptions.o Kernel/Graphics/Console/Format.o Kernel/Graphics/Console/Graphical.o Kernel/Graphics/Console/Vga.o Kernel/Graphics/Fonts/Bitmap.o Kernel/Libraries/Memory/Memory.o Kernel/Libraries/Memory/Amd64/Memcpy.o Kernel/Libraries/Memory/Amd64/Memset.o Kernel/Libraries/Memory/String.o Kernel/System/Amd64.o
 	@echo "Building $@"
 	@$(CC) -T Linker.ld $(LDFLAGS) -o Kernel/Kernel.elf -ffreestanding -nolibc -nostdlib -lgcc $^
