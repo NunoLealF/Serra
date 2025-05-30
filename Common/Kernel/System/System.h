@@ -14,6 +14,7 @@
 
   #elif defined(__aarch64__)
 
+    #define SystemPageSize 16384 // (I've heard M1 Macs do this)
     #error "ARM64 targets are not supported :("
 
   #elif defined(__riscv) || defined(__riscv__)

@@ -7,7 +7,7 @@
 
   // Include standard and/or necessary headers.
 
-  #include "../Stdint.h"
+  #include "../Libraries/Stdint.h"
   #include "Console/Console.h"
   #include "Fonts/Fonts.h"
 

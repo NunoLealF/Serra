@@ -2,9 +2,9 @@
 // This file is part of the Serra project, which is released under the MIT license.
 // For more information, please refer to the accompanying license agreement. <3
 
-#include "../../Stdint.h"
-#include "../../String.h"
-#include "../../../Constructors/Firmware/Firmware.h"
+#include "../../Libraries/Stdint.h"
+#include "../../Libraries/String.h"
+#include "../../Firmware/Firmware.h"
 #include "Console.h"
 
 // (Converts a char*/char8* string to char16*)

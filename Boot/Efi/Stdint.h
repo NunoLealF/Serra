@@ -6,7 +6,7 @@
 // [Built for x64 (AMD64); compatible with both LP64 and LLP64]
 
 #if !defined(__amd64__) && !defined(__x86_64__)
-  #error "This code must be compiled with an x86_64-elf cross-compiler"
+  #error "This code must be compiled with an x86_64-w64-mingw32 cross-compiler"
 #endif
 
 #ifndef SERRA_STDINT_H

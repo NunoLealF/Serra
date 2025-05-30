@@ -2,15 +2,15 @@
 // This file is part of the Serra project, which is released under the MIT license.
 // For more information, please refer to the accompanying license agreement. <3
 
-#ifndef SERRA_KERNEL_FIRMWARE_BIOS_H
-#define SERRA_KERNEL_FIRMWARE_BIOS_H
+#ifndef SERRA_KERNEL_FIRMWARE_H
+#define SERRA_KERNEL_FIRMWARE_H
 
-  // Import standard headers.
+  // Import standard and/or necessary headers.
 
-  #include "../../Libraries/Stdint.h"
+  #include "../Libraries/Stdint.h"
+  #include "../Constructors/Firmware/Firmware.h"
 
-  // Include memory-map-related definitions.
-  // (For reference, this is the memory map returned by (int 15h, eax = E820h))
+  // Include BIOS (E820) memory-map-related definitions.
 
   typedef enum _biosMmapEntryType : uint32 {
 
@@ -56,8 +56,11 @@
 
   } __attribute__((packed)) pciBiosInfoTable;
 
-  // Include other BIOS-related definitions. (TODO)
+  // Include EFI-related definitions.
 
-  // Include kernel-specific definitions, and functions from Bios.c (TODO)
+  typedef efiMemoryDescriptor efiMmapEntry;
+  #define efiMmapEntrySize (sizeof(efiMmapEntry))
+
+  // Include kernel-specific definitions, and functions from Efi.c (TODO)
 
 #endif

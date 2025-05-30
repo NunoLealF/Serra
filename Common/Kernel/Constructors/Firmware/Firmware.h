@@ -8,10 +8,9 @@
   // Include standard and/or necessary headers.
 
   #include "../../Libraries/Stdint.h"
-  #include "../../Firmware/Bios/Bios.h"
-  #include "../../Firmware/Efi/Efi.h"
-
-  // Include functions and global variables from Bios.c (TODO)
+  #include "../../../../Boot/Efi/Efi/Efi.h"
+  #include "../../../../Boot/Efi/Efi/Protocols.h"
+  #include "../../../../Boot/Efi/Efi/Tables.h"
 
   // Include functions and global variables from Efi.c
 

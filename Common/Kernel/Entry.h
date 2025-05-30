@@ -7,9 +7,9 @@
 
   // Import standard and bootloader-related headers.
 
-  #include "Libraries/Graphics/Graphics.h"
   #include "Libraries/Stdint.h"
   #include "Libraries/String.h"
+  #include "Libraries/Stdio.h"
   #include "../Common.h"
 
   // Import kernel constructors.
@@ -19,8 +19,13 @@
 
   // Import firmware-specific headers.
 
-  #include "Firmware/Bios/Bios.h"
-  #include "Firmware/Efi/Efi.h"
+  #include "Firmware/Firmware.h"
+
+  // Import graphics-specific headers.
+
+  #include "Graphics/Graphics.h"
+  #include "Graphics/Console/Console.h"
+  #include "Graphics/Fonts/Fonts.h"
 
   // Import system-specific headers.
 

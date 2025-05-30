@@ -9,7 +9,7 @@
 
   #include "Stdint.h"
 
-  // Include input-related functions from ...TODO
+  // Include input-related functions from TODO
 
   // Include output-related functions from Graphics/Console/Console.c,
   // Exceptions.c and Format.c.

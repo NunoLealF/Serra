@@ -7,7 +7,7 @@
 
   // Include standard headers.
 
-  #include "../../Stdint.h"
+  #include "../../Libraries/Stdint.h"
 
   // Include definitions used in Bitmap.c
 

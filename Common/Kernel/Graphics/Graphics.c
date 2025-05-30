@@ -2,9 +2,9 @@
 // This file is part of the Serra project, which is released under the MIT license.
 // For more information, please refer to the accompanying license agreement. <3
 
-#include "../Stdint.h"
-#include "../String.h"
-#include "../../../Common.h"
+#include "../Libraries/Stdint.h"
+#include "../Libraries/String.h"
+#include "../../Common.h"
 #include "Graphics.h"
 
 // (TODO - Variables)
