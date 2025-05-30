@@ -4,7 +4,7 @@
 
 #include "../Stdint.h"
 #include "../String.h"
-#include "../../Constructors/System/System.h"
+#include "../../System/System.h"
 
 // (TODO - Write documentation)
 // [Platform-specific Memcpy - for x64]

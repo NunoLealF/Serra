@@ -12,11 +12,6 @@
   #include "Libraries/Stdio.h"
   #include "../Common.h"
 
-  // Import kernel constructors.
-
-  #include "Constructors/Firmware/Firmware.h"
-  #include "Constructors/System/System.h"
-
   // Import firmware-specific headers.
 
   #include "Firmware/Firmware.h"

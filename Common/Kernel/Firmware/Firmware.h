@@ -8,7 +8,9 @@
   // Import standard and/or necessary headers.
 
   #include "../Libraries/Stdint.h"
-  #include "../Constructors/Firmware/Firmware.h"
+  #include "../../../Boot/Efi/Efi/Efi.h"
+  #include "../../../Boot/Efi/Efi/Protocols.h"
+  #include "../../../Boot/Efi/Efi/Tables.h"
 
   // Include BIOS (E820) memory-map-related definitions.
 
@@ -61,6 +63,12 @@
   typedef efiMemoryDescriptor efiMmapEntry;
   #define efiMmapEntrySize (sizeof(efiMmapEntry))
 
-  // Include kernel-specific definitions, and functions from Efi.c (TODO)
+  // Include functions and global variables from Efi.c
+
+  extern efiSystemTable* gST;
+  extern efiBootServices* gBS;
+  extern efiRuntimeServices* gRT;
+
+  uint64 InitializeEfiTables(efiSystemTable* SystemTable);
 
 #endif

@@ -489,7 +489,7 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
 
     // (Check that the CPUID instruction is supported)
 
-    if (x64_QueryCpuid(0, 0).Rax == 0) {
+    if (QueryCpuid(0, 0).Rax == 0) {
       return EntrypointSystemDoesntSupportCpuid;
     }
 

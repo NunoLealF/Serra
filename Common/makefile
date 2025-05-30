@@ -64,9 +64,6 @@ Clean:
 	@-rm -f Kernel/*.elf
 	@-rm -f Kernel/*.bin
 
-	@-rm -f Kernel/Constructors/Firmware/*.o
-	@-rm -f Kernel/Constructors/System/*.o
-
 	@-rm -f Kernel/Firmware/*.o
 	@-rm -f Kernel/Firmware/*.o
 
@@ -78,7 +75,7 @@ Clean:
 	@-rm -f Kernel/Libraries/Memory/*.o
 	@-rm -f Kernel/Libraries/Memory/x64/*.o
 
-	@-rm -f Kernel/System/x64/*.o
+	@-rm -f Kernel/System/*.o
 
 Dump:
 	@$(OBJD) -S Kernel/Kernel.elf
@@ -104,16 +101,6 @@ Kernel/Entry.o:
 Kernel/Core.o:
 	@echo "Building $@"
 	@$(CC) $(CFLAGS) -c Kernel/Core.c -o Kernel/Core.o
-
-# (Constructors - these set up the kernel libraries)
-
-Kernel/Constructors/Firmware/Efi.o:
-	@echo "Building $@"
-	@$(CC) $(CFLAGS) -c Kernel/Constructors/Firmware/Efi.c -o Kernel/Constructors/Firmware/Efi.o
-
-Kernel/Constructors/System/x64.o:
-	@echo "Building $@"
-	@$(CC) $(CFLAGS) -c Kernel/Constructors/System/x64.c -o Kernel/Constructors/System/x64.o
 
 # (Firmware-specific files/libraries)
 
@@ -173,12 +160,12 @@ Kernel/Libraries/Memory/x64/Memset.o:
 
 # (System/platform-specific files)
 
-Kernel/System/x64/Cpu.o:
+Kernel/System/x64.o:
 	@echo "Building $@"
-	@$(CC) $(CFLAGS) -c Kernel/System/x64/Cpu.c -o Kernel/System/x64/Cpu.o
+	@$(CC) $(CFLAGS) -c Kernel/System/x64.c -o Kernel/System/x64.o
 
 # Link everything into one .elf file
 
-Kernel/Kernel.elf: Kernel/Entry.o Kernel/Core.o Kernel/Constructors/Firmware/Efi.o Kernel/Constructors/System/x64.o Kernel/Firmware/Efi.o Kernel/Graphics/Graphics.o Kernel/Graphics/Console/Console.o Kernel/Graphics/Console/Efi.o Kernel/Graphics/Console/Exceptions.o Kernel/Graphics/Console/Format.o Kernel/Graphics/Console/Graphical.o Kernel/Graphics/Console/Vga.o Kernel/Graphics/Fonts/Bitmap.o Kernel/Libraries/Memory/Memory.o Kernel/Libraries/Memory/x64/Memcpy.o Kernel/Libraries/Memory/x64/Memset.o Kernel/Libraries/Memory/String.o Kernel/System/x64/Cpu.o
+Kernel/Kernel.elf: Kernel/Entry.o Kernel/Core.o Kernel/Firmware/Efi.o Kernel/Graphics/Graphics.o Kernel/Graphics/Console/Console.o Kernel/Graphics/Console/Efi.o Kernel/Graphics/Console/Exceptions.o Kernel/Graphics/Console/Format.o Kernel/Graphics/Console/Graphical.o Kernel/Graphics/Console/Vga.o Kernel/Graphics/Fonts/Bitmap.o Kernel/Libraries/Memory/Memory.o Kernel/Libraries/Memory/x64/Memcpy.o Kernel/Libraries/Memory/x64/Memset.o Kernel/Libraries/Memory/String.o Kernel/System/x64.o
 	@echo "Building $@"
 	@$(CC) -T Linker.ld $(LDFLAGS) -o Kernel/Kernel.elf -ffreestanding -nolibc -nostdlib -lgcc $^
