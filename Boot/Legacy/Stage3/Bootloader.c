@@ -446,12 +446,12 @@ void S3Bootloader(void) {
 
       }
 
-      // Check if the entry size is at least `UsableMmapMinSize`
+      // Check if the entry size is at least `MmapEntryMemoryLimit`
       // bytes; if not, skip it.
 
       auto Size = (End - Start);
 
-      if (Size < UsableMmapMinSize) {
+      if (Size < MmapEntryMemoryLimit) {
         NumUsableMmapEntries--;
         continue;
       }

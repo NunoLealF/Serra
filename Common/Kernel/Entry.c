@@ -250,7 +250,7 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
 
   // (Scan through the usable memory map, calculating the amount available
   // to the kernel, and checking that all entries are aligned to page
-  // size boundaries *and* are at least `UsableMmapMinSize` bytes)
+  // size boundaries *and* are at least `MmapEntryMemoryLimit` bytes)
 
   uint64 UsableMemoryAvailable = 0;
 
@@ -271,9 +271,9 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
       return EntrypointMemoryMapNotPageAligned;
     }
 
-    // (Check if the entry size is at least `UsableMmapMinSize`)
+    // (Check if the entry size is at least `MmapEntryMemoryLimit`)
 
-    if ((End - Start) < UsableMmapMinSize) {
+    if ((End - Start) < MmapEntryMemoryLimit) {
       return EntrypointMemoryMapEntryUnderMinSize;
     }
 

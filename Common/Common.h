@@ -42,11 +42,11 @@
      (TODO: Something about how this is for the usable mmap; also Offset
      isn't relevant anymore lol)
 
-     (TODO: Something about `UsableMmapMinSize` being a requirement)
+     (TODO: Something about `MmapEntryMemoryLimit` being a requirement)
 
   */
 
-  #define UsableMmapMinSize (128 * 1024ULL) // (A usable entry must be at least 128 KiB)
+  #define MmapEntryMemoryLimit (1024UL * 16) // (Each usable memory map entry must be at least 16 KiB)
 
   typedef struct _usableMmapEntry {
 

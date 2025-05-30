@@ -1525,10 +1525,10 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
       continue;
     }
 
-    // (Make sure that the entry size is at least `UsableMmapMinSize`
+    // (Make sure that the entry size is at least `MmapEntryMemoryLimit`
     // bytes, and if not, skip it)
 
-    if (Size < UsableMmapMinSize) {
+    if (Size < MmapEntryMemoryLimit) {
       continue;
     }
 
