@@ -1508,25 +1508,18 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
     }
 
     // (Align everything to 4 KiB (page) boundaries, and make sure each
-    // entry isn't empty)
+    // entry is at least `MmapEntryMemoryLimit` bytes long)
 
     if ((Start % 4096) != 0) {
 
-      uint16 Remainder = (Start % 4096);
+      auto Remainder = (4096 - (Start % 4096));
 
-      Size -= (4096 - Remainder);
-      Start += (4096 - Remainder);
+      Start += Remainder;
+      Size -= Remainder;
 
     }
 
     Size -= (Size % 4096);
-
-    if (Size == 0) {
-      continue;
-    }
-
-    // (Make sure that the entry size is at least `MmapEntryMemoryLimit`
-    // bytes, and if not, skip it)
 
     if (Size < MmapEntryMemoryLimit) {
       continue;
