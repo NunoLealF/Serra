@@ -9,6 +9,7 @@
 
   #if defined(__amd64__) || defined(__x86_64__)
 
+    #define SystemPageSize 4096
     #include "x64/x64.h"
 
   #elif defined(__aarch64__)

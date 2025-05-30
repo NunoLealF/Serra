@@ -237,6 +237,8 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
 
   for (auto Index = 1; Index < InfoTable->Memory.NumEntries; Index++) {
 
+    // (Check if any entries overlap)
+
     auto EndOfLastEntry = (UsableMmap[Index - 1].Base + UsableMmap[Index - 1].Limit);
     auto StartOfThisEntry = UsableMmap[Index].Base;
 
@@ -246,32 +248,34 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
 
   }
 
-  // (Sanity-check the value of PreserveUntilOffset)
-
-  usableMmapEntry LastUsableMmapEntry = UsableMmap[InfoTable->Memory.NumEntries - 1];
-  uint64 EndOfUsableMemory = (LastUsableMmapEntry.Base + LastUsableMmapEntry.Limit);
-
-  if (EndOfUsableMemory <= InfoTable->Memory.PreserveUntilOffset) {
-    return EntrypointMemoryInvalidPreserveOffset;
-  }
-
-  // (Taking into account PreserveUntilOffset, calculate the amount of
-  // memory available to the kernel)
+  // (Scan through the usable memory map, calculating the amount available
+  // to the kernel, and checking that all entries are aligned to page
+  // size boundaries *and* are at least `UsableMmapMinSize` bytes)
 
   uint64 UsableMemoryAvailable = 0;
 
   for (auto Index = 0; Index < InfoTable->Memory.NumEntries; Index++) {
 
+    // (Add this entry's size to UsableMemoryAvailable)
+
     auto Start = UsableMmap[Index].Base;
     auto End = (Start + UsableMmap[Index].Limit);
 
-    if (End < InfoTable->Memory.PreserveUntilOffset) {
-      continue;
-    } else if (Start < InfoTable->Memory.PreserveUntilOffset) {
-      Start = InfoTable->Memory.PreserveUntilOffset;
+    UsableMemoryAvailable += (End - Start);
+
+    // (Check if any of the entries are not page aligned)
+
+    if ((Start % SystemPageSize) != 0) {
+      return EntrypointMemoryMapNotPageAligned;
+    } else if ((End % SystemPageSize) != 0) {
+      return EntrypointMemoryMapNotPageAligned;
     }
 
-    UsableMemoryAvailable += (End - Start + 1);
+    // (Check if the entry size is at least `UsableMmapMinSize`)
+
+    if ((End - Start) < UsableMmapMinSize) {
+      return EntrypointMemoryMapEntryUnderMinSize;
+    }
 
   }
 

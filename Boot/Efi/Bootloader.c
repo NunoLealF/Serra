@@ -1525,6 +1525,13 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
       continue;
     }
 
+    // (Make sure that the entry size is at least `UsableMmapMinSize`
+    // bytes, and if not, skip it)
+
+    if (Size < UsableMmapMinSize) {
+      continue;
+    }
+
     // Finally, we now have a memory area that we know is guaranteed to be
     // usable, so let's allocate it (as `EfiLoaderData`) and add it to
     // UsableMmap.
@@ -1581,7 +1588,6 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
   CommonInfoTable.Memory.NumEntries = NumUsableMmapEntries;
   CommonInfoTable.Memory.List.Pointer = (void*)UsableMmap;
-  CommonInfoTable.Memory.PreserveUntilOffset = UsableOffset;
 
 
 
@@ -1598,6 +1604,63 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   Message(Info, u"(commonInfoTable*) CommonInfoTable is at %xh", (uint64)(&CommonInfoTable));
   Message(Info, u"(void*) KernelEntrypoint is at %xh", (uint64)KernelEntrypoint);
   Message(Info, u"(void*) KernelStackTop is at %xh \n\r", (uint64)KernelStackTop);
+
+  // (Set up the usable memory map - more specifically, remove
+  // everything up to `UsableOffset`)
+
+  for (uint16 Index = 0; Index < NumUsableMmapEntries; Index++) {
+
+    auto Start = UsableMmap[Index].Base;
+    auto End = (Start + UsableMmap[Index].Limit);
+
+    if (End < UsableOffset) {
+
+      continue;
+
+    } else if (Start < UsableOffset) {
+
+      // (Realign `Start` to come after `UsableOffset`, and to be
+      // page-aligned)
+
+      Start = UsableOffset;
+
+      if ((Start % 4096) != 0) {
+
+        auto Remainder = (4096 - (Start % 4096));
+        Start += Remainder;
+
+      }
+
+      // (Update the values in the usable memory map, including Limit)
+
+      UsableMmap[Index].Base = Start;
+      UsableMmap[Index].Limit = (End - Start);
+
+      // (Move the usable memory map 'down' (using Memmove()), in
+      // order to properly discard any unusable entries)
+
+      if (Index > 0) {
+
+        Memmove((void*)&UsableMmap[0],
+                (const void*)&UsableMmap[Index],
+                (uint32)(sizeof(usableMmapEntry) * (NumUsableMmapEntries - Index)));
+
+        NumUsableMmapEntries -= Index;
+
+      }
+
+      // (Commit those changes to the information table)
+
+      CommonInfoTable.Memory.NumEntries = NumUsableMmapEntries;
+      CommonInfoTable.Memory.List.Pointer = (void*)UsableMmap;
+
+    } else {
+
+      break;
+
+    }
+
+  }
 
   // (If GOP is enabled, enable a graphics mode, and fill out information)
 

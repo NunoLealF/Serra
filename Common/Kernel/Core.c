@@ -184,9 +184,6 @@ void KernelCore(commonInfoTable* InfoTable) {
   Message(Info, "InfoTable::Memory @ (NumEntries = %d, List = %xh)",
                  InfoTable->Memory.NumEntries, InfoTable->Memory.List.Address);
 
-  Message(Info, "InfoTable::Memory.PreserveUntilOffset = %xh",
-                 InfoTable->Memory.PreserveUntilOffset);
-
   if (InfoTable->System.Architecture == UnknownArchitecture) {
     Message(Info, "InfoTable::System.Architecture = 0 (`UnknownArchitecture`)");
   } else if (InfoTable->System.Architecture == x64Architecture) {
@@ -212,6 +209,22 @@ void KernelCore(commonInfoTable* InfoTable) {
                  InfoTable->System.Smbios.Table.Address);
 
   Message(Info, "InfoTable->Checksum = %xh", InfoTable->Checksum);
+
+
+
+  // (Display usable memory map, as a test)
+
+  Putchar('\n', false, 0);
+  usableMmapEntry* UsableMmap = InfoTable->Memory.List.Pointer;
+
+  for (auto Index = 0; Index < InfoTable->Memory.NumEntries; Index++) {
+
+    Message(Kernel, "Entry [%d] goes from %xh to %xh (%d KiB)",
+                     Index, UsableMmap[Index].Base,
+                     (UsableMmap[Index].Base + UsableMmap[Index].Limit),
+                     (UsableMmap[Index].Limit / 1024));
+
+  }
 
 
 

@@ -39,10 +39,14 @@
      Members: uint64 Base - The starting address of this memory map entry;
               uint64 Limit - The size (or 'limit') of this entry, in bytes.
 
-     (TODO: Something about how this is for the usable mmap (at least,
-     for everything after PreserveUntilOffset))
+     (TODO: Something about how this is for the usable mmap; also Offset
+     isn't relevant anymore lol)
+
+     (TODO: Something about `UsableMmapMinSize` being a requirement)
 
   */
+
+  #define UsableMmapMinSize (128 * 1024ULL) // (A usable entry must be at least 128 KiB)
 
   typedef struct _usableMmapEntry {
 
@@ -83,7 +87,7 @@
   */
 
   #define commonInfoTableSignature 0x7577757E7577757E
-  #define commonInfoTableVersion 5
+  #define commonInfoTableVersion 6
 
   typedef struct _commonInfoTable {
 
@@ -311,8 +315,6 @@
       uint16 NumEntries;
       uptr List; // (pointer to a list of usableMmapEntry{})
 
-      uint64 PreserveUntilOffset; // (tell the kernel to keep everything below this untouched)
-
     } __attribute__((packed)) Memory;
 
     // [System-related information]
@@ -417,7 +419,8 @@
     EntrypointMemoryMapIsNull = (6ULL << 32),
     EntrypointMemoryMapHasNoEntries,
     EntrypointMemoryMapHasOverlappingEntries,
-    EntrypointMemoryInvalidPreserveOffset,
+    EntrypointMemoryMapNotPageAligned,
+    EntrypointMemoryMapEntryUnderMinSize,
     EntrypointMemoryUnderLimit,
 
     // (High bit is 7h - issue with architecture- or system-related data)
@@ -507,8 +510,9 @@
       "The pointer to the bootloader-provided memory map is invalid.",
       "The bootloader-provided memory map appears to be empty.",
       "The bootloader-provided memory map has overlapping entries.",
-      "The bootloader-provided PreserveUntilOffset value is invalid.",
-      "The kernel doesn't have enough usable memory to work with."
+      "The bootloader-provided memory map is not page-aligned.",
+      "The bootloader-provided memory map has entries under the size limit.",
+      "The system doesn't have enough memory for the kernel."
 
     },
 

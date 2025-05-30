@@ -429,6 +429,33 @@ void S3Bootloader(void) {
 
       }
 
+      // Align our usable entry to page size boundaries, just
+      // in case.
+
+      if ((Start % 4096) != 0) {
+
+        auto Remainder = (4096 - (Start % 4096));
+        Start += Remainder;
+
+      }
+
+      if ((End % 4096) != 0) {
+
+        auto Remainder = (End % 4096);
+        End -= Remainder;
+
+      }
+
+      // Check if the entry size is at least `UsableMmapMinSize`
+      // bytes; if not, skip it.
+
+      auto Size = (End - Start);
+
+      if (Size < UsableMmapMinSize) {
+        NumUsableMmapEntries--;
+        continue;
+      }
+
       // Finally, add the entry to the usable memory map area,
       // and increment the position
 
@@ -1468,19 +1495,70 @@ void S3Bootloader(void) {
 
 
 
-
   // [Prepare to transfer control to the kernel]
 
   Putchar('\n', 0);
   Message(Boot, "Preparing to transfer control to the kernel.");
 
-  // Let's set up the remaining bits of the information table.
-
-  CommonInfoTable.Memory.PreserveUntilOffset = Offset;
-
   Message(Info, "Calling TransitionStub() at %xh", &TransitionStub);
   Message(Info, "(commonInfoTable*) InfoTable -> %xh", (uint32)(&CommonInfoTable));
   Message(Info, "(void*) Pml4 -> %xh", (uint32)Pml4);
+
+  // (Set up the usable memory map - more specifically, remove
+  // everything up to `Offset`)
+
+  for (uint16 Index = 0; Index < NumUsableMmapEntries; Index++) {
+
+    auto Start = UsableMmap[Index].Base;
+    auto End = (Start + UsableMmap[Index].Limit);
+
+    if (End < Offset) {
+
+      continue;
+
+    } else if (Start < Offset) {
+
+      // (Realign `Start` to come after `Offset`, and to be page-aligned)
+
+      Start = Offset;
+
+      if ((Start % 4096) != 0) {
+
+        auto Remainder = (4096 - (Start % 4096));
+        Start += Remainder;
+
+      }
+
+      // (Update the values in the usable memory map, including Limit)
+
+      UsableMmap[Index].Base = Start;
+      UsableMmap[Index].Limit = (End - Start);
+
+      // (Move the usable memory map 'down' (using Memmove()), in
+      // order to properly discard any unusable entries)
+
+      if (Index > 0) {
+
+        Memmove((void*)&UsableMmap[0],
+                (const void*)&UsableMmap[Index],
+                (uint32)(sizeof(usableMmapEntry) * (NumUsableMmapEntries - Index)));
+
+        NumUsableMmapEntries -= Index;
+
+      }
+
+      // (Commit those changes to the information table)
+
+      CommonInfoTable.Memory.NumEntries = NumUsableMmapEntries;
+      CommonInfoTable.Memory.List.Address = (uintptr)UsableMmap;
+
+    } else {
+
+      break;
+
+    }
+
+  }
 
   // (Set up graphics mode, if applicable.)
 
@@ -1522,10 +1600,6 @@ void S3Bootloader(void) {
     CommonInfoTable.Display.Text.PosY = TerminalTable.PosY;
 
   }
-
-  // (Update any additional fields within the information table.)
-
-  CommonInfoTable.Memory.PreserveUntilOffset = Offset;
 
   // (Calculate the information table checksum.)
 
