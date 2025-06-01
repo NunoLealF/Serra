@@ -228,6 +228,38 @@ void KernelCore(commonInfoTable* InfoTable) {
 
 
 
+  // (Try this out)
+
+  bool Thing = InitializeAllocationSubsystem(InfoTable->Memory.List.Pointer, InfoTable->Memory.NumEntries);
+
+  if (Thing == false) {
+
+    Message(Error, "InitializeAllocationSubsystem() failed for some reason");
+
+  } else {
+
+    Message(Ok, "InitializeAllocationSubsystem() worked");
+
+    for (uint16 Limit = 0; Limit < 64; Limit++) {
+
+      uint64 Num = 0;
+
+      while (Nodes[Limit] != NULL) {
+        Message(Info, "Found a %xh-sized area at %xh (prev=%xh, next=%xh)", (1ULL << Limit), (uintptr)Nodes[Limit], (uintptr)Nodes[Limit]->Previous, (uintptr)Nodes[Limit]->Next);
+        Nodes[Limit] = Nodes[Limit]->Previous;
+        Num++;
+      }
+
+      if (Num != 0) {
+        Message(Info, "Found %d nodes at logarithm level [%d]", Num, (uint64)Limit);
+      }
+
+    }
+
+  }
+
+
+
   // (Depending on the system type, either wait for a keypress or just
   // stall the system for a while)
 
@@ -242,7 +274,7 @@ void KernelCore(commonInfoTable* InfoTable) {
 
     // (Do a lot of NOPs to stall the system)
 
-    for (auto Count = 0; Count < 500000000; Count++) {
+    for (uint64 Count = 0; Count < 5000000000; Count++) {
       __asm__ __volatile__ ("nop");
     }
 

@@ -9,8 +9,20 @@
 
   #include "../Libraries/Stdint.h"
 
-  // Include functions and global variables from Allocator.c (TODO)
+  // Include structures from Allocator.c
 
-  // -> Something
+  typedef struct _allocationNode {
+
+    struct _allocationNode* Previous;
+    struct _allocationNode* Next;
+
+  } allocationNode;
+
+  // Include functions and global variables from Allocator.c
+
+  extern allocationNode* Nodes[64];
+  extern uint8 Levels[2];
+
+  bool InitializeAllocationSubsystem(void* UsableMmap, uint16 NumUsableMmapEntries);
 
 #endif

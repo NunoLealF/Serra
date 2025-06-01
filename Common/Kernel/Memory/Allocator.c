@@ -4,6 +4,7 @@
 
 #include "../Libraries/Stdint.h"
 #include "../System/System.h"
+#include "../../Common.h"
 #include "Memory.h"
 
 // (TODO - Include a function to initialize the memory allocator)
@@ -85,6 +86,177 @@
 // finish this at all - I need this done by *today*, c'mon)
 
 
+
+// (TODO - Node; in this case, `Previous` and `Next` refer to previous
+// and next nodes *with the same size*, and can be NULL if undefined)
+
+typedef struct _allocationNode {
+
+  struct _allocationNode* Previous;
+  struct _allocationNode* Next;
+
+} allocationNode;
+
+
+
+// (TODO - Variables and such)
+
+allocationNode* Nodes[64] = {NULL};
+uint8 Levels[2] = {0};
+
+
+
+// (TODO - Push node to LatestNodes[Level], via Address (which represents
+// the memory region this is supposed to represent))
+
+static inline void PushNode(uintptr Address, uint16 Level) {
+
+  // Check if `Address` is zero, and if it isn't, declare a node
+  // at the given address.
+
+  if (Address == 0) {
+    return;
+  }
+
+  allocationNode* Node = (allocationNode*)Address;
+
+  // Get the previous node to point to this one, if possible.
+
+  if (Nodes[Level] != NULL) {
+    Nodes[Level]->Next = Node;
+  }
+
+  // Add the previous node, set the next node to NULL (as this is the
+  // last node), and update Nodes[Level] to point to this node.
+
+  Node->Previous = Nodes[Level];
+  Node->Next = NULL;
+
+  Nodes[Level] = Node;
+
+  // Return.
+
+  return;
+
+}
+
+
+
+// (TODO - Pop node from LatestNodes[Level])
+
+static inline void PopNode(uint16 Level) {
+
+  // Check if Nodes[Level] is NULL, and if not, set the last node to
+  // the previous node.
+
+  if (Nodes[Level] == NULL) {
+    return;
+  }
+
+  Nodes[Level] = Nodes[Level]->Previous;
+
+  // Remove the `Next` pointer from that node.
+
+  Nodes[Level]->Next = NULL;
+
+  // Return.
+
+  return;
+
+}
+
+
+
+// (TODO - Initializer/constructor function)
+
+bool InitializeAllocationSubsystem(void* UsableMmap, uint16 NumUsableMmapEntries) {
+
+  // (Is this actually a usable memory map?)
+
+  if (UsableMmap == NULL) {
+    return false;
+  } else if (NumUsableMmapEntries == 0) {
+    return false;
+  }
+
+  usableMmapEntry* KernelMmap = UsableMmap;
+
+  // (Calculate the 'minimum' and 'maximum' levels, storing them in
+  // Levels[]; this is based off of `SystemPageSize`
+
+  auto PageSize = SystemPageSize;
+  Levels[0] = 0; Levels[1] = 63;
+
+  while (PageSize != 0) {
+
+    Levels[0]++;
+    PageSize >>= 1;
+
+  }
+
+  // (Handle each memory map entry)
+
+  for (auto Entry = 0; Entry < NumUsableMmapEntries; Entry++) {
+
+    // First, let's calculate how much space will actually be needed for
+    // the allocation data (at *Start), and reserve it.
+
+    auto ReservedSpace = (KernelMmap[Entry].Limit * sizeof(allocationNode)) / SystemPageSize;
+
+    if ((ReservedSpace % SystemPageSize) != 0) {
+      ReservedSpace += (SystemPageSize - (ReservedSpace % SystemPageSize));
+    }
+
+    uintptr Start = KernelMmap[Entry].Base;
+    uintptr Offset = Start;
+
+    extern void Printf(const char* String, bool Important, uint8 Color, ...);
+    Printf("(Reserved - [%xh,%xh]) (Free - [%xh,%xh])\n\r", false, 0x0B, Start, (Start+ReservedSpace), (Start+ReservedSpace), (Start+KernelMmap[Entry].Limit));
+
+    // Now that we know how much space we're working with, let's
+    // push nodes (add free blocks) as necessary.
+
+    auto Space = (KernelMmap[Entry].Limit - ReservedSpace);
+
+    if (Space < (KernelMmap[Entry].Limit / 2)) {
+      return false;
+    }
+
+    while (Space > SystemPageSize) {
+
+      // (Find the largest offset of two that would reasonably fit;
+      // this is the base-two logarithm of `Space`)
+
+      auto Logarithm = 0;
+
+      while ((Space >> Logarithm) != 0) {
+        Logarithm++;
+      }
+
+      Logarithm--;
+
+      // (Push a node to signify that there's a free memory area
+      // at *Offset that's (1 << Logarithm) bytes wide)
+
+      extern void Printf(const char* String, bool Important, uint8 Color, ...);
+      Printf("(Space = %xh, Offset = %xh~%xh, Logarithm = %d, (1 << Logarithm) = %xh)\n\r", false, 0x0F, (uint64)Space, (uint64)Offset, (uint64)(Offset + (((1ULL << Logarithm) * sizeof(allocationNode)) / SystemPageSize)), (uint64)Logarithm, (uint64)(1ULL<<Logarithm));
+
+      PushNode(Offset, Logarithm);
+
+      // (Update `Space` and `Offset`)
+
+      Space -= (1ULL << Logarithm);
+      Offset += ((1ULL << Logarithm) * sizeof(allocationNode)) / SystemPageSize;
+
+    }
+
+  }
+
+  // (Return true, now that we're done)
+
+  return true;
+
+}
 
 
 // (TODO - Include a function to allocate (kmalloc? malloc?) and free

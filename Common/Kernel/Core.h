@@ -22,6 +22,10 @@
   #include "Graphics/Console/Console.h"
   #include "Graphics/Fonts/Fonts.h"
 
+  // Import memory-specific headers.
+
+  #include "Memory/Memory.h"
+
   // Import system-specific headers.
 
   #include "System/System.h"
