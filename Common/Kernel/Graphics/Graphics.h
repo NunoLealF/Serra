@@ -39,7 +39,7 @@
 
   } graphicsSubsystemData;
 
-  // Include functions and global variables from Graphics.c (TODO)
+  // Include functions and global variables from Graphics.c
 
   extern graphicsSubsystemData GraphicsData;
   bool InitializeGraphicsSubsystem(void* InfoTable);
