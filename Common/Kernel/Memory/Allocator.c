@@ -363,9 +363,86 @@ void* Malloc(uint64 Size) {
 
 // (TODO - Memory deallocator, free(); does nothing if `Pointer == NULL`)
 
-void Free(void* Pointer) {
+void Free(void* Pointer, uint64 Size) {
 
-  // (TODO)
+  // (Sanity-check our values first - if `Pointer` *or* `KernelMmap`
+  // is a null pointer (or has no entries), return)
+
+  if ((KernelMmap == NULL) || (NumKernelMmapEntries == 0)) {
+    return;
+  } else if (Pointer == NULL) {
+    return;
+  }
+
+  // (Try to figure out where `Pointer` is (within the memory map))
+
+  uint16 Entry = 65535;
+
+  for (uint16 Index = 0; Index < NumKernelMmapEntries; Index++) {
+
+    if ((uintptr)Pointer >= KernelMmap[Index].Base) {
+
+      if ((uintptr)Pointer <= (KernelMmap[Index].Base + KernelMmap[Index].Limit)) {
+
+        Entry = Index;
+        break;
+
+      }
+
+    }
+
+  }
+
+  // (If it's not within the memory map at all, just return)
+
+  if (Entry == 65535) {
+    return;
+  }
+
+  // (Calculate the reserved space size of the entry Pointer belongs to)
+
+  auto ReservedSpace = (KernelMmap[Entry].Limit / ScalingFactor);
+
+  if ((ReservedSpace % SystemPageSize) != 0) {
+    ReservedSpace += (SystemPageSize - (ReservedSpace % SystemPageSize));
+  }
+
+  // Now that we know we're probably good to go, there's two things
+  // we need to do:
+
+  // -> (1) Push a new node to Nodes[N] indicating that the data at
+  // *Pointer is free again.
+
+  // (Calculate the block size and 'level', based on `Size` - if
+  // it exceeds `Levels[1]`, or the end of the entry, return)
+
+  auto Logarithm = Levels[0];
+
+  while (Size > SystemPageSize) {
+    Logarithm++;
+    Size >>= 1;
+  }
+
+  if (Logarithm > Levels[1]) {
+    return;
+  }
+
+  // (Push a node to signify that there's a free memory area at
+  // at *(Start + Offset) that's `BlockSize` bytes wide)
+
+  auto Start = KernelMmap[Entry].Base;
+  auto Offset = ((uintptr)Pointer - ReservedSpace - Start);
+
+  uintptr Address = (Start + (Offset / ScalingFactor));
+
+  extern void Printf(const char* String, bool Important, uint8 Color, ...);
+  Printf("[Free] Found something! (Address -> %xh, Pointer -> %xh, Logarithm -> %d, LogSize -> %xh)\n\r", false, 0x0F,
+          (uint64)Address, (uint64)Pointer, (uint64)Logarithm, (uint64)(1ULL << Logarithm));
+
+  PushNode(Address, Pointer, Logarithm);
+
+  // (Return, now that we're done)
+
   return;
 
 }

@@ -240,8 +240,11 @@ void KernelCore(commonInfoTable* InfoTable) {
 
     Message(Ok, "InitializeAllocationSubsystem() worked");
 
-    void* Test = Malloc(0x123);
-    Message(Info, "Result of Malloc(0x123) was %xh", (uintptr)Test);
+    void* Test = Malloc(0x1234567);
+    Message(Info, "Result of Malloc(0x1234567) was %xh", (uintptr)Test);
+
+    Free(Test, 0x1234567);
+    Message(Info, "Called Free(Test, 0x1234567) on that address");
 
     for (uint16 Limit = 0; Limit < 64; Limit++) {
 
