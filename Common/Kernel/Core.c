@@ -240,14 +240,23 @@ void KernelCore(commonInfoTable* InfoTable) {
 
     Message(Ok, "InitializeAllocationSubsystem() worked");
 
+    void* Test = Malloc(0x123);
+    Message(Info, "Result of Malloc(0x123) was %xh", (uintptr)Test);
+
     for (uint16 Limit = 0; Limit < 64; Limit++) {
 
       uint64 Num = 0;
 
       while (Nodes[Limit] != NULL) {
-        Message(Info, "Found a %xh-sized area at %xh (prev=%xh, next=%xh)", (1ULL << Limit), (uintptr)Nodes[Limit], (uintptr)Nodes[Limit]->Previous, (uintptr)Nodes[Limit]->Next);
+
+        Message(Info, "Found a %xh-sized block (at %xh) that represents (%xh, %xh) | (prev=%xh, next=%xh)",
+                      (1ULL << Limit), ((uintptr)Nodes[Limit]),
+                      (uintptr)Nodes[Limit]->Pointer, ((uintptr)Nodes[Limit]->Pointer + (1ULL << Limit)),
+                      (uintptr)Nodes[Limit]->Previous, (uintptr)Nodes[Limit]->Next);
+
         Nodes[Limit] = Nodes[Limit]->Previous;
         Num++;
+
       }
 
       if (Num != 0) {

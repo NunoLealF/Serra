@@ -92,10 +92,14 @@
 
 typedef struct _allocationNode {
 
+  void* Pointer;
+
   struct _allocationNode* Previous;
   struct _allocationNode* Next;
 
 } allocationNode;
+
+static constexpr uint64 ScalingFactor = (SystemPageSize / sizeof(allocationNode));
 
 
 
@@ -104,31 +108,37 @@ typedef struct _allocationNode {
 allocationNode* Nodes[64] = {NULL};
 uint8 Levels[2] = {0};
 
+static usableMmapEntry* KernelMmap = NULL;
+static uint16 NumKernelMmapEntries = 0;
+
 
 
 // (TODO - Push node to LatestNodes[Level], via Address (which represents
 // the memory region this is supposed to represent))
 
-static inline void PushNode(uintptr Address, uint16 Level) {
+static inline void PushNode(uintptr Address, void* Pointer, uint16 Level) {
 
-  // Check if `Address` is zero, and if it isn't, declare a node
-  // at the given address.
+  // (Check if `Address` or `Pointer` are null, and if they are, return;
+  // otherwise, declare a node at the given address.)
 
   if (Address == 0) {
+    return;
+  } else if (Pointer == NULL) {
     return;
   }
 
   allocationNode* Node = (allocationNode*)Address;
 
-  // Get the previous node to point to this one, if possible.
+  // (Get the previous node to point to this one, if possible)
 
   if (Nodes[Level] != NULL) {
     Nodes[Level]->Next = Node;
   }
 
-  // Add the previous node, set the next node to NULL (as this is the
-  // last node), and update Nodes[Level] to point to this node.
+  // (Add the previous node, set the next node to NULL (as this is the
+  // last node), and update Nodes[Level] to point to this node)
 
+  Node->Pointer = Pointer;
   Node->Previous = Nodes[Level];
   Node->Next = NULL;
 
@@ -155,9 +165,11 @@ static inline void PopNode(uint16 Level) {
 
   Nodes[Level] = Nodes[Level]->Previous;
 
-  // Remove the `Next` pointer from that node.
+  // Remove the `Next` pointer from that node, if applicable.
 
-  Nodes[Level]->Next = NULL;
+  if (Nodes[Level] != NULL) {
+    Nodes[Level]->Next = NULL;
+  }
 
   // Return.
 
@@ -171,7 +183,7 @@ static inline void PopNode(uint16 Level) {
 
 bool InitializeAllocationSubsystem(void* UsableMmap, uint16 NumUsableMmapEntries) {
 
-  // (Is this actually a usable memory map?)
+  // (First, is this actually a usable memory map?)
 
   if (UsableMmap == NULL) {
     return false;
@@ -179,7 +191,8 @@ bool InitializeAllocationSubsystem(void* UsableMmap, uint16 NumUsableMmapEntries
     return false;
   }
 
-  usableMmapEntry* KernelMmap = UsableMmap;
+  KernelMmap = UsableMmap;
+  NumKernelMmapEntries = NumUsableMmapEntries;
 
   // (Calculate the 'minimum' and 'maximum' levels, storing them in
   // Levels[]; this is based off of `SystemPageSize`
@@ -194,21 +207,23 @@ bool InitializeAllocationSubsystem(void* UsableMmap, uint16 NumUsableMmapEntries
 
   }
 
+  Levels[0]--;
+
   // (Handle each memory map entry)
 
-  for (auto Entry = 0; Entry < NumUsableMmapEntries; Entry++) {
+  for (auto Entry = 0; Entry < NumKernelMmapEntries; Entry++) {
 
     // First, let's calculate how much space will actually be needed for
     // the allocation data (at *Start), and reserve it.
 
-    auto ReservedSpace = (KernelMmap[Entry].Limit * sizeof(allocationNode)) / SystemPageSize;
+    auto ReservedSpace = (KernelMmap[Entry].Limit / ScalingFactor);
 
     if ((ReservedSpace % SystemPageSize) != 0) {
       ReservedSpace += (SystemPageSize - (ReservedSpace % SystemPageSize));
     }
 
     uintptr Start = KernelMmap[Entry].Base;
-    uintptr Offset = Start;
+    uintptr Offset = 0;
 
     extern void Printf(const char* String, bool Important, uint8 Color, ...);
     Printf("(Reserved - [%xh,%xh]) (Free - [%xh,%xh])\n\r", false, 0x0B, Start, (Start+ReservedSpace), (Start+ReservedSpace), (Start+KernelMmap[Entry].Limit));
@@ -222,7 +237,7 @@ bool InitializeAllocationSubsystem(void* UsableMmap, uint16 NumUsableMmapEntries
       return false;
     }
 
-    while (Space > SystemPageSize) {
+    while (Space >= SystemPageSize) {
 
       // (Find the largest offset of two that would reasonably fit;
       // this is the base-two logarithm of `Space`)
@@ -236,17 +251,17 @@ bool InitializeAllocationSubsystem(void* UsableMmap, uint16 NumUsableMmapEntries
       Logarithm--;
 
       // (Push a node to signify that there's a free memory area
-      // at *Offset that's (1 << Logarithm) bytes wide)
+      // at *(Start + Offset) that's (1 << Logarithm) bytes wide)
 
-      extern void Printf(const char* String, bool Important, uint8 Color, ...);
-      Printf("(Space = %xh, Offset = %xh~%xh, Logarithm = %d, (1 << Logarithm) = %xh)\n\r", false, 0x0F, (uint64)Space, (uint64)Offset, (uint64)(Offset + (((1ULL << Logarithm) * sizeof(allocationNode)) / SystemPageSize)), (uint64)Logarithm, (uint64)(1ULL<<Logarithm));
+      uintptr Address = (Start + (Offset / ScalingFactor));
+      void* Pointer = (void*)(Start + ReservedSpace + Offset);
 
-      PushNode(Offset, Logarithm);
+      PushNode(Address, Pointer, Logarithm);
 
-      // (Update `Space` and `Offset`)
+      // (Update `Offset` and `Space` respectively)
 
+      Offset += (1ULL << Logarithm);
       Space -= (1ULL << Logarithm);
-      Offset += ((1ULL << Logarithm) * sizeof(allocationNode)) / SystemPageSize;
 
     }
 
@@ -259,6 +274,98 @@ bool InitializeAllocationSubsystem(void* UsableMmap, uint16 NumUsableMmapEntries
 }
 
 
-// (TODO - Include a function to allocate (kmalloc? malloc?) and free
-// (free? kfree?) memory - maybe like in EFI where they have pool/heap
-// and page.)
+
+// (TODO - Kernel memory allocator, malloc(); returns `NULL` if there's
+// an issue (size == 0, lack of memory, etc.), and must be contiguous)
+
+void* Malloc(uint64 Size) {
+
+  // (Sanity-check our values first - if `Size` is zero or `KernelMmap`
+  // is a null pointer (or has no entries), return NULL)
+
+  if ((KernelMmap == NULL) || (NumKernelMmapEntries == 0)) {
+    return NULL;
+  } else if (Size == 0) {
+    return NULL;
+  }
+
+  // Now that we know we're probably good to go, let's calculate the
+  // (minimum) block size we need to allocate.
+
+  auto BlockLevel = Levels[0];
+  auto BlockSize = SystemPageSize;
+
+  while (Size > SystemPageSize) {
+
+    BlockLevel++;
+    BlockSize *= 2;
+
+    Size /= 2;
+
+  }
+
+  // (If the block level exceeds the maximum limit, just return NULL)
+
+  if (BlockLevel > Levels[1]) {
+    return NULL;
+  }
+
+  extern void Printf(const char* String, bool Important, uint8 Color, ...);
+  Printf("[Malloc] BlockLevel = %d, Levels[n] = (%d,%d)\n\r", false, 0x0F, (uint64)BlockLevel, (uint64)Levels[0], (uint64)Levels[1]);
+
+  // The allocation system we're using uses doubly-linked lists of nodes,
+  // with one list for each 'level' (which corresponds to the amount
+  // of memory that node corresponds to).
+
+  // (Essentially, for any N, Nodes[N] is a pointer to the last entry in
+  // a list of nodes that correspond to memory areas that are (1 << N)
+  // bytes long.)
+
+  // That means there are two steps we need to take:
+
+  // -> (1) If there *aren't* any memory areas at our level, try to
+  // find a larger area we can break up)
+
+  if (Nodes[BlockLevel] == NULL) {
+
+    for (auto Level = (BlockLevel + 1); Level <= Levels[1]; Level++) {
+
+      // [TODO] Break up blocks
+
+    }
+
+  }
+
+  // -> (2) Otherwise, or after finishing that, obtain the memory area
+  // from Nodes[BlockLevel], popping it from the list, and returning.
+
+  void* Pointer = NULL;
+
+  if (Nodes[BlockLevel] != NULL) {
+
+    Pointer = Nodes[BlockLevel]->Pointer;
+    Printf("[Malloc] Found something! (@ %xh, MPointer -> %xh, Previous -> %xh)\n\r", false, 0x0F, (uint64)Nodes[BlockLevel], (uint64)Nodes[BlockLevel]->Pointer, (uint64)Nodes[BlockLevel]->Previous);
+
+    if (Pointer != NULL) {
+      PopNode(BlockLevel);
+    }
+
+  }
+
+  // (Return `Pointer`; if we didn't find anything, this will return
+  // a null pointer, which is also appropriate)
+
+  return Pointer;
+
+}
+
+
+
+// (TODO - Memory deallocator, free(); does nothing if `Pointer == NULL`)
+
+void Free(void* Pointer) {
+
+  // (TODO)
+  return;
+
+}
