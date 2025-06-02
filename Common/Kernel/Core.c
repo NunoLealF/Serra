@@ -241,13 +241,13 @@ void KernelCore(commonInfoTable* InfoTable) {
     Message(Ok, "InitializeAllocationSubsystem() worked");
 
     const uintptr Size = 0x8800;
-    [[maybe_unused]] void* Test1p = Malloc(&Size);
+    [[maybe_unused]] void* Test1p = Malloc(&Size); Printf("\n\r", false, 0);
 
     const uintptr Size2 = 0x8700;
-    [[maybe_unused]] void* Test2p = Malloc(&Size2);
+    [[maybe_unused]] void* Test2p = Malloc(&Size2); Printf("\n\r", false, 0);
 
-    [[maybe_unused]] bool Test1f = Free(Test1p, &Size);
-    [[maybe_unused]] bool Test2f = Free(Test2p, &Size2);
+    [[maybe_unused]] bool Test1f = Free(Test1p, &Size); Printf("\n\r", false, 0);
+    [[maybe_unused]] bool Test2f = Free(Test2p, &Size2); Printf("\n\r", false, 0);
 
     for (uint16 Limit = 0; Limit < 64; Limit++) {
 

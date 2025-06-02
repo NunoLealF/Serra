@@ -647,6 +647,8 @@ static inline allocationNode* FreeBlock(void* Pointer, uintptr Size) {
     // -> (1) 'Pop' the last two nodes from their respective lists;
     // we can't use PopBlock() since we don't know where they are.
 
+    // (TODO - Redo position links)
+
     allocationNode* Before = Previous->Position.Previous;
     allocationNode* After = Node->Position.Next;
 
@@ -661,7 +663,14 @@ static inline allocationNode* FreeBlock(void* Pointer, uintptr Size) {
 
     if (After != NULL) {
       After->Position.Previous = Before;
-      After->Size.Previous = Before;
+    }
+
+    // (TODO - Redo size links
+
+    if (After->Size.Previous == Node) {
+      After->Size.Previous = Previous->Size.Previous;
+    } else {
+      Printf("[TODO] How are you going to connect the *next* size node to `Previous->Size.Previous`? \n\r", false, 0x4F);
     }
 
     if ((Nodes[Logarithm] == Previous) || (Nodes[Logarithm] == Node)) {
