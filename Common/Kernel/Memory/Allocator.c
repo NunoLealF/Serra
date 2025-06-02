@@ -91,7 +91,7 @@
 // (TODO - Variables and such)
 
 allocationNode* Nodes[64] = {NULL};
-uint8 Levels[2] = {0};
+uint8 Limits[2] = {0};
 
 static usableMmapEntry* KernelMmap = NULL;
 static uint16 NumKernelMmapEntries = 0;
@@ -116,19 +116,19 @@ bool InitializeAllocationSubsystem(void* UsableMmap, uint16 NumUsableMmapEntries
   NumKernelMmapEntries = NumUsableMmapEntries;
 
   // (Calculate the 'minimum' and 'maximum' levels, storing them in
-  // Levels[]; this is based off of `SystemPageSize`
+  // Limits[]; this is based off of `SystemPageSize`
 
   auto PageSize = SystemPageSize;
-  Levels[0] = 0; Levels[1] = 63;
+  Limits[0] = 0; Limits[1] = 63;
 
   while (PageSize != 0) {
 
-    Levels[0]++;
+    Limits[0]++;
     PageSize >>= 1;
 
   }
 
-  Levels[0]--;
+  Limits[0]--;
 
   // (Handle each memory map entry)
 
@@ -199,10 +199,10 @@ bool InitializeAllocationSubsystem(void* UsableMmap, uint16 NumUsableMmapEntries
       Node->Size.Previous = Nodes[Logarithm];
       Nodes[Logarithm] = Node;
 
-      // (Update `Offset` and `Space` respectively)
+      // (Update `Space` and `Offset` respectively)
 
-      Offset += (1ULL << Logarithm);
       Space -= (1ULL << Logarithm);
+      Offset += (1ULL << Logarithm);
 
     }
 
@@ -256,12 +256,11 @@ static inline void PushBlock(allocationNode* Node, void* Pointer, allocationNode
 
 // (TODO - Pop a block (for Allocate(), Coalesce, etc.))
 
-static inline void* PopBlock(uint8 Level) {
+[[nodiscard]] static inline void* PopBlock(allocationNode* Node, uint8 Level) {
 
   // (Get the current node for the corresponding level, as long as
   // it isn't a null pointer)
 
-  allocationNode* Node = Nodes[Level];
   void* Pointer = NULL;
 
   if (Node != NULL) {
@@ -428,7 +427,7 @@ static inline allocationNode* FreeBlock(void* Pointer, uintptr Size) {
 
   // (Calculate the logarithm of the block size / the block 'level')
 
-  auto Logarithm = Levels[0];
+  auto Logarithm = Limits[0];
 
   while (Size > SystemPageSize) {
     Logarithm++;
@@ -437,7 +436,7 @@ static inline allocationNode* FreeBlock(void* Pointer, uintptr Size) {
 
   // (Return a null pointer if the logarithm exceeds the maximum)
 
-  if (Logarithm > Levels[1]) {
+  if (Logarithm > Limits[1]) {
     return NULL;
   }
 
@@ -455,12 +454,90 @@ static inline allocationNode* FreeBlock(void* Pointer, uintptr Size) {
 
 // (TODO - Break a block up to a certain target size)
 
-static void BreakupBlock(allocationNode* Node, uint8 Level, uint8 Target) {
+[[nodiscard]] static bool BreakupBlock(allocationNode* Node, uint8 Level, uint8 Target) {
 
-  // (Break up `Node` in such a way that at least one `Target` level
-  // node is generated; (!) always break up looking right)
+  // (Sanity-check `Node`, `Level` and `Target`, and return `false`
+  // if they don't make sense)
 
-  return;
+  if ((Node == NULL) || (Node->Pointer == NULL)) {
+    return false;
+  } else if (Target >= Level) {
+    return false;
+  }
+
+  uintptr Address = (uintptr)Node;
+
+  // (Additionally, check if we're exceeding Limits[])
+
+  if (Target < Limits[0]) {
+    return false;
+  } else if (Level > Limits[1]) {
+    return false;
+  }
+
+  // We need to be able to break up our memory block in the most efficient
+  // way possible, depending on the value of `Target`; so, before we
+  // do anything else, let's try to deal with that.
+
+  // (Calculate the necessary size for the 'buffer')
+
+  auto Size = (Level - Target + 1);
+  uint8 Buffer[Size];
+
+  // (Fill it out; for example, (15, 11) becomes (14, 13, 12, 11, 11))
+
+  extern void Printf(const char* String, bool Important, uint8 Color, ...);
+  Printf("[BreakupBlock] (%d,%d) turned into (", false, 0x0F, (uint64)Level, (uint64)Target);
+
+  for (auto Index = 0; Index < (Size - 1); Index++) {
+    Buffer[Index] = (Level - Index - 1);
+    Printf("%d, ", false, 0x0F, (uint64)Buffer[Index]);
+  }
+
+  Buffer[Size - 1] = Target;
+  Printf("%d)\n\r", false, 0x0F, (uint64)Target);
+
+  // Now that we know which levels we need to push to, let's extract the
+  // current node's information, before popping it from its list.
+
+  allocationNode* PreviousNode = Node->Position.Previous;
+  allocationNode* NextNode = Node->Position.Next;
+
+  void* Pointer = PopBlock(Node, Level);
+
+  // (Sanity-check `Pointer`, just in case it didn't go well)
+
+  if (Pointer == NULL) {
+    return false;
+  }
+
+  // Now, let's add *new* free blocks to their respective lists, as
+  // indicated by the buffer.
+
+  uintptr Location = (uintptr)Pointer;
+
+  for (auto Index = 0; Index < Size; Index++) {
+
+    // (Declare a node, and push it with `PushBlock()`
+
+    allocationNode* Node = (allocationNode*)Address;
+    PushBlock(Node, (void*)Location, PreviousNode, NextNode, Buffer[Index]);
+
+    // (Update `PreviousNode` to point to this node - `NextNode`
+    // shouldn't need to be updated, however)
+
+    PreviousNode = Node;
+
+    // (Update `Address` and `Location` to point to the next block)
+
+    Address += ((1ULL << Buffer[Index]) / ScalingFactor);
+    Location += (1ULL << Buffer[Index]);
+
+  }
+
+  // (Now that we're done, we can safely return `true`.)
+
+  return true;
 
 }
 
@@ -468,7 +545,7 @@ static void BreakupBlock(allocationNode* Node, uint8 Level, uint8 Target) {
 
 // (TODO - Join/coalesce a block; can be recursive)
 
-static void CoalesceBlock(allocationNode* Node, uintptr Size) {
+[[nodiscard]] static bool CoalesceBlock(allocationNode* Node, uintptr Size) {
 
   // (Coalesce `Node` to the maximum possible level - can be recursive,
   // and (!) always coalesce looking left)
@@ -480,7 +557,7 @@ static void CoalesceBlock(allocationNode* Node, uintptr Size) {
   // (WARNING) (!) Size is not level, you need to calculate it
   // first (maybe a [[reproducible]] function would be useful here?)
 
-  return;
+  return false;
 
 }
 
@@ -489,7 +566,7 @@ static void CoalesceBlock(allocationNode* Node, uintptr Size) {
 // (TODO - Kernel memory allocator, malloc(); returns `NULL` if there's
 // an issue (size == 0, lack of memory, etc.), and must be contiguous)
 
-void* Malloc(const uintptr* Length) {
+[[nodiscard]] void* Malloc(const uintptr* Length) {
 
   // (Sanity-check our values first - if `Length` is zero or `KernelMmap`
   // is a null pointer (or has no entries), return NULL)
@@ -507,7 +584,7 @@ void* Malloc(const uintptr* Length) {
   // Now that we know we're probably good to go, let's calculate the
   // (minimum) block size we need to allocate.
 
-  auto BlockLevel = Levels[0];
+  auto BlockLevel = Limits[0];
   auto BlockSize = SystemPageSize;
 
   while (Size > SystemPageSize) {
@@ -521,12 +598,12 @@ void* Malloc(const uintptr* Length) {
 
   // (If the block level exceeds the maximum limit, just return NULL)
 
-  if (BlockLevel > Levels[1]) {
+  if (BlockLevel > Limits[1]) {
     return NULL;
   }
 
   extern void Printf(const char* String, bool Important, uint8 Color, ...);
-  Printf("[Malloc] BlockLevel = %d, Levels[n] = (%d,%d)\n\r", false, 0x0F, (uint64)BlockLevel, (uint64)Levels[0], (uint64)Levels[1]);
+  Printf("[Malloc] BlockLevel = %d, Limits[n] = (%d,%d)\n\r", false, 0x0F, (uint64)BlockLevel, (uint64)Limits[0], (uint64)Limits[1]);
 
   // The allocation system we're using uses doubly-linked lists of nodes,
   // with one list for each 'level' (which corresponds to the amount
@@ -543,12 +620,17 @@ void* Malloc(const uintptr* Length) {
 
   if (Nodes[BlockLevel] == NULL) {
 
-    for (auto Level = (BlockLevel + 1); Level <= Levels[1]; Level++) {
+    for (auto Level = (BlockLevel + 1); Level <= Limits[1]; Level++) {
 
       if (Nodes[Level] != NULL) {
 
-        BreakupBlock(Nodes[Level], Level, BlockLevel);
-        break;
+        bool Result = BreakupBlock(Nodes[Level], Level, BlockLevel);
+
+        if (Result == false) {
+          return NULL;
+        } else {
+          break;
+        }
 
       }
 
@@ -559,7 +641,7 @@ void* Malloc(const uintptr* Length) {
   // -> (2) TODO - Use PopBlock() to actually pop it from the stack;
   // it should return the corresponding address as well
 
-  return PopBlock(BlockLevel);
+  return PopBlock(Nodes[BlockLevel], BlockLevel);
 
 }
 
@@ -567,7 +649,7 @@ void* Malloc(const uintptr* Length) {
 
 // (TODO - Memory deallocator, free(); does nothing if `Pointer == NULL`)
 
-bool Free(void* Pointer, const uintptr* Length) {
+[[nodiscard]] bool Free(void* Pointer, const uintptr* Length) {
 
   // (Sanity-check our values first - if `Pointer` *or* `KernelMmap`
   // is a null pointer (or has no entries), return false)

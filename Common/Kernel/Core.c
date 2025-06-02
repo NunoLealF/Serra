@@ -240,15 +240,15 @@ void KernelCore(commonInfoTable* InfoTable) {
 
     Message(Ok, "InitializeAllocationSubsystem() worked");
 
-    const uintptr Size = 0x3000;
-    void* Test = Malloc(&Size);
+    const uintptr Size = 0x8800;
+    [[maybe_unused]] void* Test1p = Malloc(&Size);
 
-    const uintptr Size2 = 0x2400;
-    void* Test2 = Malloc(&Size2);
+    const uintptr Size2 = 0x8700;
+    [[maybe_unused]] void* Test2p = Malloc(&Size2);
 
-    Free(Test, &Size);
-    Free(Test2, &Size2);
-    
+    [[maybe_unused]] bool Test1f = Free(Test1p, &Size);
+    [[maybe_unused]] bool Test2f = Free(Test2p, &Size2);
+
     for (uint16 Limit = 0; Limit < 64; Limit++) {
 
       uint64 Num = 0;

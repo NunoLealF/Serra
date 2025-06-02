@@ -38,7 +38,7 @@
 
   bool InitializeAllocationSubsystem(void* UsableMmap, uint16 NumUsableMmapEntries);
 
-  void* Malloc(const uintptr* Length);
-  bool Free(void* Pointer, const uintptr* Length);
+  [[nodiscard]] void* Malloc(const uintptr* Length);
+  [[nodiscard]] bool Free(void* Pointer, const uintptr* Length);
 
 #endif
