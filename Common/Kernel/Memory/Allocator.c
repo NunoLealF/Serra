@@ -293,6 +293,9 @@ static inline void PushBlock(allocationNode* Node, void* Pointer, allocationNode
 
       // (Pop the node from `Nodes[Level]`)
 
+      Printf("[PopBlock] Moving Nodes[%d] from %xh to prev(%xh) \n\r", false, 0x0C,
+             (uint64)Level, (uint64)Nodes[Level], (uint64)Nodes[Level]->Size.Previous);
+
       allocationNode* Node = Nodes[Level];
       Nodes[Level] = Node->Size.Previous;
 
@@ -571,25 +574,67 @@ static inline allocationNode* FreeBlock(void* Pointer, uintptr Size) {
 
   while (Logarithm < Limits[1]) {
 
-    // Calculate the address of the previous node (and break if it
-    // appears to be invalid.)
+    // Calculate the address of the previous and next nodes, and break
+    // if both are NULL.
 
     allocationNode* Previous = Node->Position.Previous;
-    void* Pointer = Previous->Pointer;
+    allocationNode* Next = Node->Position.Next;
 
-    if (Previous == NULL) {
-      break;
-    } else if ((uintptr)Node < (uintptr)Previous) {
+    if ((Previous == NULL) && (Next == NULL)) {
       break;
     }
 
-    // Compare the distance (delta) in addresses, and break if it
-    // isn't equal to `(1 << Logarithm)`.
+    // Compare the distance (delta) between nodes, and break if
+    // *both* adjacent nodes don't have the same size as ours.
 
-    uintptr Delta = ((uintptr)Node - (uintptr)Previous);
+    // (This is necessary because it lets us merge blocks from *both*
+    // sides; otherwise, you'd only be able to merge from the right.)
 
-    if (Delta != ((1ULL << Logarithm) / ScalingFactor)) {
-      break;
+    uintptr Delta = 0;
+    auto Target = ((1ULL << Logarithm) / ScalingFactor);
+
+    if (Previous != NULL) {
+      Delta = ((uintptr)Node - (uintptr)Previous);
+    }
+
+    if (Delta != Target) {
+
+      // (Can we calculate the size of the next block?)
+
+      if (Next == NULL) {
+
+        break;
+
+      } else if (Next->Position.Next == NULL) {
+
+        break;
+
+      } else {
+
+        // (Attempt to calculate the size of the next free block)
+
+        Delta = ((uintptr)Next->Position.Next - (uintptr)Next);
+
+        if (Delta != Target) {
+
+          break;
+
+        } else {
+
+          // (The next free block *is* just as wide, so let's move
+          // `Node` to that instead, then continue)
+
+          extern void Printf(const char* String, bool Important, uint8 Color, ...);
+          Printf("[MergeBlock] Moving (Previous: %xh => %xh) (Node: %xh => %xh) \n\r", false, 0x09,
+                 (uint64)Previous, (uint64)Node, (uint64)Node, (uint64)Next);
+
+          Previous = Node;
+          Node = Next;
+
+        }
+
+      }
+
     }
 
     extern void Printf(const char* String, bool Important, uint8 Color, ...);
@@ -605,6 +650,8 @@ static inline allocationNode* FreeBlock(void* Pointer, uintptr Size) {
     allocationNode* Before = Previous->Position.Previous;
     allocationNode* After = Node->Position.Next;
 
+    void* Pointer = Previous->Pointer;
+
     Printf("[MergeBlock] Popping from stack, so (%xh --(%xh,%xh)--> %xh)\n\r", false, 0x09,
             (uint64)Before, (uint64)Previous, (uint64)Node, (uint64)After);
 
@@ -617,7 +664,7 @@ static inline allocationNode* FreeBlock(void* Pointer, uintptr Size) {
       After->Size.Previous = Before;
     }
 
-    if (Nodes[Logarithm] == Node) {
+    if ((Nodes[Logarithm] == Previous) || (Nodes[Logarithm] == Node)) {
       Nodes[Logarithm] = Before;
     }
 
