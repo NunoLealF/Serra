@@ -340,25 +340,17 @@ static inline allocationNode* FreeBlock(void* Pointer, uintptr Size) {
 
   allocationNode* NextNode = NULL;
 
-  if (PreviousNode != NULL) {
+  Limit += ReservedSpace;
+  Multiplier = sizeof(allocationNode);
 
-    NextNode = PreviousNode->Position.Next;
+  while ((Address + Multiplier) <= Limit) {
 
-  } else {
+    allocationNode* Try = (allocationNode*)(Address + Multiplier);
 
-    Limit += ReservedSpace;
-    Multiplier = sizeof(allocationNode);
-
-    while ((Address + Multiplier) <= Limit) {
-
-      allocationNode* Try = (allocationNode*)(Address + Multiplier);
-
-      if (Try->Pointer != NULL) {
-        NextNode = Try; break;
-      } else {
-        Multiplier *= 2;
-      }
-
+    if (Try->Pointer != NULL) {
+      NextNode = Try; break;
+    } else {
+      Multiplier *= 2;
     }
 
   }
