@@ -3,6 +3,7 @@
 // For more information, please refer to the accompanying license agreement. <3
 
 #include "../Libraries/Stdint.h"
+#include "../Libraries/String.h"
 #include "../System/System.h"
 #include "../../Common.h"
 #include "Memory.h"
@@ -90,15 +91,6 @@
 // (TODO - Node; in this case, `Previous` and `Next` refer to previous
 // and next nodes *with the same size*, and can be NULL if undefined)
 
-typedef struct _allocationNode {
-
-  void* Pointer;
-
-  struct _allocationNode* Previous;
-  struct _allocationNode* Next;
-
-} allocationNode;
-
 static constexpr uint64 ScalingFactor = (SystemPageSize / sizeof(allocationNode));
 
 
@@ -110,72 +102,6 @@ uint8 Levels[2] = {0};
 
 static usableMmapEntry* KernelMmap = NULL;
 static uint16 NumKernelMmapEntries = 0;
-
-
-
-// (TODO - Push node to LatestNodes[Level], via Address (which represents
-// the memory region this is supposed to represent))
-
-static inline void PushNode(uintptr Address, void* Pointer, uint16 Level) {
-
-  // (Check if `Address` or `Pointer` are null, and if they are, return;
-  // otherwise, declare a node at the given address.)
-
-  if (Address == 0) {
-    return;
-  } else if (Pointer == NULL) {
-    return;
-  }
-
-  allocationNode* Node = (allocationNode*)Address;
-
-  // (Get the previous node to point to this one, if possible)
-
-  if (Nodes[Level] != NULL) {
-    Nodes[Level]->Next = Node;
-  }
-
-  // (Add the previous node, set the next node to NULL (as this is the
-  // last node), and update Nodes[Level] to point to this node)
-
-  Node->Pointer = Pointer;
-  Node->Previous = Nodes[Level];
-  Node->Next = NULL;
-
-  Nodes[Level] = Node;
-
-  // Return.
-
-  return;
-
-}
-
-
-
-// (TODO - Pop node from LatestNodes[Level])
-
-static inline void PopNode(uint16 Level) {
-
-  // Check if Nodes[Level] is NULL, and if not, set the last node to
-  // the previous node.
-
-  if (Nodes[Level] == NULL) {
-    return;
-  }
-
-  Nodes[Level] = Nodes[Level]->Previous;
-
-  // Remove the `Next` pointer from that node, if applicable.
-
-  if (Nodes[Level] != NULL) {
-    Nodes[Level]->Next = NULL;
-  }
-
-  // Return.
-
-  return;
-
-}
 
 
 
@@ -211,6 +137,8 @@ bool InitializeAllocationSubsystem(void* UsableMmap, uint16 NumUsableMmapEntries
 
   // (Handle each memory map entry)
 
+  allocationNode* LastNode = NULL;
+
   for (auto Entry = 0; Entry < NumKernelMmapEntries; Entry++) {
 
     // First, let's calculate how much space will actually be needed for
@@ -227,6 +155,11 @@ bool InitializeAllocationSubsystem(void* UsableMmap, uint16 NumUsableMmapEntries
 
     extern void Printf(const char* String, bool Important, uint8 Color, ...);
     Printf("(Reserved - [%xh,%xh]) (Free - [%xh,%xh])\n\r", false, 0x0B, Start, (Start+ReservedSpace), (Start+ReservedSpace), (Start+KernelMmap[Entry].Limit));
+
+    // We don't know if the reserved space itself is clear or not, so
+    // let's clear it with Memset() - this is useful later on.
+
+    Memset((void*)KernelMmap[Entry].Base, 0, ReservedSpace);
 
     // Now that we know how much space we're working with, let's
     // push nodes (add free blocks) as necessary.
@@ -256,7 +189,20 @@ bool InitializeAllocationSubsystem(void* UsableMmap, uint16 NumUsableMmapEntries
       uintptr Address = (Start + (Offset / ScalingFactor));
       void* Pointer = (void*)(Start + ReservedSpace + Offset);
 
-      PushNode(Address, Pointer, Logarithm);
+      allocationNode* Node = (allocationNode*)Address;
+
+      Node->Pointer = Pointer;
+      Node->Position.Previous = LastNode;
+      Node->Position.Next = NULL;
+
+      if (LastNode != NULL) {
+        LastNode->Position.Next = Node;
+      }
+
+      LastNode = Node;
+
+      Node->Size.Previous = Nodes[Logarithm];
+      Nodes[Logarithm] = Node;
 
       // (Update `Offset` and `Space` respectively)
 
@@ -280,18 +226,18 @@ bool InitializeAllocationSubsystem(void* UsableMmap, uint16 NumUsableMmapEntries
 
 void* Malloc(const uintptr* Length) {
 
-  // (Sanity-check our values first - if `*Length` is zero or `KernelMmap`
+  // (Sanity-check our values first - if `Length` is zero or `KernelMmap`
   // is a null pointer (or has no entries), return NULL)
 
   if ((KernelMmap == NULL) || (NumKernelMmapEntries == 0)) {
     return NULL;
-  } else if ((Length == NULL)) {
+  } else if (Length == NULL) {
     return NULL;
   } else if (*Length == 0) {
     return NULL;
   }
 
-  auto Size = *Length;
+  uintptr Size = *Length;
 
   // Now that we know we're probably good to go, let's calculate the
   // (minimum) block size we need to allocate.
@@ -348,10 +294,34 @@ void* Malloc(const uintptr* Length) {
   if (Nodes[BlockLevel] != NULL) {
 
     Pointer = Nodes[BlockLevel]->Pointer;
-    Printf("[Malloc] Found something! (@ %xh, MPointer -> %xh, Previous -> %xh)\n\r", false, 0x0F, (uint64)Nodes[BlockLevel], (uint64)Nodes[BlockLevel]->Pointer, (uint64)Nodes[BlockLevel]->Previous);
+    Printf("[Malloc] Found something! (@ %xh, MPointer -> %xh, prevS -> %xh, prevP/nextP = %x/%xh)\n\r", false, 0x0F,
+            (uint64)Nodes[BlockLevel], (uint64)Nodes[BlockLevel]->Pointer,
+            (uint64)Nodes[BlockLevel]->Size.Previous, (uint64)Nodes[BlockLevel]->Position.Previous,
+            (uint64)Nodes[BlockLevel]->Position.Next);
 
     if (Pointer != NULL) {
-      PopNode(BlockLevel);
+
+      // (Update the position information)
+
+      allocationNode* PreviousNode = Nodes[BlockLevel]->Position.Previous;
+      allocationNode* NextNode = Nodes[BlockLevel]->Position.Next;
+
+      if (PreviousNode != NULL) {
+        PreviousNode->Position.Next = NextNode;
+      }
+
+      if (NextNode != NULL) {
+        NextNode->Position.Previous = PreviousNode;
+      }
+
+      // (Pop the node from the size list, and clear it (so it doesn't
+      // appear in any searches))
+
+      allocationNode* Node = Nodes[BlockLevel];
+      Nodes[BlockLevel] = Node->Size.Previous;
+
+      Memset((void*)Node, 0, sizeof(allocationNode));
+
     }
 
   }
@@ -380,7 +350,7 @@ bool Free(void* Pointer, const uintptr* Length) {
     return false;
   }
 
-  auto Size = *Length;
+  uintptr Size = *Length;
 
   // (Try to figure out where `Pointer` is (within the memory map))
 
@@ -415,6 +385,60 @@ bool Free(void* Pointer, const uintptr* Length) {
     ReservedSpace += (SystemPageSize - (ReservedSpace % SystemPageSize));
   }
 
+  // Now that we know how much reserved space we have, we can try to find
+  // the previous and next nodes. Our nodes are laid out in a predictable
+  // way across reseved space, so we can search for them like this:
+
+  // (Predict where the node would be located)
+
+  auto Start = KernelMmap[Entry].Base;
+  auto Offset = ((uintptr)Pointer - ReservedSpace - Start);
+
+  uintptr Address = (Start + (Offset / ScalingFactor));
+  allocationNode* Node = (allocationNode*)Address;
+
+  // (Attempt to find the previous node)
+
+  allocationNode* PreviousNode = NULL;
+
+  auto Limit = (KernelMmap[Entry].Base);
+  auto Multiplier = sizeof(allocationNode);
+
+  while (((uintptr)Node - Multiplier) >= Limit) {
+
+    allocationNode* Try = (allocationNode*)((uintptr)Node - Multiplier);
+
+    if (Try->Pointer != NULL) {
+      PreviousNode = Try; break;
+    } else {
+      Multiplier *= 2;
+    }
+
+  }
+
+  // (Attempt to find the next node)
+
+  allocationNode* NextNode = NULL;
+
+  Limit += ReservedSpace;
+  Multiplier = sizeof(allocationNode);
+
+  while (((uintptr)Node + Multiplier) <= Limit) {
+
+    allocationNode* Try = (allocationNode*)((uintptr)Node + Multiplier);
+
+    if (Try->Pointer != NULL) {
+      NextNode = Try; break;
+    } else {
+      Multiplier *= 2;
+    }
+
+  }
+
+  extern void Printf(const char* String, bool Important, uint8 Color, ...);
+  Printf("[Free] On @%xh (guess=%xh), guessing that (PreviousNode -> %xh), (NextNode -> %xh)\n\r", false, 0x0F,
+          (uint64)Node, (uint64)Pointer, (uint64)PreviousNode, (uint64)NextNode);
+
   // Now that we know we're probably good to go, there's two things
   // we need to do:
 
@@ -438,16 +462,23 @@ bool Free(void* Pointer, const uintptr* Length) {
   // (Push a node to signify that there's a free memory area at
   // at *(Start + Offset) that's `BlockSize` bytes wide)
 
-  auto Start = KernelMmap[Entry].Base;
-  auto Offset = ((uintptr)Pointer - ReservedSpace - Start);
+  Node->Pointer = Pointer;
+  Node->Position.Previous = PreviousNode;
+  Node->Position.Next = NextNode;
 
-  uintptr Address = (Start + (Offset / ScalingFactor));
+  if (PreviousNode != NULL) {
+    PreviousNode->Position.Next = Node;
+  }
 
-  extern void Printf(const char* String, bool Important, uint8 Color, ...);
+  if (NextNode != NULL) {
+    NextNode->Position.Previous = Node;
+  }
+
+  Node->Size.Previous = Nodes[Logarithm];
+  Nodes[Logarithm] = Node;
+
   Printf("[Free] Found something! (Address -> %xh, Pointer -> %xh, Logarithm -> %d, LogSize -> %xh)\n\r", false, 0x0F,
           (uint64)Address, (uint64)Pointer, (uint64)Logarithm, (uint64)(1ULL << Logarithm));
-
-  PushNode(Address, Pointer, Logarithm);
 
   // -> (2) TODO - Coalesce blocks (?)
 

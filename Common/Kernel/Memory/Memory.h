@@ -13,10 +13,21 @@
 
   typedef struct _allocationNode {
 
+    // (Position-related information: where are we, and where's the
+    // previous and next nodes?)
+
     void* Pointer;
 
-    struct _allocationNode* Previous;
-    struct _allocationNode* Next;
+    struct {
+      struct _allocationNode* Previous;
+      struct _allocationNode* Next;
+    } Position;
+
+    // (Size-related position - where's the last block with this size?)
+
+    struct {
+      struct _allocationNode* Previous;
+    } Size;
 
   } allocationNode;
 
