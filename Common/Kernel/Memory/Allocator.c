@@ -278,16 +278,20 @@ bool InitializeAllocationSubsystem(void* UsableMmap, uint16 NumUsableMmapEntries
 // (TODO - Kernel memory allocator, malloc(); returns `NULL` if there's
 // an issue (size == 0, lack of memory, etc.), and must be contiguous)
 
-void* Malloc(uint64 Size) {
+void* Malloc(const uintptr* Length) {
 
-  // (Sanity-check our values first - if `Size` is zero or `KernelMmap`
+  // (Sanity-check our values first - if `*Length` is zero or `KernelMmap`
   // is a null pointer (or has no entries), return NULL)
 
   if ((KernelMmap == NULL) || (NumKernelMmapEntries == 0)) {
     return NULL;
-  } else if (Size == 0) {
+  } else if ((Length == NULL)) {
+    return NULL;
+  } else if (*Length == 0) {
     return NULL;
   }
+
+  auto Size = *Length;
 
   // Now that we know we're probably good to go, let's calculate the
   // (minimum) block size we need to allocate.
@@ -363,16 +367,20 @@ void* Malloc(uint64 Size) {
 
 // (TODO - Memory deallocator, free(); does nothing if `Pointer == NULL`)
 
-void Free(void* Pointer, uint64 Size) {
+bool Free(void* Pointer, const uintptr* Length) {
 
   // (Sanity-check our values first - if `Pointer` *or* `KernelMmap`
-  // is a null pointer (or has no entries), return)
+  // is a null pointer (or has no entries), return false)
 
   if ((KernelMmap == NULL) || (NumKernelMmapEntries == 0)) {
-    return;
-  } else if (Pointer == NULL) {
-    return;
+    return false;
+  } else if ((Pointer == NULL) || (Length == NULL)) {
+    return false;
+  } else if (*Length == 0) {
+    return false;
   }
+
+  auto Size = *Length;
 
   // (Try to figure out where `Pointer` is (within the memory map))
 
@@ -393,10 +401,10 @@ void Free(void* Pointer, uint64 Size) {
 
   }
 
-  // (If it's not within the memory map at all, just return)
+  // (If it's not within the memory map at all, just return false)
 
   if (Entry == 65535) {
-    return;
+    return false;
   }
 
   // (Calculate the reserved space size of the entry Pointer belongs to)
@@ -424,7 +432,7 @@ void Free(void* Pointer, uint64 Size) {
   }
 
   if (Logarithm > Levels[1]) {
-    return;
+    return false;
   }
 
   // (Push a node to signify that there's a free memory area at
@@ -441,8 +449,10 @@ void Free(void* Pointer, uint64 Size) {
 
   PushNode(Address, Pointer, Logarithm);
 
-  // (Return, now that we're done)
+  // -> (2) TODO - Coalesce blocks (?)
 
-  return;
+  // (Return `true`, now that we're done)
+
+  return true;
 
 }
