@@ -333,21 +333,28 @@ static inline allocationNode* FreeBlock(void* Pointer, uintptr Size) {
   }
 
   // (3) Try to find the *next* node.
-  // (If the `Pointer` member isn't NULL, that means it's a valid node)
 
   allocationNode* NextNode = NULL;
 
-  Limit += ReservedSpace;
-  Multiplier = sizeof(allocationNode);
+  if (PreviousNode != NULL) {
 
-  while ((Address + Multiplier) <= Limit) {
+    NextNode = PreviousNode->Position.Next;
 
-    allocationNode* Try = (allocationNode*)(Address + Multiplier);
+  } else {
 
-    if (Try->Pointer != NULL) {
-      NextNode = Try; break;
-    } else {
-      Multiplier *= 2;
+    Limit += ReservedSpace;
+    Multiplier = sizeof(allocationNode);
+
+    while ((Address + Multiplier) <= Limit) {
+
+      allocationNode* Try = (allocationNode*)(Address + Multiplier);
+
+      if (Try->Pointer != NULL) {
+        NextNode = Try; break;
+      } else {
+        Multiplier *= 2;
+      }
+
     }
 
   }
@@ -605,7 +612,7 @@ static inline allocationNode* FreeBlock(void* Pointer, uintptr Size) {
       Temp->Size.Previous = Previous->Size.Previous;
     }
 
-    if ((Nodes[Logarithm] == Previous) || (Nodes[Logarithm] == Node)) {
+    if (Nodes[Logarithm] == Node) {
       Nodes[Logarithm] = Previous->Size.Previous;
     }
 
