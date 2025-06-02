@@ -8,86 +8,6 @@
 #include "../../Common.h"
 #include "Memory.h"
 
-// (TODO - Include a function to initialize the memory allocator)
-
-// I'm going to need to do that for *each* memory region, and have metadata
-// at the very start, with statistics like
-
-// -> how many free (4KiB, 8KiB, ..., (whatever the limit is)) pages?
-// -> when does this actually start and end?
-// -> pointers to all the different bitmaps, ofc.
-
-// If I have a bitmap for each level, and an infinite amount of levels (in
-// this case, 52, up to the 64-bit limit - just for efficiency), then in
-// theory the bitmaps together should occupy (N/16384) bytes, or (N/8192)
-// if it's 2 bits each, etc.
-
-// A somewhat clever solution would be.. since this is a buddy allocator,
-// let those 2 bits define whether the 1st and 2nd are occupied or not,
-// so 00 is free, 01 or 10 is partial (either left or right are not),
-// 11 is..
-
-
-// I could also use a stack in a similar way - make one for 4KB, one for
-// 8 KB, etc.; then, you can split it into blocks and such.
-
-// (Although this is a little problematic because you need potentially
-// up to 8 bytes for each page => 1/512.. i mean, it wouldn't be the end
-// of the world, but idk.)
-
-// Is that what a slab allocator is? It might be, actually; it combines
-// the benefits of a buddy allocator with the.. hmm
-
-// There's an issue though, which is that.. because it's a *stack*, it..
-// hmm, actually, I could just solve that with a linked list, I think.
-
-
-// Right, so, using a linked-list-style stack, you could substantially
-// reduce the amount of space you'd have to *reserve*; at the cost of
-// still needing some way of dynamically allocating memory.
-
-// But you can fix that by *always* allocating stacks for large areas,
-// and then only breaking them up once needed, *and* dynamically
-// allocating more when needed from the same space - that way
-// the initialization cost is basically 0
-
-// It would be more complicated, and I'd probably have a headache
-// trying to implement it, but it seems good, honestly - it also really
-// minimizes memory fragmentation
-
-// That being said.. now that I think about it, it only minimizes
-// fragmentation on allocating, but on *freeing*, it's not going
-// to be easy to actually build those blocks back together.
-
-// You're breaking it into individual pieces, but then not offering
-// anything that would tell you how to put it back together, so unless
-// you manually solve the puzzle (hard, don't do this).. I don't know
-
-// One solution would be to basically sort it.. and, maybe? A linked
-// list also solves this, you just have to add a new object/point, no
-// need to resort the whole list.
-
-// That being said, linked lists are O(1) to add new objects to, but
-// O(n) to traverse. You could automatically add adjacent blocks, and
-// even push them at the top of the stack, but to *know* where to
-// add the newly enbiggened node would be a hassle
-
-// Linked lists are also slow (if they aren't consecutive) because
-// of prefetching / non-contiguous memory access
-
-// Wait, right, I get it!! It's a linked list, *traversing* is slow
-// but if you sort it.. or, well, hmm
-
-
-// I mean, I *can* organize it in memory, in such a way that it's
-// actually fast (just make it so that each node is stored at an index
-// dependent on the address, so you can 'scan' the memory for nodes)
-
-// But that's complicated, and I frankly don't have much time to
-// finish this at all - I need this done by *today*, c'mon)
-
-
-
 // (TODO - Variables and such)
 
 allocationNode* Nodes[64] = {NULL};
@@ -199,6 +119,11 @@ bool InitializeAllocationSubsystem(void* UsableMmap, uint16 NumUsableMmapEntries
       Node->Size.Previous = Nodes[Logarithm];
       Nodes[Logarithm] = Node;
 
+      if (Node->Size.Previous != NULL) {
+        allocationNode* Temp = Node->Size.Previous;
+        Temp->Size.Next = Node;
+      }
+
       // (Update `Space` and `Offset` respectively)
 
       Space -= (1ULL << Logarithm);
@@ -242,6 +167,11 @@ static inline void PushBlock(allocationNode* Node, void* Pointer, allocationNode
   Node->Size.Previous = Nodes[Level];
   Nodes[Level] = Node;
 
+  if (Node->Size.Previous != NULL) {
+    allocationNode* Temp = Node->Size.Previous;
+    Temp->Size.Next = Node;
+  }
+
   extern void Printf(const char* String, bool Important, uint8 Color, ...);
   Printf("[PushBlock] Found something! (Node -> %xh, Pointer -> %xh, Level -> %d, Size -> %xh)\n\r", false, 0x0D,
           (uint64)Node, (uint64)Pointer, (uint64)Level, (uint64)(1ULL << Level));
@@ -271,10 +201,10 @@ static inline void PushBlock(allocationNode* Node, void* Pointer, allocationNode
     Pointer = Node->Pointer;
 
     extern void Printf(const char* String, bool Important, uint8 Color, ...);
-    Printf("[PopBlock] Found something! (@ %xh, Pointer -> %xh, prevS -> %xh, prevP/nextP = %x/%xh)\n\r", false, 0x0C,
+    Printf("[PopBlock] Found something! (@ %xh, Pointer -> %xh, prevS/nextS -> %x/%xh, prevP/nextP = %x/%xh)\n\r", false, 0x0C,
             (uint64)Node, (uint64)Node->Pointer,
-            (uint64)Node->Size.Previous, (uint64)Node->Position.Previous,
-            (uint64)Node->Position.Next);
+            (uint64)Node->Size.Previous, (uint64)Node->Size.Next,
+            (uint64)Node->Position.Previous, (uint64)Node->Position.Next);
 
     if (Pointer != NULL) {
 
@@ -298,6 +228,7 @@ static inline void PushBlock(allocationNode* Node, void* Pointer, allocationNode
 
       allocationNode* Node = Nodes[Level];
       Nodes[Level] = Node->Size.Previous;
+      Nodes[Level]->Size.Next = NULL;
 
       // (Clear our newly popped node, so it doesn't appear in any
       // searches from something like `FreeBlock()`)
@@ -647,7 +578,7 @@ static inline allocationNode* FreeBlock(void* Pointer, uintptr Size) {
     // -> (1) 'Pop' the last two nodes from their respective lists;
     // we can't use PopBlock() since we don't know where they are.
 
-    // (TODO - Redo position links)
+    // (Deal with position-related links)
 
     allocationNode* Before = Previous->Position.Previous;
     allocationNode* After = Node->Position.Next;
@@ -665,17 +596,21 @@ static inline allocationNode* FreeBlock(void* Pointer, uintptr Size) {
       After->Position.Previous = Before;
     }
 
-    // (TODO - Redo size links
+    // (Deal with size-related links)
+    // TODO - This is still wrong, it doesn't fully clear the previous
+    // entry and it keeps a duplicate entry, I can't be absent-minded here
 
-    if (After->Size.Previous == Node) {
-      After->Size.Previous = Previous->Size.Previous;
-    } else {
-      Printf("[TODO] How are you going to connect the *next* size node to `Previous->Size.Previous`? \n\r", false, 0x4F);
+    if (Node->Size.Next != NULL) {
+      allocationNode* Temp = Node->Size.Next;
+      Temp->Size.Previous = Previous->Size.Previous;
     }
 
     if ((Nodes[Logarithm] == Previous) || (Nodes[Logarithm] == Node)) {
-      Nodes[Logarithm] = Before;
+      Nodes[Logarithm] = Previous->Size.Previous;
     }
+
+    // (Clear `Previous` and `Node`, so they don't pop up in any
+    // future searches)
 
     Memset((void*)Previous, 0, sizeof(allocationNode));
     Memset((void*)Node, 0, sizeof(allocationNode));

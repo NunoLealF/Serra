@@ -17,19 +17,23 @@
     // previous and next nodes?)
 
     void* Pointer;
+    uint8 Padding[24];
 
     struct {
       struct _allocationNode* Previous;
       struct _allocationNode* Next;
-    } Position;
+    } __attribute__((packed)) Position;
 
     // (Size-related position - where's the last block with this size?)
 
     struct {
       struct _allocationNode* Previous;
-    } Size;
+      struct _allocationNode* Next;
+    } __attribute__((packed)) Size;
 
-  } allocationNode;
+  } __attribute__((packed)) allocationNode;
+
+  static_assert((sizeof(allocationNode) == 64), "`allocationNode`'s size must be a power of 2.");
 
   // Include functions and global variables from Allocator.c
 
