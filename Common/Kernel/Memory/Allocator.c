@@ -88,13 +88,6 @@
 
 
 
-// (TODO - Node; in this case, `Previous` and `Next` refer to previous
-// and next nodes *with the same size*, and can be NULL if undefined)
-
-static constexpr uint64 ScalingFactor = (SystemPageSize / sizeof(allocationNode));
-
-
-
 // (TODO - Variables and such)
 
 allocationNode* Nodes[64] = {NULL};
@@ -102,6 +95,8 @@ uint8 Levels[2] = {0};
 
 static usableMmapEntry* KernelMmap = NULL;
 static uint16 NumKernelMmapEntries = 0;
+
+static constexpr uint64 ScalingFactor = (SystemPageSize / sizeof(allocationNode));
 
 
 
@@ -137,7 +132,7 @@ bool InitializeAllocationSubsystem(void* UsableMmap, uint16 NumUsableMmapEntries
 
   // (Handle each memory map entry)
 
-  allocationNode* LastNode = NULL;
+  allocationNode* PreviousNode = NULL;
 
   for (auto Entry = 0; Entry < NumKernelMmapEntries; Entry++) {
 
@@ -192,14 +187,14 @@ bool InitializeAllocationSubsystem(void* UsableMmap, uint16 NumUsableMmapEntries
       allocationNode* Node = (allocationNode*)Address;
 
       Node->Pointer = Pointer;
-      Node->Position.Previous = LastNode;
+      Node->Position.Previous = PreviousNode;
       Node->Position.Next = NULL;
 
-      if (LastNode != NULL) {
-        LastNode->Position.Next = Node;
+      if (PreviousNode != NULL) {
+        PreviousNode->Position.Next = Node;
       }
 
-      LastNode = Node;
+      PreviousNode = Node;
 
       Node->Size.Previous = Nodes[Logarithm];
       Nodes[Logarithm] = Node;
@@ -216,6 +211,276 @@ bool InitializeAllocationSubsystem(void* UsableMmap, uint16 NumUsableMmapEntries
   // (Return true, now that we're done)
 
   return true;
+
+}
+
+
+
+// (TODO - Push a block (for FreeBlock, Coalesce, etc.))
+
+static inline void PushBlock(allocationNode* Node, void* Pointer, allocationNode* Previous, allocationNode* Next, uint8 Level) {
+
+  // (Create a node at the address pointed to by `Node`, and link it
+  // with adjacent nodes if possible)
+
+  Node->Pointer = Pointer;
+
+  Node->Position.Previous = Previous;
+  Node->Position.Next = Next;
+
+  if (Previous != NULL) {
+    Previous->Position.Next = Node;
+  }
+
+  if (Next != NULL) {
+    Next->Position.Previous = Node;
+  }
+
+  // (Push the node to its corresponding list at `Nodes[Level]`,
+  // and link it with the last free size block)
+
+  Node->Size.Previous = Nodes[Level];
+  Nodes[Level] = Node;
+
+  extern void Printf(const char* String, bool Important, uint8 Color, ...);
+  Printf("[PushBlock] Found something! (Node -> %xh, Pointer -> %xh, Level -> %d, Size -> %xh)\n\r", false, 0x0F,
+          (uint64)Node, (uint64)Pointer, (uint64)Level, (uint64)(1ULL << Level));
+
+  // (Return, now that we're done)
+
+  return;
+
+}
+
+
+
+// (TODO - Pop a block (for Allocate(), Coalesce, etc.))
+
+static inline void* PopBlock(uint8 Level) {
+
+  // (Get the current node for the corresponding level, as long as
+  // it isn't a null pointer)
+
+  allocationNode* Node = Nodes[Level];
+  void* Pointer = NULL;
+
+  if (Node != NULL) {
+
+    // (Update `Pointer`, and check that it isn't NULL either)
+
+    Pointer = Node->Pointer;
+
+    extern void Printf(const char* String, bool Important, uint8 Color, ...);
+    Printf("[PopBlock] Found something! (@ %xh, Pointer -> %xh, prevS -> %xh, prevP/nextP = %x/%xh)\n\r", false, 0x0F,
+            (uint64)Node, (uint64)Node->Pointer,
+            (uint64)Node->Size.Previous, (uint64)Node->Position.Previous,
+            (uint64)Node->Position.Next);
+
+    if (Pointer != NULL) {
+
+      // (Relink any adjacent nodes, and update position information)
+
+      allocationNode* Previous = Node->Position.Previous;
+      allocationNode* Next = Node->Position.Next;
+
+      if (Previous != NULL) {
+        Previous->Position.Next = Next;
+      }
+
+      if (Next != NULL) {
+        Next->Position.Previous = Previous;
+      }
+
+      // (Pop the node from `Nodes[Level]`)
+
+      allocationNode* Node = Nodes[Level];
+      Nodes[Level] = Node->Size.Previous;
+
+      // (Clear our newly popped node, so it doesn't appear in any
+      // searches from something like `FreeBlock()`)
+
+      Memset((void*)Node, 0, sizeof(allocationNode));
+
+    }
+
+  }
+
+  // (Now that we're done, return `Pointer`)
+
+  return Pointer;
+
+}
+
+
+
+// (TODO - Free a block (for Free()))
+
+static inline allocationNode* FreeBlock(void* Pointer, uintptr Size) {
+
+  // First, let's try to figure out which entry `Pointer` belongs to.
+
+  // (Try to figure out where `Pointer` is (within the memory map))
+
+  auto Entry = uintmax;
+
+  for (uint16 Index = 0; Index < NumKernelMmapEntries; Index++) {
+
+    if ((uintptr)Pointer >= KernelMmap[Index].Base) {
+
+      if ((uintptr)Pointer <= (KernelMmap[Index].Base + KernelMmap[Index].Limit)) {
+
+        Entry = Index;
+        break;
+
+      }
+
+    }
+
+  }
+
+  // (If it's not within the memory map at all, just return false)
+
+  if (Entry == uintmax) {
+    return NULL;
+  }
+
+  // Next, let's calculate the amount of reserved space within this
+  // entry, and return NULL if `Pointer` is within it.see
+
+  // (Calculate the amount of reserved space in the entry that
+  // `Pointer` belongs to)
+
+  auto ReservedSpace = (KernelMmap[Entry].Limit / ScalingFactor);
+
+  if ((ReservedSpace % SystemPageSize) != 0) {
+    ReservedSpace += (SystemPageSize - (ReservedSpace % SystemPageSize));
+  }
+
+  // (Check if `Pointer` is within that reserved space, and if so,
+  // return a NULL pointer)
+
+  auto Start = KernelMmap[Entry].Base;
+
+  if ((uintptr)Pointer <= (Start + ReservedSpace)) {
+    return NULL;
+  }
+
+  // Now that we know how much reserved space we have, we can move
+  // onto trying to find adjacent free memory blocks.
+
+  // Each free memory block is stored in a corresponding unique location
+  // as an `allocationNode`, which means you can predictably find
+  // adjacent nodes like this:
+
+  // (1) Calculate the corresponding address for the node that
+  // would represent `Pointer`
+
+  auto Offset = ((uintptr)Pointer - (ReservedSpace + Start));
+  uintptr Address = (Start + (Offset / ScalingFactor));
+
+  // (2) Try to find the *previous* node
+  // (If the `Pointer` member isn't NULL, that means it's a valid node)
+
+  allocationNode* PreviousNode = NULL;
+
+  auto Limit = (KernelMmap[Entry].Base);
+  auto Multiplier = sizeof(allocationNode);
+
+  while ((Address - Multiplier) >= Limit) {
+
+    allocationNode* Try = (allocationNode*)(Address - Multiplier);
+
+    if (Try->Pointer != NULL) {
+      PreviousNode = Try; break;
+    } else {
+      Multiplier *= 2;
+    }
+
+  }
+
+  // (3) Try to find the *next* node.
+  // (If the `Pointer` member isn't NULL, that means it's a valid node)
+
+  allocationNode* NextNode = NULL;
+
+  Limit += ReservedSpace;
+  Multiplier = sizeof(allocationNode);
+
+  while ((Address + Multiplier) <= Limit) {
+
+    allocationNode* Try = (allocationNode*)(Address + Multiplier);
+
+    if (Try->Pointer != NULL) {
+      NextNode = Try; break;
+    } else {
+      Multiplier *= 2;
+    }
+
+  }
+
+  extern void Printf(const char* String, bool Important, uint8 Color, ...);
+  Printf("[FreeBlock] On @%xh (guess=%xh), guessing that (PreviousNode -> %xh), (NextNode -> %xh)\n\r", false, 0x0F,
+          (uint64)Address, (uint64)Pointer, (uint64)PreviousNode, (uint64)NextNode);
+
+  // Finally, now that we've found the previous and next nodes, we
+  // can create a new node (at *Address), and assign it to the given
+  // list, depending on the size:
+
+  // (Calculate the logarithm of the block size / the block 'level')
+
+  auto Logarithm = Levels[0];
+
+  while (Size > SystemPageSize) {
+    Logarithm++;
+    Size >>= 1;
+  }
+
+  // (Return a null pointer if the logarithm exceeds the maximum)
+
+  if (Logarithm > Levels[1]) {
+    return NULL;
+  }
+
+  // (Use PushBlock() to initialize the node at the corresponding
+  // location (Address), before returning it)
+
+  allocationNode* Node = (allocationNode*)Address;
+  PushBlock(Node, Pointer, PreviousNode, NextNode, Logarithm);
+
+  return Node;
+
+}
+
+
+
+// (TODO - Break a block up to a certain target size)
+
+static void BreakupBlock(allocationNode* Node, uint8 Level, uint8 Target) {
+
+  // (Break up `Node` in such a way that at least one `Target` level
+  // node is generated; (!) always break up looking right)
+
+  return;
+
+}
+
+
+
+// (TODO - Join/coalesce a block; can be recursive)
+
+static void CoalesceBlock(allocationNode* Node, uintptr Size) {
+
+  // (Coalesce `Node` to the maximum possible level - can be recursive,
+  // and (!) always coalesce looking left)
+
+  // (WARNING) (!) You need to do this in such a way that it works
+  // fine with the different Nodes[] lists, and update them
+  // automatically if possible.
+
+  // (WARNING) (!) Size is not level, you need to calculate it
+  // first (maybe a [[reproducible]] function would be useful here?)
+
+  return;
 
 }
 
@@ -280,56 +545,21 @@ void* Malloc(const uintptr* Length) {
 
     for (auto Level = (BlockLevel + 1); Level <= Levels[1]; Level++) {
 
-      // [TODO] Break up blocks
+      if (Nodes[Level] != NULL) {
+
+        BreakupBlock(Nodes[Level], Level, BlockLevel);
+        break;
+
+      }
 
     }
 
   }
 
-  // -> (2) Otherwise, or after finishing that, obtain the memory area
-  // from Nodes[BlockLevel], popping it from the list, and returning.
+  // -> (2) TODO - Use PopBlock() to actually pop it from the stack;
+  // it should return the corresponding address as well
 
-  void* Pointer = NULL;
-
-  if (Nodes[BlockLevel] != NULL) {
-
-    Pointer = Nodes[BlockLevel]->Pointer;
-    Printf("[Malloc] Found something! (@ %xh, MPointer -> %xh, prevS -> %xh, prevP/nextP = %x/%xh)\n\r", false, 0x0F,
-            (uint64)Nodes[BlockLevel], (uint64)Nodes[BlockLevel]->Pointer,
-            (uint64)Nodes[BlockLevel]->Size.Previous, (uint64)Nodes[BlockLevel]->Position.Previous,
-            (uint64)Nodes[BlockLevel]->Position.Next);
-
-    if (Pointer != NULL) {
-
-      // (Update the position information)
-
-      allocationNode* PreviousNode = Nodes[BlockLevel]->Position.Previous;
-      allocationNode* NextNode = Nodes[BlockLevel]->Position.Next;
-
-      if (PreviousNode != NULL) {
-        PreviousNode->Position.Next = NextNode;
-      }
-
-      if (NextNode != NULL) {
-        NextNode->Position.Previous = PreviousNode;
-      }
-
-      // (Pop the node from the size list, and clear it (so it doesn't
-      // appear in any searches))
-
-      allocationNode* Node = Nodes[BlockLevel];
-      Nodes[BlockLevel] = Node->Size.Previous;
-
-      Memset((void*)Node, 0, sizeof(allocationNode));
-
-    }
-
-  }
-
-  // (Return `Pointer`; if we didn't find anything, this will return
-  // a null pointer, which is also appropriate)
-
-  return Pointer;
+  return PopBlock(BlockLevel);
 
 }
 
@@ -352,135 +582,19 @@ bool Free(void* Pointer, const uintptr* Length) {
 
   uintptr Size = *Length;
 
-  // (Try to figure out where `Pointer` is (within the memory map))
+  // -> (1) TODO - Use FreeBlock() to actually free the block, and
+  // have it return the corresponding node.
 
-  uint16 Entry = 65535;
+  allocationNode* Node = FreeBlock(Pointer, Size);
 
-  for (uint16 Index = 0; Index < NumKernelMmapEntries; Index++) {
-
-    if ((uintptr)Pointer >= KernelMmap[Index].Base) {
-
-      if ((uintptr)Pointer <= (KernelMmap[Index].Base + KernelMmap[Index].Limit)) {
-
-        Entry = Index;
-        break;
-
-      }
-
-    }
-
-  }
-
-  // (If it's not within the memory map at all, just return false)
-
-  if (Entry == 65535) {
+  if (Node == NULL) {
     return false;
   }
 
-  // (Calculate the reserved space size of the entry Pointer belongs to)
+  // -> (2) If possible, coalesce Nodes[N] with any other nearby
+  // blocks (for example, two 4 KiB blocks -> one 8 KiB block)
 
-  auto ReservedSpace = (KernelMmap[Entry].Limit / ScalingFactor);
-
-  if ((ReservedSpace % SystemPageSize) != 0) {
-    ReservedSpace += (SystemPageSize - (ReservedSpace % SystemPageSize));
-  }
-
-  // Now that we know how much reserved space we have, we can try to find
-  // the previous and next nodes. Our nodes are laid out in a predictable
-  // way across reseved space, so we can search for them like this:
-
-  // (Predict where the node would be located)
-
-  auto Start = KernelMmap[Entry].Base;
-  auto Offset = ((uintptr)Pointer - ReservedSpace - Start);
-
-  uintptr Address = (Start + (Offset / ScalingFactor));
-  allocationNode* Node = (allocationNode*)Address;
-
-  // (Attempt to find the previous node)
-
-  allocationNode* PreviousNode = NULL;
-
-  auto Limit = (KernelMmap[Entry].Base);
-  auto Multiplier = sizeof(allocationNode);
-
-  while (((uintptr)Node - Multiplier) >= Limit) {
-
-    allocationNode* Try = (allocationNode*)((uintptr)Node - Multiplier);
-
-    if (Try->Pointer != NULL) {
-      PreviousNode = Try; break;
-    } else {
-      Multiplier *= 2;
-    }
-
-  }
-
-  // (Attempt to find the next node)
-
-  allocationNode* NextNode = NULL;
-
-  Limit += ReservedSpace;
-  Multiplier = sizeof(allocationNode);
-
-  while (((uintptr)Node + Multiplier) <= Limit) {
-
-    allocationNode* Try = (allocationNode*)((uintptr)Node + Multiplier);
-
-    if (Try->Pointer != NULL) {
-      NextNode = Try; break;
-    } else {
-      Multiplier *= 2;
-    }
-
-  }
-
-  extern void Printf(const char* String, bool Important, uint8 Color, ...);
-  Printf("[Free] On @%xh (guess=%xh), guessing that (PreviousNode -> %xh), (NextNode -> %xh)\n\r", false, 0x0F,
-          (uint64)Node, (uint64)Pointer, (uint64)PreviousNode, (uint64)NextNode);
-
-  // Now that we know we're probably good to go, there's two things
-  // we need to do:
-
-  // -> (1) Push a new node to Nodes[N] indicating that the data at
-  // *Pointer is free again.
-
-  // (Calculate the block size and 'level', based on `Size` - if
-  // it exceeds `Levels[1]`, or the end of the entry, return)
-
-  auto Logarithm = Levels[0];
-
-  while (Size > SystemPageSize) {
-    Logarithm++;
-    Size >>= 1;
-  }
-
-  if (Logarithm > Levels[1]) {
-    return false;
-  }
-
-  // (Push a node to signify that there's a free memory area at
-  // at *(Start + Offset) that's `BlockSize` bytes wide)
-
-  Node->Pointer = Pointer;
-  Node->Position.Previous = PreviousNode;
-  Node->Position.Next = NextNode;
-
-  if (PreviousNode != NULL) {
-    PreviousNode->Position.Next = Node;
-  }
-
-  if (NextNode != NULL) {
-    NextNode->Position.Previous = Node;
-  }
-
-  Node->Size.Previous = Nodes[Logarithm];
-  Nodes[Logarithm] = Node;
-
-  Printf("[Free] Found something! (Address -> %xh, Pointer -> %xh, Logarithm -> %d, LogSize -> %xh)\n\r", false, 0x0F,
-          (uint64)Address, (uint64)Pointer, (uint64)Logarithm, (uint64)(1ULL << Logarithm));
-
-  // -> (2) TODO - Coalesce blocks (?)
+  CoalesceBlock(Node, Size);
 
   // (Return `true`, now that we're done)
 

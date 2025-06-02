@@ -240,19 +240,15 @@ void KernelCore(commonInfoTable* InfoTable) {
 
     Message(Ok, "InitializeAllocationSubsystem() worked");
 
-    const uintptr Size = 0x1234;
-
+    const uintptr Size = 0x3000;
     void* Test = Malloc(&Size);
-    Message(Info, "Result of Malloc([%xh]) was %xh", Size, (uintptr)Test);
 
-    const uintptr Size2 = 0x1234;
+    const uintptr Size2 = 0x2400;
     void* Test2 = Malloc(&Size2);
 
     Free(Test, &Size);
-
-    bool Result = Free(Test2, &Size2);
-    Message(Info, "Result of Free(%xh, [%xh]) was `%s`", (uintptr)Test2, Size2, (Result == true) ? "true" : "false");
-
+    Free(Test2, &Size2);
+    
     for (uint16 Limit = 0; Limit < 64; Limit++) {
 
       uint64 Num = 0;
