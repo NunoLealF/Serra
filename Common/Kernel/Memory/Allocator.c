@@ -216,7 +216,7 @@ bool InitializeAllocationSubsystem(void* UsableMmap, uint16 NumUsableMmapEntries
 
 
 
-// (TODO - Push a block (for FreeBlock, Coalesce, etc.))
+// (TODO - Push a block (for FreeBlock, Merge, etc.))
 
 static inline void PushBlock(allocationNode* Node, void* Pointer, allocationNode* Previous, allocationNode* Next, uint8 Level) {
 
@@ -243,7 +243,7 @@ static inline void PushBlock(allocationNode* Node, void* Pointer, allocationNode
   Nodes[Level] = Node;
 
   extern void Printf(const char* String, bool Important, uint8 Color, ...);
-  Printf("[PushBlock] Found something! (Node -> %xh, Pointer -> %xh, Level -> %d, Size -> %xh)\n\r", false, 0x0F,
+  Printf("[PushBlock] Found something! (Node -> %xh, Pointer -> %xh, Level -> %d, Size -> %xh)\n\r", false, 0x0D,
           (uint64)Node, (uint64)Pointer, (uint64)Level, (uint64)(1ULL << Level));
 
   // (Return, now that we're done)
@@ -254,13 +254,14 @@ static inline void PushBlock(allocationNode* Node, void* Pointer, allocationNode
 
 
 
-// (TODO - Pop a block (for Allocate(), Coalesce, etc.))
+// (TODO - Pop a block (for Allocate(), Merge, etc.))
 
-[[nodiscard]] static inline void* PopBlock(allocationNode* Node, uint8 Level) {
+[[nodiscard]] static inline void* PopBlock(uint8 Level) {
 
   // (Get the current node for the corresponding level, as long as
   // it isn't a null pointer)
 
+  allocationNode* Node = Nodes[Level];
   void* Pointer = NULL;
 
   if (Node != NULL) {
@@ -270,7 +271,7 @@ static inline void PushBlock(allocationNode* Node, void* Pointer, allocationNode
     Pointer = Node->Pointer;
 
     extern void Printf(const char* String, bool Important, uint8 Color, ...);
-    Printf("[PopBlock] Found something! (@ %xh, Pointer -> %xh, prevS -> %xh, prevP/nextP = %x/%xh)\n\r", false, 0x0F,
+    Printf("[PopBlock] Found something! (@ %xh, Pointer -> %xh, prevS -> %xh, prevP/nextP = %x/%xh)\n\r", false, 0x0C,
             (uint64)Node, (uint64)Node->Pointer,
             (uint64)Node->Size.Previous, (uint64)Node->Position.Previous,
             (uint64)Node->Position.Next);
@@ -418,7 +419,7 @@ static inline allocationNode* FreeBlock(void* Pointer, uintptr Size) {
   }
 
   extern void Printf(const char* String, bool Important, uint8 Color, ...);
-  Printf("[FreeBlock] On @%xh (guess=%xh), guessing that (PreviousNode -> %xh), (NextNode -> %xh)\n\r", false, 0x0F,
+  Printf("[FreeBlock] On @%xh (guess=%xh), guessing that (PreviousNode -> %xh), (NextNode -> %xh)\n\r", false, 0x0B,
           (uint64)Address, (uint64)Pointer, (uint64)PreviousNode, (uint64)NextNode);
 
   // Finally, now that we've found the previous and next nodes, we
@@ -429,9 +430,8 @@ static inline allocationNode* FreeBlock(void* Pointer, uintptr Size) {
 
   auto Logarithm = Limits[0];
 
-  while (Size > SystemPageSize) {
+  while (Size > (1ULL << Logarithm)) {
     Logarithm++;
-    Size >>= 1;
   }
 
   // (Return a null pointer if the logarithm exceeds the maximum)
@@ -454,7 +454,7 @@ static inline allocationNode* FreeBlock(void* Pointer, uintptr Size) {
 
 // (TODO - Break a block up to a certain target size)
 
-[[nodiscard]] static bool BreakupBlock(allocationNode* Node, uint8 Level, uint8 Target) {
+[[nodiscard]] static inline bool DivideBlock(allocationNode* Node, uint8 Level, uint8 Target) {
 
   // (Sanity-check `Node`, `Level` and `Target`, and return `false`
   // if they don't make sense)
@@ -475,7 +475,7 @@ static inline allocationNode* FreeBlock(void* Pointer, uintptr Size) {
     return false;
   }
 
-  // We need to be able to break up our memory block in the most efficient
+  // We need to be able to divide our memory block in the most efficient
   // way possible, depending on the value of `Target`; so, before we
   // do anything else, let's try to deal with that.
 
@@ -487,7 +487,7 @@ static inline allocationNode* FreeBlock(void* Pointer, uintptr Size) {
   // (Fill it out; for example, (15, 11) becomes (14, 13, 12, 11, 11))
 
   extern void Printf(const char* String, bool Important, uint8 Color, ...);
-  Printf("[BreakupBlock] (%d,%d) turned into (", false, 0x0F, (uint64)Level, (uint64)Target);
+  Printf("[DivideBlock] (%d,%d) turned into (", false, 0x0A, (uint64)Level, (uint64)Target);
 
   for (auto Index = 0; Index < (Size - 1); Index++) {
     Buffer[Index] = (Level - Index - 1);
@@ -503,7 +503,7 @@ static inline allocationNode* FreeBlock(void* Pointer, uintptr Size) {
   allocationNode* PreviousNode = Node->Position.Previous;
   allocationNode* NextNode = Node->Position.Next;
 
-  void* Pointer = PopBlock(Node, Level);
+  void* Pointer = PopBlock(Level);
 
   // (Sanity-check `Pointer`, just in case it didn't go well)
 
@@ -543,21 +543,107 @@ static inline allocationNode* FreeBlock(void* Pointer, uintptr Size) {
 
 
 
-// (TODO - Join/coalesce a block; can be recursive)
+// (TODO - Join/merge a block; can be recursive)
 
-[[nodiscard]] static bool CoalesceBlock(allocationNode* Node, uintptr Size) {
+[[nodiscard]] static inline bool MergeBlock(allocationNode* Node, uintptr Size) {
 
-  // (Coalesce `Node` to the maximum possible level - can be recursive,
-  // and (!) always coalesce looking left)
+  // (Sanity-check `Node` and `Size`, and return `false` if they
+  // don't make sense)
 
-  // (WARNING) (!) You need to do this in such a way that it works
-  // fine with the different Nodes[] lists, and update them
-  // automatically if possible.
+  if (Node == NULL) {
+    return false;
+  } else if (Size == 0) {
+    return false;
+  }
 
-  // (WARNING) (!) Size is not level, you need to calculate it
-  // first (maybe a [[reproducible]] function would be useful here?)
+  // Before we do anything else, let's calculate the level (logarithm) of
+  // our node, based on its size.
 
-  return false;
+  auto Logarithm = Limits[0];
+
+  while (Size > (1ULL << Logarithm)) {
+    Logarithm++;
+  }
+
+  // Next, let's recursively merge the previous block with this one
+  // until there are no more blocks left to merge, or until
+  // `Logarithm` goes out of bounds).
+
+  while (Logarithm < Limits[1]) {
+
+    // Calculate the address of the previous node (and break if it
+    // appears to be invalid.)
+
+    allocationNode* Previous = Node->Position.Previous;
+    void* Pointer = Previous->Pointer;
+
+    if (Previous == NULL) {
+      break;
+    } else if ((uintptr)Node < (uintptr)Previous) {
+      break;
+    }
+
+    // Compare the distance (delta) in addresses, and break if it
+    // isn't equal to `(1 << Logarithm)`.
+
+    uintptr Delta = ((uintptr)Node - (uintptr)Previous);
+
+    if (Delta != ((1ULL << Logarithm) / ScalingFactor)) {
+      break;
+    }
+
+    extern void Printf(const char* String, bool Important, uint8 Color, ...);
+    Printf("[MergeBlock] Nodes at (%xh, %xh) are likely one %xh-byte entry \n\r", false, 0x09,
+            (uint64)Previous, (uint64)Node, (Delta * ScalingFactor * 2));
+
+    // Finally, now that we know that we *can* merge these two
+    // blocks, let's go ahead and do so. We'll need to:
+
+    // -> (1) 'Pop' the last two nodes from their respective lists;
+    // we can't use PopBlock() since we don't know where they are.
+
+    allocationNode* Before = Previous->Position.Previous;
+    allocationNode* After = Node->Position.Next;
+
+    Printf("[MergeBlock] Popping from stack, so (%xh --(%xh,%xh)--> %xh)\n\r", false, 0x09,
+            (uint64)Before, (uint64)Previous, (uint64)Node, (uint64)After);
+
+    if (Before != NULL) {
+      Before->Position.Next = After;
+    }
+
+    if (After != NULL) {
+      After->Position.Previous = Before;
+      After->Size.Previous = Before;
+    }
+
+    if (Nodes[Logarithm] == Node) {
+      Nodes[Logarithm] = Before;
+    }
+
+    Memset((void*)Previous, 0, sizeof(allocationNode));
+    Memset((void*)Node, 0, sizeof(allocationNode));
+
+    // -> (2) 'Push' a new node to the level above, although this
+    // time using PushBlock().
+
+    Logarithm++;
+    PushBlock(Previous, Pointer, Before, After, Logarithm);
+
+    Printf("[MergeBlock] Pushing to stack, making new %xh-byte entry at %xh \n\r", false, 0x09,
+            (uint64)(1ULL << Logarithm), (uint64)Previous);
+
+    // Finally, let's redefine `Node` to point to our previous
+    // block, and repeat the loop.
+
+    Node = Previous;
+    break;
+
+  }
+
+  // (Now that we're done, we can safely return `true`.)
+
+  return true;
 
 }
 
@@ -585,15 +671,9 @@ static inline allocationNode* FreeBlock(void* Pointer, uintptr Size) {
   // (minimum) block size we need to allocate.
 
   auto BlockLevel = Limits[0];
-  auto BlockSize = SystemPageSize;
 
-  while (Size > SystemPageSize) {
-
+  while (Size > (1ULL << BlockLevel)) {
     BlockLevel++;
-    BlockSize *= 2;
-
-    Size /= 2;
-
   }
 
   // (If the block level exceeds the maximum limit, just return NULL)
@@ -603,7 +683,7 @@ static inline allocationNode* FreeBlock(void* Pointer, uintptr Size) {
   }
 
   extern void Printf(const char* String, bool Important, uint8 Color, ...);
-  Printf("[Malloc] BlockLevel = %d, Limits[n] = (%d,%d)\n\r", false, 0x0F, (uint64)BlockLevel, (uint64)Limits[0], (uint64)Limits[1]);
+  Printf("[Malloc] BlockLevel = %d, Limits[n] = (%d,%d)\n\r", false, 0x0E, (uint64)BlockLevel, (uint64)Limits[0], (uint64)Limits[1]);
 
   // The allocation system we're using uses doubly-linked lists of nodes,
   // with one list for each 'level' (which corresponds to the amount
@@ -616,7 +696,7 @@ static inline allocationNode* FreeBlock(void* Pointer, uintptr Size) {
   // That means there are two steps we need to take:
 
   // -> (1) If there *aren't* any memory areas at our level, try to
-  // find a larger area we can break up)
+  // find a larger area we can divide)
 
   if (Nodes[BlockLevel] == NULL) {
 
@@ -624,7 +704,7 @@ static inline allocationNode* FreeBlock(void* Pointer, uintptr Size) {
 
       if (Nodes[Level] != NULL) {
 
-        bool Result = BreakupBlock(Nodes[Level], Level, BlockLevel);
+        bool Result = DivideBlock(Nodes[Level], Level, BlockLevel);
 
         if (Result == false) {
           return NULL;
@@ -641,7 +721,7 @@ static inline allocationNode* FreeBlock(void* Pointer, uintptr Size) {
   // -> (2) TODO - Use PopBlock() to actually pop it from the stack;
   // it should return the corresponding address as well
 
-  return PopBlock(Nodes[BlockLevel], BlockLevel);
+  return PopBlock(BlockLevel);
 
 }
 
@@ -673,13 +753,9 @@ static inline allocationNode* FreeBlock(void* Pointer, uintptr Size) {
     return false;
   }
 
-  // -> (2) If possible, coalesce Nodes[N] with any other nearby
-  // blocks (for example, two 4 KiB blocks -> one 8 KiB block)
+  // -> (2) If possible, merge Nodes[N] with any other nearby
+  // blocks (for example, two 4 KiB blocks -> one 8 KiB block).
 
-  CoalesceBlock(Node, Size);
-
-  // (Return `true`, now that we're done)
-
-  return true;
+  return MergeBlock(Node, Size);
 
 }
