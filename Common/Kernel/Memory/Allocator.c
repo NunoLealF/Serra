@@ -597,8 +597,8 @@ static inline allocationNode* FreeBlock(void* Pointer, uintptr Size) {
     }
 
     // (Deal with size-related links)
-    // TODO - This is still wrong, it doesn't fully clear the previous
-    // entry and it keeps a duplicate entry, I can't be absent-minded here
+
+    // TODO - This still clears/sets the last entry, for some reason..
 
     if (Node->Size.Next != NULL) {
       allocationNode* Temp = Node->Size.Next;
@@ -628,7 +628,7 @@ static inline allocationNode* FreeBlock(void* Pointer, uintptr Size) {
     // block, and repeat the loop.
 
     Node = Previous;
-    break;
+    continue;
 
   }
 
