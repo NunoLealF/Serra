@@ -172,6 +172,8 @@ static inline void PushBlock(allocationNode* Node, void* Pointer, allocationNode
     Temp->Size.Next = Node;
   }
 
+  Node->Size.Next = NULL;
+
   extern void Printf(const char* String, bool Important, uint8 Color, ...);
   Printf("[PushBlock] Found something! (Node -> %xh, Pointer -> %xh, Level -> %d, Size -> %xh)\n\r", false, 0x0D,
           (uint64)Node, (uint64)Pointer, (uint64)Level, (uint64)(1ULL << Level));
@@ -226,9 +228,11 @@ static inline void PushBlock(allocationNode* Node, void* Pointer, allocationNode
       Printf("[PopBlock] Moving Nodes[%d] from %xh to prev(%xh) \n\r", false, 0x0C,
              (uint64)Level, (uint64)Nodes[Level], (uint64)Nodes[Level]->Size.Previous);
 
-      allocationNode* Node = Nodes[Level];
       Nodes[Level] = Node->Size.Previous;
-      Nodes[Level]->Size.Next = NULL;
+
+      if (Nodes[Level] != NULL) {
+        Nodes[Level]->Size.Next = NULL;
+      }
 
       // (Clear our newly popped node, so it doesn't appear in any
       // searches from something like `FreeBlock()`)
@@ -382,7 +386,7 @@ static inline allocationNode* FreeBlock(void* Pointer, uintptr Size) {
   }
 
   // (Use PushBlock() to initialize the node at the corresponding
-  // location (Address), before returning it)
+  // location (Node, representing Pointer), before returning it)
 
   allocationNode* Node = (allocationNode*)Address;
   PushBlock(Node, Pointer, PreviousNode, NextNode, Logarithm);
@@ -603,17 +607,32 @@ static inline allocationNode* FreeBlock(void* Pointer, uintptr Size) {
       After->Position.Previous = Before;
     }
 
-    // (Deal with size-related links)
+    // (Deal with size-related links, for `Previous`)
 
-    // TODO - This still clears/sets the last entry, for some reason..
+    if (Previous->Size.Previous != NULL) {
+      allocationNode* Temp = Previous->Size.Previous;
+      Temp->Size.Next = Previous->Size.Next;
+    } else {
+      Nodes[Logarithm] = Previous->Size.Next;
+    }
 
-    if (Node->Size.Next != NULL) {
-      allocationNode* Temp = Node->Size.Next;
+    if (Previous->Size.Next != NULL) {
+      allocationNode* Temp = Previous->Size.Next;
       Temp->Size.Previous = Previous->Size.Previous;
     }
 
-    if (Nodes[Logarithm] == Node) {
-      Nodes[Logarithm] = Previous->Size.Previous;
+    // (Deal with size-related links, for `Node`)
+
+    if (Node->Size.Previous != NULL) {
+      allocationNode* Temp = Node->Size.Previous;
+      Temp->Size.Next = Node->Size.Next;
+    } else {
+      Nodes[Logarithm] = Node->Size.Next;
+    }
+
+    if (Node->Size.Next != NULL) {
+      allocationNode* Temp = Node->Size.Next;
+      Temp->Size.Previous = Node->Size.Previous;
     }
 
     // (Clear `Previous` and `Node`, so they don't pop up in any
