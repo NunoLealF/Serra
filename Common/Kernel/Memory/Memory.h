@@ -9,40 +9,48 @@
 
   #include "../Libraries/Stdint.h"
 
-  // Include structures from Allocator.c
+  // Include structures from Mm.c
 
   typedef struct _allocationNode {
 
-    // (Position-related information: where are we, and where's the
-    // previous and next nodes?)
+    // (Miscellaneous information, and padding)
 
-    void* Pointer;
-    uint8 Padding[24];
+    void* Pointer; // (What memory block does this node represent?)
+    uint8 Padding[24]; // (Not used, for now.)
+
+    // (Position-related information - links to the previous and next
+    // nodes, in terms of position)
 
     struct {
+
       struct _allocationNode* Previous;
       struct _allocationNode* Next;
+
     } __attribute__((packed)) Position;
 
-    // (Size-related position - where's the last block with this size?)
+    // (Size-related information - links to the previous and next
+    // nodes with the same size)
 
     struct {
+
       struct _allocationNode* Previous;
       struct _allocationNode* Next;
+
     } __attribute__((packed)) Size;
 
   } __attribute__((packed)) allocationNode;
 
-  static_assert((sizeof(allocationNode) == 64), "`allocationNode`'s size must be a power of 2.");
+  static_assert((sizeof(allocationNode) == 64), "`allocationNode`'s size must be a power of two.");
 
-  // Include functions and global variables from Allocator.c
+  // Include functions and global variables from Mm.c
 
   extern allocationNode* Nodes[64];
   extern uint8 Levels[2];
 
-  bool InitializeAllocationSubsystem(void* UsableMmap, uint16 NumUsableMmapEntries);
+  bool InitializeMemoryManagementSubsystem(void* UsableMmap, uint16 NumUsableMmapEntries);
+  bool VerifyMemoryManagementSubsystem(const uintptr Try);
 
-  [[nodiscard]] void* Malloc(const uintptr* Length);
+  [[nodiscard]] void* Allocate(const uintptr* Length);
   [[nodiscard]] bool Free(void* Pointer, const uintptr* Length);
 
 #endif

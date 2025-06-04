@@ -503,44 +503,78 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
   // might fail to correctly reference global variables, so we also try
   // to check for that.)
 
+  // [Stage 1] Components that don't rely on other subsystems to function;
+  // the order in which these are initialized doesn't matter.
+
   // (Set up platform-specific constructors)
 
   #if defined(__amd64__) || defined(__x86_64__)
     InitializeCpuFeatures();
   #endif
 
-  // (Set up EFI-specific global variables)
+  // (Set up firmware-specific constructors)
 
   if (InfoTable->Firmware.Type == EfiFirmware) {
 
     InitializeEfiTables(InfoTable->Firmware.Efi.SystemTable.Pointer);
 
     if (gST != InfoTable->Firmware.Efi.SystemTable.Pointer) {
-      return EntrypointKernelNotPositionIndependent;
+      return EntrypointNotPositionIndependent;
     }
 
   }
 
-  // (Initialize the console and graphics subsystems)
+  // (Set up the memory management subsystem, and make sure that it's
+  // working as well)
 
-  if (InitializeBitmapFont() == false) {
-    return EntrypointCouldntInitializeBitmapFont;
-  } else if (InitializeGraphicsSubsystem(InfoTable) == false) {
-    return EntrypointCouldntInitializeGraphicsSubsystem;
-  } else if (InitializeConsoleSubsystem(InfoTable) == false) {
-    return EntrypointCouldntInitializeConsoleSubsystem;
+  if (InitializeMemoryManagementSubsystem(InfoTable->Memory.List.Pointer, InfoTable->Memory.NumEntries) == true) {
+
+    if (VerifyMemoryManagementSubsystem(SystemPageSize / 2) == false) {
+      return EntrypointCantManageMemory;
+    } else if (VerifyMemoryManagementSubsystem(SystemPageSize) == false) {
+      return EntrypointCantManageMemory;
+    } else if (VerifyMemoryManagementSubsystem(SystemPageSize * 2) == false) {
+      return EntrypointCantManageMemory;
+    }
+
+  } else {
+
+    return EntrypointCouldntInitializeMm;
+
   }
 
-  // (TODO - Initialize the memory management subsystem)
+  // [Stage 2] Components that rely on other subsystems to function; the
+  // order in which these are initialized *can* matter.
 
-  // (TODO - Initialize timing and interrupt subsystems)
+  // (Initialize the graphics subsystem, as well as the built-in bitmap
+  // font if possible)
 
-  // (TODO - Initialize filesystem drivers)
+  if (InitializeGraphicsSubsystem(InfoTable) == true) {
+
+    if (GraphicsData.IsSupported == true) {
+
+      if (InitializeBitmapFont() == false) {
+        return EntrypointCouldntInitializeFont;
+      }
+
+    }
+
+  } else {
+
+    return EntrypointCouldntInitializeGraphics;
+
+  }
+
+  // (Initialize the console subsystem)
+
+  if (InitializeConsoleSubsystem(InfoTable) == false) {
+    return EntrypointCouldntInitializeConsole;
+  }
 
 
 
 
-  // [Call the main kernel function]
+  // [Transfer control to the kernel core]
 
   // Now that we've finished setting up the kernel environment, we can
   // safely call KernelCore().
@@ -550,10 +584,10 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
 
 
 
-  // [Restore bootloader status, and return]
+  // [Restore the bootloader state, and exit]
 
-  // (TODO - This basically just tells the bootloader the correct
-  // console position by updating `InfoTable`)
+  // (Inform the bootloader about the updated console position by modifying
+  // the relevant fields in `InfoTable`, if necessary)
 
   if (ConsoleData.IsSupported == true) {
 
@@ -562,8 +596,7 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
 
   }
 
-  // Now that we're done, we can return and transfer control back
-  // to the bootloader.
+  // (Transfer control back to the bootloader)
 
   return EntrypointSuccess;
 

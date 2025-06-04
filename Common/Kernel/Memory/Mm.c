@@ -22,7 +22,7 @@ static constexpr uint64 ScalingFactor = (SystemPageSize / sizeof(allocationNode)
 
 // (TODO - Initializer/constructor function)
 
-bool InitializeAllocationSubsystem(void* UsableMmap, uint16 NumUsableMmapEntries) {
+bool InitializeMemoryManagementSubsystem(void* UsableMmap, uint16 NumUsableMmapEntries) {
 
   // (First, is this actually a usable memory map?)
 
@@ -67,9 +67,6 @@ bool InitializeAllocationSubsystem(void* UsableMmap, uint16 NumUsableMmapEntries
 
     uintptr Start = KernelMmap[Entry].Base;
     uintptr Offset = 0;
-
-    extern void Printf(const char* String, bool Important, uint8 Color, ...);
-    Printf("(Reserved - [%xh,%xh]) (Free - [%xh,%xh])\n\r", false, 0x0B, Start, (Start+ReservedSpace), (Start+ReservedSpace), (Start+KernelMmap[Entry].Limit));
 
     // We don't know if the reserved space itself is clear or not, so
     // let's clear it with Memset() - this is useful later on.
@@ -141,6 +138,31 @@ bool InitializeAllocationSubsystem(void* UsableMmap, uint16 NumUsableMmapEntries
 
 
 
+// (TODO - Function to test the memory management subsystem)
+
+bool VerifyMemoryManagementSubsystem(const uintptr Try) {
+
+  // (Declare a new `Size` variable with the value from Try, and
+  // try to allocate memory with it)
+
+  const uintptr Size = Try;
+  void* Pointer = Allocate(&Size);
+
+  if (Pointer == NULL) {
+    return false;
+  } else if (Size != Try) {
+    return false;
+  }
+
+  // (Now, try to free the memory block we just allocated, and return
+  // the result from Free())
+
+  return Free(Pointer, &Size);
+
+}
+
+
+
 // (TODO - Push a block (for FreeBlock, Merge, etc.))
 
 static inline void PushBlock(allocationNode* Node, void* Pointer, allocationNode* Previous, allocationNode* Next, uint8 Level) {
@@ -174,10 +196,6 @@ static inline void PushBlock(allocationNode* Node, void* Pointer, allocationNode
 
   Node->Size.Next = NULL;
 
-  extern void Printf(const char* String, bool Important, uint8 Color, ...);
-  Printf("[PushBlock] Found something! (Node -> %xh, Pointer -> %xh, Level -> %d, Size -> %xh)\n\r", false, 0x0D,
-          (uint64)Node, (uint64)Pointer, (uint64)Level, (uint64)(1ULL << Level));
-
   // (Return, now that we're done)
 
   return;
@@ -202,12 +220,6 @@ static inline void PushBlock(allocationNode* Node, void* Pointer, allocationNode
 
     Pointer = Node->Pointer;
 
-    extern void Printf(const char* String, bool Important, uint8 Color, ...);
-    Printf("[PopBlock] Found something! (@ %xh, Pointer -> %xh, prevS/nextS -> %x/%xh, prevP/nextP = %x/%xh)\n\r", false, 0x0C,
-            (uint64)Node, (uint64)Node->Pointer,
-            (uint64)Node->Size.Previous, (uint64)Node->Size.Next,
-            (uint64)Node->Position.Previous, (uint64)Node->Position.Next);
-
     if (Pointer != NULL) {
 
       // (Relink any adjacent nodes, and update position information)
@@ -224,9 +236,6 @@ static inline void PushBlock(allocationNode* Node, void* Pointer, allocationNode
       }
 
       // (Pop the node from `Nodes[Level]`)
-
-      Printf("[PopBlock] Moving Nodes[%d] from %xh to prev(%xh) \n\r", false, 0x0C,
-             (uint64)Level, (uint64)Nodes[Level], (uint64)Nodes[Level]->Size.Previous);
 
       Nodes[Level] = Node->Size.Previous;
 
@@ -355,10 +364,6 @@ static inline allocationNode* FreeBlock(void* Pointer, uintptr Size) {
 
   }
 
-  extern void Printf(const char* String, bool Important, uint8 Color, ...);
-  Printf("[FreeBlock] On @%xh (guess=%xh), guessing that (PreviousNode -> %xh), (NextNode -> %xh)\n\r", false, 0x0B,
-          (uint64)Address, (uint64)Pointer, (uint64)PreviousNode, (uint64)NextNode);
-
   // Finally, now that we've found the previous and next nodes, we
   // can create a new node (at *Address), and assign it to the given
   // list, depending on the size:
@@ -423,16 +428,11 @@ static inline allocationNode* FreeBlock(void* Pointer, uintptr Size) {
 
   // (Fill it out; for example, (15, 11) becomes (14, 13, 12, 11, 11))
 
-  extern void Printf(const char* String, bool Important, uint8 Color, ...);
-  Printf("[DivideBlock] (%d,%d) turned into (", false, 0x0A, (uint64)Level, (uint64)Target);
-
   for (auto Index = 0; Index < (Size - 1); Index++) {
     Buffer[Index] = (Level - Index - 1);
-    Printf("%d, ", false, 0x0F, (uint64)Buffer[Index]);
   }
 
   Buffer[Size - 1] = Target;
-  Printf("%d)\n\r", false, 0x0F, (uint64)Target);
 
   // Now that we know which levels we need to push to, let's extract the
   // current node's information, before popping it from its list.
@@ -558,10 +558,6 @@ static inline allocationNode* FreeBlock(void* Pointer, uintptr Size) {
           // (The next free block *is* just as wide, so let's move
           // `Node` to that instead, then continue)
 
-          extern void Printf(const char* String, bool Important, uint8 Color, ...);
-          Printf("[MergeBlock] Moving (Previous: %xh => %xh) (Node: %xh => %xh) \n\r", false, 0x09,
-                 (uint64)Previous, (uint64)Node, (uint64)Node, (uint64)Next);
-
           Previous = Node;
           Node = Next;
 
@@ -570,10 +566,6 @@ static inline allocationNode* FreeBlock(void* Pointer, uintptr Size) {
       }
 
     }
-
-    extern void Printf(const char* String, bool Important, uint8 Color, ...);
-    Printf("[MergeBlock] Nodes at (%xh, %xh) are likely one %xh-byte entry \n\r", false, 0x09,
-            (uint64)Previous, (uint64)Node, (Delta * ScalingFactor * 2));
 
     // Finally, now that we know that we *can* merge these two
     // blocks, let's go ahead and do so. We'll need to:
@@ -587,9 +579,6 @@ static inline allocationNode* FreeBlock(void* Pointer, uintptr Size) {
     allocationNode* After = Node->Position.Next;
 
     void* Pointer = Previous->Pointer;
-
-    Printf("[MergeBlock] Popping from stack, so (%xh --(%xh,%xh)--> %xh)\n\r", false, 0x09,
-            (uint64)Before, (uint64)Previous, (uint64)Node, (uint64)After);
 
     if (Before != NULL) {
       Before->Position.Next = After;
@@ -639,9 +628,6 @@ static inline allocationNode* FreeBlock(void* Pointer, uintptr Size) {
     Logarithm++;
     PushBlock(Previous, Pointer, Before, After, Logarithm);
 
-    Printf("[MergeBlock] Pushing to stack, making new %xh-byte entry at %xh \n\r", false, 0x09,
-            (uint64)(1ULL << Logarithm), (uint64)Previous);
-
     // Finally, let's redefine `Node` to point to our previous
     // block, and repeat the loop.
 
@@ -661,7 +647,7 @@ static inline allocationNode* FreeBlock(void* Pointer, uintptr Size) {
 // (TODO - Kernel memory allocator, malloc(); returns `NULL` if there's
 // an issue (size == 0, lack of memory, etc.), and must be contiguous)
 
-[[nodiscard]] void* Malloc(const uintptr* Length) {
+[[nodiscard]] void* Allocate(const uintptr* Length) {
 
   // (Sanity-check our values first - if `Length` is zero or `KernelMmap`
   // is a null pointer (or has no entries), return NULL)
@@ -690,9 +676,6 @@ static inline allocationNode* FreeBlock(void* Pointer, uintptr Size) {
   if (BlockLevel > Limits[1]) {
     return NULL;
   }
-
-  extern void Printf(const char* String, bool Important, uint8 Color, ...);
-  Printf("[Malloc] BlockLevel = %d, Limits[n] = (%d,%d)\n\r", false, 0x0E, (uint64)BlockLevel, (uint64)Limits[0], (uint64)Limits[1]);
 
   // The allocation system we're using uses doubly-linked lists of nodes,
   // with one list for each 'level' (which corresponds to the amount

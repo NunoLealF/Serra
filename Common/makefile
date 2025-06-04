@@ -160,9 +160,9 @@ Kernel/Libraries/Memory/Amd64/Memset.o:
 	@echo "Building $@"
 	@$(AS) Kernel/Libraries/Memory/Amd64/Memset.asm -f elf64 -o Kernel/Libraries/Memory/Amd64/Memset.o
 
-Kernel/Memory/Allocator.o:
+Kernel/Memory/Mm.o:
 	@echo "Building $@"
-	@$(CC) $(CFLAGS) -c Kernel/Memory/Allocator.c -o Kernel/Memory/Allocator.o
+	@$(CC) $(CFLAGS) -c Kernel/Memory/Mm.c -o Kernel/Memory/Mm.o
 
 # (System/platform-specific files)
 
@@ -172,6 +172,6 @@ Kernel/System/Amd64.o:
 
 # Link everything into one .elf file
 
-Kernel/Kernel.elf: Kernel/Entry.o Kernel/Core.o Kernel/Firmware/Efi.o Kernel/Graphics/Graphics.o Kernel/Graphics/Console/Console.o Kernel/Graphics/Console/Efi.o Kernel/Graphics/Console/Exceptions.o Kernel/Graphics/Console/Format.o Kernel/Graphics/Console/Graphical.o Kernel/Graphics/Console/Vga.o Kernel/Graphics/Fonts/Bitmap.o Kernel/Libraries/Memory/Memory.o Kernel/Libraries/Memory/Amd64/Memcpy.o Kernel/Libraries/Memory/Amd64/Memset.o Kernel/Libraries/Memory/String.o Kernel/Memory/Allocator.o Kernel/System/Amd64.o
+Kernel/Kernel.elf: Kernel/Entry.o Kernel/Core.o Kernel/Firmware/Efi.o Kernel/Graphics/Graphics.o Kernel/Graphics/Console/Console.o Kernel/Graphics/Console/Efi.o Kernel/Graphics/Console/Exceptions.o Kernel/Graphics/Console/Format.o Kernel/Graphics/Console/Graphical.o Kernel/Graphics/Console/Vga.o Kernel/Graphics/Fonts/Bitmap.o Kernel/Libraries/Memory/Memory.o Kernel/Libraries/Memory/Amd64/Memcpy.o Kernel/Libraries/Memory/Amd64/Memset.o Kernel/Libraries/Memory/String.o Kernel/Memory/Mm.o Kernel/System/Amd64.o
 	@echo "Building $@"
 	@$(CC) -T Linker.ld $(LDFLAGS) -o Kernel/Kernel.elf -ffreestanding -nolibc -nostdlib -lgcc $^

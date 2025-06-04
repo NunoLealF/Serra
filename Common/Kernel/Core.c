@@ -226,54 +226,48 @@ void KernelCore(commonInfoTable* InfoTable) {
 
   }
 
+  // (Show memory allocation nodes and such)
 
+  for (uint16 Limit = 0; Limit < 64; Limit++) {
 
-  // (Try this out)
+    uint64 Num = 0;
+    allocationNode* Node = Nodes[Limit];
 
-  bool Thing = InitializeAllocationSubsystem(InfoTable->Memory.List.Pointer, InfoTable->Memory.NumEntries);
+    while (Node != NULL) {
 
-  if (Thing == false) {
+      Message(Info, "Found a %xh-sized block (at %xh) that represents (%xh, %xh) | (prevS=%xh)",
+                    (1ULL << Limit), ((uintptr)Node),
+                    (uintptr)Node->Pointer, ((uintptr)Node->Pointer + (1ULL << Limit)),
+                    (uintptr)Node->Size.Previous);
 
-    Message(Error, "InitializeAllocationSubsystem() failed for some reason");
+      Node = Node->Size.Previous;
+      Num++;
 
-  } else {
+    }
 
-    Message(Ok, "InitializeAllocationSubsystem() worked");
-
-    const uintptr Size = 0x8800;
-    [[maybe_unused]] void* Test1p = Malloc(&Size); Printf("\n\r", false, 0);
-
-    const uintptr Size2 = 0x8700;
-    [[maybe_unused]] void* Test2p = Malloc(&Size2); Printf("\n\r", false, 0);
-
-    [[maybe_unused]] bool Test1f = Free(Test1p, &Size); Printf("\n\r", false, 0);
-    [[maybe_unused]] bool Test2f = Free(Test2p, &Size2); Printf("\n\r", false, 0);
-
-    for (uint16 Limit = 0; Limit < 64; Limit++) {
-
-      uint64 Num = 0;
-
-      while (Nodes[Limit] != NULL) {
-
-        Message(Info, "Found a %xh-sized block (at %xh) that represents (%xh, %xh) | (prevS=%xh)",
-                      (1ULL << Limit), ((uintptr)Nodes[Limit]),
-                      (uintptr)Nodes[Limit]->Pointer, ((uintptr)Nodes[Limit]->Pointer + (1ULL << Limit)),
-                      (uintptr)Nodes[Limit]->Size.Previous);
-
-        Nodes[Limit] = Nodes[Limit]->Size.Previous;
-        Num++;
-
-      }
-
-      if (Num != 0) {
-        Message(Info, "Found %d nodes at logarithm level [%d]", Num, (uint64)Limit);
-      }
-
+    if (Num != 0) {
+      Message(Info, "Found %d nodes at logarithm level [%d]", Num, (uint64)Limit);
     }
 
   }
 
+  // (How fast can we allocate and deallocate?)
 
+  constexpr auto TryLimit = 1000000;
+  constexpr auto TrySize = (SystemPageSize * 2);
+
+  Message(Kernel, "Starting benchmark.");
+
+  for (auto Try = 0; Try < TryLimit; Try++) {
+
+    if (VerifyMemoryManagementSubsystem(TrySize) == false) {
+      Message(Error, "I don't think that's supposed to happen.. Try = %d", Try);
+      break;
+    }
+
+  }
+
+  Message(Ok, "Finished %d allocations and deallocations (of %d bytes)", (uint64)TryLimit, (uint64)TrySize);
 
   // (Depending on the system type, either wait for a keypress or just
   // stall the system for a while)
@@ -289,7 +283,7 @@ void KernelCore(commonInfoTable* InfoTable) {
 
     // (Do a lot of NOPs to stall the system)
 
-    for (uint64 Count = 0; Count < 5000000000; Count++) {
+    for (uint64 Count = 0; Count < 50000000000; Count++) {
       __asm__ __volatile__ ("nop");
     }
 

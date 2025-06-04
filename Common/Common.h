@@ -46,7 +46,7 @@
 
   */
 
-  #define MmapEntryMemoryLimit (1024UL * 16) // (Each usable memory map entry must be at least 16 KiB)
+  #define MmapEntryMemoryLimit (1024UL * 128) // (Each usable memory map entry must be at least 128 KiB)
 
   typedef struct _usableMmapEntry {
 
@@ -87,7 +87,7 @@
   */
 
   #define commonInfoTableSignature 0x7577757E7577757E
-  #define commonInfoTableVersion 6
+  #define commonInfoTableVersion 7
 
   typedef struct _commonInfoTable {
 
@@ -432,10 +432,12 @@
 
     // (High bit is 8h - compile or runtime issue)
 
-    EntrypointKernelNotPositionIndependent = (8ULL << 32),
-    EntrypointCouldntInitializeBitmapFont,
-    EntrypointCouldntInitializeGraphicsSubsystem,
-    EntrypointCouldntInitializeConsoleSubsystem
+    EntrypointNotPositionIndependent = (8ULL << 32),
+    EntrypointCouldntInitializeMm,
+    EntrypointCantManageMemory,
+    EntrypointCouldntInitializeGraphics,
+    EntrypointCouldntInitializeFont,
+    EntrypointCouldntInitializeConsole
 
   } entrypointReturnStatus;
 
@@ -531,12 +533,17 @@
       "make sure you're linking with `-pie -Wl,--no-dynamic-linker` (and not \n\r"
       "`-static-pie`).",
 
-      "The kernel's built-in bitmap font doesn't appear to be valid;\n\r"
-      "Make sure that the font's width doesn't exceed 8 pixels.",
+      "The kernel was unable to initialize the memory management subsystem.",
 
-      "The kernel was unable to properly initialize the graphics subsystem.",
+      "The memory management subsystem doesn't appear to be working.",
 
-      "The kernel was unable to properly initialize the console subsystem."
+      "The kernel was unable to initialize the graphics subsystem.",
+
+      "The kernel's built-in bitmap font doesn't appear to be valid; make \n\r"
+      "sure that the font's width doesn't exceed 8 pixels, or compile \n\r"
+      "with `Graphical := false` within `makefile.config`.",
+
+      "The kernel was unable to initialize the console subsystem."
 
     }
 
