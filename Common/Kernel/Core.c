@@ -262,6 +262,7 @@ void KernelCore(commonInfoTable* InfoTable) {
   constexpr auto TryLimit = 100000;
   constexpr auto TrySize = (SystemPageSize * 2);
 
+  Print("\n\r", false, 0);
   Message(Kernel, "Starting benchmark.");
 
   for (auto Try = 0; Try < TryLimit; Try++) {
@@ -274,12 +275,6 @@ void KernelCore(commonInfoTable* InfoTable) {
   }
 
   Message(Ok, "Finished %d allocations and deallocations (of %d bytes)", (uint64)TryLimit, (uint64)TrySize);
-
-  // (Test things)
-
-  for (uint16 Thing = 0; Thing < 0xFFFF; Thing++) {
-    Print("[Attribute test]\n\r", false, (uint8)Thing);
-  }
 
   // (Depending on the system type, either wait for a keypress or just
   // stall the system for a while)

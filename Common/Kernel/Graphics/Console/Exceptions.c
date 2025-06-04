@@ -109,7 +109,7 @@ void Message(messageType Type, const char* String, ...) {
   // Show the given message to the user, and call va_end().
 
   vPrintf(String, Important, ((Type != Info) ? 0x0F : 0x07), Arguments);
-  Print("\n\r", Important, 0x0F);
+  Print("\n\r", Important, ((Type != Info) ? 0x0F : 0x07));
 
   va_end(Arguments);
 

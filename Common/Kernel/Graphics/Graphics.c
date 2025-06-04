@@ -305,30 +305,61 @@ void DrawBitmapFont(const char* String, const bitmapFontData* Font, uint32 Foreg
       auto BgColor = TranslateRgbColorValue(BackgroundColor);
       auto FgColor = TranslateRgbColorValue(ForegroundColor);
 
-      // (Allocate space for our lookup table from the stack, and fill it
-      // out as necessary.)
+      // (Allocate space for our lookup table, and fill it out as necessary;
+      // in order to improve performance, we also cache it, and use a
+      // different process for some color combinations)
 
-      uint8 BitmapLut[128][GraphicsData.Bpp * 8];
+      static uint32 CachedColors[2] = {0};
+      static uint8 BitmapLut[128][8 * sizeof(uint64)];
+
       #define GetBitmapLutPosition(Byte, Bit) ((void*)&BitmapLut[Byte][GraphicsData.Bpp * Bit])
 
-      for (auto Byte = 0; Byte < 128; Byte++) {
+      if ((CachedColors[0] != BgColor) || (CachedColors[1] != FgColor)) {
 
-        // (Handle each individual bit)
+        // (If the background and foreground colors are both black or
+        // white, then skip the process entirely)
 
-        auto Bit = 8;
+        if ((BackgroundColor == 0) && (ForegroundColor == 0)) {
 
-        while (Bit > 0) {
+          Memset(GetBitmapLutPosition(0, 0), 0, (128 * 8 * sizeof(uint64)));
 
-          // Depending on whether this bit is set, either draw the
-          // foreground or the background color.
+        } else if ((BackgroundColor == 0xFFFFFF) && (ForegroundColor == 0xFFFFFF)) {
 
-          if ((Byte & (1ULL << --Bit)) != 0) {
-            Memcpy(GetBitmapLutPosition(Byte, (7 - Bit)), &FgColor, GraphicsData.Bpp);
-          } else {
-            Memcpy(GetBitmapLutPosition(Byte, (7 - Bit)), &BgColor, GraphicsData.Bpp);
+          Memset(GetBitmapLutPosition(0, 0), 0xFF, (128 * 8 * sizeof(uint64)));
+
+        } else {
+
+          // (Otherwise, let's build up our lookup table.)
+
+          for (auto Byte = 0; Byte < 128; Byte++) {
+
+            // (Handle each individual bit)
+
+            auto Bit = 8;
+            auto Complement = 0;
+
+            while (Bit > 0) {
+
+              // Depending on whether this bit is set, either draw the
+              // foreground or the background color.
+
+              if ((Byte & (1ULL << --Bit)) != 0) {
+                Memcpy(GetBitmapLutPosition(Byte, Complement++), &FgColor, GraphicsData.Bpp);
+              } else {
+                Memcpy(GetBitmapLutPosition(Byte, Complement++), &BgColor, GraphicsData.Bpp);
+              }
+
+            }
+
           }
 
         }
+
+        // (Update `CachedColors` - this lets us avoid rebuilding the
+        // lookup tables if we already used the same colors last time)
+
+        CachedColors[0] = BgColor;
+        CachedColors[1] = FgColor;
 
       }
 
