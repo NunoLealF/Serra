@@ -2,13 +2,12 @@
 // This file is part of the Serra project, which is released under the MIT license.
 // For more information, please refer to the accompanying license agreement. <3
 
-#include "../../Libraries/Stdint.h"
-#include "../../Libraries/String.h"
-#include "../Graphics.h"
-#include "../Fonts/Fonts.h"
-#include "Console.h"
-
-
+#include "../../../Libraries/Stdint.h"
+#include "../../../Libraries/String.h"
+#include "../../Graphics.h"
+#include "../../Fonts/Fonts.h"
+#include "../Console.h"
+#include "Graphical.h"
 
 // (TODO - This macro converts a color attribute into actual RGB
 // color values, which is nice)

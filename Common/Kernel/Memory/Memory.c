@@ -2,9 +2,9 @@
 // This file is part of the Serra project, which is released under the MIT license.
 // For more information, please refer to the accompanying license agreement. <3
 
-#include "../Stdint.h"
-#include "../String.h"
-#include "../../System/System.h"
+#include "../Libraries/Stdint.h"
+#include "../System/System.h"
+#include "Memory.h"
 
 // (TODO - Write documentation)
 // [Platform-specific Memcpy - for AMD64/x64]

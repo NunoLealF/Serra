@@ -69,13 +69,15 @@ Clean:
 
 	@-rm -f Kernel/Graphics/*.o
 	@-rm -f Kernel/Graphics/Console/*.o
+	@-rm -f Kernel/Graphics/Console/Efi/*.o
+	@-rm -f Kernel/Graphics/Console/Graphical/*.o
+	@-rm -f Kernel/Graphics/Console/Vga/*.o
 	@-rm -f Kernel/Graphics/Fonts/*.o
 
 	@-rm -f Kernel/Libraries/*.o
-	@-rm -f Kernel/Libraries/Memory/*.o
-	@-rm -f Kernel/Libraries/Memory/Amd64/*.o
 
 	@-rm -f Kernel/Memory/*.o
+	@-rm -f Kernel/Memory/Amd64/*.o
 
 	@-rm -f Kernel/System/*.o
 
@@ -120,10 +122,6 @@ Kernel/Graphics/Console/Console.o:
 	@echo "Building $@"
 	@$(CC) $(CFLAGS) -c Kernel/Graphics/Console/Console.c -o Kernel/Graphics/Console/Console.o
 
-Kernel/Graphics/Console/Efi.o:
-	@echo "Building $@"
-	@$(CC) $(CFLAGS) -c Kernel/Graphics/Console/Efi.c -o Kernel/Graphics/Console/Efi.o
-
 Kernel/Graphics/Console/Exceptions.o:
 	@echo "Building $@"
 	@$(CC) $(CFLAGS) -c Kernel/Graphics/Console/Exceptions.c -o Kernel/Graphics/Console/Exceptions.o
@@ -132,37 +130,41 @@ Kernel/Graphics/Console/Format.o:
 	@echo "Building $@"
 	@$(CC) $(CFLAGS) -c Kernel/Graphics/Console/Format.c -o Kernel/Graphics/Console/Format.o
 
-Kernel/Graphics/Console/Graphical.o:
+Kernel/Graphics/Console/Efi/Efi.o:
 	@echo "Building $@"
-	@$(CC) $(CFLAGS) -Wno-sign-compare -c Kernel/Graphics/Console/Graphical.c -o Kernel/Graphics/Console/Graphical.o
+	@$(CC) $(CFLAGS) -c Kernel/Graphics/Console/Efi/Efi.c -o Kernel/Graphics/Console/Efi/Efi.o
 
-Kernel/Graphics/Console/Vga.o:
+Kernel/Graphics/Console/Graphical/Graphical.o:
 	@echo "Building $@"
-	@$(CC) $(CFLAGS) -c Kernel/Graphics/Console/Vga.c -o Kernel/Graphics/Console/Vga.o
+	@$(CC) $(CFLAGS) -Wno-sign-compare -c Kernel/Graphics/Console/Graphical/Graphical.c -o Kernel/Graphics/Console/Graphical/Graphical.o
+
+Kernel/Graphics/Console/Vga/Vga.o:
+	@echo "Building $@"
+	@$(CC) $(CFLAGS) -c Kernel/Graphics/Console/Vga/Vga.c -o Kernel/Graphics/Console/Vga/Vga.o
 
 Kernel/Graphics/Fonts/Bitmap.o:
 	@echo "Building $@"
 	@$(CC) $(CFLAGS) -c Kernel/Graphics/Fonts/Bitmap.c -o Kernel/Graphics/Fonts/Bitmap.o
 
-Kernel/Libraries/Memory/Memory.o:
+Kernel/Libraries/String.o:
 	@echo "Building $@"
-	@$(CC) $(CFLAGS) -c Kernel/Libraries/Memory/Memory.c -o Kernel/Libraries/Memory/Memory.o
+	@$(CC) $(CFLAGS) -c Kernel/Libraries/String.c -o Kernel/Libraries/String.o
 
-Kernel/Libraries/Memory/String.o:
+Kernel/Memory/Memory.o:
 	@echo "Building $@"
-	@$(CC) $(CFLAGS) -c Kernel/Libraries/Memory/String.c -o Kernel/Libraries/Memory/String.o
-
-Kernel/Libraries/Memory/Amd64/Memcpy.o:
-	@echo "Building $@"
-	@$(AS) Kernel/Libraries/Memory/Amd64/Memcpy.asm -f elf64 -o Kernel/Libraries/Memory/Amd64/Memcpy.o
-
-Kernel/Libraries/Memory/Amd64/Memset.o:
-	@echo "Building $@"
-	@$(AS) Kernel/Libraries/Memory/Amd64/Memset.asm -f elf64 -o Kernel/Libraries/Memory/Amd64/Memset.o
+	@$(CC) $(CFLAGS) -c Kernel/Memory/Memory.c -o Kernel/Memory/Memory.o
 
 Kernel/Memory/Mm.o:
 	@echo "Building $@"
 	@$(CC) $(CFLAGS) -c Kernel/Memory/Mm.c -o Kernel/Memory/Mm.o
+
+Kernel/Memory/Amd64/Memcpy.o:
+	@echo "Building $@"
+	@$(AS) Kernel/Memory/Amd64/Memcpy.asm -f elf64 -o Kernel/Memory/Amd64/Memcpy.o
+
+Kernel/Memory/Amd64/Memset.o:
+	@echo "Building $@"
+	@$(AS) Kernel/Memory/Amd64/Memset.asm -f elf64 -o Kernel/Memory/Amd64/Memset.o
 
 # (System/platform-specific files)
 
@@ -172,6 +174,6 @@ Kernel/System/Amd64.o:
 
 # Link everything into one .elf file
 
-Kernel/Kernel.elf: Kernel/Entry.o Kernel/Core.o Kernel/Firmware/Efi.o Kernel/Graphics/Graphics.o Kernel/Graphics/Console/Console.o Kernel/Graphics/Console/Efi.o Kernel/Graphics/Console/Exceptions.o Kernel/Graphics/Console/Format.o Kernel/Graphics/Console/Graphical.o Kernel/Graphics/Console/Vga.o Kernel/Graphics/Fonts/Bitmap.o Kernel/Libraries/Memory/Memory.o Kernel/Libraries/Memory/Amd64/Memcpy.o Kernel/Libraries/Memory/Amd64/Memset.o Kernel/Libraries/Memory/String.o Kernel/Memory/Mm.o Kernel/System/Amd64.o
+Kernel/Kernel.elf: Kernel/Entry.o Kernel/Core.o Kernel/Firmware/Efi.o Kernel/Graphics/Graphics.o Kernel/Graphics/Console/Console.o Kernel/Graphics/Console/Exceptions.o Kernel/Graphics/Console/Format.o Kernel/Graphics/Console/Efi/Efi.o Kernel/Graphics/Console/Graphical/Graphical.o Kernel/Graphics/Console/Vga/Vga.o Kernel/Graphics/Fonts/Bitmap.o Kernel/Libraries/String.o Kernel/Memory/Memory.o Kernel/Memory/Mm.o Kernel/Memory/Amd64/Memcpy.o Kernel/Memory/Amd64/Memset.o Kernel/System/Amd64.o
 	@echo "Building $@"
 	@$(CC) -T Linker.ld $(LDFLAGS) -o Kernel/Kernel.elf -ffreestanding -nolibc -nostdlib -lgcc $^

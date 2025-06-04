@@ -253,7 +253,7 @@ void KernelCore(commonInfoTable* InfoTable) {
 
   // (How fast can we allocate and deallocate?)
 
-  constexpr auto TryLimit = 1000000;
+  constexpr auto TryLimit = 100000;
   constexpr auto TrySize = (SystemPageSize * 2);
 
   Message(Kernel, "Starting benchmark.");

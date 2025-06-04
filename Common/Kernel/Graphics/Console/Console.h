@@ -66,4 +66,12 @@
 
   void Printf(const char* String, bool Important, uint8 Color, ...);
   void vPrintf(const char* String, bool Important, uint8 Color, va_list Arguments);
+
+  // Include system-specific printing functions from their
+  // respective folders.
+
+  #include "Efi/Efi.h"
+  #include "Graphical/Graphical.h"
+  #include "Vga/Vga.h"
+
 #endif

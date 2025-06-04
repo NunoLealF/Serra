@@ -2,10 +2,11 @@
 // This file is part of the Serra project, which is released under the MIT license.
 // For more information, please refer to the accompanying license agreement. <3
 
-#include "../../Libraries/Stdint.h"
-#include "../../Libraries/String.h"
-#include "../../Firmware/Firmware.h"
-#include "Console.h"
+#include "../../../Libraries/Stdint.h"
+#include "../../../Libraries/String.h"
+#include "../../../Firmware/Firmware.h"
+#include "../Console.h"
+#include "Efi.h"
 
 // (Converts a char*/char8* string to char16*)
 
@@ -33,7 +34,7 @@ void Print_Efi(const char* String, int32 Attribute) {
   // First, let's convert our ASCII string into a UTF-16 'wide'
   // string that can be understood by the firmware.
 
-  char16 Buffer[Strlen(String)];
+  char16 Buffer[Strlen(String) + 1];
   char16* WideString = ConvertToWideString(Buffer, String);
 
   // Next, let's temporarily save the current color attribute,

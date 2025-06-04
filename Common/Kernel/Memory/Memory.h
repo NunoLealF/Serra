@@ -9,6 +9,17 @@
 
   #include "../Libraries/Stdint.h"
 
+  // Include functions from Memory.c
+
+  void Memcpy(void* Destination, const void* Source, uint64 Size);
+  void Memset(void* Buffer, uint8 Character, uint64 Size);
+  void MemsetBlock(void* Buffer, const void* Block, uint64 Size, uint64 BlockSize);
+
+  // Include compiler-required wrappers from Memory.c
+
+  void* memcpy(void*, const void*, uint64);
+  void* memset(void*, int, uint64);
+
   // Include structures from Mm.c
 
   typedef struct _allocationNode {
