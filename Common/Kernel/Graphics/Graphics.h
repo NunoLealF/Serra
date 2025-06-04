@@ -20,11 +20,15 @@
     bool IsSupported; // (Does this system support graphics mode?)
 
     uint8 Bpp; // (Bytes per pixel (not bits!); .Bits.PerPixel / 8)
-    void* Framebuffer; // (A pointer to the framebuffer)
     uint64 Pitch; // (Bytes per row, including padding)
 
     uint16 LimitX; // (Horizontal/X resolution, in pixels)
     uint16 LimitY; // (Vertical/Y resolution, in pixels)
+
+    // (Framebuffer and double buffering information)
+
+    void* Framebuffer; // (A pointer to the framebuffer)
+    void* Buffer; // (A pointer to the double buffer)
 
     // (Color information; [0] is red, [1] is green, [2] is blue)
 
@@ -46,6 +50,6 @@
 
   void DrawPixel(uint32 Color, uint16 PosX, uint16 PosY);
   void DrawRectangle(uint32 Color, uint16 PosX, uint16 PosY, uint16 Width, uint16 Height);
-  void DrawBitmapFont(const char* String, const bitmapFontData* Font, uint32 ForegroundColor, [[maybe_unused]] uint32 BackgroundColor, bool UseTransparency, uint16 PosX, uint16 PosY);
+  void DrawBitmapFont(const char* String, const bitmapFontData* Font, uint32 ForegroundColor, uint32 BackgroundColor, uint16 PosX, uint16 PosY);
 
 #endif

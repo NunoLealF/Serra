@@ -55,6 +55,8 @@
 
   // Include functions and global variables from Mm.c
 
+  extern bool MemoryManagementEnabled;
+
   extern allocationNode* Nodes[64];
   extern uint8 Levels[2];
 

@@ -8,7 +8,7 @@
 // (TODO: Font, uses #embed; in PSF1 *or* PSF2 format)
 // (TODO: Also, global variables)
 
-// (WARNING: Must be PSF1, or a PSF2 font with less than 8 pixels width;
+// (WARNING: Must be PSF1, or a PSF2 font with *fixed* 8 pixels width;
 // it's not that I can't implement anything wider, but it's too difficult)
 
 const uint8 BitmapFont[] = {
@@ -78,7 +78,7 @@ bool InitializeBitmapFont(void) {
       return false;
     } else if (Header->NumGlyphs < 256) {
       return false;
-    } else if (Header->Width >= 8) {
+    } else if (Header->Width != 8) {
       return false;
     }
 

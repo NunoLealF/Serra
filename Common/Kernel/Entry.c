@@ -529,6 +529,10 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
 
   if (InitializeMemoryManagementSubsystem(InfoTable->Memory.List.Pointer, InfoTable->Memory.NumEntries) == true) {
 
+    if (MemoryManagementEnabled == false) {
+      return EntrypointCouldntInitializeMm;
+    }
+
     if (VerifyMemoryManagementSubsystem(SystemPageSize / 2) == false) {
       return EntrypointCantManageMemory;
     } else if (VerifyMemoryManagementSubsystem(SystemPageSize) == false) {
@@ -595,6 +599,9 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
     InfoTable->Display.Text.PosY = ConsoleData.PosY;
 
   }
+
+  // (Free buffers - TODO, this is only necessary for *some* things,
+  // as far as I'm aware)
 
   // (Transfer control back to the bootloader)
 

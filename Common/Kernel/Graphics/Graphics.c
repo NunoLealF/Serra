@@ -4,6 +4,7 @@
 
 #include "../Libraries/Stdint.h"
 #include "../Libraries/String.h"
+#include "../Memory/Memory.h"
 #include "../../Common.h"
 #include "Graphics.h"
 
@@ -11,6 +12,9 @@
 
 graphicsSubsystemData GraphicsData = {0};
 
+
+// [HEY, WARNING, TODO] By now, the memory subsystem should be up and
+// running, so please use double buffering nwn
 
 
 // (TODO - A function to initialize the graphics subsystem)
@@ -29,7 +33,14 @@ bool InitializeGraphicsSubsystem(void* InfoTable) {
     return false;
   }
 
-  // Next, let's check to see if we're in a graphics mode or not.
+  // Next, let's see if the memory management subsystem is enabled; we
+  // need it to be, in order to implement double buffering support.
+
+  if (MemoryManagementEnabled == false) {
+    return false;
+  }
+
+  // After that, let's check to see if we're in a graphics mode or not.
 
   switch (Table->Display.Type) {
 
@@ -95,6 +106,22 @@ bool InitializeGraphicsSubsystem(void* InfoTable) {
 
     }
 
+    // Finally, let's go ahead and initialize double buffering (by
+    // allocating space for GraphicsData.Buffer)
+
+    const uintptr Size = (GraphicsData.LimitY * GraphicsData.Pitch);
+    void* Buffer = Allocate(&Size);
+
+    // (If we weren't able to allocate it, then return a null pointer;
+    // otherwise, clear it.)
+
+    if (Buffer != NULL) {
+      Memset(Buffer, 0, Size);
+      GraphicsData.Buffer = Buffer;
+    } else {
+      return false;
+    }
+
   }
 
   // Return - the caller can check whether the graphics subsystem was
@@ -151,19 +178,22 @@ void DrawPixel(uint32 Color, uint16 PosX, uint16 PosY) {
 
   if (CanExecuteOperation(PosX, PosY) == true) {
 
-    // Now that we know we are, let's calculate the specific address
-    // within the framebuffer we need to write to
-
-    uintptr Address = ((uintptr)GraphicsData.Framebuffer
-                       + (GraphicsData.Bpp * PosX)
-                       + (GraphicsData.Pitch * PosY));
-
-    // Copy it to the framebuffer using Memcpy() - this is *not* the
-    // most efficient solution, but it'll work fine for simple
-    // operations.
+    // Now that we know we are, let's calculate the specific offset
+    // within the framebuffer we need to write to, as well as the
+    // correct color value.
 
     auto FbColor = TranslateRgbColorValue(Color);
-    Memcpy((void*)Address, (const void*)&FbColor, GraphicsData.Bpp);
+    uintptr Offset = ((GraphicsData.Bpp * PosX) + (GraphicsData.Pitch * PosY));
+
+    // Next, let's copy it to the double buffer - as well as the
+    // framebuffer - using Memcpy(). This isn't really the most
+    // efficient solution, but it *should* work
+
+    void* Backbuffer = (void*)((uintptr)GraphicsData.Buffer + Offset);
+    void* Framebuffer = (void*)((uintptr)GraphicsData.Framebuffer + Offset);
+
+    Memcpy(Backbuffer, (const void*)&FbColor, GraphicsData.Bpp);
+    Memcpy(Framebuffer, (const void*)Backbuffer, GraphicsData.Bpp);
 
   }
 
@@ -187,15 +217,16 @@ void DrawRectangle(uint32 Color, uint16 PosX, uint16 PosY, uint16 Width, uint16 
 
   if (CanExecuteOperation(LimitX, LimitY) == true) {
 
-    // Now that we know we can safely draw this rectangle, let's do
-    // exactly that!
+    // Now that we know we can safely draw this without going out of
+    // bounds, let's do exactly that:
 
     // (Allocate a buffer (from the stack) the size of one line)
 
     auto FbWidth = (GraphicsData.Bpp * Width) + (GraphicsData.Bpp % 2);
     uint8 Buffer[FbWidth];
 
-    // (Fill out the buffer, hopefully somewhat efficiently)
+    // (Fill out the buffer using `MemsetBlock()`, hopefully
+    // somewhat efficiently)
 
     auto FbColor = TranslateRgbColorValue(Color);
     MemsetBlock(Buffer, &FbColor, FbWidth, GraphicsData.Bpp);
@@ -203,16 +234,29 @@ void DrawRectangle(uint32 Color, uint16 PosX, uint16 PosY, uint16 Width, uint16 
     // Now that we've filled out the buffer, we can copy it to the
     // framebuffer, one line at a time.
 
-    uintptr Framebuffer = ((uintptr)GraphicsData.Framebuffer
-                            + (GraphicsData.Bpp * PosX)
-                            + (GraphicsData.Pitch * PosY));
+    // (Since we use double buffering, we first copy to our back
+    // buffer, and *then* we copy it to the framebuffer.)
+
+    uintptr Offset = ((GraphicsData.Bpp * PosX) + (GraphicsData.Pitch * PosY));
+
+    void* Backbuffer = (void*)((uintptr)GraphicsData.Buffer + Offset);
+    void* Framebuffer = (void*)((uintptr)GraphicsData.Framebuffer + Offset);
+
+    // (Copy line by line to the back buffer)
 
     for (auto Line = 0; Line < Height; Line++) {
 
-      Memcpy((void*)Framebuffer, (const void*)Buffer, FbWidth);
-      Framebuffer += GraphicsData.Pitch; // Move onto the next line
+      Memcpy((void*)((uintptr)Backbuffer + (GraphicsData.Pitch * Line)),
+             (const void*)Buffer,
+             FbWidth);
 
     }
+
+    // (Copy everything (from the start to the end of the rectangle) from
+    // the back buffer to the framebuffer in one move)
+
+    Memcpy(Framebuffer, (const void*)Backbuffer,
+          ((GraphicsData.Bpp * Width) + (GraphicsData.Pitch * Height)));
 
   }
 
@@ -226,13 +270,10 @@ void DrawRectangle(uint32 Color, uint16 PosX, uint16 PosY, uint16 Width, uint16 
 
 // (TODO - A function that draws a bitmap font, with optional transparency)
 
-// (WARNING - This is a good start, hopefully.. but it's only really
-// suitable for large operations, certainly not individual letters)
-
 // As with PSF2 bitmaps, 'Width' is padded out as necessary; for example,
 // a 5-bit bitmap is drawn as if it were an 8-bit one
 
-void DrawBitmapFont(const char* String, const bitmapFontData* Font, uint32 ForegroundColor, [[maybe_unused]] uint32 BackgroundColor, bool UseTransparency, uint16 PosX, uint16 PosY) {
+void DrawBitmapFont(const char* String, const bitmapFontData* Font, uint32 ForegroundColor, uint32 BackgroundColor, uint16 PosX, uint16 PosY) {
 
   // First, let's calculate the length of the string we were given.
 
@@ -252,111 +293,118 @@ void DrawBitmapFont(const char* String, const bitmapFontData* Font, uint32 Foreg
     if (CanExecuteOperation(LimitX, LimitY) == true) {
 
       // Okay - now that we know that everything appears to be valid,
-      // we can start drawing our bitmap Font->
+      // we can start drawing our bitmap font.
 
-      // Let's start by allocating a buffer (the size of one line)
-      // from the stack, that we'll update as needed.
+      // Let's start by creating a lookup table for each possible 8-bit
+      // combination (0b00000000 through 0b11111111), with our preferred
+      // foreground color:
 
-      auto FbWidth = (GraphicsData.Bpp * (Font->Width * Length)) + (GraphicsData.Bpp % 2);
-      uint8 Buffer[FbWidth];
+      // (Pre-process the framebuffer color values for `ForegroundColor`
+      // and `BackgroundColor`)
 
-      // Next, if we aren't using transparency, we also want to create
-      // a "background buffer" that we can copy from each time.
+      auto BgColor = TranslateRgbColorValue(BackgroundColor);
+      auto FgColor = TranslateRgbColorValue(ForegroundColor);
 
-      // (In this case, filling a buffer is more expensive than copying
-      // it, so this can speed up the function in the long run)
+      // (Allocate space for our lookup table from the stack, and fill it
+      // out as necessary.)
 
-      [[maybe_unused]] uint8 BackgroundBuffer[FbWidth];
+      uint8 BitmapLut[128][GraphicsData.Bpp * 8];
+      #define GetBitmapLutPosition(Byte, Bit) ((void*)&BitmapLut[Byte][GraphicsData.Bpp * Bit])
 
-      if (UseTransparency == false) {
+      for (auto Byte = 0; Byte < 128; Byte++) {
 
-        uint64 Pixel = TranslateRgbColorValue(BackgroundColor);
-        MemsetBlock(BackgroundBuffer, &Pixel, FbWidth, GraphicsData.Bpp);
+        // (Handle each individual bit)
 
-      }
+        auto Bit = 8;
 
-      // We also want to preprocess a few things for performance; namely:
+        while (Bit > 0) {
 
-      // (1) The pointers to each of the characters within the bitmap
-      // font (we'll need this either way, why not do it now?);
+          // Depending on whether this bit is set, either draw the
+          // foreground or the background color.
 
-      void* CharacterList[Length];
-
-      for (auto Index = 0; Index < Length; Index++) {
-
-        CharacterList[Index] = (void*)((uintptr)Font->GlyphData + (Font->GlyphSize * String[Index]));
-
-      }
-
-      // (2) The address we need to copy to (and possibly, from).
-
-      uintptr Framebuffer = ((uintptr)GraphicsData.Framebuffer
-                              + (GraphicsData.Bpp * PosX)
-                              + (GraphicsData.Pitch * PosY));
-
-      // Finally, let's deal with each individual line:
-
-      for (uint32 Line = 0; Line < Font->Height; Line++) {
-
-        // Depending on whether we're using transparency or not, either
-        // copy the background from the framebuffer, or the background
-        // buffer we defined earlier on.
-
-        if (UseTransparency == true) {
-          Memcpy((void*)Buffer, (const void*)Framebuffer, FbWidth);
-        } else {
-          Memcpy((void*)Buffer, (const void*)BackgroundBuffer, FbWidth);
-        }
-
-        // (Calculate the difference between the 'real' font width,
-        // and the number of bits (which is rounded up to 8))
-
-        uint32 ByteWidth = ((Font->Width + 7) / 8);
-        uint32 FontWidth = Font->Width;
-
-        uint32 WidthDifference = ((ByteWidth * 8) - FontWidth);
-
-        // Read through each bit of the bitmap for each character of
-        // our string, like this:
-
-        uint64 Address = (uint64)Buffer;
-
-        // (For each character of our string..)
-
-        for (auto Index = 0; Index < Length; Index++) {
-
-          uint8 Character = *(uint8*)((uintptr)CharacterList[Index] + (Line * ByteWidth)) >> WidthDifference;
-
-          // (For each bit in our bitmap.. (we iterate in reverse order))
-
-          auto Bit = FontWidth;
-
-          while (Bit > 0) {
-
-            // (If this bit is set, then write it to our line buffer)
-
-            if ((Character & (1ULL << --Bit)) != 0) {
-
-              uint64 Pixel = TranslateRgbColorValue(ForegroundColor);
-              Memcpy((void*)Address, &Pixel, GraphicsData.Bpp);
-
-            }
-
-            // (Increment Address)
-
-            Address += GraphicsData.Bpp;
-
+          if ((Byte & (1ULL << --Bit)) != 0) {
+            Memcpy(GetBitmapLutPosition(Byte, (7 - Bit)), &FgColor, GraphicsData.Bpp);
+          } else {
+            Memcpy(GetBitmapLutPosition(Byte, (7 - Bit)), &BgColor, GraphicsData.Bpp);
           }
 
         }
 
-        // Copy our line buffer to the framebuffer, and move our
-        // framebuffer pointer to the next line over.
+      }
 
-        Memcpy((void*)Framebuffer, (const void*)Buffer, FbWidth);
-        Framebuffer += GraphicsData.Pitch;
+      // Now that we're done, let's pre-process a few commonly
+      // used variables for performance:
+
+      // (1) The difference between the actual and padded font width,
+      // as well as the dimensions of the font;
+
+      auto Height = Font->Height;
+      auto Width = Font->Width;
+
+      auto PaddedWidth = ((Width + 7) / 8);
+
+      // (2) The initial offset, as well as the addresses of the back
+      // and front buffers (`Backbuffer` and `Framebuffer`).
+
+      const uintptr Offset = ((PosX * GraphicsData.Bpp) + (PosY * GraphicsData.Pitch));
+
+      const uintptr Backbuffer = ((uintptr)GraphicsData.Buffer + Offset);
+      const uintptr Framebuffer = ((uintptr)GraphicsData.Framebuffer + Offset);
+
+      // Finally, we can start drawing to the back buffer, like this:
+
+      uintptr Address = Backbuffer;
+
+      for (uint32 Line = 0; Line < Height; Line++) {
+
+        // (For each character within our string..)
+
+        for (auto Index = 0; Index < Length; Index++) {
+
+          // (Obtain the character, and from there, the bitmap specified
+          // by the font for that character)
+
+          char Character = String[Index];
+
+          uint8 Bitmap = *(uint8*)((uintptr)Font->GlyphData
+                                   + (Font->GlyphSize * Character)
+                                   + (Line * PaddedWidth));
+
+          // (Copy over the necessary pixels for that specific byte
+          // from the lookup table we made earlier)
+
+          const void* Pixels = GetBitmapLutPosition(Bitmap, 0);
+          Memcpy((void*)Address, Pixels, (GraphicsData.Bpp * Width));
+
+          // (Increment `Address` to move onto the next character)
+
+          Address += (GraphicsData.Bpp * Width);
+
+        }
+
+        // (Unless we're at the very last line, move `Address` to point
+        // to the next line)
+
+        if ((Line + 1) < Height) {
+
+          Address += GraphicsData.Pitch;
+          Address -= (GraphicsData.Bpp * Width * Length);
+
+        }
 
       }
+
+      // Now that we've finished drawing to the back buffer, we can
+      // finally copy everything to the framebuffer in one go.
+
+      // (Calculate the distance between the start (`Backbuffer`) and
+      // the end (`Address`) of the text we just finished drawing)
+
+      uintptr Delta = (Address - Backbuffer);
+
+      // (Copy from the back bufer to the framebuffer, using Memcpy())
+
+      Memcpy((void*)Framebuffer, (const void*)Backbuffer, (uint64)Delta);
 
     }
 

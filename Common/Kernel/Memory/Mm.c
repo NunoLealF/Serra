@@ -10,6 +10,8 @@
 
 // (TODO - Variables and such)
 
+bool MemoryManagementEnabled = false; // (Should be `true` once subsystem is initialized.)
+
 allocationNode* Nodes[64] = {NULL};
 uint8 Limits[2] = {0};
 
@@ -130,9 +132,11 @@ bool InitializeMemoryManagementSubsystem(void* UsableMmap, uint16 NumUsableMmapE
 
   }
 
-  // (Return true, now that we're done)
+  // (Update `MemoryManagementEnabled` and return true, now that
+  // we're done)
 
-  return true;
+  MemoryManagementEnabled = true;
+  return MemoryManagementEnabled;
 
 }
 

@@ -540,8 +540,8 @@
       "The kernel was unable to initialize the graphics subsystem.",
 
       "The kernel's built-in bitmap font doesn't appear to be valid; make \n\r"
-      "sure that the font's width doesn't exceed 8 pixels, or compile \n\r"
-      "with `Graphical := false` within `makefile.config`.",
+      "sure that the width of the built-in font is exactly 8 pixels, or \n\r"
+      "compile with `Graphical := false` within `makefile.config`.",
 
       "The kernel was unable to initialize the console subsystem."
 

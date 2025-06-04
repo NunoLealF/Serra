@@ -116,24 +116,30 @@ void Print_Graphical(const char* String, uint8 Attribute) {
     auto ClearLines = min((PosY + 1 - ConsoleData.LimitY), ConsoleData.LimitY);
     auto ScrollLines = (ConsoleData.LimitY - ClearLines);
 
-    // Scroll every line back by `ClearLines`, using Memcpy().
-    // (TODO - This would benefit from double buffering, it's slow)
+    // (Scroll every line back by `ClearLines`, using Memcpy())
 
-    uintptr Framebuffer = (uintptr)GraphicsData.Framebuffer;
+    uintptr Buffer = (uintptr)GraphicsData.Buffer;
     auto Multiplier = (BitmapFontData.Height * GraphicsData.Pitch);
 
-    Memcpy((void*)Framebuffer,
-           (const void*)(Framebuffer + (ClearLines * Multiplier)),
+    Memcpy((void*)Buffer,
+           (const void*)(Buffer + (ClearLines * Multiplier)),
            (uint64)(ScrollLines * Multiplier));
 
     // (Clear out the last few lines, using Memset(), and update PosY
     // to correspond to the start of those lines)
 
-    Memset((void*)(Framebuffer + (ScrollLines * Multiplier)),
+    Memset((void*)(Buffer + (ScrollLines * Multiplier)),
            (uint8)0x00,
-           (ClearLines * Multiplier));
+           (uint64)(ClearLines * Multiplier));
 
     ConsoleData.PosY -= ClearLines;
+
+    // (Copy the entire back buffer to the framebuffer in one operation;
+    // that way, we only copy to the framebuffer once.)
+
+    Memcpy((void*)GraphicsData.Framebuffer,
+           (const void*)GraphicsData.Buffer,
+           (uint64)(GraphicsData.LimitY * GraphicsData.Pitch));
 
   }
 
@@ -197,7 +203,7 @@ void Print_Graphical(const char* String, uint8 Attribute) {
       // to the framebuffer.)
 
       LineString[LineIndex] = '\0';
-      DrawBitmapFont(LineString, &BitmapFontData, ForegroundColor, BackgroundColor, false, (InitialPosition[0] * BitmapFontData.Width), (InitialPosition[1] * BitmapFontData.Height));
+      DrawBitmapFont(LineString, &BitmapFontData, ForegroundColor, BackgroundColor, (InitialPosition[0] * BitmapFontData.Width), (InitialPosition[1] * BitmapFontData.Height));
 
       // (Reset LineIndex, to start a new line.)
 

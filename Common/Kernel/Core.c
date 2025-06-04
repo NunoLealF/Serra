@@ -17,14 +17,20 @@ void KernelCore(commonInfoTable* InfoTable) {
 
       // (Get necessary addresses and values)
 
-      auto Buffer = ((uintptr)GraphicsData.Framebuffer + (GraphicsData.Pitch * Y));
+      auto Buffer = ((uintptr)GraphicsData.Buffer + (GraphicsData.Pitch * Y));
       auto Size = (GraphicsData.LimitX * GraphicsData.Bpp);
 
-      // (Use memset to display a pretty gradient)
+      // (Use memset to display a pretty gradient - we first copy to
+      // the double buffer though)
 
       Memset((void*)Buffer, (uint8)(Y * 256 / GraphicsData.LimitY), Size);
 
     }
+
+    // (Copy the entire double buffer to the framebuffer)
+
+    auto FbSize = (GraphicsData.Pitch * GraphicsData.LimitY);
+    Memcpy(GraphicsData.Framebuffer, GraphicsData.Buffer, FbSize);
 
   }
 
@@ -268,6 +274,12 @@ void KernelCore(commonInfoTable* InfoTable) {
   }
 
   Message(Ok, "Finished %d allocations and deallocations (of %d bytes)", (uint64)TryLimit, (uint64)TrySize);
+
+  // (Test things)
+
+  for (uint16 Thing = 0; Thing < 0xFFFF; Thing++) {
+    Print("[Attribute test]\n\r", false, (uint8)Thing);
+  }
 
   // (Depending on the system type, either wait for a keypress or just
   // stall the system for a while)
