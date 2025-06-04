@@ -7,8 +7,6 @@
 DEFAULT REL
 SECTION .text
 
-EXTERN SimdRegisterArea
-
 GLOBAL Memcpy_RepMovsb
 GLOBAL Memcpy_Sse2
 GLOBAL Memcpy_Avx
@@ -66,6 +64,7 @@ Memcpy_RepMovsb:
     cld
     rep movsb
 
+    sfence
     ret
 
 
@@ -115,28 +114,24 @@ Memcpy_Sse2:
 
   .MoveAlignedData:
 
-    ; (Save the current state of the SSE registers, using `fxsave`)
-
-    fxsave [SimdRegisterArea]
-
-    ; (Calculate the number of 256-byte 'blocks' we need to move in R9)
+    ; (Calculate the number of 64-byte 'blocks' we need to move in R9)
 
     mov r9, rcx
-    shr r9, 8
+    shr r9, 6
 
-  ; Move each 256-byte block using SSE registers, using R9 as a counter,
+  ; Move each 64-byte block using SSE registers, using R9 as a counter,
   ; and the `movdqu` and `movntdq` instructions
 
   .MoveBlockData:
 
-    ; (The number of 256-byte blocks left to copy is stored in R9, and
+    ; (The number of 64-byte blocks left to copy is stored in R9, and
     ; decremented with each loop count; if it's zero, that means we're
     ; done, so exit the loop)
 
     cmp r9, 0
     je .MoveRemainder
 
-    ; (Read sixteen unaligned double quadwords (16-byte blocks) into the
+    ; (Read four unaligned double quadwords (16-byte blocks) into the
     ; XMM registers, using the `movdqu` instruction - keep in mind that
     ; we're reading from [RSI+n], which is the same as (*Source + n))
 
@@ -144,18 +139,6 @@ Memcpy_Sse2:
     movdqu xmm1, [rsi+16]
     movdqu xmm2, [rsi+32]
     movdqu xmm3, [rsi+48]
-    movdqu xmm4, [rsi+64]
-    movdqu xmm5, [rsi+80]
-    movdqu xmm6, [rsi+96]
-    movdqu xmm7, [rsi+112]
-    movdqu xmm8, [rsi+128]
-    movdqu xmm9, [rsi+144]
-    movdqu xmm10, [rsi+160]
-    movdqu xmm11, [rsi+176]
-    movdqu xmm12, [rsi+192]
-    movdqu xmm13, [rsi+208]
-    movdqu xmm14, [rsi+224]
-    movdqu xmm15, [rsi+240]
 
     ; (Write those values back to memory, using the `movntdq` instruction;
     ; this time, we're writing to [RDI+n], or (*Destination + n))
@@ -164,26 +147,14 @@ Memcpy_Sse2:
     movntdq [rdi+16], xmm1
     movntdq [rdi+32], xmm2
     movntdq [rdi+48], xmm3
-    movntdq [rdi+64], xmm4
-    movntdq [rdi+80], xmm5
-    movntdq [rdi+96], xmm6
-    movntdq [rdi+112], xmm7
-    movntdq [rdi+128], xmm8
-    movntdq [rdi+144], xmm9
-    movntdq [rdi+160], xmm10
-    movntdq [rdi+176], xmm11
-    movntdq [rdi+192], xmm12
-    movntdq [rdi+208], xmm13
-    movntdq [rdi+224], xmm14
-    movntdq [rdi+240], xmm15
 
     ; (Unlike `rep movs*`, these instructions don't automatically increment
     ; or decrement registers for us, so we have to do that ourselves)
 
-    add rsi, 256
-    add rdi, 256
+    add rsi, 64
+    add rdi, 64
 
-    sub rcx, 256
+    sub rcx, 64
 
     ; (Repeat the loop, decrementing our counter (R9))
 
@@ -197,11 +168,11 @@ Memcpy_Sse2:
     cld
     rep movsb
 
-  ; Restore the previous state of the SSE registers, and return.
+  ; Now that we're done, we can safely return.
 
   .Cleanup:
 
-    fxrstor [SimdRegisterArea]
+    sfence
     ret
 
 
@@ -251,37 +222,24 @@ Memcpy_Avx:
 
   .MoveAlignedData:
 
-    ; (Save the current state of the AVX registers, using `xsave`)
-
-    push rax
-    push rdx
-
-    mov rax, 0FFFFFFFFFFFFFFFFh
-    mov rdx, 0FFFFFFFFFFFFFFFFh
-
-    xsave [SimdRegisterArea]
-
-    pop rdx
-    pop rax
-
-    ; (Calculate the number of 512-byte 'blocks' we need to move in R9)
+    ; (Calculate the number of 128-byte 'blocks' we need to move in R9)
 
     mov r9, rcx
-    shr r9, 9
+    shr r9, 7
 
-  ; Move each 512-byte block using AVX registers, using R9 as a counter,
+  ; Move each 128-byte block using AVX registers, using R9 as a counter,
   ; and the `vmovdqu` and `vmovntdq` instructions
 
   .MoveBlockData:
 
-    ; (The number of 512-byte blocks left to copy is stored in R9, and
+    ; (The number of 128-byte blocks left to copy is stored in R9, and
     ; decremented with each loop count; if it's zero, that means we're
     ; done, so exit the loop)
 
     cmp r9, 0
     je .MoveRemainder
 
-    ; (Read sixteen unaligned 32-byte blocks into the YMM registers,
+    ; (Read four unaligned 32-byte blocks into the YMM registers,
     ; using the `vmovdqu` instruction - keep in mind that we're reading
     ; from [RSI]+n, which is the same as (*Source + n))
 
@@ -289,18 +247,6 @@ Memcpy_Avx:
     vmovdqu ymm1, [rsi+32]
     vmovdqu ymm2, [rsi+64]
     vmovdqu ymm3, [rsi+96]
-    vmovdqu ymm4, [rsi+128]
-    vmovdqu ymm5, [rsi+160]
-    vmovdqu ymm6, [rsi+192]
-    vmovdqu ymm7, [rsi+224]
-    vmovdqu ymm8, [rsi+256]
-    vmovdqu ymm9, [rsi+288]
-    vmovdqu ymm10, [rsi+320]
-    vmovdqu ymm11, [rsi+352]
-    vmovdqu ymm12, [rsi+384]
-    vmovdqu ymm13, [rsi+416]
-    vmovdqu ymm14, [rsi+448]
-    vmovdqu ymm15, [rsi+480]
 
     ; (Write those values back to memory, using the `vmovntdq` instruction;
     ; this time, we're writing to [RDI+n], or (*Destination + n))
@@ -309,26 +255,14 @@ Memcpy_Avx:
     vmovntdq [rdi+32], ymm1
     vmovntdq [rdi+64], ymm2
     vmovntdq [rdi+96], ymm3
-    vmovntdq [rdi+128], ymm4
-    vmovntdq [rdi+160], ymm5
-    vmovntdq [rdi+192], ymm6
-    vmovntdq [rdi+224], ymm7
-    vmovntdq [rdi+256], ymm8
-    vmovntdq [rdi+288], ymm9
-    vmovntdq [rdi+320], ymm10
-    vmovntdq [rdi+352], ymm11
-    vmovntdq [rdi+384], ymm12
-    vmovntdq [rdi+416], ymm13
-    vmovntdq [rdi+448], ymm14
-    vmovntdq [rdi+480], ymm15
 
     ; (Unlike `rep movs*`, these instructions don't automatically increment
     ; or decrement registers for us, so we have to do that ourselves)
 
-    add rsi, 512
-    add rdi, 512
+    add rsi, 128
+    add rdi, 128
 
-    sub rcx, 512
+    sub rcx, 128
 
     ; (Repeat the loop, decrementing our counter (R9))
 
@@ -342,21 +276,11 @@ Memcpy_Avx:
     cld
     rep movsb
 
-  ; Restore the previous state of the AVX registers, and return.
+  ; Now that we're done, let's return.
 
   .Cleanup:
 
-    push rax
-    push rdx
-
-    mov rax, 0FFFFFFFFFFFFFFFFh
-    mov rdx, 0FFFFFFFFFFFFFFFFh
-
-    xrstor [SimdRegisterArea]
-
-    pop rdx
-    pop rax
-
+    sfence
     ret
 
 
@@ -406,72 +330,31 @@ Memcpy_Avx512f:
 
   .MoveAlignedData:
 
-    ; (Save the current state of the AVX registers, using `xsave`)
-
-    push rax
-    push rdx
-
-    mov rax, 0FFFFFFFFFFFFFFFFh
-    mov rdx, 0FFFFFFFFFFFFFFFFh
-
-    xsave [SimdRegisterArea]
-
-    pop rdx
-    pop rax
-
-    ; (Calculate the number of 2048-byte 'blocks' we need to move in R9)
+    ; (Calculate the number of 256-byte 'blocks' we need to move in R9)
 
     mov r9, rcx
-    shr r9, 11
+    shr r9, 8
 
-  ; Move each 2048-byte block using AVX-512 registers, using R9 as
+  ; Move each 256-byte block using AVX-512 registers, using R9 as
   ; a counter, and the `vmovdqu` and `vmovntdq` instructions
 
   .MoveBlockData:
 
-    ; (The number of 2048-byte blocks left to copy is stored in R9, and
+    ; (The number of 256-byte blocks left to copy is stored in R9, and
     ; decremented with each loop count; if it's zero, that means we're
     ; done, so exit the loop)
 
     cmp r9, 0
     je .MoveRemainder
 
-    ; (Read thirty-two unaligned 64-byte blocks into the ZMM registers,
-    ; using the `vmovdqu64` instruction - keep in mind that we're reading
+    ; (Read four unaligned 64-byte blocks into the ZMM registers, using
+    ; the `vmovdqu64` instruction - keep in mind that we're reading
     ; from [RSI]+n, which is the same as (*Source + n))
 
     vmovdqu64 zmm0, [rsi+0]
     vmovdqu64 zmm1, [rsi+64]
     vmovdqu64 zmm2, [rsi+128]
     vmovdqu64 zmm3, [rsi+192]
-    vmovdqu64 zmm4, [rsi+256]
-    vmovdqu64 zmm5, [rsi+320]
-    vmovdqu64 zmm6, [rsi+384]
-    vmovdqu64 zmm7, [rsi+448]
-    vmovdqu64 zmm8, [rsi+512]
-    vmovdqu64 zmm9, [rsi+576]
-    vmovdqu64 zmm10, [rsi+640]
-    vmovdqu64 zmm11, [rsi+704]
-    vmovdqu64 zmm12, [rsi+768]
-    vmovdqu64 zmm13, [rsi+832]
-    vmovdqu64 zmm14, [rsi+896]
-    vmovdqu64 zmm15, [rsi+960]
-    vmovdqu64 zmm16, [rsi+1024]
-    vmovdqu64 zmm17, [rsi+1088]
-    vmovdqu64 zmm18, [rsi+1152]
-    vmovdqu64 zmm19, [rsi+1216]
-    vmovdqu64 zmm20, [rsi+1280]
-    vmovdqu64 zmm21, [rsi+1344]
-    vmovdqu64 zmm22, [rsi+1408]
-    vmovdqu64 zmm23, [rsi+1472]
-    vmovdqu64 zmm24, [rsi+1536]
-    vmovdqu64 zmm25, [rsi+1600]
-    vmovdqu64 zmm26, [rsi+1664]
-    vmovdqu64 zmm27, [rsi+1728]
-    vmovdqu64 zmm28, [rsi+1792]
-    vmovdqu64 zmm29, [rsi+1856]
-    vmovdqu64 zmm30, [rsi+1920]
-    vmovdqu64 zmm31, [rsi+1984]
 
     ; (Write those values back to memory, using the `vmovntdq` instruction;
     ; this time, we're writing to [RDI+n], or (*Destination + n))
@@ -480,42 +363,14 @@ Memcpy_Avx512f:
     vmovntdq [rdi+64], zmm1
     vmovntdq [rdi+128], zmm2
     vmovntdq [rdi+192], zmm3
-    vmovntdq [rdi+256], zmm4
-    vmovntdq [rdi+320], zmm5
-    vmovntdq [rdi+384], zmm6
-    vmovntdq [rdi+448], zmm7
-    vmovntdq [rdi+512], zmm8
-    vmovntdq [rdi+576], zmm9
-    vmovntdq [rdi+640], zmm10
-    vmovntdq [rdi+704], zmm11
-    vmovntdq [rdi+768], zmm12
-    vmovntdq [rdi+832], zmm13
-    vmovntdq [rdi+896], zmm14
-    vmovntdq [rdi+960], zmm15
-    vmovntdq [rdi+1024], zmm16
-    vmovntdq [rdi+1088], zmm17
-    vmovntdq [rdi+1152], zmm18
-    vmovntdq [rdi+1216], zmm19
-    vmovntdq [rdi+1280], zmm20
-    vmovntdq [rdi+1344], zmm21
-    vmovntdq [rdi+1408], zmm22
-    vmovntdq [rdi+1472], zmm23
-    vmovntdq [rdi+1536], zmm24
-    vmovntdq [rdi+1600], zmm25
-    vmovntdq [rdi+1664], zmm26
-    vmovntdq [rdi+1728], zmm27
-    vmovntdq [rdi+1792], zmm28
-    vmovntdq [rdi+1856], zmm29
-    vmovntdq [rdi+1920], zmm30
-    vmovntdq [rdi+1984], zmm31
 
     ; (Unlike `rep movs*`, these instructions don't automatically increment
     ; or decrement registers for us, so we have to do that ourselves)
 
-    add rsi, 2048
-    add rdi, 2048
+    add rsi, 256
+    add rdi, 256
 
-    sub rcx, 2048
+    sub rcx, 256
 
     ; (Repeat the loop, decrementing our counter (R9))
 
@@ -529,19 +384,9 @@ Memcpy_Avx512f:
     cld
     rep movsb
 
-  ; Restore the previous state of the AVX registers, and return.
+  ; Now that we're done, return.
 
   .Cleanup:
 
-    push rax
-    push rdx
-
-    mov rax, 0FFFFFFFFFFFFFFFFh
-    mov rdx, 0FFFFFFFFFFFFFFFFh
-
-    xrstor [SimdRegisterArea]
-
-    pop rdx
-    pop rax
-
+    sfence
     ret

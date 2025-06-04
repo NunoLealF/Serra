@@ -11,11 +11,6 @@
 
 #if defined(__amd64__) || defined(__x86_64__)
 
-  // Initialize an area for `fxsave`/`fxrstor` and `xsave`/`xrstor`
-  // instructions to save data to.
-
-  volatile alignas(64) uint8 SimdRegisterArea[3072];
-
   // Optimized Memcpy() functions for x64 platforms, from Amd64/Memcpy.asm
 
   extern void Memcpy_RepMovsb(void* Destination, const void* Source, uint64 Size);
@@ -69,7 +64,7 @@ void Memcpy(void* Destination, const void* Source, uint64 Size) {
     // We take into account feature support, as well as size; in this
     // case, ERMS systems always use `rep movsb`)
 
-    if ((Size < 2048) || (CpuFeaturesAvailable.Erms == true)) {
+    if ((Size < 64) || (CpuFeaturesAvailable.Erms == true)) {
 
       Memcpy_RepMovsb(Destination, Source, Size);
 
@@ -148,7 +143,7 @@ void Memset(void* Buffer, uint8 Character, uint64 Size) {
     // We take into account feature support, as well as size; in this
     // case, ERMS systems always use `rep stosb`)
 
-    if ((Size < 2048) || (CpuFeaturesAvailable.Erms == true)) {
+    if ((Size < 64) || (CpuFeaturesAvailable.Erms == true)) {
 
       Memset_RepStosb(Buffer, Character, Size);
 
