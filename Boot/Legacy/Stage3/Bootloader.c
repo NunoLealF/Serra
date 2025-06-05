@@ -137,13 +137,13 @@ void S3Bootloader(void) {
   CommonInfoTable.Version = commonInfoTableVersion;
   CommonInfoTable.Size = sizeof(commonInfoTable);
 
-  CommonInfoTable.Firmware.Type = BiosFirmware;
-  CommonInfoTable.System.Architecture = x64Architecture;
+  CommonInfoTable.Firmware.Type = FirmwareType_Bios;
+  CommonInfoTable.System.Architecture = SystemArchitecture_x64;
 
   // (Copy the contents of TerminalTable)
 
-  CommonInfoTable.Display.Type = VgaDisplay;
-  CommonInfoTable.Display.Text.Format = AsciiFormat;
+  CommonInfoTable.Display.Type = DisplayType_Vga;
+  CommonInfoTable.Display.Text.Format = TextFormat_Ascii;
 
   CommonInfoTable.Display.Text.PosX = TerminalTable.PosX;
   CommonInfoTable.Display.Text.PosY = TerminalTable.PosY;
@@ -195,7 +195,7 @@ void S3Bootloader(void) {
     // the A20 line has already been enabled (either by the firmware
     // itself, or by the BIOS function method in the bootsector).
 
-    CommonInfoTable.Firmware.Bios.A20 = EnabledByDefault;
+    CommonInfoTable.Firmware.Bios.A20 = A20_Default;
     Message(Ok, "The A20 line has already been enabled.");
 
   } else {
@@ -214,7 +214,7 @@ void S3Bootloader(void) {
 
     if (CheckA20() == true) {
 
-      CommonInfoTable.Firmware.Bios.A20 = EnabledByKeyboard;
+      CommonInfoTable.Firmware.Bios.A20 = A20_Keyboard;
       Message(Ok, "The A20 line has successfully been enabled.");
 
     } else {
@@ -235,7 +235,7 @@ void S3Bootloader(void) {
 
       if (CheckA20() == true) {
 
-        CommonInfoTable.Firmware.Bios.A20 = EnabledByFast;
+        CommonInfoTable.Firmware.Bios.A20 = A20_Fast;
         Message(Ok, "The A20 line has successfully been enabled.");
 
       } else {
@@ -728,7 +728,7 @@ void S3Bootloader(void) {
 
   if (SupportsVbe == true) {
 
-    CommonInfoTable.Display.Type = VbeDisplay;
+    CommonInfoTable.Display.Type = DisplayType_Vbe;
 
     CommonInfoTable.Display.Edid.IsSupported = SupportsEdid;
     CommonInfoTable.Display.Edid.PreferredResolution[0] = PreferredResolution[0];
@@ -878,11 +878,18 @@ void S3Bootloader(void) {
 
   // (Commit that information to the common info table)
 
-  CommonInfoTable.Disk.AccessMethod = Int13Method;
+  CommonInfoTable.Disk.Method = DiskMethod_Int13;
 
   CommonInfoTable.Disk.Int13.DriveNumber = DriveNumber;
-  CommonInfoTable.Disk.Int13.Edd.IsEnabled = EddEnabled;
-  CommonInfoTable.Disk.Int13.Edd.Table.Address = (uintptr)(&InfoTable->EddInfo);
+  CommonInfoTable.Disk.Int13.Edd.IsSupported = EddEnabled;
+
+  if (EddEnabled == true) {
+
+    CommonInfoTable.Disk.Int13.Edd.Table.Address = (uintptr)(&InfoTable->EddInfo);
+    CommonInfoTable.Disk.Int13.Edd.BytesPerSector = InfoTable->EddInfo.BytesPerSector;
+    CommonInfoTable.Disk.Int13.Edd.NumSectors = InfoTable->EddInfo.NumSectors;
+
+  }
 
   // Next, let's find the BPB (BIOS Parameter Block); this will tell us
   // more information about the filesystem.
@@ -1266,7 +1273,7 @@ void S3Bootloader(void) {
 
   // (Define a few variables / set up info table)
 
-  CommonInfoTable.Image.Type = ElfImageType;
+  CommonInfoTable.Image.Type = ImageType_Elf;
   CommonInfoTable.Image.Executable.Header.Address = (uintptr)KernelHeader;
 
   // (Additionally, show some extra debug information)
@@ -1466,7 +1473,7 @@ void S3Bootloader(void) {
   CommonInfoTable.Image.StackTop.Address = (uintptr)KernelStack;
   CommonInfoTable.Image.StackSize = KernelStackSize;
 
-  CommonInfoTable.Image.Type = ElfImageType;
+  CommonInfoTable.Image.Type = ImageType_Elf;
 
 
 
@@ -1572,7 +1579,7 @@ void S3Bootloader(void) {
 
     if (VbeStatusCode != 0x4F) {
 
-      CommonInfoTable.Display.Type = VgaDisplay;
+      CommonInfoTable.Display.Type = DisplayType_Vga;
       CommonInfoTable.Firmware.Bios.Vbe.IsSupported = false;
       SupportsVbe = false;
 
@@ -1591,7 +1598,7 @@ void S3Bootloader(void) {
 
   if (SupportsVbe == false) {
 
-    CommonInfoTable.Display.Type = VgaDisplay;
+    CommonInfoTable.Display.Type = DisplayType_Vga;
 
     CommonInfoTable.Display.Text.LimitX = TerminalTable.LimitX;
     CommonInfoTable.Display.Text.LimitY = TerminalTable.LimitY;

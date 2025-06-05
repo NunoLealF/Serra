@@ -87,7 +87,7 @@
   */
 
   #define commonInfoTableSignature 0x7577757E7577757E
-  #define commonInfoTableVersion 7
+  #define commonInfoTableVersion 8
 
   typedef struct _commonInfoTable {
 
@@ -103,22 +103,21 @@
 
       enum : uint16 {
 
-        UnknownMethod = 0,
-        EfiFsMethod = 1,
-        Int13Method = 2,
-        MaxMethod
+        DiskMethod_Unknown = 0,
+        DiskMethod_Efi = 1,
+        DiskMethod_Int13 = 2,
+        DiskMethod_Max
 
-      } AccessMethod;
+      } Method;
 
       struct {
 
-        uptr FileInfo;
-
-        uptr HandleList;
         uptr Handle;
         uptr Protocol;
 
-      } __attribute__((packed)) EfiFs;
+        uptr FileInfo;
+
+      } __attribute__((packed)) Efi;
 
       struct {
 
@@ -126,8 +125,11 @@
 
         struct {
 
-          bool IsEnabled;
+          bool IsSupported;
           uptr Table;
+
+          uint16 BytesPerSector;
+          uint64 NumSectors;
 
         } __attribute__((packed)) Edd;
 
@@ -141,12 +143,12 @@
 
       enum : uint16 {
 
-        UnknownDisplay = 0,
-        VgaDisplay = 1,
-        VbeDisplay = 2,
-        EfiTextDisplay = 3,
-        GopDisplay = 4,
-        MaxDisplay
+        DisplayType_Unknown = 0,
+        DisplayType_Vga = 1,
+        DisplayType_Vbe = 2,
+        DisplayType_EfiText = 3,
+        DisplayType_Gop = 4,
+        DisplayType_Max
 
       } Type;
 
@@ -182,10 +184,10 @@
 
         enum : uint8 {
 
-          UnknownFormat = 0,
-          AsciiFormat = 1,
-          Utf16Format = 2,
-          MaxFormat
+          TextFormat_Unknown = 0,
+          TextFormat_Ascii = 1,
+          TextFormat_Utf16 = 2,
+          TextFormat_Max
 
         } Format;
 
@@ -205,10 +207,10 @@
 
       enum {
 
-        UnknownFirmware = 0,
-        BiosFirmware = 1,
-        EfiFirmware = 2,
-        MaxFirmware
+        FirmwareType_Unknown = 0,
+        FirmwareType_Bios = 1,
+        FirmwareType_Efi = 2,
+        FirmwareType_Max
 
       } Type;
 
@@ -216,11 +218,11 @@
 
         enum : uint8 {
 
-          EnabledByUnknown = 0,
-          EnabledByDefault = 1,
-          EnabledByKeyboard = 2,
-          EnabledByFast = 3,
-          EnabledByMax
+          A20_Unknown = 0,
+          A20_Default = 1,
+          A20_Keyboard = 2,
+          A20_Fast = 3,
+          A20_Max
 
         } A20;
 
@@ -293,9 +295,9 @@
 
       enum {
 
-        UnknownImageType = 0,
-        ElfImageType = 1,
-        MaxImageType
+        ImageType_Unknown = 0,
+        ImageType_Elf = 1,
+        ImageType_Max
 
       } Type;
 
@@ -323,8 +325,8 @@
 
       enum : uint16 {
 
-        UnknownArchitecture = 0,
-        x64Architecture = 1
+        SystemArchitecture_Unknown = 0,
+        SystemArchitecture_x64 = 1
 
       } Architecture;
 
@@ -437,7 +439,8 @@
     EntrypointCantManageMemory,
     EntrypointCouldntInitializeGraphics,
     EntrypointCouldntInitializeFont,
-    EntrypointCouldntInitializeConsole
+    EntrypointCouldntInitializeConsole,
+    EntrypointCouldntInitializeDisk
 
   } entrypointReturnStatus;
 
@@ -543,7 +546,9 @@
       "sure that the width of the built-in font is exactly 8 pixels, or \n\r"
       "compile with `Graphical := false` within `makefile.config`.",
 
-      "The kernel was unable to initialize the console subsystem."
+      "The kernel was unable to initialize the console subsystem.",
+
+      "The kernel was unable to initialize the disk subsystem."
 
     }
 

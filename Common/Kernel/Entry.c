@@ -58,11 +58,11 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
 
   // (Check if the system architecture is valid)
 
-  if (InfoTable->System.Architecture == UnknownArchitecture) {
+  if (InfoTable->System.Architecture == SystemArchitecture_Unknown) {
 
     return EntrypointSystemUnknownArchitecture;
 
-  } else if (InfoTable->System.Architecture == x64Architecture) {
+  } else if (InfoTable->System.Architecture == SystemArchitecture_x64) {
 
     // (Check whether the value of CR0 is zero)
 
@@ -97,22 +97,24 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
 
   // (Check if the firmware data is valid)
 
-  if (InfoTable->Firmware.Type == UnknownFirmware) {
+  if (InfoTable->Firmware.Type == FirmwareType_Unknown) {
 
     return EntrypointFirmwareUnsupportedType;
 
-  } else if (InfoTable->Firmware.Type == BiosFirmware) {
+  } else if (InfoTable->Firmware.Type == FirmwareType_Bios) {
 
     // Make sure that we're on an x64 system, since BIOS isn't supported
     // on any other architecture.
 
-    if (InfoTable->System.Architecture != x64Architecture) {
+    if (InfoTable->System.Architecture != SystemArchitecture_x64) {
       return EntrypointFirmwareUnsupportedType;
     }
 
     // (Sanity-check the A20 value given)
 
-    if (InfoTable->Firmware.Bios.A20 >= EnabledByMax) {
+    if (InfoTable->Firmware.Bios.A20 >= A20_Max) {
+      return EntrypointFirmwareInvalidBiosData;
+    } else if (InfoTable->Firmware.Bios.A20 == A20_Unknown) {
       return EntrypointFirmwareInvalidBiosData;
     }
 
@@ -158,7 +160,7 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
 
     }
 
-  } else if (InfoTable->Firmware.Type == EfiFirmware) {
+  } else if (InfoTable->Firmware.Type == FirmwareType_Efi) {
 
     // (Check whether the EFI image handle and system pointer were
     // both correctly passed on)
@@ -211,9 +213,9 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
 
   // (Check whether the kernel image data is valid)
 
-  if (InfoTable->Image.Type == UnknownImageType) {
+  if (InfoTable->Image.Type == ImageType_Unknown) {
     return EntrypointImageUnsupportedType;
-  } else if (InfoTable->Image.Type >= MaxImageType) {
+  } else if (InfoTable->Image.Type >= ImageType_Max) {
     return EntrypointImageUnsupportedType;
   }
 
@@ -288,7 +290,7 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
 
   // (Check whether the display data is valid)
 
-  if (InfoTable->Display.Type >= MaxDisplay) {
+  if (InfoTable->Display.Type >= DisplayType_Max) {
     return EntrypointDisplayUnsupportedType;
   }
 
@@ -312,13 +314,13 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
 
   }
 
-  if ((InfoTable->Display.Type == VgaDisplay) || (InfoTable->Display.Type == EfiTextDisplay)) {
+  if ((InfoTable->Display.Type == DisplayType_Vga) || (InfoTable->Display.Type == DisplayType_EfiText)) {
 
     // (Check whether the text format is supported)
 
-    if (InfoTable->Display.Text.Format == UnknownFormat) {
+    if (InfoTable->Display.Text.Format == TextFormat_Unknown) {
       return EntrypointDisplayInvalidTextData;
-    } else if (InfoTable->Display.Text.Format >= MaxFormat) {
+    } else if (InfoTable->Display.Text.Format >= TextFormat_Max) {
       return EntrypointDisplayInvalidTextData;
     }
 
@@ -343,7 +345,7 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
 
   }
 
-  if ((InfoTable->Display.Type == VbeDisplay) || (InfoTable->Display.Type == GopDisplay)) {
+  if ((InfoTable->Display.Type == DisplayType_Vbe) || (InfoTable->Display.Type == DisplayType_Gop)) {
 
     // (Check whether the framebuffer exists or not)
 
@@ -413,23 +415,23 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
 
   // (Check whether the disk/filesystem data is valid)
 
-  if (InfoTable->Disk.AccessMethod == UnknownMethod) {
+  if (InfoTable->Disk.Method == DiskMethod_Unknown) {
     return EntrypointDiskUnsupportedMethod;
-  } else if (InfoTable->Disk.AccessMethod >= MaxMethod) {
+  } else if (InfoTable->Disk.Method >= DiskMethod_Max) {
     return EntrypointDiskUnsupportedMethod;
   }
 
-  if (InfoTable->Disk.AccessMethod == Int13Method) {
+  if (InfoTable->Disk.Method == DiskMethod_Int13) {
 
     // (This method is only valid on systems with BIOS firmware)
 
-    if (InfoTable->Firmware.Type != BiosFirmware) {
+    if (InfoTable->Firmware.Type != FirmwareType_Bios) {
       return EntrypointDiskUnsupportedMethod;
     }
 
     // (Check if the drive number is valid (00-0Fh, or 80-8Fh)
 
-    if ((InfoTable->Disk.Int13.DriveNumber > 0x10) && (InfoTable->Disk.Int13.DriveNumber < 0x80)) {
+    if ((InfoTable->Disk.Int13.DriveNumber >= 0x10) && (InfoTable->Disk.Int13.DriveNumber < 0x80)) {
       return EntrypointDiskInvalidData;
     } else if (InfoTable->Disk.Int13.DriveNumber > 0x90) {
       return EntrypointDiskInvalidData;
@@ -437,29 +439,33 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
 
     // (Check if EDD data is valid)
 
-    if (InfoTable->Disk.Int13.Edd.IsEnabled == true) {
+    if (InfoTable->Disk.Int13.Edd.IsSupported == true) {
+
       if (InfoTable->Disk.Int13.Edd.Table.Pointer == NULL) {
         return EntrypointDiskInvalidData;
+      } else if (InfoTable->Disk.Int13.Edd.BytesPerSector < 512) {
+        return EntrypointDiskInvalidData;
+      } else if (InfoTable->Disk.Int13.Edd.NumSectors == 0) {
+        return EntrypointDiskInvalidData;
       }
+
     }
 
-  } else if (InfoTable->Disk.AccessMethod == EfiFsMethod) {
+  } else if (InfoTable->Disk.Method == DiskMethod_Efi) {
 
     // (This method is only valid on systems with EFI firmware)
 
-    if (InfoTable->Firmware.Type != EfiFirmware) {
+    if (InfoTable->Firmware.Type != FirmwareType_Efi) {
       return EntrypointDiskUnsupportedMethod;
     }
 
     // (Check for null pointers)
 
-    if (InfoTable->Disk.EfiFs.FileInfo.Pointer == NULL) {
+    if (InfoTable->Disk.Efi.FileInfo.Pointer == NULL) {
       return EntrypointDiskInvalidData;
-    } else if (InfoTable->Disk.EfiFs.HandleList.Pointer == NULL) {
+    } else if (InfoTable->Disk.Efi.Handle.Pointer == NULL) {
       return EntrypointDiskInvalidData;
-    } else if (InfoTable->Disk.EfiFs.Handle.Pointer == NULL) {
-      return EntrypointDiskInvalidData;
-    } else if (InfoTable->Disk.EfiFs.Protocol.Pointer == NULL) {
+    } else if (InfoTable->Disk.Efi.Protocol.Pointer == NULL) {
       return EntrypointDiskInvalidData;
     }
 
@@ -479,7 +485,7 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
 
     // (Sanity-check the architecture indicated by the information table)
 
-    if (InfoTable->System.Architecture != x64Architecture) {
+    if (InfoTable->System.Architecture != SystemArchitecture_x64) {
       return EntrypointSystemUnsupportedArchitecture;
     }
 
@@ -503,6 +509,7 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
   // might fail to correctly reference global variables, so we also try
   // to check for that.)
 
+
   // [Stage 1] Components that don't rely on other subsystems to function;
   // the order in which these are initialized doesn't matter.
 
@@ -514,7 +521,7 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
 
   // (Set up firmware-specific constructors)
 
-  if (InfoTable->Firmware.Type == EfiFirmware) {
+  if (InfoTable->Firmware.Type == FirmwareType_Efi) {
 
     InitializeEfiTables(InfoTable->Firmware.Efi.SystemTable.Pointer);
 
@@ -547,6 +554,11 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
 
   }
 
+  // (TODO - Initialize the ACPI subsystem)
+
+  // (TODO - Initialize the PCI/PCIe subsystem)
+
+
   // [Stage 2] Components that rely on other subsystems to function; the
   // order in which these are initialized *can* matter.
 
@@ -574,6 +586,14 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
   if (InitializeConsoleSubsystem(InfoTable) == false) {
     return EntrypointCouldntInitializeConsole;
   }
+
+  // (Initialize the disk subsystem)
+
+  if (InitializeDiskSubsystem(InfoTable) == false) {
+    return EntrypointCouldntInitializeDisk;
+  }
+
+  // (TODO - Initialize the filesystem subsystem)
 
 
 

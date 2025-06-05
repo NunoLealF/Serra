@@ -59,16 +59,16 @@ bool InitializeConsoleSubsystem(void* InfoTable) {
 
     switch (Table->Display.Type) {
 
-      case UnknownDisplay:
+      case DisplayType_Unknown:
         ConsoleData.IsSupported = false;
         break;
 
-      case VgaDisplay:
+      case DisplayType_Vga:
         ConsoleData.IsSupported = true;
         ConsoleData.Type = VgaConsole;
         break;
 
-      case EfiTextDisplay:
+      case DisplayType_EfiText:
         ConsoleData.IsSupported = true;
         ConsoleData.Type = EfiConsole;
         break;

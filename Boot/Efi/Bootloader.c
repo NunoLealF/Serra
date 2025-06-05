@@ -32,10 +32,10 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   CommonInfoTable.Version = commonInfoTableVersion;
   CommonInfoTable.Size = sizeof(CommonInfoTable);
 
-  CommonInfoTable.Firmware.Type = EfiFirmware;
+  CommonInfoTable.Firmware.Type = FirmwareType_Efi;
   CommonInfoTable.Firmware.Efi.ImageHandle.Pointer = ImageHandle;
 
-  CommonInfoTable.System.Architecture = x64Architecture;
+  CommonInfoTable.System.Architecture = SystemArchitecture_x64;
 
   // (Prepare local variables)
 
@@ -261,7 +261,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
     // (Lastly, let's fill out the common information table)
 
-    CommonInfoTable.Display.Text.Format = Utf16Format;
+    CommonInfoTable.Display.Text.Format = TextFormat_Utf16;
     CommonInfoTable.Display.Text.LimitX = ConOutResolution[0];
     CommonInfoTable.Display.Text.LimitY = ConOutResolution[1];
 
@@ -559,7 +559,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
     }
 
-    CommonInfoTable.Display.Type = GopDisplay;
+    CommonInfoTable.Display.Type = DisplayType_Gop;
     CommonInfoTable.Display.Graphics.LimitX = GopResolution[0];
     CommonInfoTable.Display.Graphics.LimitY = GopResolution[1];
 
@@ -568,11 +568,11 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
   } else if (SupportsConOut == true) {
 
-    CommonInfoTable.Display.Type = EfiTextDisplay;
+    CommonInfoTable.Display.Type = DisplayType_EfiText;
 
   } else {
 
-    CommonInfoTable.Display.Type = UnknownDisplay;
+    CommonInfoTable.Display.Type = DisplayType_Unknown;
 
   }
 
@@ -733,49 +733,49 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   }
 
   // (Go through each handle, open its protocol, and check if it has the
-  // kernel image in it; if it does, save it as FsProtocol/KernelFileHandle.)
+  // kernel image in it; if it does, save it as SimpleFsProtocol/FsProtocol.)
 
-  efiSimpleFilesystemProtocol* FsProtocol = NULL;
-  volatile efiHandle FsProtocolHandle = NULL;
+  efiSimpleFilesystemProtocol* SimpleFsProtocol = NULL;
+  volatile efiHandle SimpleFsProtocolHandle = NULL;
 
-  efiFileProtocol* KernelFileHandle = NULL;
+  efiFileProtocol* FsProtocol = NULL;
 
   for (uint64 HandleNum = 0; HandleNum < NumFsHandles; HandleNum++) {
 
     // (Initialize variables)
 
-    FsProtocol = NULL;
-    FsProtocolHandle = NULL;
+    SimpleFsProtocol = NULL;
+    SimpleFsProtocolHandle = NULL;
     efiFileProtocol* FileProtocol = NULL;
 
-    // (Open this handle's protocol, as FsProtocol)
+    // (Open this handle's protocol, as SimpleFsProtocol)
 
-    AppStatus = gBS->OpenProtocol(FsHandles[HandleNum], &efiSimpleFilesystemProtocol_Uuid, (void**)&FsProtocol, ImageHandle, NULL, 1);
+    AppStatus = gBS->OpenProtocol(FsHandles[HandleNum], &efiSimpleFilesystemProtocol_Uuid, (void**)&SimpleFsProtocol, ImageHandle, NULL, 1);
 
-    if ((AppStatus == EfiSuccess) && (FsProtocol != NULL)) {
+    if ((AppStatus == EfiSuccess) && (SimpleFsProtocol != NULL)) {
 
-      FsProtocolHandle = FsHandles[HandleNum];
+      SimpleFsProtocolHandle = FsHandles[HandleNum];
       HasOpenedFsProtocols = true;
 
-      Message(Info, u"Successfully opened protocol for FsHandle[%d] at %xh", HandleNum, (uint64)FsProtocol);
+      Message(Info, u"Successfully opened protocol for FsHandle[%d] at %xh", HandleNum, (uint64)SimpleFsProtocol);
 
-      // (Open FsProtocol's filesystem volume)
+      // (Open SimpleFsProtocol's filesystem volume)
 
-      AppStatus = FsProtocol->OpenVolume(FsProtocol, (void**)&FileProtocol);
+      AppStatus = SimpleFsProtocol->OpenVolume(SimpleFsProtocol, (void**)&FileProtocol);
 
       if ((AppStatus == EfiSuccess) && (FileProtocol != NULL)) {
 
         // (Open a efiFileProtocol handle at the kernel image location)
 
-        AppStatus = FileProtocol->Open(FileProtocol, (void**)&KernelFileHandle, KernelLocation, 1, 0);
+        AppStatus = FileProtocol->Open(FileProtocol, (void**)&FsProtocol, KernelLocation, 1, 0);
 
         // (If it worked, then that means the image is there, so let's save
-        // it in KernelFileHandle and leave this entire loop)
+        // it in FsProtocol and leave this entire loop)
 
-        if ((AppStatus == EfiSuccess) && (KernelFileHandle != NULL)) {
+        if ((AppStatus == EfiSuccess) && (FsProtocol != NULL)) {
 
           Message(Ok, u"Successfully found kernel image (at %s).", KernelLocation);
-          Message(Info, u"Kernel file protocol handle is located at %xh", (uint64)KernelFileHandle);
+          Message(Info, u"Kernel file protocol handle is located at %xh", (uint64)FsProtocol);
 
           break;
 
@@ -794,18 +794,16 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   // (Check if we managed to find the kernel image, and update common
   // information tables)
 
-  if ((HasOpenedFsProtocols == false) || (FsProtocolHandle == NULL)) {
+  if ((HasOpenedFsProtocols == false) || (SimpleFsProtocolHandle == NULL)) {
 
     Message(Error, u"Failed to locate the kernel image (should be at %s).", KernelLocation);
     goto ExitEfiApplication;
 
   }
 
-  CommonInfoTable.Disk.AccessMethod = EfiFsMethod;
-
-  CommonInfoTable.Disk.EfiFs.HandleList.Pointer = (void*)FsHandles;
-  CommonInfoTable.Disk.EfiFs.Handle.Pointer = (void*)KernelFileHandle;
-  CommonInfoTable.Disk.EfiFs.Protocol.Pointer = (void*)FsProtocol;
+  CommonInfoTable.Disk.Method = DiskMethod_Efi;
+  CommonInfoTable.Disk.Efi.Handle.Pointer = (void*)SimpleFsProtocolHandle;
+  CommonInfoTable.Disk.Efi.Protocol.Pointer = (void*)FsProtocol;
 
 
 
@@ -829,7 +827,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   KernelInfo = NULL;
   uint64 KernelInfoSize = 0;
 
-  AppStatus = KernelFileHandle->GetInfo(KernelFileHandle, &efiFileInfo_Uuid, &KernelInfoSize, KernelInfo);
+  AppStatus = FsProtocol->GetInfo(FsProtocol, &efiFileInfo_Uuid, &KernelInfoSize, KernelInfo);
 
   if ((AppStatus != EfiBufferTooSmall) || (KernelInfoSize == 0)) {
 
@@ -858,7 +856,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
     // (Now that we have a proper buffer ready, call GetInfo() again.)
 
-    AppStatus = KernelFileHandle->GetInfo(KernelFileHandle, &efiFileInfo_Uuid, &KernelInfoSize, KernelInfo);
+    AppStatus = FsProtocol->GetInfo(FsProtocol, &efiFileInfo_Uuid, &KernelInfoSize, KernelInfo);
 
     if ((AppStatus != EfiSuccess) || (KernelInfo == NULL)) {
 
@@ -867,7 +865,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
     } else {
 
-      CommonInfoTable.Disk.EfiFs.FileInfo.Pointer = (void*)KernelInfo;
+      CommonInfoTable.Disk.Efi.FileInfo.Pointer = (void*)KernelInfo;
 
       Message(Ok, u"Successfully obtained kernel's EFI file info table.");
       Message(Info, u"efiFileInfo table is located at %xh", (uint64)KernelInfo);
@@ -918,7 +916,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
   // (Read the kernel image into our newly allocated buffer, at *Kernel)
 
-  AppStatus = KernelFileHandle->Read(KernelFileHandle, &KernelSize, Kernel);
+  AppStatus = FsProtocol->Read(FsProtocol, &KernelSize, Kernel);
 
   if ((AppStatus != EfiSuccess) || (Kernel == NULL)) {
 
@@ -1216,7 +1214,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
   // (Fill out the common information table)
 
-  CommonInfoTable.Image.Type = ElfImageType;
+  CommonInfoTable.Image.Type = ImageType_Elf;
   CommonInfoTable.Image.Executable.Entrypoint.Pointer = KernelEntrypoint;
   CommonInfoTable.Image.Executable.Header.Pointer = KernelHeader;
 
@@ -1719,7 +1717,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
     } else {
 
-      CommonInfoTable.Display.Type = ((SupportsConOut == true) ? EfiTextDisplay : UnknownDisplay);
+      CommonInfoTable.Display.Type = ((SupportsConOut == true) ? DisplayType_EfiText : DisplayType_Unknown);
       SupportsGop = false;
 
       Message(Fail, u"Failed to enable default graphics mode; staying with EFI text mode.");
@@ -1869,7 +1867,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
     if (HasOpenedFsHandles == true) {
 
       if (HasOpenedFsProtocols == true) {
-        gBS->CloseProtocol(FsProtocolHandle, &efiSimpleFilesystemProtocol_Uuid, ImageHandle, NULL);
+        gBS->CloseProtocol(SimpleFsProtocolHandle, &efiSimpleFilesystemProtocol_Uuid, ImageHandle, NULL);
       }
 
       gBS->FreePool(FsHandles);

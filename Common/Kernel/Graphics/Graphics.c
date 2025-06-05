@@ -44,10 +44,10 @@ bool InitializeGraphicsSubsystem(void* InfoTable) {
 
   switch (Table->Display.Type) {
 
-    case VbeDisplay:
+    case DisplayType_Vbe:
       [[fallthrough]];
 
-    case GopDisplay:
+    case DisplayType_Gop:
       GraphicsData.IsSupported = true;
       break;
 
