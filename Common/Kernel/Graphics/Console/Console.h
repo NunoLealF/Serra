@@ -5,9 +5,13 @@
 #ifndef SERRA_KERNEL_GRAPHICS_CONSOLE_H
 #define SERRA_KERNEL_GRAPHICS_CONSOLE_H
 
-  // Include standard headers.
+  // Include standard and/or necessary headers.
 
   #include "../../Libraries/Stdint.h"
+  
+  #include "Efi/Efi.h"
+  #include "Graphical/Graphical.h"
+  #include "Vga/Vga.h"
 
   // Include console-related definitions
 
@@ -66,12 +70,5 @@
 
   void Printf(const char* String, bool Important, uint8 Color, ...);
   void vPrintf(const char* String, bool Important, uint8 Color, va_list Arguments);
-
-  // Include system-specific printing functions from their
-  // respective folders.
-
-  #include "Efi/Efi.h"
-  #include "Graphical/Graphical.h"
-  #include "Vga/Vga.h"
 
 #endif

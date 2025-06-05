@@ -12,6 +12,10 @@
   #include "Libraries/Stdio.h"
   #include "../Common.h"
 
+  // Import disk- and filesystem-specific headers.
+
+  #include "Disk/Disk.h"
+
   // Import firmware-specific headers.
 
   #include "Firmware/Firmware.h"
