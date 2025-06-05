@@ -310,7 +310,7 @@ void DrawBitmapFont(const char* String, const bitmapFontData* Font, uint32 Foreg
       // different process for some color combinations)
 
       static uint32 CachedColors[2] = {0};
-      static uint8 BitmapLut[128][8 * sizeof(uint64)];
+      static uint8 BitmapLut[256][8 * sizeof(uint64)];
 
       #define GetBitmapLutPosition(Byte, Bit) ((void*)&BitmapLut[Byte][GraphicsData.Bpp * Bit])
 
@@ -331,7 +331,7 @@ void DrawBitmapFont(const char* String, const bitmapFontData* Font, uint32 Foreg
 
           // (Otherwise, let's build up our lookup table.)
 
-          for (auto Byte = 0; Byte < 128; Byte++) {
+          for (auto Byte = 0; Byte < 256; Byte++) {
 
             // (Handle each individual bit)
 
