@@ -57,6 +57,7 @@
 
   // Include functions and global variables from Disk.c
 
+  extern diskInfo DiskInfo;
   bool InitializeDiskSubsystem(void* InfoTable);
 
   // Include functions and global variables from Fs.c (TODO)

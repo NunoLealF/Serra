@@ -130,8 +130,10 @@ bool InitializeDiskSubsystem(void* InfoTable) {
 
   }
 
-  // (Now that we're done, we can return `true`)
+  // (Now that we're done, we can set `DiskInfo.IsSupported`, and
+  // return `true`)
 
+  DiskInfo.IsSupported = true;
   return true;
 
 }

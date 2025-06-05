@@ -258,24 +258,53 @@ void KernelCore(commonInfoTable* InfoTable) {
 
   }
 
-  // (How fast can we allocate and deallocate?)
+  // (Try to read the MBR from the disk - or, at least, the bootsector,
+  // in the case of `unpart` / non-partitioned builds)
 
-  constexpr auto TryLimit = 100000;
-  constexpr auto TrySize = (SystemPageSize * 2);
+  if (InfoTable->Firmware.Type == FirmwareType_Bios) {
 
-  Print("\n\r", false, 0);
-  Message(Kernel, "Starting benchmark.");
+    const uintptr Size = 4096;
+    void* Area = Allocate(&Size);
 
-  for (auto Try = 0; Try < TryLimit; Try++) {
+    if (Area != NULL) {
 
-    if (VerifyMemoryManagementSubsystem(TrySize) == false) {
-      Message(Error, "I don't think that's supposed to happen.. Try = %d", Try);
-      break;
+      auto Lba = 0;
+      auto NumSectors = 1;
+
+      Message(Ok, "Allocated a %d-byte buffer at %xh.", (uint64)Size, (uint64)Area);
+      Message(Ok, "Attempting to read %d sector (from LBA %d of drive %xh) to buffer at %xh.",
+                   (uint64)NumSectors, (uint64)Lba, DiskInfo.Int13.DriveNumber, (uint64)Area);
+
+      bool Status = Read_Int13Wrapper(Area, Lba, NumSectors, DiskInfo.Int13.DriveNumber);
+
+      if (Status == true) {
+
+        Message(Ok, "Successfully loaded sectors - showing first 512 bytes of the boot disk.");
+        uint8* Buffer = (uint8*)Area;
+
+        for (auto Index = 0; Index < 512; Index++) {
+          Printf("%xh ", false, 0x07, (uint64)Buffer[Index]);
+        }
+
+      } else {
+
+        Message(Warning, "Failed to load sectors :/");
+
+      }
+
+      [[maybe_unused]] bool Thing = Free(Area, &Size);
+
+    } else {
+
+      Message(Error, "Failed to allocate space for int 13h buffer :(");
+
     }
 
-  }
+  } else {
 
-  Message(Ok, "Finished %d allocations and deallocations (of %d bytes)", (uint64)TryLimit, (uint64)TrySize);
+    Message(Warning, "Can't test int 13h functionality on non-BIOS firmware.");
+
+  }
 
   // (Depending on the system type, either wait for a keypress or just
   // stall the system for a while)

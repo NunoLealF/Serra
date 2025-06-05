@@ -15,6 +15,6 @@
   constexpr uint32 Int13Wrapper_Location = 0x7FE00;
 
   [[nodiscard]] bool Setup_Int13Wrapper(void);
-  [[nodiscard]] bool Read_Int13Wrapper(void* Pointer, uint64 Lba, uint64 Size);
+  [[nodiscard]] bool Read_Int13Wrapper(void* Pointer, uint64 Lba, uint64 NumSectors, uint8 DriveNumber);
 
 #endif
