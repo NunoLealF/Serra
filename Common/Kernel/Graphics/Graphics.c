@@ -13,9 +13,6 @@
 graphicsSubsystemData GraphicsData = {0};
 
 
-// [HEY, WARNING, TODO] By now, the memory subsystem should be up and
-// running, so please use double buffering nwn
-
 
 // (TODO - A function to initialize the graphics subsystem)
 // (This is required for the console subsystem later on.)
