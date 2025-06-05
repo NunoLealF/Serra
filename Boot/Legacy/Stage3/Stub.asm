@@ -140,11 +140,15 @@ ReturnFromKernel64:
   ; mode. First though, we need to switch from long mode to
   ; compatibility mode (IA-32e), like this:
 
-  ; (1) Update the GDT with 32-bit segments;
+  ; (1) Disable interrupts, as a precaution.
+
+  cli
+
+  ; (2) Update the GDT with 32-bit segments;
 
   lgdt [ProtectedModeGdtDescriptor]
 
-  ; (2) Set the CS register by doing a far return, which pops
+  ; (3) Set the CS register by doing a far return, which pops
   ; CS and IP from the stack, "resetting" our GDT.
 
   ; Keep in mind that long mode stores CS as a 64-bit register,
