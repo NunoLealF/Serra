@@ -10,7 +10,7 @@
 // info table onto a shared table, and *later on* deal with
 // initialization work and such)
 
-// (TODO - Initialize global variables (in this case, `DiskInfo`))
+// (TODO - Initialize global variables (`DiskInfo`, but probably others))
 
 diskInfo DiskInfo = {0};
 
@@ -61,18 +61,61 @@ bool InitializeDiskSubsystem(void* InfoTable) {
 
     // (Set up the necessary fields in `DiskInfo`)
 
-    //DiskInfo.Efi.
+    DiskInfo.Efi.Handle = Table->Disk.Efi.Handle.Pointer;
+    DiskInfo.Efi.Protocol = Table->Disk.Efi.Protocol.Pointer;
+
+    DiskInfo.Efi.FileInfo = Table->Disk.Efi.FileInfo.Pointer;
+
+    // (Make sure that they're valid - otherwise, return NULL)
+
+    if (DiskInfo.Efi.FileInfo == NULL) {
+      return false;
+    } else if (DiskInfo.Efi.Handle == NULL) {
+      return false;
+    } else if (DiskInfo.Efi.Protocol == NULL) {
+      return false;
+    }
 
     // (TODO - Set up the environment)
 
+    // ...
+
   } else if (DiskInfo.BootMethod == BootMethod_Int13) {
+
+    // (Set up the necessary fields in `DiskInfo` - if EDD isn't enabled,
+    // we use 'default' values for all fields but `DriveNumber`)
+
+    DiskInfo.Int13.DriveNumber = Table->Disk.Int13.DriveNumber;
+    DiskInfo.Int13.EddSupported = Table->Disk.Int13.Edd.IsSupported;
+
+    if (DiskInfo.Int13.EddSupported == true) {
+
+      DiskInfo.Int13.BytesPerSector = Table->Disk.Int13.Edd.BytesPerSector;
+      DiskInfo.Int13.NumSectors = Table->Disk.Int13.Edd.NumSectors;
+
+    } else {
+
+      DiskInfo.Int13.BytesPerSector = 512;
+      DiskInfo.Int13.NumSectors = uintmax;
+
+    }
+
+    // (Just in case, let's sanity-check the values we just added)
+
+    if (DiskInfo.Int13.NumSectors == 0) {
+      DiskInfo.Int13.NumSectors = uintmax;
+    } else if (DiskInfo.Int13.BytesPerSector < 512) {
+      return false;
+    }
+
+    // (TODO - Set up the environment)
 
     // ...
 
   } else {
 
     // If we don't have a boot method, then that means we don't know
-    // how to interact with the disk, so..
+    // how to interact with the disk, so let's return `false`
 
     return false;
 

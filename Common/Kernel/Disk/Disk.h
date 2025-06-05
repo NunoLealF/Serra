@@ -45,10 +45,11 @@
 
     struct {
 
-      uint8 DriveNumber; // (The drive number we need to pass on, in `dl`)
+      uint8 DriveNumber; // (The drive number we need to pass on, in DL)
+      bool EddSupported; // (Are EDD extensions to int 13h supported?)
 
-      uint16 BytesPerSector; // (The number of bytes per sector)
-      uint64 NumSectors; // (The number of sectors)
+      uint16 BytesPerSector; // (The number of bytes per sector - *EDD only, or 512*)
+      uint64 NumSectors; // (The total number of sectors on the drive - *EDD only*)
 
     } __attribute__((packed)) Int13;
 
