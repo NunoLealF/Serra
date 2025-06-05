@@ -108,6 +108,15 @@ bool InitializeDiskSubsystem(void* InfoTable) {
       return false;
     }
 
+    // (Verify and set up the Int 13h wrapper - if this doesn't return
+    // true, then that means there's probably something wrong)
+
+    bool CanUseWrapper = Setup_Int13Wrapper();
+
+    if (CanUseWrapper == false) {
+      return false;
+    }
+
     // (TODO - Set up the environment)
 
     // ...

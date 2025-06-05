@@ -111,6 +111,12 @@ Kernel/Core.o:
 	@echo "Building $@"
 	@$(CC) $(CFLAGS) -c Kernel/Core.c -o Kernel/Core.o
 
+# (External kernel components)
+
+Kernel/Disk/Bios/Int13.bin:
+	@echo "Building $@"
+	@$(AS) Kernel/Disk/Bios/Int13.asm -f bin -o Kernel/Disk/Bios/Int13.bin
+
 # (Kernel libraries)
 
 Kernel/Disk/Disk.o:
@@ -121,7 +127,7 @@ Kernel/Disk/Fs.o:
 	@echo "Building $@"
 	@$(CC) $(CFLAGS) -c Kernel/Disk/Fs.c -o Kernel/Disk/Fs.o
 
-Kernel/Disk/Bios/Bios.o:
+Kernel/Disk/Bios/Bios.o: Kernel/Disk/Bios/Int13.bin
 	@echo "Building $@"
 	@$(CC) $(CFLAGS) -c Kernel/Disk/Bios/Bios.c -o Kernel/Disk/Bios/Bios.o
 

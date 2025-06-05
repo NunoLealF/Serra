@@ -534,7 +534,7 @@
 
       "The kernel was not compiled as a pure position-independent executable;\n\r"
       "make sure you're linking with `-pie -Wl,--no-dynamic-linker` (and not \n\r"
-      "`-static-pie`).",
+      "`-static-pie`). \n\r",
 
       "The kernel was unable to initialize the memory management subsystem.",
 
@@ -544,11 +544,13 @@
 
       "The kernel's built-in bitmap font doesn't appear to be valid; make \n\r"
       "sure that the width of the built-in font is exactly 8 pixels, or \n\r"
-      "compile with `Graphical := false` within `makefile.config`.",
+      "compile with `Graphical := false` within `makefile.config`. \n\r",
 
       "The kernel was unable to initialize the console subsystem.",
 
-      "The kernel was unable to initialize the disk subsystem."
+      "The kernel was unable to initialize the disk subsystem. \n\r"
+      "This can happen if the bootloader disk access method is not known, or if \n\r"
+      "`Int13.asm` is incorrectly compiled (if you're on a BIOS system). \n\r"
 
     }
 

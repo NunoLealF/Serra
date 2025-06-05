@@ -12,7 +12,7 @@
 // it's not that I can't implement anything wider, but it's too difficult)
 
 const uint8 BitmapFont[] = {
-  #embed "Font.psf"
+  #embed "Font.psf" if_empty('\0')
 };
 
 bitmapFontData BitmapFontData = {0};
