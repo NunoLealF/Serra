@@ -137,7 +137,7 @@ void Print_Vga(const char* String, uint8 Attribute) {
     }
 
     // (If we *aren't* dealing with a special character, draw the
-    // current character)
+    // current character - otherwise, recalculate it)
 
     if (IsSpecialCharacter == false) {
 
@@ -152,6 +152,13 @@ void Print_Vga(const char* String, uint8 Attribute) {
       // (Move `Framebuffer` to point to the next character)
 
       Framebuffer += 2;
+
+    } else {
+
+      // (Recalculate `Framebuffer`, based on ConsoleData.PosX and
+      // ConsoleData.PosY)
+
+      Framebuffer = 0xB8000 + ((ConsoleData.PosX + (ConsoleData.PosY * ConsoleData.LimitX)) * 2);
 
     }
 
