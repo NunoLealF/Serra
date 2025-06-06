@@ -13,7 +13,6 @@
 ; (We preserve RBX, RSP, RBP, R12, R13, R14, R15 and *MM)
 ; (We return the value in RAX (on success, the lower 16 bits are 0)
 
-Function_Int13Wrapper:
 PrepareProtectedMode64:
 
   ; First, before we do anything else, let's store the necessary values
