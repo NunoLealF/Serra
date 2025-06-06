@@ -35,7 +35,7 @@ const uint8 Int13Wrapper[] = {
 
 // (TODO - The function itself..?)
 
-typedef uint16 (*Fn_Int13Wrapper)(uint64 Lba, uint32 NumSectors, uint8 DriveNumber);
+typedef uint16 (*Fn_Int13Wrapper)(uint64 Lba, uint16 NumSectors, uint8 DriveNumber);
 static Fn_Int13Wrapper Call_Int13Wrapper = (Fn_Int13Wrapper)Int13Wrapper_Location;
 
 

@@ -8,7 +8,7 @@
 ; It's assumed that this wrapper will behave as a regular 64-bit function
 ; (using the SystemV ABI) would, so let's obtain our arguments:
 
-; (uint64 Lba [rsi], uint32 NumSectors [rsi], uint8 DriveNumber [rdx ~ dl])
+; (uint64 Lba [rdi], uint16 NumSectors [si], uint8 DriveNumber [dl])
 
 ; (We preserve RBX, RSP, RBP, R12, R13, R14, R15 and *MM)
 ; (We return the value in RAX (on success, the lower 16 bits are 0)
@@ -19,8 +19,8 @@ PrepareProtectedMode64:
   ; First, before we do anything else, let's store the necessary values
   ; in `DiskAddressPacket`, since it's easier to do that now.
 
-  mov qword [DiskAddressPacket.Offset], rdi
-  mov word [DiskAddressPacket.NumSectors], si
+  mov [DiskAddressPacket.Offset], rdi
+  mov [DiskAddressPacket.NumSectors], si
 
   ; Afterwards, let's disable interrupts, so they don't interfere with
   ; the process - we shouldn't need to disable NMIs however.
@@ -93,11 +93,17 @@ PrepareRealMode32:
   ; Finally, let's disable compatibility mode altogether by *clearing*
   ; bit 8 of the EFER model specific register (at C0000080h).
 
+  ; (Since `wrmsr`/`rdmsr` uses EDX, we need to push it to the stack)
+
+  push edx
+
   mov ecx, 0xC0000080
   rdmsr
 
   and eax, ~(1 << 8)
   wrmsr
+
+  pop edx
 
   ; Now that we've done that, we *should* be in regular protected mode,
   ; which means we can start the process of switching to real mode.
@@ -149,8 +155,16 @@ RealMode:
   ; After all of this, we should finally be in 16-bit real mode, which
   ; means we're ready to use BIOS interrupt calls.
 
-  ; Before we do that though, let's disable the carry flag, and enable
-  ; interrupts again, like this:
+  ; Before we do that though, let's reset the segments (to 0h as well),
+  ; before disabling the carry flag and enabling interrupts:
+
+  mov bx, 0h
+
+  mov ds, bx
+  mov es, bx
+  mov fs, bx
+  mov gs, bx
+  mov ss, bx
 
   clc
   sti
@@ -159,20 +173,14 @@ RealMode:
   ; 42h, DL = (drive), DS:SI = &DiskAddressPacket) in order to
   ; read from the disk.
 
-  ; (Set DS and ES to 0h, and set DS:SI to &DiskAddressPacket)
-
-  mov bx, 0h
-  mov ds, bx
-  mov es, bx
+  ; (Set DS:SI to &DiskAddressPacket)
 
   mov si, DiskAddressPacket
 
   ; (Set the AH register to 42h, and call interrupt 13h)
-  ; The DL register hasn't been touched so far, so it's fine
+  ; We don't need to set DL, since it's been preserved so far
 
   mov ah, 42h
-  mov al, 00h
-
   int 13h
 
   ; (Depending on whether the carry flag is set, either clear or set
@@ -239,10 +247,9 @@ PrepareLongMode32:
   ; After that, we can *set* bit 8 (IA-32e / 'compatibility') mode
   ; of the EFER model specific register (at C0000080h):
 
-  ; (We temporarily save EAX in the EDX register here, because
-  ; `rdmsr` and `wrmsr` both use it)
+  ; (Since `wrmsr`/`rdmsr` uses EAX, we need to push it to the stack)
 
-  mov edx, eax
+  push eax
 
   mov ecx, 0xC0000080
   rdmsr
@@ -250,7 +257,7 @@ PrepareLongMode32:
   or eax, (1 << 8)
   wrmsr
 
-  mov eax, edx
+  pop eax
 
   ; Finally, we can enable (long mode-style) paging by setting bit
   ; 31 of CR0 - this *immediately* already re-enables paging.
@@ -312,10 +319,10 @@ ReturnFromWrapper:
 
 DiskAddressPacket:
   .Size: db 16 ; (The size of this packet is 16 bytes)
-  .Reserved: db 0h ; (Not used)
+  .Reserved: db 0h ; (Unused, can safely ignore)
   .NumSectors: dw 0h ; (How many sectors should we load?)
   .Location: dd 70000h ; (Tell the firmware to load sectors to 70000h)
-  .Offset: dq 0h ; (From which LBA offset should we start loading?)
+  .Offset: dq 0h ; (From which LBA should we start loading?)
 
 
 ; In order to avoid corrupting the stack, we'll need to save the stack
