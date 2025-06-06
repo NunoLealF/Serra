@@ -95,12 +95,16 @@ running `make all`.
 
 ## Roadmap
 
-- Start working on the kernel, in `Common/`.
-- - Review the kernel info tables;
-- - Implement a few common drivers, for things like graphics support, PCI, etc.;
-- - Add filesystem support (something involving a VFS maybe?);
+- Finish implementing the disk subsystem, in `Kernel/Disk`;
+- - Implement handlers for the EFI Block and Disk IO protocols (`EFI_BLOCK_IO_PROTOCOL` and `EFI_DISK_IO_PROTOCOL` respectively);
+- - Unify both the BIOS and EFI handlers into one unified disk read function;
+- - Work on filesystem drivers, and create a VFS.
+
 - Add the actual boot manager functionality (support for boot protocols);
-- Create a simple user interface (GUI *and* text-mode as fallback)
+
+- Create simple human interface drivers (keyboard, mouse..);
+
+- Create a simple console user interface / menu.
 
 &nbsp;
 
@@ -110,4 +114,4 @@ running `make all`.
 This project has been released under the [MIT license](https://choosealicense.com/licenses/mit/).
 For more information, please refer to the accompanying license agreement. <3
 
-*(last updated on May 12th 2025)*
+*(last updated on June 6th 2025)*
