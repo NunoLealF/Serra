@@ -330,7 +330,8 @@ DiskAddressPacket:
   .Size: db 16 ; The size of this (disk address) packet is 16 bytes.
   .Reserved: db 0 ; (This area is reserved)
   .NumSectors: dw 24 ; We want to load 24 sectors into memory.
-  .Location: dd 7E00h ; And we also want to load those at 7E00h.
+  .Location.Offset: dw 7E00h ; And we also want to load those at 0000:[7E00h].
+  .Location.Segment: dw 0000h ; And we also want to load those at [0000]:7E00h.
   .Offset: dq 16 ; Additionally, we want to start loading from LBA 16 (this value may be changed).
 
 ; -----------------------------------

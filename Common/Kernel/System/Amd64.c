@@ -3,7 +3,7 @@
 // For more information, please refer to the accompanying license agreement. <3
 
 #if !defined(__amd64__) && !defined(__x86_64__)
-  #error "This code must be compiled with an x64 cross compiler."
+  #error "This code must be compiled with an x86-64 cross compiler."
 #endif
 
 #include "../Libraries/Stdint.h"

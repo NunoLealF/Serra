@@ -2,8 +2,13 @@
 // This file is part of the Serra project, which is released under the MIT license.
 // For more information, please refer to the accompanying license agreement. <3
 
+#if !defined(__amd64__) && !defined(__x86_64__)
+  #error "This code must be compiled with an x86-64 cross compiler."
+#endif
+
 #include "../../Libraries/Stdint.h"
 #include "../../Libraries/String.h"
+#include "../../System/System.h"
 #include "../Disk.h"
 #include "Bios.h"
 
@@ -35,7 +40,7 @@ const uint8 Int13Wrapper[] = {
 
 // (TODO - The function itself..?)
 
-typedef uint16 (*Fn_Int13Wrapper)(uint64 Lba, uint16 NumSectors, uint8 DriveNumber);
+typedef uint16 (*Fn_Int13Wrapper)(uint64 Lba, uint16 Sectors, uint8 DriveNumber);
 static Fn_Int13Wrapper Call_Int13Wrapper = (Fn_Int13Wrapper)Int13Wrapper_Location;
 
 
@@ -69,6 +74,36 @@ static Fn_Int13Wrapper Call_Int13Wrapper = (Fn_Int13Wrapper)Int13Wrapper_Locatio
     return false;
   }
 
+  // Additionally, let's make some additional sanity checks, since we
+  // need `Int13Wrapper_Data` and `Int13Wrapper_Location` to be at
+  // sane locations
+
+  // (Check that none of them overlap with the IVT, and that the
+  // code is also below 7C00h)
+
+  if (Int13Wrapper_Data < 0x400) {
+    return false;
+  } else if (Int13Wrapper_Location < 0x400) {
+    return false;
+  } else if (Int13Wrapper_Location >= 0x7C00) {
+    return false;
+  }
+
+  // (Check that the data address is aligned to a 64 KiB boundary,
+  // and that the location doesn't overlap with it)
+
+  if ((Int13Wrapper_Data % 0x10000) != 0) {
+    return false;
+  }
+
+  if (Int13Wrapper_Location >= Int13Wrapper_Data) {
+
+    if (Int13Wrapper_Location < (Int13Wrapper_Data + 0xFE00)) {
+      return false;
+    }
+
+  }
+
   // Finally, now that we know Int13Wrapper[] is *probably* real code
   // that does what we want, let's copy the first 512 bytes to the
   // location specified by `Int13Wrapper_Location`.
@@ -89,61 +124,119 @@ static Fn_Int13Wrapper Call_Int13Wrapper = (Fn_Int13Wrapper)Int13Wrapper_Locatio
 // (TODO - Include a function to interface with int 13h); this will require
 // a real mode stub that's (okay i just implemented it lmao))
 
-[[nodiscard]] bool Read_Int13Wrapper(void* Pointer, uint64 Lba, uint64 NumSectors, uint8 DriveNumber) {
+[[nodiscard]] bool Read_Int13Wrapper(void* Pointer, uint64 Lba, uint64 Sectors, uint8 DriveNumber) {
 
-  // (TODO - Sanity-check things, and declare initial values)
+  // Before we do anything else, let's check to see if the disk subsystem
+  // has been initialized yet (and if int 13h is available).
 
-  uintptr Address = (uintptr)Pointer;
-
-  if (Address == 0) {
+  if (DiskInfo.IsSupported == false) {
     return false;
-  } else if (DiskInfo.IsSupported == false) {
-    return false;
-  } else if (NumSectors == 0) {
+  } else if (DiskInfo.BootMethod != BootMethod_Int13) {
     return false;
   }
 
-  // (TODO - Something to save state (disable interrupts? + other things))
+  // Next, let's verify that the values we were given are sane, and
+  // make sure that we aren't reading past the end of the disk.
 
-  // The IDT is saved, but you *need* to make sure CR3 can fit in the
-  // lower 32-bits - *the original CR3 should be okay for this*
+  if (Pointer == NULL) {
+    return false;
+  } else if (Sectors == 0) {
+    return false;
+  } else if ((Lba + Sectors) > DiskInfo.Int13.NumSectors) {
+    return false;
+  }
 
-  // (TODO - Loop, since we can only do up to 127 sectors at a time; we
-  // also need to memcpy as necessary)
+  // Now that we know that int 13h is available, that we can safely
+  // use it, and that we're within bounds, we can start preparing
+  // the necessary environment for it:
 
-  do {
+  // (1) Save the current state of the kernel, if applicable: interrupts
+  // must be disabled, and the value in CR3 must be below 4 GiB. (TODO)
 
-    // (Call int 13h, and check the return value (it should be 0h for
-    // a successful read - otherwise, return `false`)
+  // (2) Make sure that we can safely switch in and out of long mode.
 
-    uint16 Result = Call_Int13Wrapper(Lba, (NumSectors % 127), DriveNumber);
+  if (ReadFromControlRegister(3, false) >= 0xFFFF0000) {
+    return false;
+  }
+
+  // (3) Calculate the amount of sectors we can safely read into our
+  // data buffer, which is 63.5 KiB (FE00h bytes) long.
+
+  const uint64 SectorsPerRead = (0xFE00 / DiskInfo.Int13.BytesPerSector);
+
+  // Finally, we can now safely call (int 13h, ah = 42h) as many times
+  // as necessary.
+
+  // (Since we can't load everything at once, and we can't access memory
+  // above 1 MiB from real mode, we load as much as we can (to the buffer
+  // at `Int13Wrapper_Data`), and then copy it to `Pointer`)
+
+  uintptr Address = (uintptr)Pointer;
+  bool Status = true;
+
+  while (Sectors > 0) {
+
+    // Calculate the amount of sectors we need to read for now.
+
+    uint32 NumSectors = ((Sectors >= SectorsPerRead) ? SectorsPerRead : Sectors);
+    uint64 Size = (NumSectors * DiskInfo.Int13.BytesPerSector);
+
+    // Call the wrapper, and obtain the result - in this case, the higher
+    // 8 bits represent the value of AH, whereas the lower 8 bits is
+    // clear if the carry flag wasn't set.
+
+    // (We want AH to be zero, and the carry flag to not have been set,
+    // so we know it's successful if the return value is zero)
+
+    uint16 Result = Call_Int13Wrapper(Lba, NumSectors, DriveNumber);
 
     if (Result != 0) {
-      return false;
+
+      Status = false;
+      goto Cleanup;
+
     }
 
-    // (Copy the data from `Int13Wrapper_Data`, using Memcpy())
+    // Next, let's copy the data from `Int13Wrapper_Data`, using Memcpy():
 
-    auto Remainder = (NumSectors % 127);
-    auto Size = (Remainder * DiskInfo.Int13.BytesPerSector);
+    Memcpy((void*)Address, (const void*)Int13Wrapper_Data, Size);
 
-    Memcpy((void*)Address, (const void*)Int13Wrapper_Data, (uint64)Size);
+    // (Just in case Memcpy() is borked for some reason, compare the
+    // data to make sure the copy didn't actually fail)
 
-    // (Move onto the next iteration of the loop)
+    uint64* Compare[2] = {(uint64*)Address, (uint64*)Int13Wrapper_Data};
+
+    if (*(Compare[0]) != *(Compare[1])) {
+
+      Status = false;
+      goto Cleanup;
+
+    }
+
+    // Finally, now that we're done, let's move onto the next iteration
+    // of the loop.
 
     Address += Size;
-    Lba += Remainder;
-    NumSectors -= Remainder;
 
-  } while (NumSectors > 127);
+    Lba += NumSectors;
+    Sectors -= NumSectors;
+
+  }
+
+
+
+  Cleanup:
 
   // (TODO - Something to restore state (enable interrupts? + other things))
 
   // The IDT is restored, but interrupts are not re-enabled for you, so
   // include a check to deal with that - also, the CR3 stuff
 
-  // (Now that we're done, we can return `true`)
 
-  return true;
+
+  // Finally, now that we're done, we can return `Status` (which should
+  // be true for a *successful* read).
+
+  return Status;
 
 }

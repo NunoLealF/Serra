@@ -2,13 +2,13 @@
 ; This file is part of the Serra project, which is released under the MIT license.
 ; For more information, please refer to the accompanying license agreement. <3
 
-[ORG 9E00h] ; We are at 9E00h.
+[ORG 1000h] ; We are at 1000h.
 [BITS 64] ; This is 64-bit code (for now).
 
 ; It's assumed that this wrapper will behave as a regular 64-bit function
 ; (using the SystemV ABI) would, so let's obtain our arguments:
 
-; (uint64 Lba [rdi], uint16 NumSectors [si], uint8 DriveNumber [dl])
+; (uint64 Lba [rdi], uint16 Sectors [si], uint8 DriveNumber [dl])
 
 ; (We preserve RBX, RSP, RBP, R12, R13, R14, R15 and *MM)
 ; (We return the value in RAX (on success, the lower 16 bits are 0)
@@ -321,7 +321,8 @@ DiskAddressPacket:
   .Size: db 16 ; (The size of this packet is 16 bytes)
   .Reserved: db 0h ; (Unused, can safely ignore)
   .NumSectors: dw 0h ; (How many sectors should we load?)
-  .Location: dd 70000h ; (Tell the firmware to load sectors to 70000h)
+  .Location.Offset: dw 0h ; (Tell the firmware to load sectors to 7000:[0000h] = 70000h)
+  .Location.Segment: dw 7000h ; (Tell the firmware to load sectors to [7000]:0000h = 70000h)
   .Offset: dq 0h ; (From which LBA should we start loading?)
 
 
@@ -445,7 +446,7 @@ times 512 - ($-$$) db 0
 ; Setup_Int13Wrapper() to correctly validate this wrapper, we also need to
 ; include a signature and some extra information at the end.
 
-; Keep in mind that this won't be copied over to 9E00h - only the first
+; Keep in mind that this won't be copied over to 1000h - only the first
 ; 512 bytes will - it'll just be used for verification, so the above
 ; code can't use these variables
 
@@ -456,4 +457,4 @@ times 512 - ($-$$) db 0
   dd 70000h
 
 .Int13Wrapper_Location:
-  dd 9E00h
+  dd 1000h

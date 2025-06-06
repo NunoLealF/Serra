@@ -261,18 +261,20 @@ void KernelCore(commonInfoTable* InfoTable) {
   // (Try to read the MBR from the disk - or, at least, the bootsector,
   // in the case of `unpart` / non-partitioned builds)
 
+  Putchar('\n', false, 0x0F);
+
   if (InfoTable->Firmware.Type == FirmwareType_Bios) {
 
-    const uintptr Size = 4096;
+    const uintptr Size = 1048576;
     void* Area = Allocate(&Size);
 
     if (Area != NULL) {
 
       auto Lba = 0;
-      auto NumSectors = 1;
+      auto NumSectors = (Size / DiskInfo.Int13.BytesPerSector);
 
       Message(Ok, "Allocated a %d-byte buffer at %xh.", (uint64)Size, (uint64)Area);
-      Message(Ok, "Attempting to read %d sector (from LBA %d of drive %xh) to buffer at %xh.",
+      Message(Ok, "Attempting to read %d sectors (from LBA %d of drive %xh) to buffer at %xh.",
                    (uint64)NumSectors, (uint64)Lba, DiskInfo.Int13.DriveNumber, (uint64)Area);
 
       bool Status = Read_Int13Wrapper(Area, Lba, NumSectors, DiskInfo.Int13.DriveNumber);
@@ -282,9 +284,26 @@ void KernelCore(commonInfoTable* InfoTable) {
         Message(Ok, "Successfully loaded sectors - showing first 512 bytes of the boot disk.");
         uint8* Buffer = (uint8*)Area;
 
-        for (auto Index = 0; Index < 512; Index++) {
-          Printf("%xh ", false, 0x07, (uint64)Buffer[Index]);
+        Printf("[", false, 0x07); Printf("0h", false, 0x0F); Printf("] ", false, 0x07);
+
+        for (uint64 Index = 0; Index < (NumSectors * DiskInfo.Int13.BytesPerSector); Index++) {
+
+          if (Buffer[Index] < 0x10) {
+            Putchar('0', false, 0x07);
+          }
+
+          Printf("%x ", false, 0x07, (uint64)Buffer[Index]);
+
+          if ((Index+1) % 16 == 0) {
+            Print("\n\r[", false, 0x07);
+            Printf("%xh", false, 0x0F, ((Index+1) / 16)*16);
+            Print("] ", false, 0x07);
+          }
+
         }
+
+        Printf("If the read was successful, that should be the data from LBA %d to %d.",
+                false, 0x07, (uint64)Lba, (uint64)Lba+NumSectors);
 
       } else {
 
@@ -320,7 +339,7 @@ void KernelCore(commonInfoTable* InfoTable) {
 
     // (Do a lot of NOPs to stall the system)
 
-    for (uint64 Count = 0; Count < 50000000000; Count++) {
+    for (uint64 Count = 0; Count < 20000000000; Count++) {
       __asm__ __volatile__ ("nop");
     }
 
