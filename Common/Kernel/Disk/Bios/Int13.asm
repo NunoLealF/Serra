@@ -354,7 +354,7 @@ RealModeGdtDescriptor:
 
 ProtectedModeGdtDescriptor:
   .Size: dw (ProtectedModeGdt.End - ProtectedModeGdt - 1)
-  .Address: dd ProtectedModeGdt
+  .Address: dq ProtectedModeGdt ; (Must be 8 bytes, so we can load it from 64-bit mode.)
 
 LongModeGdtDescriptor:
   .Size: dw 0h

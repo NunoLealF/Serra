@@ -272,10 +272,13 @@ ProtectedModeGdt:
 
 ; Our 32-bit protected mode GDT descriptor.
 
+; (We have to reserve a 64-bit address, so we can load this from long mode;
+; otherwise, we're also including the 4 bytes afterwards.)
+
 ProtectedModeGdtDescriptor:
 
   dw 24 - 1 ; Three eight-byte segments, minus one byte.
-  dd ProtectedModeGdt ; The location of our GDT is the ProtectedModeGdt label.
+  dq ProtectedModeGdt ; The location of our GDT is the ProtectedModeGdt label.
 
 
 ; ------------------------------------------------------------
