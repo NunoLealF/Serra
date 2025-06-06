@@ -12,7 +12,7 @@
   // Include functions and global variables from Bios.c
 
   constexpr uint32 Int13Wrapper_Data = 0x70000;
-  constexpr uint32 Int13Wrapper_Location = 0x7FE00;
+  constexpr uint16 Int13Wrapper_Location = 0x9E00;
 
   [[nodiscard]] bool Setup_Int13Wrapper(void);
   [[nodiscard]] bool Read_Int13Wrapper(void* Pointer, uint64 Lba, uint64 NumSectors, uint8 DriveNumber);

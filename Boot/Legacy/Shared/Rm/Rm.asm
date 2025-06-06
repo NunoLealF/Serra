@@ -398,7 +398,7 @@ realModeGdt:
   db 00000000b ; Limit (bits 16-19) and flags (bits 0-7)
   db 00h ; Base (bits 24-31)
 
-  ; Segment 1 (Code segment, spans all 1MiB of memory)
+  ; Segment 1 (Code segment, spans the first 64 KiB of memory)
 
   dw 0FFFFh ; Limit (bits 0-15)
   dw 0000h ; Base (bits 0-15)
@@ -407,7 +407,7 @@ realModeGdt:
   db 00000000b ; Limit (bits 16-19) and flags (bits 0-7)
   db 00h ; Base (bits 24-31)
 
-  ; Segment 2 (Data segment, spans all 1MiB of memory)
+  ; Segment 2 (Data segment, spans the first 64 KiB of memory)
 
   dw 0FFFFh ; Limit (bits 0-15)
   dw 0000h ; Base (bits 0-15)

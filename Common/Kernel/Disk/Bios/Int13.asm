@@ -2,8 +2,8 @@
 ; This file is part of the Serra project, which is released under the MIT license.
 ; For more information, please refer to the accompanying license agreement. <3
 
-[ORG 7FE00h] ; We are at 7FE00h.
-[BITS 64] ; This is 64-bit code.
+[ORG 9E00h] ; We are at 9E00h.
+[BITS 64] ; This is 64-bit code (for now).
 
 ; It's assumed that this wrapper will behave as a regular 64-bit function
 ; (using the SystemV ABI) would, so let's obtain our arguments:
@@ -62,15 +62,15 @@ PrepareProtectedMode64:
 
 
 
-[BITS 32] ; This is 32-bit code.
+[BITS 32] ; This is 32-bit code (for now).
 
 PrepareRealMode32:
 
   ; Now that we're here, we should be in IA-32e (or 'compatibility')
   ; mode, which is essentially just a subset of protected mode.
 
-  ; Before we switch back to regular protected mode though, let's
-  ; set up the segment registers with our data segment (10h):
+  ; Before we switch back to regular protected mode though, let's load
+  ; the segment registers with our 32-bit data segment, 10h:
 
   mov bx, 10h
 
@@ -99,27 +99,25 @@ PrepareRealMode32:
   and eax, ~(1 << 8)
   wrmsr
 
-  ; Now that we've done that, we *should* be in regular protected
-  ; mode, which means we can actually start preparing to switch
-  ; to 16-bit real mode.
+  ; Now that we've done that, we *should* be in regular protected mode,
+  ; which means we can start the process of switching to real mode.
 
-  ; The first thing we need to do then is to load our GDT with
-  ; 16-bit segments, before making a far jump to 16-bit protected
-  ; mode (we can't switch directly):
+  ; The first thing we need to do then, is to reload the segment
+  ; registers with our 16-bit code selector (18h) by making a
+  ; far jump to `PrepareRealMode16`, like this:
 
-  lgdt [RealModeGdtDescriptor]
-  jmp 08h:PrepareRealMode16
+  jmp 18h:PrepareRealMode16
 
 
 
-[BITS 16] ; This is 16-bit code.
+[BITS 16] ; This is 16-bit code (for now).
 
 PrepareRealMode16:
 
-  ; Right now, we're still in protected-mode, but using 16-bit
-  ; segments, so our first action is to load those:
+  ; Right now, our code segment is in 16-bit protected mode, but our other
+  ; segments aren't, so we need to load our segment registers:
 
-  mov bx, 10h
+  mov bx, 20h
 
   mov ds, bx
   mov es, bx
@@ -127,50 +125,50 @@ PrepareRealMode16:
   mov gs, bx
   mov ss, bx
 
-  ; Now that we have, we can load the real mode IDT (or IVT,
-  ; Interrupt Vector Table), although we can't call
-  ; BIOS interrupts just yet.
+  ; Now that we have, we can load the real mode IDT (or IVT, Interrupt
+  ; Vector Table), although we can't call BIOS interrupts just yet.
 
-  lidt [RealModeIdtDescriptor]
+  lidt [RealModeIvtDescriptor]
 
-  ; Finally, we can disable protected mode (by *clearing* bit 0
-  ; of CR0), and make a far jump to our 16-bit real mode code.
+  ; Finally, we can disable protected mode (by *clearing* bit 0 of CR0),
+  ; and make a far jump to our 16-bit real mode payload.
 
-  ; (Our code starts at 7FE00h, so we should use 7FE0h as our
-  ; segment within 16-bit real mode)
+  ; (Unlike protected mode, real mode uses segments completely differently,
+  ; so we actually use 0h as our base segment within real mode)
 
   mov ebx, cr0
   and ebx, ~(1 << 0)
   mov cr0, ebx
 
-  jmp 7FE0h:(RealMode - 7FE00h)
+  jmp 0h:RealMode
 
 
 
 RealMode:
 
-  ; After all of this, we should be in 16-bit real mode, which means
-  ; we can *finally* use BIOS interrupt calls.
+  ; After all of this, we should finally be in 16-bit real mode, which
+  ; means we're ready to use BIOS interrupt calls.
+
+  ; Before we do that though, let's disable the carry flag, and enable
+  ; interrupts again, like this:
+
+  clc
+  sti
 
   ; In this case, we want to use the BIOS interrupt (int 13h, AH =
   ; 42h, DL = (drive), DS:SI = &DiskAddressPacket) in order to
   ; read from the disk.
 
-  ; (Disable the carry flag, and enable interrupts again)
+  ; (Set DS and ES to 0h, and set DS:SI to &DiskAddressPacket)
 
-  clc
-  sti
-
-  ; (Set DS:SI to the address of DiskAddressPacket; we also set
-  ; ES, just in case.)
-
-  mov bx, 7FE0h
+  mov bx, 0h
   mov ds, bx
   mov es, bx
 
-  mov si, (DiskAddressPacket - 7FE00h)
+  mov si, DiskAddressPacket
 
   ; (Set the AH register to 42h, and call interrupt 13h)
+  ; The DL register hasn't been touched so far, so it's fine
 
   mov ah, 42h
   mov al, 00h
@@ -197,39 +195,32 @@ PrepareProtectedMode16:
   ; the real mode IDT/IVT isn't usable in protected mode:
 
   cli
+  clc
 
-  ; Next, let's load our GDT with 32-bit segments, and then re-enable
-  ; protected mode by setting bit 0 of the CR0 register.
+  ; We don't need to reload our GDT again, since it already has both 16
+  ; and 32-bit segments, so we can already enable protected mode:
 
-  ; (In 16-bit real mode, `lgdt` uses the DS register - thankfully,
-  ; we already set that to 7FE0h earlier on, but it does mean that
-  ; we need to *only* provide the offset)
-
-  mov ebx, ProtectedModeGdtDescriptor
-  sub ebx, 7FE00h
-  shr ebx, 4
-
-  lgdt [ebx]
-
-  ; Finally, let's enable protected mode (by *setting* bit 0 of the
-  ; CR0 register), and do a far jump to the next stage.
+  ; (We enable protected mode by *setting* bit 0 of the CR0 register)
 
   mov ebx, cr0
   or ebx, (1 << 0)
   mov cr0, ebx
 
+  ; Finally, let's make a far jump to set the code segment to 08h
+  ; (our GDT's 32-bit code segment), like this:
+
   jmp 08h:PrepareLongMode32
 
 
 
-[BITS 32] ; This is 32-bit code.
+[BITS 32] ; This is 32-bit code (for now).
 
 PrepareLongMode32:
 
   ; We should finally be in 32-bit protected mode now. Before we do
   ; anything else though, let's restore the segment registers:
 
-  ; (In this case, 10h is ProtectedModeGdt's data segment offset)
+  ; (In this case, our 32-bit data segment is at an offset of 10h)
 
   mov bx, 10h
 
@@ -326,11 +317,13 @@ DiskAddressPacket:
   .Location: dd 70000h ; (Tell the firmware to load sectors to 70000h)
   .Offset: dq 0h ; (From which LBA offset should we start loading?)
 
+
 ; In order to avoid corrupting the stack, we'll need to save the stack
 ; pointer (the value of RSP) early on, so let's do that:
 
 SaveStack:
   dq 0h
+
 
 ; Finally, we'll also need to save the page tables (the value of CR3)
 ; as we switch out of long mode, so let's reserve space for that:
@@ -341,65 +334,36 @@ SavePageTables:
 
 ; ----------------------------------------------------------------------
 
-; Throughout the wrapper, we'll need to switch between 64-bit (long),
-; 32-bit (protected) and 16-bit (real) mode, which means we'll need to
-; have three different GDTs (Global Descriptor Tables) for each.
+; Throughout the wrapper, we'll need to switch between 64-bit (long)
+; and 16-/32-bit (protected) mode, which means we'll need to have
+; two separate GDTs (Global Descriptor Tables) for each.
 
-; (Define descriptors for all three GDTs - keep in mind that we don't
-; define a long mode GDT here, since we'll just use `sgdt`)
-
-RealModeGdtDescriptor:
-  .Size: dw (RealModeGdt.End - RealModeGdt - 1)
-  .Address: dd RealModeGdt
+; (Define descriptors for both GDTs - keep in mind that we don't define
+; a long mode GDT here, since we'll save the current one with `sgdt`)
 
 ProtectedModeGdtDescriptor:
   .Size: dw (ProtectedModeGdt.End - ProtectedModeGdt - 1)
   .Address: dq ProtectedModeGdt ; (Must be 8 bytes, so we can load it from 64-bit mode.)
 
 LongModeGdtDescriptor:
-  .Size: dw 0h
-  .Address: dq 0h
+  .Size: dw 0h ; (To be filled out by `sgdt`)
+  .Address: dq 0h ; (To be filled out by `sgdt`)
 
-; (Our 16-bit real mode GDT, with null + code + data segments)
 
-RealModeGdt:
+; We'll also need to switch between our kernel's IDT, and the real mode
+; IVT (Interrupt Vector Table), so let's define descriptors for both:
 
-  ; [Segment 0 (null segment, spans nothing)]
+RealModeIvtDescriptor:
+  .Size: dw 3FFh ; (The real mode IVT is always 400h bytes long)
+  .Location: dd 0h ; (And located at address 0h)
 
-  .Null:
+LongModeIdtDescriptor:
+  .Size: dw 0h ; (To be filled out by `sidt`)
+  .Location: dq 0h ; (To be filled out by `sidt`)
 
-    dw 0000h ; Limit (bits 0-15)
-    dw 0000h ; Base (bits 0-15)
-    db 00h ; Base (bits 16-23)
-    db 00000000b ; Access byte (bits 0-7)
-    db 00000000b ; Limit (bits 16-19) and flags (bits 0-7)
-    db 00h ; Base (bits 24-31)
 
-  ; [Segment 1 (code segment, spans the first 1 MiB of memory)]
-
-  .Code:
-
-    dw 0FFFFh ; Limit (bits 0-15)
-    dw 0000h ; Base (bits 0-15)
-    db 00h ; Base (bits 16-23)
-    db 10011010b ; Access byte (bits 0-7)
-    db 00000000b ; Limit (bits 16-19) and flags (bits 0-7)
-    db 00h ; Base (bits 24-31)
-
-  ; [Segment 2 (data segment, spans the first 1 MiB of memory)]
-
-  .Data:
-
-    dw 0FFFFh ; Limit (bits 0-15)
-    dw 0000h ; Base (bits 0-15)
-    db 00h ; Base (bits 16-23)
-    db 10010010b ; Access byte (bits 0-7)
-    db 00000000b ; Limit (bits 16-19) and flags (bits 0-7)
-    db 00h ; Base (bits 24-31)
-
-  .End:
-
-; (Our 32-bit protected mode GDT, with null + code + data segments)
+; Finally, let's declare our protected-mode GDT, with both 16- and 32-
+; bit code and data segments (08h, 10h, 18h and 20h respectively):
 
 ProtectedModeGdt:
 
@@ -414,9 +378,9 @@ ProtectedModeGdt:
     db 00000000b ; Limit (bits 16-19) and flags (bits 0-7)
     db 00h ; Base (bits 24-31)
 
-  ; [Segment 1 (code segment, spans the first 4 GiB of memory)]
+  ; [Segment 1 (32-bit code segment, spans the first 4 GiB of memory)]
 
-  .Code:
+  .Code32:
 
     dw 0FFFFh ; Limit (bits 0-15)
     dw 0000h ; Base (bits 0-15)
@@ -425,9 +389,9 @@ ProtectedModeGdt:
     db 11001111b ; Limit (bits 16-19) and flags (bits 0-7)
     db 00h ; Base (bits 24-31)
 
-  ; [Segment 2 (data segment, spans the first 4 GiB of memory)]
+  ; [Segment 2 (32-bit data segment, spans the first 4 GiB of memory)]
 
-  .Data:
+  .Data32:
 
     dw 0FFFFh ; Limit (bits 0-15)
     dw 0000h ; Base (bits 0-15)
@@ -436,20 +400,29 @@ ProtectedModeGdt:
     db 11001111b ; Limit (bits 16-19) and flags (bits 0-7)
     db 00h ; Base (bits 24-31)
 
+  ; [Segment 3 (16-bit code segment, spans the first 64 KiB of memory)]
+
+  .Code16:
+
+    dw 0FFFFh ; Limit (bits 0-15)
+    dw 0000h ; Base (bits 0-15)
+    db 00h ; Base (bits 16-23)
+    db 10011010b ; Access byte (bits 0-7)
+    db 00000000b ; Limit (bits 16-19) and flags (bits 0-7)
+    db 00h ; Base (bits 24-31)
+
+  ; [Segment 4 (16-bit data segment, spans the first 64 KiB of memory)]
+
+  .Data16:
+
+    dw 0FFFFh ; Limit (bits 0-15)
+    dw 0000h ; Base (bits 0-15)
+    db 00h ; Base (bits 16-23)
+    db 10010010b ; Access byte (bits 0-7)
+    db 00000000b ; Limit (bits 16-19) and flags (bits 0-7)
+    db 00h ; Base (bits 24-31)
+
   .End:
-
-; Additionally, we also need to define an IDT descriptor for when we're
-; in real mode (so we can access BIOS interrupts), like this:
-
-RealModeIdtDescriptor:
-  .Size: dw 3FFh
-  .Location: dd 0h
-
-; Finally, this is where we'll save the long mode IDT (with `sidt`):
-
-LongModeIdtDescriptor:
-  .Size: dw 0h
-  .Location: dq 0h
 
 
 
@@ -460,11 +433,12 @@ LongModeIdtDescriptor:
 
 times 512 - ($-$$) db 0
 
+
 ; Since this is included with #embed (rather than linked), in order for
 ; Setup_Int13Wrapper() to correctly validate this wrapper, we also need to
 ; include a signature and some extra information at the end.
 
-; Keep in mind that this won't be copied over to 7FE00h - only the first
+; Keep in mind that this won't be copied over to 9E00h - only the first
 ; 512 bytes will - it'll just be used for verification, so the above
 ; code can't use these variables
 
@@ -475,4 +449,4 @@ times 512 - ($-$$) db 0
   dd 70000h
 
 .Int13Wrapper_Location:
-  dd 7FE00h
+  dd 9E00h
