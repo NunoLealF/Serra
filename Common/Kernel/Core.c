@@ -238,7 +238,7 @@ void KernelCore(commonInfoTable* InfoTable) {
   for (uint16 Limit = 0; Limit < 64; Limit++) {
 
     uint64 Num = 0;
-    allocationNode* Node = Nodes[Limit];
+    allocationNode* Node = MmSubsystemData.Nodes[Limit];
 
     while (Node != NULL) {
 

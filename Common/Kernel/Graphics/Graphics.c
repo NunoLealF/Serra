@@ -33,7 +33,7 @@ bool InitializeGraphicsSubsystem(void* InfoTable) {
   // Next, let's see if the memory management subsystem is enabled; we
   // need it to be, in order to implement double buffering support.
 
-  if (MemoryManagementEnabled == false) {
+  if (MmSubsystemData.IsEnabled == false) {
     return false;
   }
 

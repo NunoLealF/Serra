@@ -140,7 +140,7 @@ bool InitializeConsoleSubsystem(void* InfoTable) {
 
     if (gST == NULL) {
 
-      InitializeEfiTables(Table->Firmware.Efi.SystemTable.Pointer);
+      InitializeEfiTables(InfoTable, Table->Firmware.Efi.SystemTable.Pointer);
 
       if (gST != Table->Firmware.Efi.SystemTable.Pointer) {
         return false;

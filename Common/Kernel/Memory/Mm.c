@@ -8,12 +8,11 @@
 #include "../../Common.h"
 #include "Memory.h"
 
-// (TODO - Variables and such)
+// (TODO - Global variables)
 
-bool MemoryManagementEnabled = false; // (Should be `true` once subsystem is initialized.)
+mmSubsystemData MmSubsystemData = {0};
 
-allocationNode* Nodes[64] = {NULL};
-uint8 Limits[2] = {0};
+// (TODO - Local variables)
 
 static usableMmapEntry* KernelMmap = NULL;
 static uint16 NumKernelMmapEntries = 0;
@@ -38,19 +37,19 @@ bool InitializeMemoryManagementSubsystem(void* UsableMmap, uint16 NumUsableMmapE
   NumKernelMmapEntries = NumUsableMmapEntries;
 
   // (Calculate the 'minimum' and 'maximum' levels, storing them in
-  // Limits[]; this is based off of `SystemPageSize`
+  // MmSubsystemData.Limits[]; this is based off of `SystemPageSize`
 
   auto PageSize = SystemPageSize;
-  Limits[0] = 0; Limits[1] = 63;
+  MmSubsystemData.Limits[0] = 0; MmSubsystemData.Limits[1] = 63;
 
   while (PageSize != 0) {
 
-    Limits[0]++;
+    MmSubsystemData.Limits[0]++;
     PageSize >>= 1;
 
   }
 
-  Limits[0]--;
+  MmSubsystemData.Limits[0]--;
 
   // (Handle each memory map entry)
 
@@ -115,8 +114,8 @@ bool InitializeMemoryManagementSubsystem(void* UsableMmap, uint16 NumUsableMmapE
 
       PreviousNode = Node;
 
-      Node->Size.Previous = Nodes[Logarithm];
-      Nodes[Logarithm] = Node;
+      Node->Size.Previous = MmSubsystemData.Nodes[Logarithm];
+      MmSubsystemData.Nodes[Logarithm] = Node;
 
       if (Node->Size.Previous != NULL) {
         allocationNode* Temp = Node->Size.Previous;
@@ -132,11 +131,11 @@ bool InitializeMemoryManagementSubsystem(void* UsableMmap, uint16 NumUsableMmapE
 
   }
 
-  // (Update `MemoryManagementEnabled` and return true, now that
+  // (Update `MmSubsystemData.IsEnabled` and return true, now that
   // we're done)
 
-  MemoryManagementEnabled = true;
-  return MemoryManagementEnabled;
+  MmSubsystemData.IsEnabled = true;
+  return MmSubsystemData.IsEnabled;
 
 }
 
@@ -187,11 +186,11 @@ static inline void PushBlock(allocationNode* Node, void* Pointer, allocationNode
     Next->Position.Previous = Node;
   }
 
-  // (Push the node to its corresponding list at `Nodes[Level]`,
+  // (Push the node to its corresponding list at `MmSubsystemData.Nodes[Level]`,
   // and link it with the last free size block)
 
-  Node->Size.Previous = Nodes[Level];
-  Nodes[Level] = Node;
+  Node->Size.Previous = MmSubsystemData.Nodes[Level];
+  MmSubsystemData.Nodes[Level] = Node;
 
   if (Node->Size.Previous != NULL) {
     allocationNode* Temp = Node->Size.Previous;
@@ -215,7 +214,7 @@ static inline void PushBlock(allocationNode* Node, void* Pointer, allocationNode
   // (Get the current node for the corresponding level, as long as
   // it isn't a null pointer)
 
-  allocationNode* Node = Nodes[Level];
+  allocationNode* Node = MmSubsystemData.Nodes[Level];
   void* Pointer = NULL;
 
   if (Node != NULL) {
@@ -239,12 +238,12 @@ static inline void PushBlock(allocationNode* Node, void* Pointer, allocationNode
         Next->Position.Previous = Previous;
       }
 
-      // (Pop the node from `Nodes[Level]`)
+      // (Pop the node from `MmSubsystemData.Nodes[Level]`)
 
-      Nodes[Level] = Node->Size.Previous;
+      MmSubsystemData.Nodes[Level] = Node->Size.Previous;
 
-      if (Nodes[Level] != NULL) {
-        Nodes[Level]->Size.Next = NULL;
+      if (MmSubsystemData.Nodes[Level] != NULL) {
+        MmSubsystemData.Nodes[Level]->Size.Next = NULL;
       }
 
       // (Clear our newly popped node, so it doesn't appear in any
@@ -374,7 +373,7 @@ static inline allocationNode* FreeBlock(void* Pointer, uintptr Size) {
 
   // (Calculate the logarithm of the block size / the block 'level')
 
-  auto Logarithm = Limits[0];
+  auto Logarithm = MmSubsystemData.Limits[0];
 
   while (Size > (1ULL << Logarithm)) {
     Logarithm++;
@@ -382,7 +381,7 @@ static inline allocationNode* FreeBlock(void* Pointer, uintptr Size) {
 
   // (Return a null pointer if the logarithm exceeds the maximum)
 
-  if (Logarithm > Limits[1]) {
+  if (Logarithm > MmSubsystemData.Limits[1]) {
     return NULL;
   }
 
@@ -413,11 +412,11 @@ static inline allocationNode* FreeBlock(void* Pointer, uintptr Size) {
 
   uintptr Address = (uintptr)Node;
 
-  // (Additionally, check if we're exceeding Limits[])
+  // (Additionally, check if we're exceeding MmSubsystemData.Limits[])
 
-  if (Target < Limits[0]) {
+  if (Target < MmSubsystemData.Limits[0]) {
     return false;
-  } else if (Level > Limits[1]) {
+  } else if (Level > MmSubsystemData.Limits[1]) {
     return false;
   }
 
@@ -500,7 +499,7 @@ static inline allocationNode* FreeBlock(void* Pointer, uintptr Size) {
   // Before we do anything else, let's calculate the level (logarithm) of
   // our node, based on its size.
 
-  auto Logarithm = Limits[0];
+  auto Logarithm = MmSubsystemData.Limits[0];
 
   while (Size > (1ULL << Logarithm)) {
     Logarithm++;
@@ -510,7 +509,7 @@ static inline allocationNode* FreeBlock(void* Pointer, uintptr Size) {
   // until there are no more blocks left to merge, or until
   // `Logarithm` goes out of bounds).
 
-  while (Logarithm < Limits[1]) {
+  while (Logarithm < MmSubsystemData.Limits[1]) {
 
     // Calculate the address of the previous and next nodes, and break
     // if both are NULL.
@@ -598,7 +597,7 @@ static inline allocationNode* FreeBlock(void* Pointer, uintptr Size) {
       allocationNode* Temp = Previous->Size.Previous;
       Temp->Size.Next = Previous->Size.Next;
     } else {
-      Nodes[Logarithm] = Previous->Size.Next;
+      MmSubsystemData.Nodes[Logarithm] = Previous->Size.Next;
     }
 
     if (Previous->Size.Next != NULL) {
@@ -612,7 +611,7 @@ static inline allocationNode* FreeBlock(void* Pointer, uintptr Size) {
       allocationNode* Temp = Node->Size.Previous;
       Temp->Size.Next = Node->Size.Next;
     } else {
-      Nodes[Logarithm] = Node->Size.Next;
+      MmSubsystemData.Nodes[Logarithm] = Node->Size.Next;
     }
 
     if (Node->Size.Next != NULL) {
@@ -669,7 +668,7 @@ static inline allocationNode* FreeBlock(void* Pointer, uintptr Size) {
   // Now that we know we're probably good to go, let's calculate the
   // (minimum) block size we need to allocate.
 
-  auto BlockLevel = Limits[0];
+  auto BlockLevel = MmSubsystemData.Limits[0];
 
   while (Size > (1ULL << BlockLevel)) {
     BlockLevel++;
@@ -677,7 +676,7 @@ static inline allocationNode* FreeBlock(void* Pointer, uintptr Size) {
 
   // (If the block level exceeds the maximum limit, just return NULL)
 
-  if (BlockLevel > Limits[1]) {
+  if (BlockLevel > MmSubsystemData.Limits[1]) {
     return NULL;
   }
 
@@ -685,7 +684,7 @@ static inline allocationNode* FreeBlock(void* Pointer, uintptr Size) {
   // with one list for each 'level' (which corresponds to the amount
   // of memory that node corresponds to).
 
-  // (Essentially, for any N, Nodes[N] is a pointer to the last entry in
+  // (Essentially, for any N, MmSubsystemData.Nodes[N] is a pointer to the last entry in
   // a list of nodes that correspond to memory areas that are (1 << N)
   // bytes long.)
 
@@ -694,13 +693,13 @@ static inline allocationNode* FreeBlock(void* Pointer, uintptr Size) {
   // -> (1) If there *aren't* any memory areas at our level, try to
   // find a larger area we can divide)
 
-  if (Nodes[BlockLevel] == NULL) {
+  if (MmSubsystemData.Nodes[BlockLevel] == NULL) {
 
-    for (auto Level = (BlockLevel + 1); Level <= Limits[1]; Level++) {
+    for (auto Level = (BlockLevel + 1); Level <= MmSubsystemData.Limits[1]; Level++) {
 
-      if (Nodes[Level] != NULL) {
+      if (MmSubsystemData.Nodes[Level] != NULL) {
 
-        bool Result = DivideBlock(Nodes[Level], Level, BlockLevel);
+        bool Result = DivideBlock(MmSubsystemData.Nodes[Level], Level, BlockLevel);
 
         if (Result == false) {
           return NULL;
@@ -749,7 +748,7 @@ static inline allocationNode* FreeBlock(void* Pointer, uintptr Size) {
     return false;
   }
 
-  // -> (2) If possible, merge Nodes[N] with any other nearby
+  // -> (2) If possible, merge MmSubsystemData.Nodes[N] with any other nearby
   // blocks (for example, two 4 KiB blocks -> one 8 KiB block).
 
   return MergeBlock(Node, Size);

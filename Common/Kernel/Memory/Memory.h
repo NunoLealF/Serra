@@ -53,12 +53,18 @@
 
   static_assert((sizeof(allocationNode) == 64), "`allocationNode`'s size must be a power of two.");
 
+  typedef struct _mmSubsystemData {
+
+    bool IsEnabled; // Is the memory management subsystem currently enabled?
+
+    allocationNode* Nodes[64]; // A list of heads to linked lists for different sizes
+    uint8 Limits[2]; // The lower and upper bounds/limits for Nodes[]
+
+  } mmSubsystemData;
+
   // Include functions and global variables from Mm.c
 
-  extern bool MemoryManagementEnabled;
-
-  extern allocationNode* Nodes[64];
-  extern uint8 Levels[2];
+  extern mmSubsystemData MmSubsystemData;
 
   bool InitializeMemoryManagementSubsystem(void* UsableMmap, uint16 NumUsableMmapEntries);
   bool VerifyMemoryManagementSubsystem(const uintptr Try);

@@ -69,6 +69,8 @@
   extern efiBootServices* gBS;
   extern efiRuntimeServices* gRT;
 
-  uint64 InitializeEfiTables(efiSystemTable* SystemTable);
+  extern efiHandle ImageHandle;
+
+  void InitializeEfiTables(void* InfoTable, efiSystemTable* SystemTable);
 
 #endif

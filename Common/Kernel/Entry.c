@@ -523,10 +523,12 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
 
   if (InfoTable->Firmware.Type == FirmwareType_Efi) {
 
-    InitializeEfiTables(InfoTable->Firmware.Efi.SystemTable.Pointer);
+    InitializeEfiTables(InfoTable, InfoTable->Firmware.Efi.SystemTable.Pointer);
 
     if (gST != InfoTable->Firmware.Efi.SystemTable.Pointer) {
       return EntrypointNotPositionIndependent;
+    } else if (ImageHandle != InfoTable->Firmware.Efi.ImageHandle.Pointer) {
+      return EntrypointFirmwareInvalidEfiData;
     }
 
   }
@@ -536,7 +538,7 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
 
   if (InitializeMemoryManagementSubsystem(InfoTable->Memory.List.Pointer, InfoTable->Memory.NumEntries) == true) {
 
-    if (MemoryManagementEnabled == false) {
+    if (MmSubsystemData.IsEnabled == false) {
       return EntrypointCouldntInitializeMm;
     }
 
