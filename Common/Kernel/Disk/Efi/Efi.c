@@ -34,7 +34,7 @@
 // (TODO - List of efiBlockIoProtocol handles, and protocols?)
 
 static efiHandle* EfiBlockIoHandles = NULL;
-static efiBlockIoProtocol* EfiBlockIoProtocols = NULL;
+static efiBlockIoProtocol** EfiBlockIoProtocols = NULL;
 
 static uint64 NumEfiBlockIoHandles = 0;
 
@@ -116,16 +116,14 @@ static uint64 NumEfiBlockIoHandles = 0;
   // Finally, now that we have a list of usable handles, let's fill out
   // `EfiBlockIoProtocols` by opening each corresponding protocol.
 
-  // (Allocate enough space for `EfiBlockIoProtocols`; we can reuse
-  // `HandleListSize` for this, since sizeof(efiHandle) is equal
-  // to sizeof(efiProtocol))
+  // (Allocate enough space for `EfiBlockIoProtocols`)
 
   void* ProtocolList = Allocate(&HandleListSize);
 
   if (ProtocolList == NULL) {
     return false;
   } else {
-    EfiBlockIoProtocols = (efiBlockIoProtocol*)ProtocolList;
+    EfiBlockIoProtocols = (efiBlockIoProtocol**)ProtocolList;
   }
 
   // (Use gBS->OpenProtocol() on each handle in `EfiBlockIoHandles`;
@@ -135,11 +133,11 @@ static uint64 NumEfiBlockIoHandles = 0;
 
     // (Open an `efiBlockIoProtocol` instance at EfiBlockIoProtocols[n]
     // for each EfiBlockIoHandles[n])
+
     Status = gBS->OpenProtocol(EfiBlockIoHandles[Index],
                                &efiBlockIoProtocol_Uuid,
                                (void**)&EfiBlockIoProtocols[Index],
                                ImageHandle, NULL, 1);
-
 
     // (If there any issues, return `false`)
 
@@ -169,17 +167,138 @@ bool TerminateDiskSubsystem_Efi(void) {
     return false;
   }
 
-  // (Close each instance of efiBlockIoProtocol, by manually going through
-  // each member of `EfiBlockIoHandles`)
+  // Close each instance of efiBlockIoProtocol, by manually going through
+  // each member of `EfiBlockIoHandles` ~ `EfiBlockIoProtocols`.
 
   for (uint64 Index = 0; Index < NumEfiBlockIoHandles; Index++) {
 
-    gBS->CloseProtocol(EfiBlockIoHandles[Index],
-                       &efiBlockIoProtocol_Uuid, ImageHandle, NULL);
+    // (Get this protocol's location and handle)
+
+    efiHandle Handle = EfiBlockIoHandles[Index];
+    efiBlockIoProtocol* Protocol = EfiBlockIoProtocols[Index];
+
+    // (Flush all data from the device, if possible, before closing it)
+
+    Protocol->FlushBlocks(Protocol);
+    gBS->CloseProtocol(Handle, &efiBlockIoProtocol_Uuid, ImageHandle, NULL);
 
   }
 
   // (Return `true`, now that we're done)
+
+  return true;
+
+}
+
+
+
+// (TODO - Function to get the block size of a given device, I guess?)
+
+uint64 GetBlockSize_Efi(uint64 DrivePosition) {
+
+  // (Make sure that the disk subsystem has been initialized, that the
+  // boot method is `BootMethod_Efi`, and that we're within bounds)
+
+  if (DiskInfo.IsEnabled == false) {
+    return uintmax;
+  } else if (DiskInfo.BootMethod != BootMethod_Efi) {
+    return uintmax;
+  } else if (DrivePosition >= NumEfiBlockIoHandles) {
+    return uintmax;
+  }
+
+  // (Get the necessary media table)
+
+  efiBlockIoProtocol* Protocol = EfiBlockIoProtocols[DrivePosition];
+  efiBlockIoMedia* Media = Protocol->Media;
+
+  // (Get the block size)
+
+  auto Size = Media->BlockSize;
+
+  if (Size != 0) {
+    return Size;
+  } else {
+    return uintmax;
+  }
+
+}
+
+
+
+// (TODO - Function to read, like the ReadDisk_Bios() function)
+
+[[nodiscard]] bool ReadDisk_Efi(void* Pointer, uint64 Lba, uint64 NumBlocks, uint64 DrivePosition) {
+
+  // (Make sure that the parameters we were given are valid)
+
+  if (NumBlocks == 0) {
+    return false;
+  } else if (Pointer == NULL) {
+    return false;
+  }
+
+  // (Make sure that the disk subsystem has been initialized, that the
+  // boot method is `BootMethod_Efi`, and that we're within bounds)
+
+  if (DiskInfo.IsEnabled == false) {
+    return false;
+  } else if (DiskInfo.BootMethod != BootMethod_Efi) {
+    return false;
+  } else if (DrivePosition >= NumEfiBlockIoHandles) {
+    return false;
+  }
+
+  // (Additionally, let's make sure that `EfiBlockIoProtocols` and
+  // `EfiBlockIoProtocols[DrivePosition]` aren't null pointers.
+
+  if (EfiBlockIoProtocols == NULL) {
+    return false;
+  } else if (EfiBlockIoProtocols[DrivePosition] == NULL) {
+    return false;
+  }
+
+  // Now that we know we can probably use this protocol, let's see if
+  // the device it represents is currently present, since not all
+  // disks are non-removable (USB sticks, for example).
+
+  efiBlockIoProtocol* Protocol = EfiBlockIoProtocols[DrivePosition];
+  efiBlockIoMedia* Media = Protocol->Media;
+
+  if (Media == NULL) {
+    return false;
+  } else if (Media->MediaPresent != true) {
+    return false;
+  }
+
+  // (Also, make sure that the transfer buffer address is aligned to
+  // (1 << IoAlign); otherwise, the read could fail)
+
+  if (Media->IoAlign > 1) {
+
+    uintptr Address = (uintptr)Pointer;
+    auto Mask = (1ULL << (Media->IoAlign)) - 1;
+
+    if ((Address & Mask) != 0) {
+      return false;
+    }
+
+  }
+
+  // Finally, now that we know we can probably read from the disk, let's
+  // use the `ReadBlocks()` function to do just that.
+
+  efiStatus Status;
+
+  Status = Protocol->ReadBlocks(Protocol, DrivePosition, (efiLba)Lba,
+                                (NumBlocks * Media->BlockSize),
+                                (volatile void*)Pointer);
+
+  // (Depending on the return status, either return `true` or `false`)
+
+  if (Status != EfiSuccess) {
+    return false;
+  }
 
   return true;
 

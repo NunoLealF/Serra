@@ -146,11 +146,13 @@ bool InitializeDiskSubsystem(void* InfoTable) {
 bool TerminateDiskSubsystem(void) {
 
   // Before we do anything else, let's check to see if the disk subsystem
-  // has been enabled yet.
+  // has been enabled yet - and if not, disable it ourselves.
 
   if (DiskInfo.IsEnabled == false) {
     return false;
   }
+
+  DiskInfo.IsEnabled = false;
 
   // Depending on the boot method, we may or may not need to manually
   // terminate the disk subsystem.

@@ -11,7 +11,11 @@
 
   // Include functions from Efi.c
 
+  #include "../../../Common.h"
   [[nodiscard]] bool InitializeDiskSubsystem_Efi(void);
   bool TerminateDiskSubsystem_Efi(void);
+
+  uint64 GetBlockSize_Efi(uint64 DrivePosition);
+  [[nodiscard]] bool ReadDisk_Efi(void* Pointer, uint64 Lba, uint64 NumBlocks, uint64 DrivePosition);
 
 #endif
