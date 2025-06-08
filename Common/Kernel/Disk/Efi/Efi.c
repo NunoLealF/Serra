@@ -113,6 +113,31 @@ static uint64 NumEfiBlockIoHandles = 0;
     return false;
   }
 
+  // Additionally, if the first handle doesn't match DiskInfo.Efi.Handle,
+  // then let's iterate through each handle, and swap in the first one
+  // that does - this should make the first handle the boot drive.
+
+  if (EfiBlockIoHandles[0] != DiskInfo.Efi.Handle) {
+
+    for (uint64 Index = 1; Index < NumEfiBlockIoHandles; Index++) {
+
+      // (If we find a handle that matches `DiskInfo.Efi.Handle`, then
+      // swap it with the first handle, and break)
+
+      if (EfiBlockIoHandles[Index] == DiskInfo.Efi.Handle) {
+
+        efiHandle SwapHandle = EfiBlockIoHandles[0];
+        EfiBlockIoHandles[0] = EfiBlockIoHandles[Index];
+        EfiBlockIoHandles[Index] = SwapHandle;
+
+        break;
+
+      }
+
+    }
+
+  }
+
   // Finally, now that we have a list of usable handles, let's fill out
   // `EfiBlockIoProtocols` by opening each corresponding protocol.
 
@@ -290,7 +315,7 @@ uint64 GetBlockSize_Efi(uint64 DrivePosition) {
 
   efiStatus Status;
 
-  Status = Protocol->ReadBlocks(Protocol, DrivePosition, (efiLba)Lba,
+  Status = Protocol->ReadBlocks(Protocol, Media->MediaId, (efiLba)Lba,
                                 (NumBlocks * Media->BlockSize),
                                 (volatile void*)Pointer);
 
