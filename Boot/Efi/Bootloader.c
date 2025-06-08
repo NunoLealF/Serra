@@ -738,7 +738,8 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   efiSimpleFilesystemProtocol* SimpleFsProtocol = NULL;
   volatile efiHandle SimpleFsProtocolHandle = NULL;
 
-  efiFileProtocol* FsProtocol = NULL;
+  efiFileProtocol* FileProtocol = NULL;
+  efiFileProtocol* KernelFileProtocol = NULL;
 
   for (uint64 HandleNum = 0; HandleNum < NumFsHandles; HandleNum++) {
 
@@ -746,7 +747,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
     SimpleFsProtocol = NULL;
     SimpleFsProtocolHandle = NULL;
-    efiFileProtocol* FileProtocol = NULL;
+    FileProtocol = NULL;
 
     // (Open this handle's protocol, as SimpleFsProtocol)
 
@@ -767,15 +768,15 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
         // (Open a efiFileProtocol handle at the kernel image location)
 
-        AppStatus = FileProtocol->Open(FileProtocol, (void**)&FsProtocol, KernelLocation, 1, 0);
+        AppStatus = FileProtocol->Open(FileProtocol, (void**)&KernelFileProtocol, KernelLocation, 1, 0);
 
         // (If it worked, then that means the image is there, so let's save
         // it in FsProtocol and leave this entire loop)
 
-        if ((AppStatus == EfiSuccess) && (FsProtocol != NULL)) {
+        if ((AppStatus == EfiSuccess) && (KernelFileProtocol != NULL)) {
 
           Message(Ok, u"Successfully found kernel image (at %s).", KernelLocation);
-          Message(Info, u"Kernel file protocol handle is located at %xh", (uint64)FsProtocol);
+          Message(Info, u"Kernel file protocol handle is located at %xh", (uint64)KernelFileProtocol);
 
           break;
 
@@ -803,7 +804,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
   CommonInfoTable.Disk.Method = DiskMethod_Efi;
   CommonInfoTable.Disk.Efi.Handle.Pointer = (void*)SimpleFsProtocolHandle;
-  CommonInfoTable.Disk.Efi.Protocol.Pointer = (void*)FsProtocol;
+  CommonInfoTable.Disk.Efi.Protocol.Pointer = (void*)FileProtocol;
 
 
 
@@ -827,7 +828,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   KernelInfo = NULL;
   uint64 KernelInfoSize = 0;
 
-  AppStatus = FsProtocol->GetInfo(FsProtocol, &efiFileInfo_Uuid, &KernelInfoSize, KernelInfo);
+  AppStatus = KernelFileProtocol->GetInfo(KernelFileProtocol, &efiFileInfo_Uuid, &KernelInfoSize, KernelInfo);
 
   if ((AppStatus != EfiBufferTooSmall) || (KernelInfoSize == 0)) {
 
@@ -856,7 +857,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
     // (Now that we have a proper buffer ready, call GetInfo() again.)
 
-    AppStatus = FsProtocol->GetInfo(FsProtocol, &efiFileInfo_Uuid, &KernelInfoSize, KernelInfo);
+    AppStatus = KernelFileProtocol->GetInfo(KernelFileProtocol, &efiFileInfo_Uuid, &KernelInfoSize, KernelInfo);
 
     if ((AppStatus != EfiSuccess) || (KernelInfo == NULL)) {
 
@@ -916,7 +917,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
   // (Read the kernel image into our newly allocated buffer, at *Kernel)
 
-  AppStatus = FsProtocol->Read(FsProtocol, &KernelSize, Kernel);
+  AppStatus = KernelFileProtocol->Read(KernelFileProtocol, &KernelSize, Kernel);
 
   if ((AppStatus != EfiSuccess) || (Kernel == NULL)) {
 
@@ -928,6 +929,10 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
     Message(Ok, u"Successfully loaded the kernel image to %xh in memory.", (uint64)Kernel);
 
   }
+
+  // (Close the kernel file itself, now that we're done with it.)
+
+  KernelFileProtocol->Close(KernelFileProtocol);
 
 
 
