@@ -33,6 +33,7 @@
   typedef uint64 efiPhysicalAddress;
   typedef uint64 efiVirtualAddress;
   typedef uintptr efiNotImplemented; // sizeof(uintptr) == sizeof(void*), so this is okay
+  typedef uint64 efiLba;
 
   typedef struct _efiInputKey {
 

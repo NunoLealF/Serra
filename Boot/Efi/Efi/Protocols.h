@@ -10,6 +10,45 @@
 #ifndef SERRA_EFI_PROTOCOLS_H
 #define SERRA_EFI_PROTOCOLS_H
 
+  // (Block IO Protocol-related definitions)
+
+  typedef efiStatus (efiAbi *efiBlockRead) (efiProtocol This, uint32 MediaId, efiLba Lba, uint64 BufferSize, volatile void* Buffer);
+  constexpr efiUuid efiBlockIoProtocol_Uuid = {0x964E5B21, {0x6459, 0x11D2}, {0x8E, 0x39, 0x00, 0xA0, 0xC9, 0x69, 0x72, 0x3B}};
+
+  typedef struct _efiBlockIoMedia {
+
+    uint32 MediaId;
+
+    bool RemovableMedia;
+    bool MediaPresent;
+
+    bool LogicalPartition;
+    bool ReadOnly;
+    bool WriteCaching;
+
+    uint32 BlockSize;
+    uint32 IoAlign;
+
+    efiLba LastBlock;
+
+  } efiBlockIoMedia;
+
+  typedef struct _efiBlockIoProtocol {
+
+    uint64 Revision;
+
+    efiBlockIoMedia* Media;
+
+    efiNotImplemented Reset;
+    efiBlockRead ReadBlocks;
+    efiNotImplemented WriteBlocks;
+    efiNotImplemented FlushBlocks;
+
+  } efiBlockIoProtocol;
+
+
+
+
   // (File Protocol-related definitions)
 
   typedef efiStatus (efiAbi *efiFileClose) (efiProtocol This);
