@@ -18,7 +18,7 @@
 
     // (Has this subsystem been initialized yet?)
 
-    bool IsSupported;
+    bool IsEnabled;
 
     // (Which method did we boot with - and can be guaranteed to work?)
 
@@ -58,7 +58,9 @@
   // Include functions and global variables from Disk.c
 
   extern diskInfo DiskInfo;
+  
   bool InitializeDiskSubsystem(void* InfoTable);
+  bool TerminateDiskSubsystem(void);
 
   // Include functions and global variables from Fs.c (TODO)
 

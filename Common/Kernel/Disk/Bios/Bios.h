@@ -14,7 +14,7 @@
   constexpr uint32 Int13Wrapper_Data = 0x70000;
   constexpr uint16 Int13Wrapper_Location = 0x1000;
 
-  [[nodiscard]] bool Setup_Int13Wrapper(void);
-  [[nodiscard]] bool Read_Int13Wrapper(void* Pointer, uint64 Lba, uint64 NumSectors, uint8 DriveNumber);
+  [[nodiscard]] bool InitializeDiskSubsystem_Bios(void);
+  [[nodiscard]] bool ReadDisk_Bios(void* Pointer, uint64 Lba, uint64 NumSectors, uint8 DriveNumber);
 
 #endif

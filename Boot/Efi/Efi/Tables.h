@@ -35,7 +35,8 @@
   typedef efiStatus (efiAbi *efiFreePool) (void* Buffer);
   typedef efiStatus (efiAbi *efiFreePages) (efiPhysicalAddress Memory, uint64 Pages);
   typedef efiStatus (efiAbi *efiGetMemoryMap) (volatile uint64* MemoryMapSize, volatile efiMemoryDescriptor* MemoryMap, volatile uint64* MapKey, volatile uint64* DescriptorSize, volatile uint32* DescriptorVersion);
-  typedef efiStatus (efiAbi *efiLocateHandleBuffer) (efiLocateSearchType SearchType, const efiUuid* Protocol, void* SearchKey, uint64* NoHandles, efiHandle** Buffer);
+  typedef efiStatus (efiAbi *efiLocateHandle) (efiLocateSearchType SearchType, const efiUuid* Protocol, void* SearchKey, uintptr* BufferSize, efiHandle* Buffer);
+  typedef efiStatus (efiAbi *efiLocateHandleBuffer) (efiLocateSearchType SearchType, const efiUuid* Protocol, void* SearchKey, uintptr* NoHandles, efiHandle** Buffer);
   typedef efiStatus (efiAbi *efiLocateProtocol) (const efiUuid* Protocol, void* Registration, efiProtocol* Interface);
   typedef efiStatus (efiAbi *efiOpenProtocol) (efiHandle Handle, const efiUuid* Protocol, efiProtocol* Interface, efiHandle AgentHandle, efiHandle ControllerHandle, uint32 Attributes);
   typedef efiTpl (efiAbi *efiRaiseTpl) (efiTpl NewTpl);
@@ -82,7 +83,7 @@
     void* AlsoReserved;
 
     efiNotImplemented RegisterProtocolNotify;
-    efiNotImplemented LocateHandle;
+    efiLocateHandle LocateHandle;
     efiNotImplemented LocateDevicePath;
     efiNotImplemented InstallConfigurationTable;
 

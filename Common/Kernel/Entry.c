@@ -612,6 +612,13 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
 
   // [Restore the bootloader state, and exit]
 
+  // (Terminate any subsystems that need to be terminated - this can
+  // sometimes be necessary if we need to close any EFI protocols)
+
+  if (TerminateDiskSubsystem() != true) {
+    Message(Warning, "Failed to terminate the disk subsystem.");
+  }
+
   // (Inform the bootloader about the updated console position by modifying
   // the relevant fields in `InfoTable`, if necessary)
 
@@ -621,9 +628,6 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
     InfoTable->Display.Text.PosY = ConsoleData.PosY;
 
   }
-
-  // (Free buffers - TODO, this is only necessary for *some* things,
-  // as far as I'm aware)
 
   // (Transfer control back to the bootloader)
 

@@ -277,7 +277,7 @@ void KernelCore(commonInfoTable* InfoTable) {
       Message(Ok, "Attempting to read %d sectors (from LBA %d of drive %xh) to buffer at %xh.",
                    (uint64)NumSectors, (uint64)Lba, DiskInfo.Int13.DriveNumber, (uint64)Area);
 
-      bool Status = Read_Int13Wrapper(Area, Lba, NumSectors, DiskInfo.Int13.DriveNumber);
+      bool Status = ReadDisk_Bios(Area, Lba, NumSectors, DiskInfo.Int13.DriveNumber);
 
       if (Status == true) {
 

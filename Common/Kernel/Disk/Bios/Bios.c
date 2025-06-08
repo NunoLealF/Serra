@@ -30,9 +30,9 @@
 
 // (TODO - The data)
 
-#define Int13Wrapper_Signature 0x3331496172726553
+#define Int13_Signature 0x3331496172726553
 
-const uint8 Int13Wrapper[] = {
+static const uint8 Int13_Wrapper[] = {
   #embed "Int13.bin" if_empty('\0') limit(528)
 };
 
@@ -40,8 +40,8 @@ const uint8 Int13Wrapper[] = {
 
 // (TODO - The function itself..?)
 
-typedef uint16 (*Fn_Int13Wrapper)(uint64 Lba, uint16 Sectors, uint8 DriveNumber);
-static Fn_Int13Wrapper Call_Int13Wrapper = (Fn_Int13Wrapper)Int13Wrapper_Location;
+typedef uint16 (*Fn_Int13)(uint64 Lba, uint16 Sectors, uint8 DriveNumber);
+static Fn_Int13 Call_Int13 = (Fn_Int13)Int13Wrapper_Location;
 
 
 
@@ -50,23 +50,23 @@ static Fn_Int13Wrapper Call_Int13Wrapper = (Fn_Int13Wrapper)Int13Wrapper_Locatio
 
 // True means it's fine, false means probably not and you should panic
 
-[[nodiscard]] bool Setup_Int13Wrapper(void) {
+[[nodiscard]] bool InitializeDiskSubsystem_Bios(void) {
 
   // First, let's check to see if the first byte is zero, (and if so,
   // return false).
 
-  if (Int13Wrapper[0] == '\0') {
+  if (Int13_Wrapper[0] == '\0') {
     return false;
   }
 
   // Next, let's check to see if the data at the end (the signature,
   // and the intended code and data addresses) is valid.
 
-  const uint64* Signature = (const uint64*)((uintptr)Int13Wrapper + 512);
-  const uint32* IntendedData = (const uint32*)((uintptr)Int13Wrapper + 512 + 8);
-  const uint32* IntendedLocation = (const uint32*)((uintptr)Int13Wrapper + 512 + 8 + 4);
+  const uint64* Signature = (const uint64*)((uintptr)Int13_Wrapper + 512);
+  const uint32* IntendedData = (const uint32*)((uintptr)Int13_Wrapper + 512 + 8);
+  const uint32* IntendedLocation = (const uint32*)((uintptr)Int13_Wrapper + 512 + 8 + 4);
 
-  if (*Signature != Int13Wrapper_Signature) {
+  if (*Signature != Int13_Signature) {
     return false;
   } else if (*IntendedData != Int13Wrapper_Data) {
     return false;
@@ -104,14 +104,14 @@ static Fn_Int13Wrapper Call_Int13Wrapper = (Fn_Int13Wrapper)Int13Wrapper_Locatio
 
   }
 
-  // Finally, now that we know Int13Wrapper[] is *probably* real code
+  // Finally, now that we know Int13_Wrapper[] is *probably* real code
   // that does what we want, let's copy the first 512 bytes to the
   // location specified by `Int13Wrapper_Location`.
 
   // (This doesn't include the variables we just checked, but that's
   // on purpose, since it would otherwise take up space)
 
-  Memcpy((void*)Int13Wrapper_Location, (const void*)Int13Wrapper, 512);
+  Memcpy((void*)Int13Wrapper_Location, (const void*)Int13_Wrapper, 512);
 
   // (Now that we're done, let's return `true`)
 
@@ -124,12 +124,12 @@ static Fn_Int13Wrapper Call_Int13Wrapper = (Fn_Int13Wrapper)Int13Wrapper_Locatio
 // (TODO - Include a function to interface with int 13h); this will require
 // a real mode stub that's (okay i just implemented it lmao))
 
-[[nodiscard]] bool Read_Int13Wrapper(void* Pointer, uint64 Lba, uint64 Sectors, uint8 DriveNumber) {
+[[nodiscard]] bool ReadDisk_Bios(void* Pointer, uint64 Lba, uint64 Sectors, uint8 DriveNumber) {
 
   // Before we do anything else, let's check to see if the disk subsystem
   // has been initialized yet (and if int 13h is available).
 
-  if (DiskInfo.IsSupported == false) {
+  if (DiskInfo.IsEnabled == false) {
     return false;
   } else if (DiskInfo.BootMethod != BootMethod_Int13) {
     return false;
@@ -188,7 +188,7 @@ static Fn_Int13Wrapper Call_Int13Wrapper = (Fn_Int13Wrapper)Int13Wrapper_Locatio
     // (We want AH to be zero, and the carry flag to not have been set,
     // so we know it's successful if the return value is zero)
 
-    uint16 Result = Call_Int13Wrapper(Lba, NumSectors, DriveNumber);
+    uint16 Result = Call_Int13(Lba, NumSectors, DriveNumber);
 
     if (Result != 0) {
 
@@ -240,3 +240,8 @@ static Fn_Int13Wrapper Call_Int13Wrapper = (Fn_Int13Wrapper)Int13Wrapper_Locatio
   return Status;
 
 }
+
+
+
+// (NOTE - The int 13h subsystem doesn't require a terminate/destructor
+// function)

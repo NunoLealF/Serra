@@ -76,9 +76,14 @@ bool InitializeDiskSubsystem(void* InfoTable) {
       return false;
     }
 
-    // (TODO - Set up the environment)
+    // (Use InitializeDiskSubsystem_Efi() to initialize the EFI Boot
+    // Services-dependent disk subsystem)
 
-    // ...
+    bool Status = InitializeDiskSubsystem_Efi();
+
+    if (Status == false) {
+      return false;
+    }
 
   } else if (DiskInfo.BootMethod == BootMethod_Int13) {
 
@@ -108,18 +113,14 @@ bool InitializeDiskSubsystem(void* InfoTable) {
       return false;
     }
 
-    // (Verify and set up the Int 13h wrapper - if this doesn't return
-    // true, then that means there's probably something wrong)
+    // (Use InitializeDiskSubsystem_Bios() to initialize the BIOS
+    // int 13h-dependent disk subsystem)
 
-    bool CanUseWrapper = Setup_Int13Wrapper();
+    bool Status = InitializeDiskSubsystem_Bios();
 
-    if (CanUseWrapper == false) {
+    if (Status == false) {
       return false;
     }
-
-    // (TODO - Set up the environment)
-
-    // ...
 
   } else {
 
@@ -130,10 +131,39 @@ bool InitializeDiskSubsystem(void* InfoTable) {
 
   }
 
-  // (Now that we're done, we can set `DiskInfo.IsSupported`, and
+  // (Now that we're done, we can set `DiskInfo.IsEnabled`, and
   // return `true`)
 
-  DiskInfo.IsSupported = true;
+  DiskInfo.IsEnabled = true;
+  return true;
+
+}
+
+
+
+// (TODO - Destructor function; this is necessary for EFI!)
+
+bool TerminateDiskSubsystem(void) {
+
+  // Before we do anything else, let's check to see if the disk subsystem
+  // has been enabled yet.
+
+  if (DiskInfo.IsEnabled == false) {
+    return false;
+  }
+
+  // Depending on the boot method, we may or may not need to manually
+  // terminate the disk subsystem.
+
+  // (BootMethod_Int13) Does not need to be terminated.
+  // (BootMethod_Efi) Needs to be terminated, to close protocols.
+
+  if (DiskInfo.BootMethod == BootMethod_Efi) {
+    return TerminateDiskSubsystem_Efi();
+  }
+
+  // (Return `true`, if we haven't already)
+
   return true;
 
 }

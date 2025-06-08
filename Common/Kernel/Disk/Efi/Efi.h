@@ -9,6 +9,9 @@
 
   #include "../../Libraries/Stdint.h"
 
-  // Include functions from Efi.c (TODO)
+  // Include functions from Efi.c
+
+  [[nodiscard]] bool InitializeDiskSubsystem_Efi(void);
+  bool TerminateDiskSubsystem_Efi(void);
 
 #endif
