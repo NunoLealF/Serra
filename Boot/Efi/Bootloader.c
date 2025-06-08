@@ -1871,6 +1871,10 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
     if (HasOpenedFsHandles == true) {
 
+      if (FileProtocol != NULL) {
+        FileProtocol->Close(FileProtocol);
+      }
+
       if (HasOpenedFsProtocols == true) {
         gBS->CloseProtocol(SimpleFsProtocolHandle, &efiSimpleFilesystemProtocol_Uuid, ImageHandle, NULL);
       }
