@@ -589,13 +589,21 @@ entrypointReturnStatus Entrypoint(commonInfoTable* InfoTable) {
     return EntrypointCouldntInitializeConsole;
   }
 
-  // (Initialize the disk subsystem)
 
-  if (InitializeDiskSubsystem(InfoTable) == false) {
+
+  // [Stage 3] Components that rely on the previous subsystems to function.
+
+  // (Initialize the disk and filesystem subsystems)
+
+  if (InitializeDiskSubsystem(InfoTable) == true) {
+
+    // TODO - Make a few test reads.
+
+  } else {
+
     return EntrypointCouldntInitializeDisk;
-  }
 
-  // (TODO - Initialize the filesystem subsystem)
+  }
 
 
 
