@@ -3,6 +3,7 @@
 // For more information, please refer to the accompanying license agreement. <3
 
 #include "../Libraries/Stdint.h"
+#include "../Memory/Memory.h"
 #include "../../Common.h"
 #include "Disk.h"
 
@@ -29,7 +30,7 @@ uint16 NumVolumes = 0;
 // provided by the firmware, I don't have much of a choice, I'll have to
 // rely on PCI/PCIe/ACPI/even maybe timing
 
-bool InitializeDiskSubsystem(void* InfoTable) {
+[[nodiscard]] bool InitializeDiskSubsystem(void* InfoTable) {
 
   // Before we do anything else, let's check that the pointer we were
   // given actually matches a commonInfoTable{} structure.
@@ -175,6 +176,29 @@ bool TerminateDiskSubsystem(void) {
 
 
 
+// (TODO - Function to actually read the data itself)
+
+[[nodiscard]] bool ReadSectors(void* Buffer, uint64 Lba, uint64 NumSectors, uint16 VolumeNum) {
+
+  // (Read sectors using the driver indicated by Volume->Method)
+
+  volumeInfo* Volume = &VolumeList[VolumeNum];
+
+  if (Volume->Method == VolumeMethod_EfiBlockIo) {
+    return ReadSectors_Efi(Buffer, Lba, NumSectors, Volume->Drive);
+  } else if (Volume->Method == VolumeMethod_Int13) {
+    return ReadSectors_Bios(Buffer, Lba, NumSectors, Volume->Drive);
+  }
+
+  // (If we don't support this volume's method, then just return false;
+  // the previous conditions should have returned already)
+
+  return false;
+
+}
+
+
+
 // (TODO - Function to read data from a volume)
 
 // This function works on a byte-by-byte basis (not block or sector size);
@@ -188,6 +212,10 @@ bool TerminateDiskSubsystem(void) {
 
   // Before we do anything else, we need to make sure that the disk subsystem
   // has been initialized, and that the given volume is usable.
+
+  #include "../Libraries/Stdio.h"
+  Message(-1, "Buffer => %xh, Offset = %d, Size = %d, VolumeNum = %d", (uintptr)Buffer, Offset, Size, VolumeNum);
+  Message(-1, "VolumeList[%d]->Drive => %xh", VolumeNum, VolumeList[VolumeNum].Drive);
 
   if (DiskInfo.IsEnabled == false) {
     return false;
@@ -210,69 +238,206 @@ bool TerminateDiskSubsystem(void) {
   // Next, let's calculate the boundaries of where we'll need to read *from*,
   // and compare them against the overall volume boundaries.
 
-  // (Calculate the start and end blocks)
+  // (Calculate the first and last sectors)
 
   volumeInfo* Volume = &VolumeList[VolumeNum];
 
-  uint64 Start = Offset;
-  uint64 End = (Offset + Size + Volume->BytesPerSector - 1);
+  auto FirstSector = Offset / Volume->BytesPerSector;
+  auto LastSector = (Offset + Size) / Volume->BytesPerSector;
 
-  Start /= Volume->BytesPerSector;
-  End /= Volume->BytesPerSector;
+  Message(-1, "FirstSector is %d; LastSector is %d.", FirstSector, LastSector);
 
   // (Make sure they don't exceed the volume boundaries)
 
-  if (End >= Volume->NumSectors) {
+  if (LastSector >= Volume->NumSectors) {
     return false;
   }
 
   // We also want to be able to deal with alignment constraints; more
-  // specifically, we need to take into account:
+  // specifically, we need to take into account non-aligned buffers,
+  // as well as non-aligned `Offset` and `Size` values.
 
-  // -> (1) `Buffer` not being aligned to (Volume->Alignment), in which
-  // case we need to either read twice, or allocate a new buffer;
+  // (Pre-calculate alignment conditions)
 
-  // -> (2) `Offset` being misaligned, in which case we need to
+  uintptr Address = (uintptr)Buffer;
 
+  bool BufferAligned = ((Address % (1ULL << Volume->Alignment)) == 0) ? true : false;
+  bool OffsetAligned = ((Offset % Volume->BytesPerSector) == 0) ? true : false;
+  bool SizeAligned = (((Offset + Size) % Volume->BytesPerSector) == 0) ? true : false;
 
+  // (If all three are aligned, we can directly use ReadSectors(); otherwise,
+  // we need to pre-process a few things)
 
-  /*
+  if ((OffsetAligned == false) || (SizeAligned == false)) {
 
-  Buffer OK, Offset (NOT OK)
+    // First, we'll likely need to pre-allocate a temporary buffer. We
+    // can either do that in place, or use Allocate().
 
-  if buffer == OK, but offset != OK, then.. hmm
+    // (Declare initial variables)
 
+    void* TempBuffer = NULL;
+    const uintptr TempSize = Volume->BytesPerSector;
 
-  [Size < BlockSize] Allocate buffer, then copy.
+    // (Figure out whether `Buffer` can fit our temporary buffer)
 
-  [Size >= BlockSize] See table thing:
+    auto Alignment = max((1ULL << Volume->Alignment), Volume->BytesPerSector);
+    auto Threshold = (Address + Size - Volume->BytesPerSector);
 
-   B,O,S
-  (Y,Y,Y) = Read directly
-  (Y,Y,N) = Read twice (COMMON,e), then copy to last part of buffer
-  (Y,N,Y) = Read twice (e,COMMON), then copy to first part of buffer
-  (Y,N,N) = Read thrice (e,COMMON,e), then copy to edges of buffer
+    Address += (Alignment - (Address % Alignment));
+    bool CanFitInBuffer = ((Address + TempSize) <= Threshold) ? true : false;
 
-  (N,?,?) = Read once, then copy to buffer
+    // (Depending on whether it can, either allocate it, or point
+    // it to an unused region of the buffer)
 
+    if (CanFitInBuffer == true) {
+      TempBuffer = (void*)Address;
+    } else {
+      TempBuffer = Allocate(&TempSize);
+    }
 
-  That truth table seems like it would be reasonable (in this case, OK
-  means aligned); I wouldn't allocate a new buffer unless necessary though,
-  often it's better to just do that sort of thing *inside* the buffer
+    if (TempBuffer == NULL) {
+      return false;
+    }
 
-  But there are exceptions; I think you have to find an aligned page within
-  the buffer, and if you can't, only *then* allocate a page (and even then,
-  you should be able to just
+    // (Declare a status flag, so we can jump to `Cleanup`)
 
-  In other terms:
+    bool Status = true;
 
-  if (Size < BytesPerSector):
-    *allocate a buffer from the stack, read into that, then copy*
-  elif (Buffer % Alignment != 0):
-    *allocate a buffer using Allocator(), read into that, then copy*
-  else:
-    *the truth table thing from earlier*
+    // Now that we *have* allocated a buffer, we can work on tidying
+    // up the non-aligned bits of it.
 
-  */
+    auto Start = Offset;
+    auto End = (Offset + Size);
+
+    // (Deal with non-aligned `Start` or `Offset`)
+
+    if ((Start % Volume->BytesPerSector) != 0) {
+
+      // (Read the first sector into our temporary buffer)
+
+      Status = ReadSectors(TempBuffer, FirstSector, 1, VolumeNum);
+
+      if (Status == false) {
+        goto CleanupSingleSector;
+      }
+
+      // (Copy the necessary portion to the beginning, increment
+      // `Offset` and `FirstSector`, and decrement `Size`)
+
+      auto Remainder = (Start - (Start % Volume->BytesPerSector));
+      Memcpy(Buffer, TempBuffer, Remainder);
+
+      FirstSector++;
+      Offset += Remainder;
+      Size -= Remainder;
+
+    }
+
+    // (Make sure that the first and last sectors don't overlap)
+
+    if (FirstSector > LastSector) {
+      goto CleanupSingleSector;
+    }
+
+    // (Deal with non-aligned `End` or `Size`)
+
+    if ((End % Volume->BytesPerSector) != 0) {
+
+      // (Read the last sector into our temporary buffer)
+
+      Status = ReadSectors(TempBuffer, LastSector, 1, VolumeNum);
+
+      if (Status == false) {
+        goto CleanupSingleSector;
+      }
+
+      // (Copy the necessary portion to the end, and decrement `Size`
+      // and `LastSector`)
+
+      auto Remainder = (End - (End % Volume->BytesPerSector));
+      Memcpy((void*)((uintptr)Buffer + Size - Remainder), TempBuffer, Remainder);
+
+      LastSector--;
+      Size -= Remainder;
+
+    }
+
+    goto CleanupSingleSector;
+
+    // No matter what happens, we need to free `Temp` if it was
+    // allocated.
+
+    CleanupSingleSector:
+
+    if (CanFitInBuffer == false) {
+
+      if (Free(TempBuffer, &TempSize) != true) {
+        return false;
+      }
+
+    }
+
+    if (Status == false) {
+      return Status;
+    }
+
+  }
+
+  // (Depending on whether `Buffer` is aligned, either read the sectors
+  // directly, or read them into a temporary buffer before copying)
+
+  Message(-1, "AGAIN: FirstSector is %d; LastSector is %d.", FirstSector, LastSector);
+  auto NumSectors = (LastSector - FirstSector);
+
+  if (BufferAligned == false) {
+
+    // First, let's allocate a temporary buffer:
+
+    const uintptr TempSize = ((1ULL << Volume->Alignment) + Size);
+    void* TempPointer = Allocate(&TempSize);
+
+    if (TempPointer == NULL) {
+      return false;
+    }
+
+    // Next, let's get `TempBuffer` to point to a location that
+    // also meets alignment restrictions:
+
+    uintptr TempAddress = (uintptr)TempPointer;
+
+    auto Alignment = (1ULL << Volume->Alignment);
+    void* TempBuffer = (void*)(TempAddress + Alignment - (TempAddress % Alignment));
+
+    // Finally, we can read sectors - let's do just that, and
+    // then copy from our temporary buffer to `Buffer`.
+
+    Message(-1, "(1) Calling ReadSectors(%xh, %d, %d, %d)", (uintptr)TempBuffer, FirstSector, NumSectors, VolumeNum);
+
+    bool Status = ReadSectors(TempBuffer, FirstSector, NumSectors, VolumeNum);
+
+    if (Status == false) {
+      goto CleanupSeveralSectors;
+    }
+
+    Memcpy(Buffer, TempBuffer, (NumSectors * Volume->BytesPerSector));
+
+    // (Clean up the area we just allocated, so we don't
+    // accidentally leak memory)
+
+    CleanupSeveralSectors:
+
+    if (Free(TempPointer, &TempSize) == true) {
+      return Status;
+    } else {
+      return false;
+    }
+
+  } else {
+
+    Message(-1, "(2) Calling ReadSectors(%xh, %d, %d, %d)", (uintptr)Buffer, FirstSector, NumSectors, VolumeNum);
+
+    return ReadSectors(Buffer, FirstSector, NumSectors, VolumeNum);
+
+  }
 
 }

@@ -279,13 +279,13 @@ bool TerminateDiskSubsystem_Efi(void) {
 
 
 
-// (TODO - Function to read, like the ReadDisk_Bios() function)
+// (TODO - Function to read, like the ReadSectors_Bios() function)
 
-[[nodiscard]] bool ReadDisk_Efi(void* Buffer, uint64 Lba, uint64 NumBlocks, uint16 DrivePosition) {
+[[nodiscard]] bool ReadSectors_Efi(void* Buffer, uint64 Lba, uint64 NumSectors, uint16 BlockIoIndex) {
 
   // (Make sure that the parameters we were given are valid)
 
-  if (NumBlocks == 0) {
+  if (NumSectors == 0) {
     return false;
   } else if (Buffer == NULL) {
     return false;
@@ -298,16 +298,16 @@ bool TerminateDiskSubsystem_Efi(void) {
     return false;
   } else if (DiskInfo.BootMethod != BootMethod_Efi) {
     return false;
-  } else if (DrivePosition >= NumEfiBlockIoHandles) {
+  } else if (BlockIoIndex >= NumEfiBlockIoHandles) {
     return false;
   }
 
   // (Additionally, let's make sure that `EfiBlockIoProtocols` and
-  // `EfiBlockIoProtocols[DrivePosition]` aren't null pointers.
+  // `EfiBlockIoProtocols[BlockIoIndex]` aren't null pointers.
 
   if (EfiBlockIoProtocols == NULL) {
     return false;
-  } else if (EfiBlockIoProtocols[DrivePosition] == NULL) {
+  } else if (EfiBlockIoProtocols[BlockIoIndex] == NULL) {
     return false;
   }
 
@@ -315,7 +315,7 @@ bool TerminateDiskSubsystem_Efi(void) {
   // the device it represents is currently present, since not all
   // disks are non-removable (USB sticks, for example).
 
-  efiBlockIoProtocol* Protocol = EfiBlockIoProtocols[DrivePosition];
+  efiBlockIoProtocol* Protocol = EfiBlockIoProtocols[BlockIoIndex];
   efiBlockIoMedia* Media = Protocol->Media;
 
   if (Media == NULL) {
@@ -341,7 +341,7 @@ bool TerminateDiskSubsystem_Efi(void) {
   efiStatus Status;
 
   Status = Protocol->ReadBlocks(Protocol, Media->MediaId, (efiLba)Lba,
-                                (NumBlocks * Media->BlockSize),
+                                (NumSectors * Media->BlockSize),
                                 (volatile void*)Buffer);
 
   // (Depending on the return status, either return `true` or `false`)

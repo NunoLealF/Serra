@@ -289,9 +289,9 @@ void KernelCore(commonInfoTable* InfoTable) {
       bool Status;
 
       if (DiskInfo.BootMethod == BootMethod_Int13) {
-        Status = ReadDisk_Bios(Area, Lba, NumSectors, DriveNumber);
+        Status = ReadSectors_Bios(Area, Lba, NumSectors, DriveNumber);
       } else {
-        Status = ReadDisk_Efi(Area, Lba, NumSectors, DriveNumber);
+        Status = ReadSectors_Efi(Area, Lba, NumSectors, DriveNumber);
       }
 
       // (Depending on the status message...)
@@ -356,6 +356,48 @@ void KernelCore(commonInfoTable* InfoTable) {
     Message(Info, "Alignment => (1 << %d):(%xh); BytesPerSector => %d; NumSectors => %d",
                   (uint64)VolumeList[Index].Alignment, (1ULL << VolumeList[Index].Alignment),
                   (uint64)VolumeList[Index].BytesPerSector, VolumeList[Index].NumSectors);
+
+    // (Try to read from it!)
+
+    char Bootsector[512];
+    bool Status = ReadDisk((void*)Bootsector, 0, 512, (uint16)Index);
+
+    if (Status == true) {
+
+      Message(Ok, "Successfully read the bootsector from volume %d (last four bytes are %xh:%xh:%xh:%xh)",
+                  Index, Bootsector[508], Bootsector[509],
+                  Bootsector[510], Bootsector[511]);
+
+    } else {
+
+      Message(Error, "Failed to read the bootsector from volume %d :(", Index);
+
+    }
+
+  }
+
+  // (Show memory allocation nodes and such, *again*)
+
+  for (uint16 Limit = 0; Limit < 64; Limit++) {
+
+    uint64 Num = 0;
+    allocationNode* Node = MmSubsystemData.Nodes[Limit];
+
+    while (Node != NULL) {
+
+      Message(Info, "Found a %xh-sized block (at %xh) that represents (%xh, %xh) | (prevS=%xh)",
+                    (1ULL << Limit), ((uintptr)Node),
+                    (uintptr)Node->Pointer, ((uintptr)Node->Pointer + (1ULL << Limit)),
+                    (uintptr)Node->Size.Previous);
+
+      Node = Node->Size.Previous;
+      Num++;
+
+    }
+
+    if (Num != 0) {
+      Message(Info, "Found %d nodes at logarithm level [%d]", Num, (uint64)Limit);
+    }
 
   }
 

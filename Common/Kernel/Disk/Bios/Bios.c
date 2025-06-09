@@ -152,7 +152,7 @@ static Fn_Int13 Call_Int13 = (Fn_Int13)Int13Wrapper_Location;
 // (TODO - Include a function to interface with int 13h); this will require
 // a real mode stub that's (okay i just implemented it lmao))
 
-[[nodiscard]] bool ReadDisk_Bios(void* Buffer, uint64 Lba, uint64 Sectors, uint8 DriveNumber) {
+[[nodiscard]] bool ReadSectors_Bios(void* Buffer, uint64 Lba, uint64 Sectors, uint8 DriveNumber) {
 
   // Before we do anything else, let's check to see if the disk subsystem
   // has been initialized yet (and if int 13h is available).

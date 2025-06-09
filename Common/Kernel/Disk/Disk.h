@@ -118,8 +118,11 @@
   extern volumeInfo VolumeList[512];
   extern uint16 NumVolumes;
 
-  bool InitializeDiskSubsystem(void* InfoTable);
+  [[nodiscard]] bool InitializeDiskSubsystem(void* InfoTable);
   bool TerminateDiskSubsystem(void);
+
+  [[nodiscard]] bool ReadSectors(void* Buffer, uint64 Lba, uint64 NumSectors, uint16 VolumeNum);
+  [[nodiscard]] bool ReadDisk(void* Buffer, uint64 Offset, uint64 Size, uint16 VolumeNum);
 
   // Include functions and global variables from Fs.c (TODO)
 
