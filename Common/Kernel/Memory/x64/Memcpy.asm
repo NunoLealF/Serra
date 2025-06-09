@@ -120,7 +120,7 @@ Memcpy_Sse2:
     shr r9, 6
 
   ; Move each 64-byte block using SSE registers, using R9 as a counter,
-  ; and the `movdqa` and `movntdq` instructions
+  ; and the `movdqu` and `movntdq` instructions
 
   .MoveBlockData:
 
@@ -132,15 +132,15 @@ Memcpy_Sse2:
     je .MoveRemainder
 
     ; (Read four aligned double quadwords (16-byte blocks) into the
-    ; XMM registers, using the `movdqa` instruction - keep in mind that
+    ; XMM registers, using the `movdqu` instruction - keep in mind that
     ; we're reading from [RSI+n], which is the same as (*Source + n))
 
     prefetchnta [rsi+192]
 
-    movdqa xmm0, [rsi+0]
-    movdqa xmm1, [rsi+16]
-    movdqa xmm2, [rsi+32]
-    movdqa xmm3, [rsi+48]
+    movdqu xmm0, [rsi+0]
+    movdqu xmm1, [rsi+16]
+    movdqu xmm2, [rsi+32]
+    movdqu xmm3, [rsi+48]
 
     ; (Write those values back to memory, using the `movntdq` instruction;
     ; this time, we're writing to [RDI+n], or (*Destination + n))
@@ -230,7 +230,7 @@ Memcpy_Avx:
     shr r9, 7
 
   ; Move each 128-byte block using AVX registers, using R9 as a counter,
-  ; and the `vmovdqa` and `vmovntdq` instructions
+  ; and the `vmovdqu` and `vmovntdq` instructions
 
   .MoveBlockData:
 
@@ -242,15 +242,15 @@ Memcpy_Avx:
     je .MoveRemainder
 
     ; (Read four aligned 32-byte blocks into the YMM registers,
-    ; using the `vmovdqa` instruction - keep in mind that we're reading
+    ; using the `vmovdqu` instruction - keep in mind that we're reading
     ; from [RSI]+n, which is the same as (*Source + n))
 
     prefetchnta [rsi+256]
 
-    vmovdqa ymm0, [rsi+0]
-    vmovdqa ymm1, [rsi+32]
-    vmovdqa ymm2, [rsi+64]
-    vmovdqa ymm3, [rsi+96]
+    vmovdqu ymm0, [rsi+0]
+    vmovdqu ymm1, [rsi+32]
+    vmovdqu ymm2, [rsi+64]
+    vmovdqu ymm3, [rsi+96]
 
     ; (Write those values back to memory, using the `vmovntdq` instruction;
     ; this time, we're writing to [RDI+n], or (*Destination + n))
@@ -340,7 +340,7 @@ Memcpy_Avx512f:
     shr r9, 8
 
   ; Move each 256-byte block using AVX-512 registers, using R9 as
-  ; a counter, and the `vmovdqa` and `vmovntdq` instructions
+  ; a counter, and the `vmovdqu` and `vmovntdq` instructions
 
   .MoveBlockData:
 
@@ -352,15 +352,15 @@ Memcpy_Avx512f:
     je .MoveRemainder
 
     ; (Read four aligned 64-byte blocks into the ZMM registers, using
-    ; the `vmovdqa64` instruction - keep in mind that we're reading
+    ; the `vmovdqu64` instruction - keep in mind that we're reading
     ; from [RSI]+n, which is the same as (*Source + n))
 
     prefetchnta [rsi+512]
 
-    vmovdqa64 zmm0, [rsi+0]
-    vmovdqa64 zmm1, [rsi+64]
-    vmovdqa64 zmm2, [rsi+128]
-    vmovdqa64 zmm3, [rsi+192]
+    vmovdqu64 zmm0, [rsi+0]
+    vmovdqu64 zmm1, [rsi+64]
+    vmovdqu64 zmm2, [rsi+128]
+    vmovdqu64 zmm3, [rsi+192]
 
     ; (Write those values back to memory, using the `vmovntdq` instruction;
     ; this time, we're writing to [RDI+n], or (*Destination + n))
