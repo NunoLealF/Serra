@@ -34,10 +34,9 @@
 // (TODO - List of efiBlockIoProtocol handles, and protocols?)
 
 static efiHandle* EfiBlockIoHandles = NULL;
+static uintptr NumEfiBlockIoHandles = 0;
+
 static efiBlockIoProtocol** EfiBlockIoProtocols = NULL;
-
-static uint64 NumEfiBlockIoHandles = 0;
-
 
 
 // (TODO - Constructor: find efiBlockIoProtocol handles, open protocols
@@ -219,7 +218,7 @@ bool TerminateDiskSubsystem_Efi(void) {
 
 // (TODO - Function to get the block size of a given device, I guess?)
 
-uint64 GetBlockSize_Efi(uint64 DrivePosition) {
+uint64 GetBlockSize_Efi(uint16 DrivePosition) {
 
   // (Make sure that the disk subsystem has been initialized, that the
   // boot method is `BootMethod_Efi`, and that we're within bounds)
@@ -253,7 +252,7 @@ uint64 GetBlockSize_Efi(uint64 DrivePosition) {
 
 // (TODO - Function to read, like the ReadDisk_Bios() function)
 
-[[nodiscard]] bool ReadDisk_Efi(void* Pointer, uint64 Lba, uint64 NumBlocks, uint64 DrivePosition) {
+[[nodiscard]] bool ReadDisk_Efi(void* Pointer, uint64 Lba, uint64 NumBlocks, uint16 DrivePosition) {
 
   // (Make sure that the parameters we were given are valid)
 
@@ -264,7 +263,7 @@ uint64 GetBlockSize_Efi(uint64 DrivePosition) {
   }
 
   // (Make sure that the disk subsystem has been initialized, that the
-  // boot method is `BootMethod_Efi`, and that we're within bounds)
+  // boot method is `BootMethod_Efi`, anduint64 that we're within bounds)
 
   if (DiskInfo.IsEnabled == false) {
     return false;
@@ -297,14 +296,11 @@ uint64 GetBlockSize_Efi(uint64 DrivePosition) {
   }
 
   // (Also, make sure that the transfer buffer address is aligned to
-  // (1 << IoAlign); otherwise, the read could fail)
+  // Media->IoAlign; otherwise, the read could fail)
 
   if (Media->IoAlign > 1) {
 
-    uintptr Address = (uintptr)Pointer;
-    auto Mask = (1ULL << (Media->IoAlign)) - 1;
-
-    if ((Address & Mask) != 0) {
+    if (((uintptr)Pointer % (Media->IoAlign)) != 0) {
       return false;
     }
 

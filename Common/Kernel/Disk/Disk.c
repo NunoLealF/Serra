@@ -13,6 +13,7 @@
 // (TODO - Initialize global variables (`DiskInfo`, but probably others))
 
 diskInfo DiskInfo = {0};
+volumeInfo VolumeList[256] = {{0}};
 
 
 
