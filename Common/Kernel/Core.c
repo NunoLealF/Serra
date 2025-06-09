@@ -376,31 +376,6 @@ void KernelCore(commonInfoTable* InfoTable) {
 
   }
 
-  // (Show memory allocation nodes and such, *again*)
-
-  for (uint16 Limit = 0; Limit < 64; Limit++) {
-
-    uint64 Num = 0;
-    allocationNode* Node = MmSubsystemData.Nodes[Limit];
-
-    while (Node != NULL) {
-
-      Message(Info, "Found a %xh-sized block (at %xh) that represents (%xh, %xh) | (prevS=%xh)",
-                    (1ULL << Limit), ((uintptr)Node),
-                    (uintptr)Node->Pointer, ((uintptr)Node->Pointer + (1ULL << Limit)),
-                    (uintptr)Node->Size.Previous);
-
-      Node = Node->Size.Previous;
-      Num++;
-
-    }
-
-    if (Num != 0) {
-      Message(Info, "Found %d nodes at logarithm level [%d]", Num, (uint64)Limit);
-    }
-
-  }
-
   // (Depending on the system type, either wait for a keypress or just
   // stall the system for a while)
 
