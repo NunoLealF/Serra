@@ -265,7 +265,7 @@ void KernelCore(commonInfoTable* InfoTable) {
 
   if ((InfoTable->Firmware.Type == FirmwareType_Bios) || (InfoTable->Firmware.Type == FirmwareType_Efi)) {
 
-    const uintptr Size = 512;
+    const uintptr Size = VolumeList[0].BytesPerSector;
     void* Area = Allocate(&Size);
 
     if (Area != NULL) {
@@ -274,48 +274,17 @@ void KernelCore(commonInfoTable* InfoTable) {
 
       auto Lba = 0;
 
-      auto DriveNumber = 0;
-      auto NumSectors = Size;
-
-      if (DiskInfo.BootMethod == BootMethod_Int13) {
-
-        NumSectors /= DiskInfo.Int13.BytesPerSector;
-        DriveNumber = DiskInfo.Int13.DriveNumber;
-
-      } else {
-
-        NumSectors /= GetBlockSize_Efi(DriveNumber);
-
-      }
+      auto DriveNumber = VolumeList[0].Drive;
+      auto NumSectors = Size / VolumeList[0].BytesPerSector;
 
       // (Show that we did allocate a buffer)
 
       Message(Ok, "Allocated a %d-byte buffer at %xh.", (uint64)Size, (uint64)Area);
 
-      // (Try to find a suitable drive to read from)
-
-      // This is necessary, because the boot drive basically never works
-      // outside of emulators
-
-      if (DiskInfo.BootMethod == BootMethod_Efi) {
-
-        while (ReadDisk_Efi(Area, Lba, 1, DriveNumber) != true) {
-
-          if (DriveNumber >= 1024) {
-            Message(Fail, "Gave up on trying to find a drive past [%d].", DriveNumber);
-            break;
-          }
-
-          DriveNumber++;
-
-        }
-
-      }
-
       // (Thing)
 
       Message(Ok, "Attempting to read %d sectors (from LBA %d of drive %xh) to buffer at %xh.",
-                   (uint64)NumSectors, (uint64)Lba, DriveNumber, (uint64)Area);
+                   (uint64)NumSectors, (uint64)Lba, (uint64)DriveNumber, (uint64)Area);
 
       bool Status;
 
@@ -332,7 +301,7 @@ void KernelCore(commonInfoTable* InfoTable) {
         Message(Ok, "Successfully loaded sectors - showing first %d bytes of the boot disk.", (uint64)Size);
         uint8* Buffer = (uint8*)Area;
 
-        auto ActualSize = NumSectors * ((DiskInfo.BootMethod == BootMethod_Int13) ? DiskInfo.Int13.BytesPerSector : GetBlockSize_Efi(DriveNumber));
+        auto ActualSize = NumSectors * VolumeList[0].BytesPerSector;
 
         Printf("[", false, 0x07); Printf("0h", false, 0x0F); Printf("] ", false, 0x07);
 

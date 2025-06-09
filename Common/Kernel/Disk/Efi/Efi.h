@@ -15,7 +15,6 @@
   [[nodiscard]] bool InitializeDiskSubsystem_Efi(void);
   bool TerminateDiskSubsystem_Efi(void);
 
-  uint64 GetBlockSize_Efi(uint16 DrivePosition);
-  [[nodiscard]] bool ReadDisk_Efi(void* Pointer, uint64 Lba, uint64 NumBlocks, uint16 DrivePosition);
+  [[nodiscard]] bool ReadDisk_Efi(void* Buffer, uint64 Lba, uint64 NumBlocks, uint16 DrivePosition);
 
 #endif

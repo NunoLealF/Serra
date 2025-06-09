@@ -126,9 +126,6 @@ static Fn_Int13 Call_Int13 = (Fn_Int13)Int13Wrapper_Location;
   // (Otherwise, create a volumeInfo{} structure, and fill it
   // out with the necessary information)
 
-  // Technically speaking, there isn't any alignment requirement, but
-  // we still set it to (1 << 6) to speed up Memcpy() on SSE/AVX.
-
   volumeInfo* Volume = &VolumeList[NumVolumes];
 
   Volume->Method = VolumeMethod_Int13;
@@ -139,7 +136,7 @@ static Fn_Int13 Call_Int13 = (Fn_Int13)Int13Wrapper_Location;
   Volume->MediaId = 0; // (Not applicable)
   Volume->Offset = 0;
 
-  Volume->Alignment = 6;
+  Volume->Alignment = 0;
   Volume->BytesPerSector = DiskInfo.Int13.BytesPerSector;
   Volume->NumSectors = DiskInfo.Int13.NumSectors;
 
@@ -155,7 +152,7 @@ static Fn_Int13 Call_Int13 = (Fn_Int13)Int13Wrapper_Location;
 // (TODO - Include a function to interface with int 13h); this will require
 // a real mode stub that's (okay i just implemented it lmao))
 
-[[nodiscard]] bool ReadDisk_Bios(void* Pointer, uint64 Lba, uint64 Sectors, uint8 DriveNumber) {
+[[nodiscard]] bool ReadDisk_Bios(void* Buffer, uint64 Lba, uint64 Sectors, uint8 DriveNumber) {
 
   // Before we do anything else, let's check to see if the disk subsystem
   // has been initialized yet (and if int 13h is available).
@@ -169,7 +166,7 @@ static Fn_Int13 Call_Int13 = (Fn_Int13)Int13Wrapper_Location;
   // Next, let's verify that the values we were given are sane, and
   // make sure that we aren't reading past the end of the disk.
 
-  if (Pointer == NULL) {
+  if (Buffer == NULL) {
     return false;
   } else if (Sectors == 0) {
     return false;
@@ -200,9 +197,9 @@ static Fn_Int13 Call_Int13 = (Fn_Int13)Int13Wrapper_Location;
 
   // (Since we can't load everything at once, and we can't access memory
   // above 1 MiB from real mode, we load as much as we can (to the buffer
-  // at `Int13Wrapper_Data`), and then copy it to `Pointer`)
+  // at `Int13Wrapper_Data`), and then copy it to `Buffer`)
 
-  uintptr Address = (uintptr)Pointer;
+  uintptr Address = (uintptr)Buffer;
   bool Status = true;
 
   while (Sectors > 0) {

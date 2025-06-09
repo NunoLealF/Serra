@@ -279,49 +279,15 @@ bool TerminateDiskSubsystem_Efi(void) {
 
 
 
-// (TODO - Function to get the block size of a given device, I guess?)
-
-uint64 GetBlockSize_Efi(uint16 DrivePosition) {
-
-  // (Make sure that the disk subsystem has been initialized, that the
-  // boot method is `BootMethod_Efi`, and that we're within bounds)
-
-  if (DiskInfo.IsEnabled == false) {
-    return uintmax;
-  } else if (DiskInfo.BootMethod != BootMethod_Efi) {
-    return uintmax;
-  } else if (DrivePosition >= NumEfiBlockIoHandles) {
-    return uintmax;
-  }
-
-  // (Get the necessary media table)
-
-  efiBlockIoProtocol* Protocol = EfiBlockIoProtocols[DrivePosition];
-  efiBlockIoMedia* Media = Protocol->Media;
-
-  // (Get the block size)
-
-  auto Size = Media->BlockSize;
-
-  if (Size != 0) {
-    return Size;
-  } else {
-    return uintmax;
-  }
-
-}
-
-
-
 // (TODO - Function to read, like the ReadDisk_Bios() function)
 
-[[nodiscard]] bool ReadDisk_Efi(void* Pointer, uint64 Lba, uint64 NumBlocks, uint16 DrivePosition) {
+[[nodiscard]] bool ReadDisk_Efi(void* Buffer, uint64 Lba, uint64 NumBlocks, uint16 DrivePosition) {
 
   // (Make sure that the parameters we were given are valid)
 
   if (NumBlocks == 0) {
     return false;
-  } else if (Pointer == NULL) {
+  } else if (Buffer == NULL) {
     return false;
   }
 
@@ -363,7 +329,7 @@ uint64 GetBlockSize_Efi(uint16 DrivePosition) {
 
   if (Media->IoAlign > 1) {
 
-    if (((uintptr)Pointer % (Media->IoAlign)) != 0) {
+    if (((uintptr)Buffer % (Media->IoAlign)) != 0) {
       return false;
     }
 
@@ -376,7 +342,7 @@ uint64 GetBlockSize_Efi(uint16 DrivePosition) {
 
   Status = Protocol->ReadBlocks(Protocol, Media->MediaId, (efiLba)Lba,
                                 (NumBlocks * Media->BlockSize),
-                                (volatile void*)Pointer);
+                                (volatile void*)Buffer);
 
   // (Depending on the return status, either return `true` or `false`)
 
