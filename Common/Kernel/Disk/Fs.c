@@ -5,6 +5,15 @@
 #include "../Libraries/Stdint.h"
 #include "Disk.h"
 
-// (TODO - Include a function to initialize the filesystem subsystem.. or,
-// in less pretentious terms, to try to see which filesystems are on each
-// disk and then just deal with that)
+// (TODO - Include MBR and GPT-related functions (and typedefs..?))
+
+
+
+// (TODO - Include a function to read through a volume, and identify +
+// automatically add any relevant partitions.)
+
+
+
+// (TODO - Include a function to initialize the filesystem subsystem..
+// or, better, this is the disk subsystem, to just do the things above
+// and try to automatically identify partitions and all)

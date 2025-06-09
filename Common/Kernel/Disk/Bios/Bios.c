@@ -113,8 +113,39 @@ static Fn_Int13 Call_Int13 = (Fn_Int13)Int13Wrapper_Location;
 
   Memcpy((void*)Int13Wrapper_Location, (const void*)Int13_Wrapper, 512);
 
-  // (Now that we're done, let's return `true`)
+  // Now that we're done, we can move onto the next part - updating
+  // `VolumeList` (from Disk.c) to include our boot drive.
 
+  // (If we've exceeded the maximum amount of elements that
+  // `VolumeList` can handle, then return `false`)
+
+  if (NumVolumes >= (sizeof(VolumeList) / sizeof(volumeInfo))) {
+    return false;
+  }
+
+  // (Otherwise, create a volumeInfo{} structure, and fill it
+  // out with the necessary information)
+
+  // Technically speaking, there isn't any alignment requirement, but
+  // we still set it to (1 << 6) to speed up Memcpy() on SSE/AVX.
+
+  volumeInfo* Volume = &VolumeList[NumVolumes];
+
+  Volume->Method = VolumeMethod_Int13;
+  Volume->Drive = DiskInfo.Int13.DriveNumber;
+  Volume->Partition = 0;
+
+  Volume->Type = VolumeType_Unknown; // (Should be filled by Fs.c later)
+  Volume->MediaId = 0; // (Not applicable)
+  Volume->Offset = 0;
+
+  Volume->Alignment = 6;
+  Volume->BytesPerSector = DiskInfo.Int13.BytesPerSector;
+  Volume->NumSectors = DiskInfo.Int13.NumSectors;
+
+  // (Increment `NumVolumes`, and return true)
+
+  NumVolumes++;
   return true;
 
 }

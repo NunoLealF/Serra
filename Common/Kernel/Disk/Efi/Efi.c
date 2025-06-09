@@ -171,8 +171,71 @@ static efiBlockIoProtocol** EfiBlockIoProtocols = NULL;
 
   }
 
-  // Now that we're done, we can safely return `true`, to indicate
-  // that everything went okay.
+  // Now that we're done, we can update `VolumeList` (from Disk.c)
+  // to contain information about each instance, like this:
+
+  auto VolumeLimit = (sizeof(VolumeList) / sizeof(volumeInfo));
+
+  for (uint64 Index = 0; Index < NumEfiBlockIoHandles; Index++) {
+
+    // (If we've exceeded the maximum amount of elements that
+    // `VolumeList` can handle, then break)
+
+    if (NumVolumes >= VolumeLimit) {
+      break;
+    }
+
+    // (Obtain the protocol for this index, and make sure that it
+    // was opened correctly, and is present in the system.)
+
+    efiBlockIoProtocol* Protocol = EfiBlockIoProtocols[Index];
+
+    if (Protocol == NULL) {
+      continue;
+    } else if (Protocol->Media == NULL) {
+      continue;
+    } else if (Protocol->Media->MediaPresent == false) {
+      continue;
+    }
+
+    // (Create a volumeInfo{} structure, and fill it out)
+
+    // In this case, the drive number corresponds to the index within
+    // EfiBlockIoHandles[], and the partition number is always 0.
+
+    volumeInfo* Volume = &VolumeList[NumVolumes];
+
+    Volume->Method = VolumeMethod_EfiBlockIo;
+    Volume->Drive = Index;
+    Volume->Partition = 0;
+
+    Volume->Type = VolumeType_Unknown; // (Should be filled by Fs.c later)
+    Volume->MediaId = Protocol->Media->MediaId;
+    Volume->Offset = 0;
+
+    Volume->Alignment = 0;
+    Volume->BytesPerSector = Protocol->Media->BlockSize;
+    Volume->NumSectors = Protocol->Media->LastBlock;
+
+    // (Calculate the alignment as a power of two - any transfer buffer
+    // must be aligned to (1 << Volume->Alignment) == (Media->IoAlign))
+
+    auto IoAlign = Protocol->Media->IoAlign;
+
+    while ((IoAlign >> Volume->Alignment) > 0) {
+      Volume->Alignment++;
+    }
+
+    Volume->Alignment = IoAlign;
+
+    // (Increment variables)
+
+    NumVolumes++;
+
+  }
+
+  // Finally, now that we're done, let's return `true` to indicate
+  // that everything went smoothly.
 
   return true;
 

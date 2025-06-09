@@ -265,7 +265,7 @@ void KernelCore(commonInfoTable* InfoTable) {
 
   if ((InfoTable->Firmware.Type == FirmwareType_Bios) || (InfoTable->Firmware.Type == FirmwareType_Efi)) {
 
-    const uintptr Size = 1048576;
+    const uintptr Size = 512;
     void* Area = Allocate(&Size);
 
     if (Area != NULL) {
@@ -352,7 +352,7 @@ void KernelCore(commonInfoTable* InfoTable) {
 
         }
 
-        Printf("If the read was successful, that should be the data from LBA %d to %d.",
+        Printf("If the read was successful, that should be the data from LBA %d to %d. \n\r",
                 false, 0x07, (uint64)Lba, (uint64)Lba+NumSectors);
 
       } else {
@@ -365,13 +365,28 @@ void KernelCore(commonInfoTable* InfoTable) {
 
     } else {
 
-      Message(Error, "Failed to allocate space for int 13h buffer :(");
+      Message(Error, "Failed to allocate space for buffer :(");
 
     }
 
-  } else {
+  }
 
-    Message(Warning, "Can't test int 13h functionality on non-BIOS firmware.");
+  // (Show a list of disks, hopefully?)
+
+  for (auto Index = 0; Index < NumVolumes; Index++) {
+
+    Message(Kernel, "Found VolumeList[%d] => method(%xh)drive(%xh)partition(%xh)",
+                    (uint64)Index, (uint64)VolumeList[Index].Method,
+                    (uint64)VolumeList[Index].Drive,
+                    (uint64)VolumeList[Index].Partition);
+
+    Message(Info, "Type => %xh; MediaId => %xh; Offset => %xh",
+                  (uint64)VolumeList[Index].Type, (uint64)VolumeList[Index].MediaId,
+                  (uint64)VolumeList[Index].Offset);
+
+    Message(Info, "Alignment => (1 << %d):(%xh); BytesPerSector => %d; NumSectors => %d",
+                  (uint64)VolumeList[Index].Alignment, (1ULL << VolumeList[Index].Alignment),
+                  (uint64)VolumeList[Index].BytesPerSector, VolumeList[Index].NumSectors);
 
   }
 

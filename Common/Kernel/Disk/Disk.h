@@ -25,8 +25,8 @@
     enum {
 
       BootMethod_Unknown = 0,
-      BootMethod_Efi = 1,
-      BootMethod_Int13 = 2
+      BootMethod_Efi,
+      BootMethod_Int13
 
     } BootMethod;
 
@@ -66,8 +66,8 @@
       // and that can be read from at boot-time)
 
       VolumeMethod_Unknown = 0, // (You can probably ignore this)
-      VolumeMethod_EfiBlockIo = 1, // (Can be accessed via efiBlockIoProtocol)
-      VolumeMethod_Int13 = 2 // (Can be accessed via the int 13h wrapper)
+      VolumeMethod_EfiBlockIo, // (Can be accessed via efiBlockIoProtocol)
+      VolumeMethod_Int13 // (Can be accessed via the int 13h wrapper)
 
       // (Additional volume types that can be set up later on for
       // specific types of devices - TODO)
@@ -77,18 +77,46 @@
     uint32 Drive; // (The drive number (implementation varies))
     uint16 Partition; // (The partition number, or 0 if raw/unpartitioned)
 
+    // [Information about the volume's type (and partition, if one exists)]
+
+    enum : uint16 {
+
+      // (If this volume represents an entire device, show the partition
+      // map type (for example, MBR or GPT))
+      // `Partition == 0`, bit 8 is cleared.
+
+      VolumeType_Unknown = 0, // (Couldn't determine type)
+      VolumeType_Mbr, // (Appears to be a 'raw' MBR volume)
+      VolumeType_Gpt, // (Appears to be a 'raw' GPT volume)
+
+      // (Otherwise, if it represents a partition, show the type)
+      // `Partition != 0`, bit 8 is set.
+
+      VolumeType_Fat12 = (1ULL << 8), // (Appears to be a FAT12 partition)
+      VolumeType_Fat16, // (Appears to be a FAT16 partition)
+      VolumeType_Fat32, // (Appears to be a FAT32 partition)
+
+      // TODO - Add more partition types, FAT is just the bare minimum
+
+    } Type;
+
+    uint32 MediaId; // (`VolumeMethod_EfiBlockIo` only - the media ID.)
+    uint64 Offset; // (The LBA offset of the partition, if applicable)
+
     // [Information about how to interact with the volume]
 
-    uint32 Alignment; // (The alignment requirement for a transfer buffer; can be 0)
+    uint16 Alignment; // (The alignment requirement for a transfer buffer, *as a power of 2*)
     uint32 BytesPerSector; // (How many bytes per sector/block?)
     uint64 NumSectors; // (The total number of sectors/blocks in the volume)
 
-  } __attribute__((packed)) volumeInfo;
+  } volumeInfo;
 
   // Include functions and global variables from Disk.c
 
   extern diskInfo DiskInfo;
-  extern volumeInfo VolumeList[256];
+
+  extern volumeInfo VolumeList[512];
+  extern uint16 NumVolumes;
 
   bool InitializeDiskSubsystem(void* InfoTable);
   bool TerminateDiskSubsystem(void);

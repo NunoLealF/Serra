@@ -13,7 +13,9 @@
 // (TODO - Initialize global variables (`DiskInfo`, but probably others))
 
 diskInfo DiskInfo = {0};
-volumeInfo VolumeList[256] = {{0}};
+
+volumeInfo VolumeList[512] = {{0}};
+uint16 NumVolumes = 0;
 
 
 
