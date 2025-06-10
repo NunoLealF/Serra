@@ -133,7 +133,6 @@ static Fn_Int13 Call_Int13 = (Fn_Int13)Int13Wrapper_Location;
   Volume->Partition = 0;
 
   Volume->Type = VolumeType_Unknown; // (Should be filled by Fs.c later)
-  Volume->MediaId = 0; // (Not applicable)
   Volume->Offset = 0;
 
   Volume->Alignment = 0;

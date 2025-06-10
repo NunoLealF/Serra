@@ -210,7 +210,6 @@ static efiBlockIoProtocol** EfiBlockIoProtocols = NULL;
     Volume->Partition = 0;
 
     Volume->Type = VolumeType_Unknown; // (Should be filled by Fs.c later)
-    Volume->MediaId = Protocol->Media->MediaId;
     Volume->Offset = 0;
 
     Volume->Alignment = 0;

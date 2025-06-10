@@ -349,9 +349,8 @@ void KernelCore(commonInfoTable* InfoTable) {
                     (uint64)VolumeList[Index].Drive,
                     (uint64)VolumeList[Index].Partition);
 
-    Message(Info, "Type => %xh; MediaId => %xh; Offset => %xh",
-                  (uint64)VolumeList[Index].Type, (uint64)VolumeList[Index].MediaId,
-                  (uint64)VolumeList[Index].Offset);
+    Message(Info, "Type => %xh; Offset => %xh",
+                  (uint64)VolumeList[Index].Type, (uint64)VolumeList[Index].Offset);
 
     Message(Info, "Alignment => (1 << %d):(%xh); BytesPerSector => %d; NumSectors => %d",
                   (uint64)VolumeList[Index].Alignment, (1ULL << VolumeList[Index].Alignment),
