@@ -116,14 +116,14 @@ void Print_Graphical(const char* String, uint8 Attribute) {
     auto ClearLines = min((PosY + 1 - ConsoleData.LimitY), ConsoleData.LimitY);
     auto ScrollLines = (ConsoleData.LimitY - ClearLines);
 
-    // (Scroll every line back by `ClearLines`, using Memcpy())
+    // (Scroll every line back by `ClearLines`, using Memmove())
 
     uintptr Buffer = (uintptr)GraphicsData.Buffer;
     auto Multiplier = (BitmapFontData.Height * GraphicsData.Pitch);
 
-    Memcpy((void*)Buffer,
-           (const void*)(Buffer + (ClearLines * Multiplier)),
-           (uint64)(ScrollLines * Multiplier));
+    Memmove((void*)Buffer,
+            (const void*)(Buffer + (ClearLines * Multiplier)),
+            (uint64)(ScrollLines * Multiplier));
 
     // (Clear out the last few lines, using Memset(), and update PosY
     // to correspond to the start of those lines)

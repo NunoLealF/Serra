@@ -100,16 +100,16 @@
 
     } Type;
 
-    uint32 MediaId; // (`VolumeMethod_EfiBlockIo` only - the media ID.)
     uint64 Offset; // (The LBA offset of the partition, if applicable)
 
     // [Information about how to interact with the volume]
 
     uint16 Alignment; // (The alignment requirement for a transfer buffer, *as a power of 2*)
     uint32 BytesPerSector; // (How many bytes per sector/block?)
+    uint32 MediaId; // (The volume's media ID (`_EfiBlockIo` only))
     uint64 NumSectors; // (The total number of sectors/blocks in the volume)
 
-  } volumeInfo;
+  } __attribute__((packed)) volumeInfo;
 
   // Include functions and global variables from Disk.c
 

@@ -21,17 +21,21 @@
 
   #ifndef SERRA_KERNEL_MEMORY_H
 
-    void Memcpy(void* Destination, const void* Source, uint64 Size);
-    void Memset(void* Buffer, uint8 Character, uint64 Size);
-    void MemsetBlock(void* Buffer, const void* Block, uint64 Size, uint64 BlockSize);
+    // Include standard library functions
 
-    // Even in a freestanding environment, compilers will sometimes still
-    // emit calls to memcpy, memcmp, memset and memmove, so we need to
-    // provide wrappers for those.
+    void Memcpy(void* Destination, const void* Source, uintptr Size);
+    void Memmove(void* Destination, const void* Source, uintptr Size);
+    void Memset(void* Buffer, uint8 Character, uintptr Size);
 
-    // (It's true they already exist, but they aren't named identically)
+    // Include non-standard functions
 
-    void* memcpy(void*, const void*, uint64);
+    void MemsetBlock(void* Buffer, const void* Block, uintptr Size, uintptr BlockSize);
+
+    // Include compiler-required wrappers; keep in mind that function
+    // names are case-sensitive, so this is needed.
+
+    void* memcpy(void*, const void*, uintptr);
+    void* memmove(void*, const void*, uintptr);
     void* memset(void*, int, uint64);
 
   #endif

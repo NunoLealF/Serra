@@ -359,13 +359,14 @@ void KernelCore(commonInfoTable* InfoTable) {
 
     // (Try to read from it!)
 
-    #define TestDiskOffset 1
+    #define Offset 0x102000
+    #define TestOffs 4
 
     const uintptr Size = (VolumeList[Index].BytesPerSector * 4);
     char Bootsector[Size];
 
     char SaveBootsectorThing = Bootsector[Size];
-    bool Status = ReadDisk(Bootsector, TestDiskOffset, Size, (uint16)Index);
+    bool Status = ReadDisk(Bootsector, Offset + TestOffs, Size, (uint16)Index);
 
     if (Status == true) {
 
@@ -396,29 +397,29 @@ void KernelCore(commonInfoTable* InfoTable) {
       bool Status2;
 
       if (DiskInfo.BootMethod == BootMethod_Int13) {
-        Status2 = ReadSectors_Bios(Area, 0, (Size / VolumeList[Index].BytesPerSector), VolumeList[Index].Drive);
+        Status2 = ReadSectors_Bios(Area, (Offset / VolumeList[Index].BytesPerSector), (Size / VolumeList[Index].BytesPerSector), VolumeList[Index].Drive);
       } else {
-        Status2 = ReadSectors_Efi(Area, 0, (Size / VolumeList[Index].BytesPerSector), VolumeList[Index].Drive);
+        Status2 = ReadSectors_Efi(Area, (Offset / VolumeList[Index].BytesPerSector), (Size / VolumeList[Index].BytesPerSector), VolumeList[Index].Drive);
       }
 
       if (Status2 == false) continue;
 
-      for (uintptr Index = TestDiskOffset; Index < Size; Index++) {
+      for (uintptr Index = TestOffs; Index < Size; Index++) {
 
         uint8 Byte = *(uint8*)((uintptr)Area+Index);
-        uint8 Char = Bootsector[Index-TestDiskOffset];
+        uint8 Char = Bootsector[Index - TestOffs];
 
         int8 Attribute = (Byte==Char) ? 0x07 : 0x0C;
 
-        if (Byte<0x10) Putchar('0',false,Attribute);
+        if (Byte<0x10) Putchar('0', false, Attribute);
         Printf("%xh", false, Attribute, (uint64)Byte);
 
         Putchar(':', false, Attribute);
 
-        if (Char<0x10) Putchar('0',false,Attribute);
+        if (Char<0x10) Putchar('0', false, Attribute);
         Printf("%xh ", false, Attribute, (uint64)Char);
 
-        if (Index % 16 == (16-1)) Printf("\n\r", false, Attribute);
+        if (Index % 16 == (16-1)) Printf("\n\r[+%xh] ", false, 0x0F, (Index+1));
 
       }
 

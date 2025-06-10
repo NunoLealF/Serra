@@ -9,16 +9,21 @@
 
   #include "../Libraries/Stdint.h"
 
-  // Include functions from Memory.c
+  // Include standard library functions from Memory.c
 
-  void Memcpy(void* Destination, const void* Source, uint64 Size);
-  void Memset(void* Buffer, uint8 Character, uint64 Size);
-  void MemsetBlock(void* Buffer, const void* Block, uint64 Size, uint64 BlockSize);
+  void Memcpy(void* Destination, const void* Source, uintptr Size);
+  void Memmove(void* Destination, const void* Source, uintptr Size);
+  void Memset(void* Buffer, uint8 Character, uintptr Size);
+
+  // Include non-standard library functions from Memory.c
+
+  void MemsetBlock(void* Buffer, const void* Block, uintptr Size, uintptr BlockSize);
 
   // Include compiler-required wrappers from Memory.c
 
-  void* memcpy(void*, const void*, uint64);
-  void* memset(void*, int, uint64);
+  void* memcpy(void*, const void*, uintptr);
+  void* memset(void*, int, uintptr);
+  void* memmove(void*, const void*, uintptr);
 
   // Include structures from Mm.c
 

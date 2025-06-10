@@ -33,7 +33,7 @@
 
    Inputs: void* Destination - The memory area you want to copy data to.
            const void* Source - The memory area you want to copy data from.
-           uint64 Size - The size of both memory areas, in bytes.
+           uintptr Size - The size of both memory areas, in bytes.
 
    Outputs: (None, or value of `Destination`)
 
@@ -50,7 +50,7 @@
 
 */
 
-void Memcpy(void* Destination, const void* Source, uint64 Size) {
+void Memcpy(void* Destination, const void* Source, uintptr Size) {
 
   // For the most part, our memory copying routines are written in platform-
   // -specific Assembly code, so we need to call different functions
@@ -105,8 +105,93 @@ void Memcpy(void* Destination, const void* Source, uint64 Size) {
 
 }
 
-void* memcpy(void* Destination, const void* Source, uint64 Size) {
+void* memcpy(void* Destination, const void* Source, uintptr Size) {
   Memcpy(Destination, Source, Size); return Destination;
+}
+
+
+
+/* void Memmove(), void* memmove()
+
+   Inputs: void* Destination - The memory area you want to move data to.
+           const void* Source - The memory area you want to move data from.
+           uintptr Size - The size of both memory areas, in bytes.
+
+   (TODO - Something about memmove; this is essentially just a memcpy
+   that can deal with overlapping areas.)
+
+   (TODO - Something about the different levels available (for instance,
+   if the memory allocation subsystem is available, it can use that)
+
+   (TODO - Something about GCC's insistence on memmove())
+
+*/
+
+void Memmove(void* Destination, const void* Source, uintptr Size) {
+
+  // In order to move overlapping data, we can either manually move
+  // each byte (for smaller or non-memory-managed allocations),
+  // or allocate a temporary buffer for the move.
+
+  // (If the given size is larger than the system page size, then
+  // attempt to allocate a buffer)
+
+  const uintptr MoveSize = Size;
+  void* MoveBuffer = NULL;
+
+  if (MmSubsystemData.IsEnabled && (MoveSize >= SystemPageSize)) {
+    MoveBuffer = Allocate(&MoveSize);
+  }
+
+  // (Depending on whether the buffer was allocated successfully,
+  // either move data manually, or into the buffer.)
+
+  if (MoveBuffer != NULL) {
+
+    // (Copy data from `Source` to `MoveBuffer`, and from `MoveBuffer`
+    // to `Destination`)
+
+    Memcpy(MoveBuffer, Source, MoveSize);
+    Memcpy(Destination, MoveBuffer, MoveSize);
+
+    // (Free `MoveBuffer`, if possible)
+
+    [[maybe_unused]] bool Result = Free(MoveBuffer, &MoveSize);
+
+  } else {
+
+    // (Manually copy each byte from `Source` to `Destination`)
+
+    // If our destination buffer comes *before* our source buffer, then
+    // we need to copy each byte back-to-front, not front-to-back.
+
+    uint8* SourceByte = (uint8*)Source;
+    uint8* DestinationByte = (uint8*)Destination;
+
+    if (Destination < Source) {
+
+      for (uintptr Index = 0; Index < Size; Index++) {
+        DestinationByte[Index] = SourceByte[Index];
+      }
+
+    } else {
+
+      for (uintptr Index = Size; Index > 0; Index--) {
+        DestinationByte[Index-1] = SourceByte[Index-1];
+      }
+
+    }
+
+  }
+
+  // Now that we're done, we can return.
+
+  return;
+
+}
+
+void* memmove(void* Destination, const void* Source, uintptr Size) {
+  Memmove(Destination, Source, Size); return Destination;
 }
 
 
@@ -115,7 +200,7 @@ void* memcpy(void* Destination, const void* Source, uint64 Size) {
 
    Inputs: void* Buffer - The buffer you want to write to.
            uint8 Character - The character you want to write with.
-           uint64 Size - The size of the buffer, *in bytes*.
+           uintptr Size - The size of the buffer, *in bytes*.
 
    Outputs: (None, or value of `Destination`)
 
@@ -129,7 +214,7 @@ void* memcpy(void* Destination, const void* Source, uint64 Size) {
 
 */
 
-void Memset(void* Buffer, uint8 Character, uint64 Size) {
+void Memset(void* Buffer, uint8 Character, uintptr Size) {
 
   // For the most part, our memory filling routines are written in platform-
   // -specific Assembly code, so we need to call different functions
@@ -183,7 +268,7 @@ void Memset(void* Buffer, uint8 Character, uint64 Size) {
 
 }
 
-void* memset(void* Buffer, int Value, uint64 Size) {
+void* memset(void* Buffer, int Value, uintptr Size) {
   Memset(Buffer, (uint8)Value, Size); return Buffer;
 }
 
@@ -193,8 +278,8 @@ void* memset(void* Buffer, int Value, uint64 Size) {
 
    Inputs: void* Buffer - The buffer you want to write to.
            void* Block - A pointer to the block you want to write with.
-           uint64 Size - The size of the (destination) buffer, *in bytes*.
-           uint64 BlockSize - The size of the block you want to write with.
+           uintptr Size - The size of the (destination) buffer, *in bytes*.
+           uintptr BlockSize - The size of the block you want to write with.
 
    Outputs: (None)
 
@@ -205,7 +290,7 @@ void* memset(void* Buffer, int Value, uint64 Size) {
 
 */
 
-void MemsetBlock(void* Buffer, const void* Block, uint64 Size, uint64 BlockSize) {
+void MemsetBlock(void* Buffer, const void* Block, uintptr Size, uintptr BlockSize) {
 
   // (Routines for block sizes between 1 and 8 bytes)
   // (TODO - This could be optimized further..)
