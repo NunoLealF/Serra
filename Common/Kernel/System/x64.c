@@ -59,9 +59,11 @@ void InitializeCpuFeatures(void) {
 
   // (Check for `fxsave`/`fxrstor` and `xsave`/`xrstor` support)
 
+  #define MsrBit (1ULL << 5) // (Within rdx)
   #define FxsaveBit (1ULL << 24) // (Within rdx)
   #define XsaveBit (1ULL << 26) // (Within rcx)
 
+  CpuFeaturesAvailable.Msr = ((StandardFeatureFlags.Rdx & MsrBit) != 0);
   CpuFeaturesAvailable.Fxsave = ((StandardFeatureFlags.Rdx & FxsaveBit) != 0);
   CpuFeaturesAvailable.Xsave = ((StandardFeatureFlags.Rcx & XsaveBit) != 0);
 
@@ -78,16 +80,44 @@ void InitializeCpuFeatures(void) {
 
     // (Unlock access to higher CPUID 'leaves' (functions, basically))
 
-    WriteToMsr(MiscEnableMsr, (ReadFromMsr(MiscEnableMsr) & (~LcmvBit | FseBit)));
-    LcmvBitHasBeenCleared = true;
+    // This may not be necessary on some CPUs, so we check the maximum
+    // leaf first; if it's between 1h and 3h, then we probably need to
+    // unlock it, but otherwise, we have no need to.
 
-    // (Call CPUID leaf (rax = 0000000Dh, rcx = 1)), and check whether
-    // bit 2 (support for the `xgetbv` instruction) is set)
+    cpuidRegisterTable IdentifyFeatureFlags = QueryCpuid(0, 0);
 
-    cpuidRegisterTable ExtendedState = QueryCpuid(0x0D, 1);
-    #define XgetbvBit (1ULL << 2) // (Within rax)
+    if ((CpuFeaturesAvailable.Msr == true) && (IdentifyFeatureFlags.Rax <= 0x03)) {
+      WriteToMsr(MiscEnableMsr, ((ReadFromMsr(MiscEnableMsr) & ~LcmvBit) | FseBit));
+    }
 
-    CpuFeaturesAvailable.Xsave = ((ExtendedState.Rax & XgetbvBit) != 0);
+    LcmvBitHasBeenCleared = CpuFeaturesAvailable.Msr;
+
+    // (Check the maximum CPUID leaf again, and disable the `xsave` bit
+    // if it isn't at least 0Dh; otherwise, query for `xgetbv` support)
+
+    IdentifyFeatureFlags = QueryCpuid(0, 0);
+
+    if (IdentifyFeatureFlags.Rax >= 0x0D) {
+
+      // (Call CPUID leaf (rax = 0000000Dh, rcx = 1)), and check whether
+      // bit 2 (support for the `xgetbv` instruction) is set)
+
+      cpuidRegisterTable ExtendedState = QueryCpuid(0x0D, 1);
+      #define XgetbvBit (1ULL << 2) // (Within rax)
+
+      CpuFeaturesAvailable.Xsave = ((ExtendedState.Rax & XgetbvBit) != 0);
+
+    } else {
+
+      // (`xsave` and `xgetbv` probably aren't supported)
+
+      if (IdentifyFeatureFlags.Rax >= 0x03) {
+        LcmvBitHasBeenCleared = false;
+      }
+
+      CpuFeaturesAvailable.Xsave = false;
+
+    }
 
   }
 

@@ -15,17 +15,22 @@
 
     typedef struct _cpuFeaturesAvailable {
 
-      // (SIMD- and register-specific features)
+      // (Architectural features)
+
+      bool Msr : 1; // Are MSRs (model-specific registers) available?
 
       bool Fxsave : 1; // Are `fxsave` instructions available?
+      bool Xsave : 1; // Are `xsave` instructions and extended control registers available?
+      bool Erms : 1; // Is Enhanced REP MOVS*/STOS* (ERMS) being used?
+
+      // (SIMD- and register-specific features)
+
       bool Sse : 1; // Are (base) SSE features available?
       bool Sse2 : 1; // Are SSE 2 features available?
       bool Sse3 : 1; // Are SSE 3 features available?
       bool Ssse3 : 1; // Are SSSE 3 features available?
       bool Sse4 : 1; // Are SSE4.1/4.2 (not SSE4a!) features available?
 
-      bool Xsave : 1; // Are `xsave` instructions and extended control registers available?
-      bool Erms : 1; // Is Enhanced REP MOVS*/STOS* (ERMS) being used?
       bool Avx : 1; // Are (base) AVX features available?
       bool Avx2 : 1; // Are (base) AVX2 features available?
       bool Avx512f : 1; // Are (foundational) AVX512 features available?
