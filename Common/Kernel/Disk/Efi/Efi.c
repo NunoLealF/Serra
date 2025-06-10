@@ -222,11 +222,9 @@ static efiBlockIoProtocol** EfiBlockIoProtocols = NULL;
 
     auto IoAlign = Protocol->Media->IoAlign;
 
-    while ((IoAlign >> Volume->Alignment) > 0) {
+    while ((IoAlign >> Volume->Alignment) > 1) {
       Volume->Alignment++;
     }
-
-    Volume->Alignment = IoAlign;
 
     // (Increment variables)
 
