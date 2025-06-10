@@ -265,7 +265,7 @@ void KernelCore(commonInfoTable* InfoTable) {
 
   if ((InfoTable->Firmware.Type == FirmwareType_Bios) || (InfoTable->Firmware.Type == FirmwareType_Efi)) {
 
-    const uintptr Size = VolumeList[0].BytesPerSector;
+    const uintptr Size = VolumeList[0].BytesPerSector * 2;
     void* Area = Allocate(&Size);
 
     if (Area != NULL) {
@@ -360,7 +360,7 @@ void KernelCore(commonInfoTable* InfoTable) {
     // (Try to read from it!)
 
     char Bootsector[512];
-    bool Status = ReadDisk((void*)Bootsector, 0, 512, (uint16)Index);
+    bool Status = ReadDisk((void*)Bootsector, 1, 512, (uint16)Index);
 
     if (Status == true) {
 
