@@ -265,7 +265,7 @@ void KernelCore(commonInfoTable* InfoTable) {
 
   if ((InfoTable->Firmware.Type == FirmwareType_Bios) || (InfoTable->Firmware.Type == FirmwareType_Efi)) {
 
-    const uintptr Size = VolumeList[0].BytesPerSector * 2;
+    const uintptr Size = VolumeList[0].BytesPerSector;
     void* Area = Allocate(&Size);
 
     if (Area != NULL) {
@@ -359,14 +359,74 @@ void KernelCore(commonInfoTable* InfoTable) {
 
     // (Try to read from it!)
 
-    char Bootsector[512];
-    bool Status = ReadDisk((void*)Bootsector, 1, 512, (uint16)Index);
+    #define TestDiskOffset 1
+
+    const uintptr Size = (VolumeList[Index].BytesPerSector * 4);
+    char Bootsector[Size];
+
+    char SaveBootsectorThing = Bootsector[Size];
+    bool Status = ReadDisk(Bootsector, TestDiskOffset, Size, (uint16)Index);
 
     if (Status == true) {
 
-      Message(Ok, "Successfully read the bootsector from volume %d (last four bytes are %xh:%xh:%xh:%xh)",
-                  Index, Bootsector[508], Bootsector[509],
-                  Bootsector[510], Bootsector[511]);
+      // (Show msg)
+
+      Message(Ok, "Successfully read the bootsector from volume %d (last four bytes @ %xh are %xh:%xh:%xh:%xh)",
+                  (uint64)Index, (uintptr)&Bootsector[508],
+                  (uint64)Bootsector[508], (uint64)Bootsector[509],
+                  (uint64)Bootsector[510], (uint64)Bootsector[511]);
+
+      // (Try again!)
+
+      char Aa55[2] = {0xFF, 0xFF};
+      Status = ReadDisk(Aa55, 510, 2, (uint16)Index);
+
+      if (Status == true) {
+        Message(Ok, "Read 510,2 successfully, should be AA55h -> %xh", *(uint16*)Aa55);
+      } else {
+        Message(Error, "Didn't read 510,2, shouldn't be AA55h -> %xh", *(uint16*)Aa55);
+      }
+
+      // (Read using manual methods)
+
+      void* Area = Allocate(&Size);
+
+      if (Area == NULL) continue;
+
+      bool Status2;
+
+      if (DiskInfo.BootMethod == BootMethod_Int13) {
+        Status2 = ReadSectors_Bios(Area, 0, (Size / VolumeList[Index].BytesPerSector), VolumeList[Index].Drive);
+      } else {
+        Status2 = ReadSectors_Efi(Area, 0, (Size / VolumeList[Index].BytesPerSector), VolumeList[Index].Drive);
+      }
+
+      if (Status2 == false) continue;
+
+      for (uintptr Index = TestDiskOffset; Index < Size; Index++) {
+
+        uint8 Byte = *(uint8*)((uintptr)Area+Index);
+        uint8 Char = Bootsector[Index-TestDiskOffset];
+
+        int8 Attribute = (Byte==Char) ? 0x07 : 0x0C;
+
+        if (Byte<0x10) Putchar('0',false,Attribute);
+        Printf("%xh", false, Attribute, (uint64)Byte);
+
+        Putchar(':', false, Attribute);
+
+        if (Char<0x10) Putchar('0',false,Attribute);
+        Printf("%xh ", false, Attribute, (uint64)Char);
+
+        if (Index % 16 == (16-1)) Printf("\n\r", false, Attribute);
+
+      }
+
+      if (Bootsector[Size] != SaveBootsectorThing) {
+        Message(Warning, "Seems like it overwrote something");
+      }
+
+      [[maybe_unused]] bool Thing = Free(Area, &Size);
 
     } else {
 

@@ -253,6 +253,8 @@ bool TerminateDiskSubsystem(void) {
   auto FirstSector = (Start / Volume->BytesPerSector);
   auto LastSector = (End / Volume->BytesPerSector);
 
+  Message(Info, "(pre) Start = %xh, FirstSector = %xh | End = %xh, LastSector = %xh", Start, FirstSector, End, LastSector);
+
   // (Make sure that `LastSector` doesn't exceed the total amount of
   // sectors on the drive)
 
@@ -273,14 +275,14 @@ bool TerminateDiskSubsystem(void) {
   // anything else, let's check if our buffer is aligned:
 
   // (We also assume the buffer is misaligned for any reads that
-  // are smaller than the sector size)
+  // don't have enough space to handle start *and* end)
 
   auto Alignment = (1ULL << Volume->Alignment);
   auto NumSectors = (1 + LastSector - FirstSector);
 
   bool BufferAligned = (((uintptr)Buffer % Alignment) == 0);
 
-  if (Size < Volume->BytesPerSector) {
+  if (NumSectors < 3) {
     BufferAligned = false;
   }
 
@@ -301,15 +303,16 @@ bool TerminateDiskSubsystem(void) {
     // If the last sector isn't aligned, read it into the start of the
     // buffer, then move it to the correct position.
 
-    // TODO - *This is probably buggy!!! TODO TODO TODO TODO*
-
-    Message(Info, "(1) StartOffset = %xh (Aligned=%s), EndOffset = %xh (Aligned=%s)",
+    Message(Info, "(0-0) StartOffset = %xh (Aligned=%s), EndOffset = %xh (Aligned=%s)",
                   (uint64)StartOffset, ((StartAligned == true) ? "true" : "false"),
                   (uint64)EndOffset, ((EndAligned == true) ? "true" : "false"));
 
     if (EndAligned == false) {
 
       // (Read the last sector to the start of the buffer)
+
+      Message(Info, "(0-1) Buffer = %xh, LastSector = %xh, NumSectors = %xh, VolumeNum = %d", (uintptr)Buffer, (uint64)LastSector, 1, (uint64)VolumeNum);
+      Message(-1, "Last 4 bytes at offset 508 are %xh", *(uint32*)((uintptr)Buffer + 508));
 
       bool Status = ReadSectors(Buffer, LastSector, 1, VolumeNum);
 
@@ -322,47 +325,46 @@ bool TerminateDiskSubsystem(void) {
       uintptr Source = (uintptr)Buffer;
       uintptr Destination = (Source + Size - EndOffset);
 
-      Memcpy((void*)Destination, (const void*)Destination, EndOffset);
+      Memcpy((void*)Destination, (const void*)Source, EndOffset);
+      Message(Info, "(0-2) Moved %d bytes from %xh to %xh.", EndOffset, (uintptr)Source, (uintptr)Destination);
+      Message(-1, "Last 4 bytes at offset 508 are %xh", *(uint32*)((uintptr)Buffer + 508));
 
       // (Update `LastSector`, `NumSectors` and `Size`)
 
       LastSector--;
       NumSectors--;
 
-      Size -= EndOffset;
+      Message(Info, "(0-3) NumSectors is now %xh; FirstSector is now %xh; LastSector is now %xh", NumSectors, FirstSector, LastSector);
+      Message(-1, "Last 4 bytes at offset 508 are %xh", *(uint32*)((uintptr)Buffer + 508));
 
     }
 
     // Depending on whether the first sector is aligned, either read
     // the rest of it directly, or read our data in two parts.
 
-    // TODO - *This is probably buggy!!! TODO TODO TODO TODO*
-
     if (StartAligned == false) {
 
-      bool Status = true;
+      // (Read directly to the start of the buffer, with the exception
+      // of the first sector)
 
-      // (If we have anything to read after the first sector..)
+      Message(Info, "(1-0) Buffer = %xh, FirstSector+1 = %xh, NumSectors-1 = %xh, VolumeNum = %d", (uintptr)Buffer, (uint64)(FirstSector + 1), (uint64)(NumSectors - 1), (uint64)VolumeNum);
+      Message(-1, "Last 4 bytes at offset 508 are %xh", *(uint32*)((uintptr)Buffer + 508));
+      bool Status = ReadSectors(Buffer, (FirstSector + 1), (NumSectors - 1), VolumeNum);
 
-      if (NumSectors > 1) {
-
-        // (Read directly to the start of the buffer, with the exception
-        // of the first sector)
-
-        bool Status = ReadSectors(Buffer, (FirstSector + 1), (NumSectors - 1), VolumeNum);
-
-        if (Status == false) {
-          return false;
-        }
-
-        // (Move the data to the start of the next sector)
-
-        uintptr Source = (uintptr)Buffer;
-        uintptr Destination = ((uintptr)Buffer + StartOffset);
-
-        Memcpy((void*)Destination, (const void*)Source, (Size - StartOffset));
-
+      if (Status == false) {
+        return false;
       }
+
+      // (Move the data to the start of the next sector)
+
+      uintptr Source = (uintptr)Buffer;
+      uintptr Destination = ((uintptr)Buffer + (Volume->BytesPerSector - StartOffset));
+
+      Memcpy((void*)Destination, (const void*)Source,
+             (uint64)((NumSectors - 1) * Volume->BytesPerSector));
+
+      Message(Info, "(1-1) Moved %d bytes from %xh to %xh.", ((NumSectors - 1) * Volume->BytesPerSector), (uintptr)Source, (uintptr)Destination);
+      Message(-1, "Last 4 bytes at offset 508 are %xh", *(uint32*)((uintptr)Buffer + 508));
 
       // (Allocate a temporary buffer to store data in)
 
@@ -377,9 +379,13 @@ bool TerminateDiskSubsystem(void) {
       // transfer buffer in `Temp`)
 
       Memcpy(Temp, Buffer, Volume->BytesPerSector);
+      Message(Info, "(1-1.5) Moved %d bytes from %xh to %xh.", Volume->BytesPerSector, (uintptr)Buffer, (uintptr)Temp);
+      Message(-1, "Last 4 bytes at offset 508 are %xh", *(uint32*)((uintptr)Buffer + 508));
 
       // (Now, we can read directly to the start of the buffer again)
 
+      Message(Info, "(1-2) Buffer = %xh, FirstSector = %xh, NumSectors = %xh, VolumeNum = %d", (uintptr)Buffer, (uint64)FirstSector, (uint64)1, (uint64)VolumeNum);
+      Message(-1, "Last 4 bytes at offset 508 are %xh", *(uint32*)((uintptr)Buffer + 508));
       Status = ReadSectors(Buffer, FirstSector, 1, VolumeNum);
 
       if (Status == false) {
@@ -389,15 +395,19 @@ bool TerminateDiskSubsystem(void) {
       // (Finally, we can move back the non-included bytes, and
       // copy the remainder from `Temp`)
 
-      uintptr Source = ((uintptr)Buffer + StartOffset);
-      uintptr Destination = (uintptr)Buffer;
+      Source = ((uintptr)Buffer + StartOffset);
+      Destination = (uintptr)Buffer;
 
-      Memcpy((void*)Destination, (const void*)Source,
-             (uint64)(Volume->BytesPerSector - StartOffset));
+      Memcpy((void*)Destination, (const void*)Source, (Volume->BytesPerSector - StartOffset));
+      Message(Info, "(1-3) Moved %d bytes from %xh to %xh.", (Volume->BytesPerSector - StartOffset), (uintptr)Source, (uintptr)Destination);
+      Message(-1, "Last 4 bytes at offset 508 are %xh", *(uint32*)((uintptr)Buffer + 508));
 
-      if (NumSectors > 1) {
-        Memcpy((void*)Source, (const void*)Temp, StartOffset);
-      }
+      Destination = ((uintptr)Buffer + (Volume->BytesPerSector - StartOffset));
+      Source = ((uintptr)Temp + Volume->BytesPerSector - StartOffset);
+
+      Memcpy((void*)Destination, (const void*)Source, StartOffset);
+      Message(Info, "(1-4) Moved %d bytes from %xh to %xh.", (uintptr)StartOffset, (uintptr)Source, (uintptr)Destination);
+      Message(-1, "Last 4 bytes at offset 508 are %xh", *(uint32*)((uintptr)Buffer + 508));
 
       // (No matter what, we *have* to free the buffer we allocated)
 
@@ -429,7 +439,7 @@ bool TerminateDiskSubsystem(void) {
     const uintptr TempSize = Alignment + (NumSectors * Volume->BytesPerSector);
     void* TempPointer = Allocate(&TempSize);
 
-    Message(Info, "(3) TempSize = %xh, TempPointer = %xh", TempSize, (uintptr)TempPointer);
+    Message(Info, "(3-0) TempSize = %xh, TempPointer = %xh", TempSize, (uintptr)TempPointer);
 
     // (Make sure that the allocation succeeded, and declare a status
     // variable, so we can jump to `CleanupBuffer`)
@@ -448,14 +458,17 @@ bool TerminateDiskSubsystem(void) {
     uintptr TempAddress = (uintptr)TempPointer;
 
     if ((TempAddress % Alignment) > 0) {
-      TempAddress += (TempAddress - (TempAddress % Alignment));
+      TempAddress += (Alignment - (TempAddress % Alignment));
     }
 
     void* TempBuffer = (void*)TempAddress;
 
+    Message(Info, "(3-1) TempAddress = TempBuffer = %xh", TempAddress);
+
     // Finally, now that we have a buffer we can read into, let's do that:
     // (We also want to check if the read was successful)
 
+    Message(Info, "(3-2) TempBuffer = %xh, FirstSector = %xh, NumSectors = %xh, VolumeNum = %d", (uintptr)TempBuffer, (uint64)FirstSector, (uint64)NumSectors, (uint64)VolumeNum);
     Status = ReadSectors(TempBuffer, FirstSector, NumSectors, VolumeNum);
 
     if (Status == false) {
@@ -466,9 +479,9 @@ bool TerminateDiskSubsystem(void) {
     // to `Buffer`, using Memcpy():
 
     TempBuffer = (void*)(TempAddress + StartOffset);
-    uint64 SizeOffset = (EndOffset - StartOffset);
+    Message(Info, "(3-3) Moved %d bytes from %xh to %xh.", (uintptr)Size, (uintptr)TempBuffer, (uintptr)Buffer);
 
-    Memcpy(Buffer, (const void*)(TempAddress + StartOffset), SizeOffset);
+    Memcpy(Buffer, TempBuffer, Size);
     goto CleanupBuffer;
 
     // (No matter what, we *have* to free the buffer we allocated)
