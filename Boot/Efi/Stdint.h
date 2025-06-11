@@ -160,7 +160,7 @@
 
   static_assert((sizeof(intptr) == 8), "`intptr` has incorrect size - are you on a 64-bit platform?");
   static_assert((sizeof(uintptr) == 8), "`uintptr` has incorrect size - are you on a 64-bit platform?");
-  
+
   // [Other integer/pointer types]
 
   #define intmax 0x7FFFFFFFFFFFFFFF
@@ -168,6 +168,14 @@
 
   #define uintmax 0xFFFFFFFFFFFFFFFF
   #define UINTMAX uintmax
+
+  typedef struct _genericUuid {
+
+    uint32 Uuid_A;
+    uint16 Uuid_B[2];
+    uint8 Uuid_C[8];
+
+  } __attribute__((packed)) genericUuid;
 
   // [Null types]
 

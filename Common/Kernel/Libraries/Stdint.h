@@ -163,12 +163,20 @@
   #define uintmax 0xFFFFFFFFFFFFFFFF
   #define UINTMAX uintmax
 
-  typedef struct {
+  typedef struct _farPtr {
 
     uint16 Offset;
     uint16 Segment;
 
   } __attribute__((packed)) farPtr;
+
+  typedef struct _genericUuid {
+
+    uint32 Uuid_A;
+    uint16 Uuid_B[2];
+    uint8 Uuid_C[8];
+
+  } __attribute__((packed)) genericUuid;
 
   #define convertFarPtr(Ptr) ((Ptr.Segment << 4) + Ptr.Offset)
 

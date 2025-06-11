@@ -54,13 +54,7 @@
 
   } efiMemoryDescriptor;
 
-  typedef struct _efiUuid {
-
-    uint32 Uuid_A;
-    uint16 Uuid_B[2];
-    uint8 Uuid_C[8];
-
-  } efiUuid;
+  typedef genericUuid efiUuid;
 
 
   // (Enums, and other types with a limited set of definitions)

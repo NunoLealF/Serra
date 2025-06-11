@@ -12,6 +12,7 @@
   #include "Bios/Bios.h"
   #include "Efi/Efi.h"
 
+
   // Include data structures from Disk.c
 
   typedef struct _diskInfo {
@@ -115,6 +116,7 @@
 
   } __attribute__((packed)) volumeInfo;
 
+
   // Include functions and global variables from Disk.c
 
   extern diskInfo DiskInfo;
@@ -128,17 +130,18 @@
   [[nodiscard]] bool ReadSectors(void* Buffer, uint64 Lba, uint64 NumSectors, uint16 VolumeNum);
   [[nodiscard]] bool ReadDisk(void* Buffer, uint64 Offset, uint64 Size, uint16 VolumeNum);
 
-  // Include data structures used in Fs.c
+
+  // Include data structures from Fs.c
 
   typedef struct _chsAddress {
 
-    _BitInt(8) Heads : 8; // (The head value; this can be between 0 and 254~255)
-    _BitInt(6) Sectors : 6; // (The sector value; this can be between 0 and 63)
-    _BitInt(10) Cylinders : 10; // (The cylinder value; this can be between 0 and 1023)
+    uint16 Heads : 8; // (The head value; this can be between 0 and 254~255)
+    uint16 Sectors : 6; // (The sector value; this can be between 0 and 63)
+    uint16 Cylinders : 10; // (The cylinder value; this can be between 0 and 1023)
 
   } __attribute__((packed)) chsAddress;
 
-  static_assert((sizeof(chsAddress) == 3), "`chsAddress` was not packed correctly by the compiler.");
+  #define mbrHeaderSignature 0xAA55
 
   typedef struct _mbrHeader {
 
@@ -174,19 +177,47 @@
 
     } __attribute__((packed)) Entry[4];
 
-    // [Boot signature - this *must* match AA55h]
+    // [Bootsector signature]
 
-    uint16 Signature;
+    uint16 Signature; // (This *must* match `mbrHeaderSignature`, or AA55h)
 
   } __attribute__((packed)) mbrHeader;
 
-  static_assert((sizeof(mbrHeader) == 66), "`mbrHeader` was not packed correctly by the compiler.");
+  #define gptHeaderSignature 0x5452415020494645
 
   typedef struct _gptHeader {
 
+    // [Header-related information]
 
+    uint64 Signature; // (Must match `gptHeaderSignature`, or 5452415020494645h)
+    uint32 Revision; // (Should be at least 10000h (EFI 1.1))
+    uint32 Size; // (Should be at least sizeof(gptHeader))
+
+    uint32 Unused[2]; // (We don't use the data here; contains CRC32 and reserved byte)
+
+    // [Partition-related information]
+
+    uint64 HeaderLba; // (The LBA of the sector containing this data structure)
+    uint64 BackupLba; // (Same as above, but for the backup header)
+
+    uint64 FirstUsableLba; // (The *first* usable sector on the disk)
+    uint64 LastUsableLba; // (The *last* usable sector on the disk)
+
+    genericUuid DiskUuid; // (The UUID/GUID of this specific disk)
+
+    // [Partition-entry-related information]
+
+    uint64 PartitionLba; // (The first sector that holds partition entries)
+    uint32 NumPartitions; // (The number of partition entries)
+    uint32 PartitionEntrySize; // (The size of a partition entry)
+    uint32 PartitionUnused; // (We don't use the data here - contains CRC32)
 
   } __attribute__((packed)) gptHeader;
+
+  static_assert((sizeof(chsAddress) == 3), "chsAddress{} was not packed correctly by the compiler.");
+  static_assert((sizeof(mbrHeader) == 66), "mbrHeader{} was not packed correctly by the compiler.");
+  static_assert((sizeof(gptHeader) == 92), "gptHeader{} was not packed correctly by the compiler.");
+
 
   // Include functions and global variables from Fs.c
 
