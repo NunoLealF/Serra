@@ -178,6 +178,9 @@ bool TerminateDiskSubsystem(void) {
 
 // (TODO - Function to actually read the data itself)
 
+// The LBA must represent the real LBA, which means you need to add the
+// partition offset to it)
+
 [[nodiscard]] bool ReadSectors(void* Buffer, uint64 Lba, uint64 NumSectors, uint16 VolumeNum) {
 
   // (Read sectors using the driver indicated by Volume->Method)
@@ -238,6 +241,12 @@ bool TerminateDiskSubsystem(void) {
 
   // Next, let's calculate the boundaries of where we'll need to read *from*,
   // and compare them against the overall volume boundaries.
+
+  // (If the volume is a partition, add the necessary offset to `Offset`)
+
+  if (Volume->IsPartition == true) {
+    Offset += ((uint64)Volume->BytesPerSector * Volume->PartitionOffset);
+  }
 
   // (Calculate the first and last *byte* we'll read)
 

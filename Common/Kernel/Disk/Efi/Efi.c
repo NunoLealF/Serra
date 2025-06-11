@@ -210,7 +210,8 @@ static efiBlockIoProtocol** EfiBlockIoProtocols = NULL;
     Volume->Partition = 0;
 
     Volume->Type = VolumeType_Unknown; // (Should be filled by Fs.c later)
-    Volume->Offset = 0;
+    Volume->IsPartition = Protocol->Media->LogicalPartition; // (Does this volume represent a specific partition?)
+    Volume->PartitionOffset = 0; // (Even if it does, the firmware abstracts the offset away)
 
     Volume->Alignment = 0;
     Volume->BytesPerSector = Protocol->Media->BlockSize;

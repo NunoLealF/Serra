@@ -81,15 +81,18 @@
 
     enum : uint16 {
 
-      // (If this volume represents an entire device, show the partition
-      // map type (for example, MBR or GPT))
+      // (If this volume represents an entire device, and is partitioned,
+      // show the partition map type (for example, MBR or GPT))
+
       // `Partition == 0`, bit 8 is cleared.
 
       VolumeType_Unknown = 0, // (Couldn't determine type)
       VolumeType_Mbr, // (Appears to be a 'raw' MBR volume)
       VolumeType_Gpt, // (Appears to be a 'raw' GPT volume)
 
-      // (Otherwise, if it represents a partition, show the type)
+      // (Otherwise, if it only represents a specific partition, or the
+      // device itself is unpartitioned, show the filesystem type)
+
       // `Partition != 0`, bit 8 is set.
 
       VolumeType_Fat12 = (1ULL << 8), // (Appears to be a FAT12 partition)
@@ -100,7 +103,8 @@
 
     } Type;
 
-    uint64 Offset; // (The LBA offset of the partition, if applicable)
+    bool IsPartition; // (Whether this volume represents a specific *partition* or not)
+    uint64 PartitionOffset; // (The partition's LBA offset, *if needed*)
 
     // [Information about how to interact with the volume]
 
@@ -124,6 +128,60 @@
   [[nodiscard]] bool ReadSectors(void* Buffer, uint64 Lba, uint64 NumSectors, uint16 VolumeNum);
   [[nodiscard]] bool ReadDisk(void* Buffer, uint64 Offset, uint64 Size, uint16 VolumeNum);
 
-  // Include functions and global variables from Fs.c (TODO)
+  // Include data structures used in Fs.c
+
+  typedef struct _chsAddress {
+
+    _BitInt(8) Heads : 8; // (The head value; this can be between 0 and 254~255)
+    _BitInt(6) Sectors : 6; // (The sector value; this can be between 0 and 63)
+    _BitInt(10) Cylinders : 10; // (The cylinder value; this can be between 0 and 1023)
+
+  } __attribute__((packed)) chsAddress;
+
+  static_assert((sizeof(chsAddress) == 3), "`chsAddress` is not packed correctly.");
+
+  typedef struct _mbrStructure {
+
+    // [Reserved or optional data]
+
+    uint8 Reserved[440]; // (Every MBR has 440 bytes of data reserved for bootstrap code)
+    uint8 Optional[6]; // (Some MBRs may also use this space)
+
+    // [Partition entries]
+
+    struct {
+
+      uint8 Attributes; // (Bit 7 means the partition is 'active')
+      chsAddress ChsStart; // (The starting sector, in CHS format)
+
+      enum : uint8 {
+
+        MbrEntryType_None = 0x00, // (Partition doesn't exist)
+
+        // (TODO - Add FAT?)
+
+        MbrEntryType_Gpt = 0xEE, // (Protective MBR partition)
+        MbrEntryType_Esp = 0xEF, // (EFI System Partition (FAT))
+
+      } Type;
+
+      chsAddress ChsEnd; // (The *last* sector, in CHS format)
+
+      uint32 Lba; // (LBA start address)
+      uint32 NumSectors; // (Number of sectors)
+
+    } __attribute__((packed)) Entry[4];
+
+    // [Boot signature - this *must* match AA55h]
+
+    uint16 Signature;
+
+  } __attribute__((packed)) mbrStructure;
+
+  static_assert((sizeof(mbrStructure) == 512), "`mbrStructure` is not 512 bytes.");
+
+  // Include functions and global variables from Fs.c
+
+  [[nodiscard]] bool InitializePartitions(void);
 
 #endif

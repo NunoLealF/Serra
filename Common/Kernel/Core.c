@@ -263,6 +263,8 @@ void KernelCore(commonInfoTable* InfoTable) {
 
   Putchar('\n', false, 0x0F);
 
+  /*
+
   if ((InfoTable->Firmware.Type == FirmwareType_Bios) || (InfoTable->Firmware.Type == FirmwareType_Efi)) {
 
     const uintptr Size = VolumeList[0].BytesPerSector;
@@ -435,6 +437,12 @@ void KernelCore(commonInfoTable* InfoTable) {
     }
 
   }
+
+  */
+
+  // (Test partitions)
+
+  [[maybe_unused]] bool Thing2 = InitializePartitions();
 
   // (Depending on the system type, either wait for a keypress or just
   // stall the system for a while)

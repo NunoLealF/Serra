@@ -133,7 +133,8 @@ static Fn_Int13 Call_Int13 = (Fn_Int13)Int13Wrapper_Location;
   Volume->Partition = 0;
 
   Volume->Type = VolumeType_Unknown; // (Should be filled by Fs.c later)
-  Volume->Offset = 0;
+  Volume->IsPartition = false; // (Int 13h devices don't represent logical partitions)
+  Volume->PartitionOffset = 0; // (Not necessary - see above)
 
   Volume->Alignment = 0;
   Volume->BytesPerSector = DiskInfo.Int13.BytesPerSector;
