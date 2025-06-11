@@ -214,6 +214,7 @@ static efiBlockIoProtocol** EfiBlockIoProtocols = NULL;
 
     Volume->Alignment = 0;
     Volume->BytesPerSector = Protocol->Media->BlockSize;
+    Volume->MediaId = Protocol->Media->MediaId;
     Volume->NumSectors = Protocol->Media->LastBlock;
 
     // (Calculate the alignment as a power of two - any transfer buffer
@@ -278,7 +279,7 @@ bool TerminateDiskSubsystem_Efi(void) {
 
 // (TODO - Function to read, like the ReadSectors_Bios() function)
 
-[[nodiscard]] bool ReadSectors_Efi(void* Buffer, uint64 Lba, uint64 NumSectors, uint16 BlockIoIndex) {
+[[nodiscard]] bool ReadSectors_Efi(void* Buffer, uint64 Lba, uint64 NumSectors, uint16 BlockIoIndex, uint32 MediaId) {
 
   // (Make sure that the parameters we were given are valid)
 
@@ -321,23 +322,12 @@ bool TerminateDiskSubsystem_Efi(void) {
     return false;
   }
 
-  // (Also, make sure that the transfer buffer address is aligned to
-  // Media->IoAlign; otherwise, the read could fail)
-
-  if (Media->IoAlign > 1) {
-
-    if (((uintptr)Buffer % (Media->IoAlign)) != 0) {
-      return false;
-    }
-
-  }
-
   // Finally, now that we know we can probably read from the disk, let's
   // use the `ReadBlocks()` function to do just that.
 
   efiStatus Status;
 
-  Status = Protocol->ReadBlocks(Protocol, Media->MediaId, (efiLba)Lba,
+  Status = Protocol->ReadBlocks(Protocol, MediaId, (efiLba)Lba,
                                 (NumSectors * Media->BlockSize),
                                 (volatile void*)Buffer);
 

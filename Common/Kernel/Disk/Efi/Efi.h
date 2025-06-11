@@ -15,6 +15,6 @@
   [[nodiscard]] bool InitializeDiskSubsystem_Efi(void);
   bool TerminateDiskSubsystem_Efi(void);
 
-  [[nodiscard]] bool ReadSectors_Efi(void* Buffer, uint64 Lba, uint64 NumSectors, uint16 BlockIoIndex);
+  [[nodiscard]] bool ReadSectors_Efi(void* Buffer, uint64 Lba, uint64 NumSectors, uint16 BlockIoIndex, uint32 MediaId);
 
 #endif

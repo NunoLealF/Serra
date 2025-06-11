@@ -185,7 +185,7 @@ bool TerminateDiskSubsystem(void) {
   volumeInfo* Volume = &VolumeList[VolumeNum];
 
   if (Volume->Method == VolumeMethod_EfiBlockIo) {
-    return ReadSectors_Efi(Buffer, Lba, NumSectors, Volume->Drive);
+    return ReadSectors_Efi(Buffer, Lba, NumSectors, Volume->Drive, Volume->MediaId);
   } else if (Volume->Method == VolumeMethod_Int13) {
     return ReadSectors_Bios(Buffer, Lba, NumSectors, Volume->Drive);
   }

@@ -291,7 +291,7 @@ void KernelCore(commonInfoTable* InfoTable) {
       if (DiskInfo.BootMethod == BootMethod_Int13) {
         Status = ReadSectors_Bios(Area, Lba, NumSectors, DriveNumber);
       } else {
-        Status = ReadSectors_Efi(Area, Lba, NumSectors, DriveNumber);
+        Status = ReadSectors_Efi(Area, Lba, NumSectors, DriveNumber, VolumeList[0].MediaId);
       }
 
       // (Depending on the status message...)
@@ -358,10 +358,10 @@ void KernelCore(commonInfoTable* InfoTable) {
 
     // (Try to read from it!)
 
-    #define Offset 0x102000
-    #define TestOffs 4
+    #define Offset 0
+    #define TestOffs 0
 
-    const uintptr Size = (VolumeList[Index].BytesPerSector * 4);
+    const uintptr Size = (VolumeList[Index].BytesPerSector * 1);
     char Bootsector[Size];
 
     char SaveBootsectorThing = Bootsector[Size];
@@ -398,7 +398,7 @@ void KernelCore(commonInfoTable* InfoTable) {
       if (DiskInfo.BootMethod == BootMethod_Int13) {
         Status2 = ReadSectors_Bios(Area, (Offset / VolumeList[Index].BytesPerSector), (Size / VolumeList[Index].BytesPerSector), VolumeList[Index].Drive);
       } else {
-        Status2 = ReadSectors_Efi(Area, (Offset / VolumeList[Index].BytesPerSector), (Size / VolumeList[Index].BytesPerSector), VolumeList[Index].Drive);
+        Status2 = ReadSectors_Efi(Area, (Offset / VolumeList[Index].BytesPerSector), (Size / VolumeList[Index].BytesPerSector), VolumeList[Index].Drive, VolumeList[Index].MediaId);
       }
 
       if (Status2 == false) continue;

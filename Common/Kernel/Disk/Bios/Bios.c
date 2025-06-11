@@ -137,6 +137,7 @@ static Fn_Int13 Call_Int13 = (Fn_Int13)Int13Wrapper_Location;
 
   Volume->Alignment = 0;
   Volume->BytesPerSector = DiskInfo.Int13.BytesPerSector;
+  Volume->MediaId = 0; // (Not necessary for this volume method)
   Volume->NumSectors = DiskInfo.Int13.NumSectors;
 
   // (Increment `NumVolumes`, and return true)
