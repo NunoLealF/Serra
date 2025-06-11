@@ -3,16 +3,121 @@
 // For more information, please refer to the accompanying license agreement. <3
 
 #include "../Libraries/Stdint.h"
+#include "../Memory/Memory.h"
 #include "Disk.h"
 
 // (TODO - Include MBR and GPT-related functions (and typedefs..?))
 
 
 
+// (TODO - Include a function to process an unpartitioned volume / an
+// individual filesystem)
+
+
+
+// (TODO - Include a function to process a partitioned volume, and
+// identify (as well as add) each partition it contains)
+
+// Dynamically updates `NumVolumes`, *returning the old value*, and adds
+// partitions (obviously) - in a for loop, you'd do something like:
+// `for (uint16 Index = ReturnVal; Index < NumVolumes; Index++)`
+
+static uint16 DetectPartitionMap(mbrHeader* Mbr, uint16 VolumeNum) {
+
+  // Before we do anything else, let's see if the disk is MBR- or
+  // GPT-formatted, by checking for the existence of a GPT
+  // Protective partition (type = EEh).
+
+  // (Even GPT-formatted devices still contain a protective MBR for
+  // compatibility reasons, so it's safe to assume we have one)
+
+  bool GptPartitionMap = false;
+
+  for (auto EntryNum = 0; EntryNum < 4; EntryNum++) {
+
+    if (Mbr->Entry[EntryNum].Type == MbrEntryType_Gpt) {
+
+      GptPartitionMap = true;
+      break;
+
+    }
+
+  }
+
+  // If we *are* dealing with a GPT-formatted disk, then we'll need
+  // to read from more than just the 512-byte bootsector (`Mbr`);
+  // more specifically, we'll need to read LBAs 1 through 33.
+
+  // (If `GptPartitionMap` is true, allocate a buffer wide enough
+  // to store 33 sectors in)
+
+  // TODO - The documentation doesn't actually say that - you
+  // need to read the second LBA (LBA 1), which is the GPT header,
+  // which then has the correct LBA amounts and such
+
+  // TODO TODO TODO TODO (Fix the thing above) TODO TODO TODO TODO
+
+  const uint16 SaveNumVolumes = NumVolumes;
+  const uintptr GptSize = (VolumeList[VolumeNum].BytesPerSector * 33);
+  void* Gpt = NULL;
+
+  if (GptPartitionMap == true) {
+
+    Gpt = Allocate(&GptSize);
+
+    if (Gpt == NULL) {
+      return SaveNumVolumes;
+    }
+
+  }
+
+  // (Read the data into the area we just allocated)
+
+  if (GptPartitionMap == true) {
+
+    auto Offset = VolumeList[VolumeNum].BytesPerSector;
+    auto Size = (Offset * 33);
+
+    if (ReadDisk(Gpt, Offset, Size, VolumeNum) == false) {
+      goto Cleanup;
+    }
+
+  }
+
+  // Finally, now that we have the necessary data, let's obtain each
+  // of the volume's partitions - we'll need to create a separate
+  // volume for each one, like this:
+
+  if (GptPartitionMap == true) {
+
+    // (TODO - Handle GPT partitions; limit is 32)
+
+  } else {
+
+    // (TODO - Handle MBR partitions; limit is 4)
+
+  }
+
+
+  // (If applicable, free what we allocated, and return the value
+  // we saved earlier on)
+
+  Cleanup:
+
+  if (Gpt != NULL) {
+    [[maybe_unused]] bool Result = Free(Gpt, &GptSize);
+  }
+
+  return SaveNumVolumes;
+
+}
+
+
+
 // (TODO - Include a function to read through a volume, and identify +
 // automatically add any relevant partitions.)
 
-[[nodiscard]] bool InitializePartitions(void) {
+[[nodiscard]] bool InitializeFsSubsystem(void) {
 
   // Before we do anything else, we need to check whether the disk
   // subsystem has been initialized, and whether there are any
@@ -52,7 +157,7 @@
     // the beginning, so it should be safe to assume one exists.
 
     bool IsPartitioned = false;
-    mbrStructure* Mbr = (mbrStructure*)Bootsector;
+    mbrHeader* Mbr = (mbrHeader*)((uintptr)Bootsector + 446);
 
     // (Check if the volume is partitioned - we skip any volumes that
     // don't have a valid signature, or that are already indicated
@@ -237,30 +342,16 @@
 
     }
 
+    // Now that we know for sure whether the volume is partitioned
+    // or not, we can move onto processing it.
 
+    // (If the volume is partitioned, add each partition to the
+    // volume list)
+    // TODO - Add a function to do that
 
-
-    // Now that we know whether the volume is partitioned or not, we
-    // we can move onto the next step - processing it.
-
-    // (TODO - Detect MBR and GPT; we already did MBR earlier, but
-    // having something to unify that with MBR *and* return a list
-    // of partitions would be nice)
-
-    // (TODO - For any *partitioned* (MBR/GPT) volumes, fill out
-    // the current volume, and then add its subsequent partitions
-    // to the volume list)
-
-    // -> It would be a good idea to separate that into its own
-    // function.. actually, same goes for the 'detect valid MBR'
-    // thing.
-
-
-    // (TODO - For any *non-partitioned* volumes, try to detect
-    // a filesystem - maybe also keep a list of filesystems, like
-    // I already do with volumes..? idk)
-
-
+    // (If the volume isn't partitioned *or* we just finished
+    // adding each partition, process the partition itself)
+    // TODO - Add a function to do that
 
   }
 

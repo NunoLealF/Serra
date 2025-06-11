@@ -442,7 +442,7 @@ void KernelCore(commonInfoTable* InfoTable) {
 
   // (Test partitions)
 
-  [[maybe_unused]] bool Thing2 = InitializePartitions();
+  [[maybe_unused]] bool Thing2 = InitializeFsSubsystem();
 
   // (Depending on the system type, either wait for a keypress or just
   // stall the system for a while)

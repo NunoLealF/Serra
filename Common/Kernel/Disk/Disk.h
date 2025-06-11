@@ -138,14 +138,9 @@
 
   } __attribute__((packed)) chsAddress;
 
-  static_assert((sizeof(chsAddress) == 3), "`chsAddress` is not packed correctly.");
+  static_assert((sizeof(chsAddress) == 3), "`chsAddress` was not packed correctly by the compiler.");
 
-  typedef struct _mbrStructure {
-
-    // [Reserved or optional data]
-
-    uint8 Reserved[440]; // (Every MBR has 440 bytes of data reserved for bootstrap code)
-    uint8 Optional[6]; // (Some MBRs may also use this space)
+  typedef struct _mbrHeader {
 
     // [Partition entries]
 
@@ -158,7 +153,14 @@
 
         MbrEntryType_None = 0x00, // (Partition doesn't exist)
 
-        // (TODO - Add FAT?)
+        MbrEntryType_Fat12 = 0x01, // (FAT12 partition, small)
+
+        MbrEntryType_Fat16_A = 0x04, // (FAT16 partition, small)
+        MbrEntryType_Fat16_B = 0x06, // (FAT16 partition, large)
+
+        MbrEntryType_Fat32_A = 0x0B, // (FAT32 partition, CHS variant)
+        MbrEntryType_Fat32_B = 0x0C, // (FAT32 partition, LBA variant)
+        MbrEntryType_Fat16_C = 0x0E, // (FAT16 partition, LBA)
 
         MbrEntryType_Gpt = 0xEE, // (Protective MBR partition)
         MbrEntryType_Esp = 0xEF, // (EFI System Partition (FAT))
@@ -176,12 +178,18 @@
 
     uint16 Signature;
 
-  } __attribute__((packed)) mbrStructure;
+  } __attribute__((packed)) mbrHeader;
 
-  static_assert((sizeof(mbrStructure) == 512), "`mbrStructure` is not 512 bytes.");
+  static_assert((sizeof(mbrHeader) == 66), "`mbrHeader` was not packed correctly by the compiler.");
+
+  typedef struct _gptHeader {
+
+
+
+  } __attribute__((packed)) gptHeader;
 
   // Include functions and global variables from Fs.c
 
-  [[nodiscard]] bool InitializePartitions(void);
+  [[nodiscard]] bool InitializeFsSubsystem(void);
 
 #endif
