@@ -173,8 +173,8 @@ LoadPartition:
     ; int 13h disk read function)
 
     pusha
-    mov [DiskAddressPacket.Lba.High], ax
-    mov [DiskAddressPacket.Lba.Low], cx
+    mov [DiskAddressPacket.Lba.Low], ax
+    mov [DiskAddressPacket.Lba.High], cx
 
     mov ah, 42h
     mov si, DiskAddressPacket
@@ -278,12 +278,14 @@ DiskAddressPacket:
 
   .Reserved: db 0 ; This area is reserved.
   .NumSectors: dw 1 ; We only want to load a single sector.
-  .Location: dd 7C00h ; And we want to load it at 7C00h.
 
-  .Lba.High: dw 0 ; The higher 16-bits of the 32-bit LBA.
-  .Lba.Low: dw 0 ; The lower 16-bits of the 32-bit LBA.
+  .Location.Offset: dw 7C00h ; And we want to load it at 0000:[7C00h].
+  .Location.Segment: dw 0h ; And we want to load it at [0000]:7C00h.
 
-  .LbaPadding: dd 0 ; The 32-bits of the LBA we aren't going to use
+  .Lba.Low: dw 0 ; The higher 16-bits of the 32-bit LBA.
+  .Lba.High: dw 0 ; The lower 16-bits of the 32-bit LBA.
+
+  .Lba.Padding: dd 0 ; The 32-bits of the LBA that we aren't going to use.
 
 ; ---------------------------------------------------------------------------
 
@@ -307,12 +309,12 @@ Reserved: dw 0
 FirstPartition:
 
   .Attributes: db 0
-  .ChsStart.High: db 0
   .ChsStart.Low: dw 0
+  .ChsStart.High: db 0
 
   .Type: db 0
-  .ChsEnd.High: db 0
   .ChsEnd.Low: dw 0
+  .ChsEnd.High: db 0
 
   .Lba: dd 0
   .NumSectors: dd 0
@@ -320,12 +322,12 @@ FirstPartition:
 SecondPartition:
 
   .Attributes: db 0
-  .ChsStart.High: db 0
   .ChsStart.Low: dw 0
+  .ChsStart.High: db 0
 
   .Type: db 0
-  .ChsEnd.High: db 0
   .ChsEnd.Low: dw 0
+  .ChsEnd.High: db 0
 
   .Lba: dd 0
   .NumSectors: dd 0
@@ -333,12 +335,12 @@ SecondPartition:
 ThirdPartition:
 
   .Attributes: db 0
-  .ChsStart.High: db 0
   .ChsStart.Low: dw 0
+  .ChsStart.High: db 0
 
   .Type: db 0
-  .ChsEnd.High: db 0
   .ChsEnd.Low: dw 0
+  .ChsEnd.High: db 0
 
   .Lba: dd 0
   .NumSectors: dd 0
@@ -346,12 +348,12 @@ ThirdPartition:
 FourthPartition:
 
   .Attributes: db 0
-  .ChsStart.High: db 0
   .ChsStart.Low: dw 0
+  .ChsStart.High: db 0
 
   .Type: db 0
-  .ChsEnd.High: db 0
   .ChsEnd.Low: dw 0
+  .ChsEnd.High: db 0
 
   .Lba: dd 0
   .NumSectors: dd 0
