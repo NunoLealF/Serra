@@ -6,6 +6,9 @@
 #include "../Memory/Memory.h"
 #include "Disk.h"
 
+// (DEBUG)
+#include "../Libraries/Stdio.h"
+
 // (TODO - Include a function to process an unpartitioned volume / an
 // individual filesystem)
 
@@ -15,7 +18,7 @@
 
 [[nodiscard]] static bool ValidateMbrHeader(mbrHeader* Header, uint16 VolumeNum) {
 
-  // (Check that `Bootsector` is a valid pointer, and that `VolumeNum`
+  // (Check whether `Header` is a valid pointer, and that `VolumeNum`
   // doesn't exceed limits)
 
   if (Header == NULL) {
@@ -157,8 +160,6 @@
 
   // [DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG]
 
-  #include "../Libraries/Stdio.h"
-
   Message(Kernel, "Volume %d is partitioned.", VolumeNum);
 
   for (auto i = 0; i < 4; i++) {
@@ -192,10 +193,109 @@
 
 
 
-// (TODO - Include a function to validate a GPT header)
+// (TODO - Include a function to validate an *individual* GPT header)
 
-[[nodiscard]] static bool ValidateGptHeader(gptHeader* PrimaryHeader, gptHeader* BackupHeader, uint16 VolumeNum) {
+[[nodiscard]] static bool ValidateGptHeader(gptHeader* Header, uint16 VolumeNum) {
+
+  // Before we do anything else, we need to check if the signature
+  // is valid - it should match `gptHeaderSignature`.
+
+  if (Header->Signature != gptHeaderSignature) {
+    return false;
+  }
+
+  // Additionally, we want to check if the revision is valid; in that
+  // case, it should be at least `gptHeaderRevision`.
+
+  if (Header->Revision < gptHeaderRevision) {
+    return false;
+  }
+
+  // (TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO - CRC32)
+  // (TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO - CRC32)
+  // (TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO - CRC32)
+
+  // We also want to check whether the size of the header is valid;
+  // it should be at least `sizeof(gptHeader)`.
+
+  if (Header->Size < sizeof(gptHeader)) {
+    return false;
+  }
+
+  // Next, we want to check whether the primary and backup header LBA
+  // values are accurate - they should match 1 and `BackupLba`
+  // respectively.
+
+  auto BackupLba = (VolumeList[VolumeNum].NumSectors - 1);
+
+  if (Header->HeaderLba != 1) {
+    return false;
+  } else if (Header->BackupLba != BackupLba) {
+    return false;
+  }
+
+  // In theory, that should be everything that's *officially* needed
+  // to verify a GPT header.. but just in case:
+
+  // (1) Check that `PartitionLba` comes after Header->HeaderLba:
+
+  if (Header->PartitionLba <= Header->HeaderLba) {
+    return false;
+  }
+
+  // (2) Check that the number of partition entries isn't zero:
+
+  if (Header->NumPartitions == 0) {
+    return false;
+  }
+
+  // (3) Check that the partition entry size is a multiple of 8:
+
+  if ((Header->PartitionEntrySize % 8) != 0) {
+    return false;
+  }
+
+  // (4) Make sure that everything after the table is zeroed out:
+  // (This only scans within the current block)
+
+  auto SectorSize = VolumeList[VolumeNum].BytesPerSector;
+  uint8* RawHeader = (uint8*)Header;
+
+  for (auto Index = sizeof(gptHeader); Index < SectorSize; Index++) {
+
+    if (RawHeader[Index] != 0) {
+      return false;
+    }
+
+  }
+
+  // DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG
+
+  Message(Kernel, "Volume %d has a valid GPT header.", VolumeNum);
+
+  Message(Ok, "Signature = %xh | Revision = %xh | Size = %xh | Crc32 = %xh",
+    Header->Signature, Header->Revision, Header->Size, Header->Crc32);
+
+  Message(Ok, "[Header,Backup]Lba = [%xh,%xh] | [First,Last]UsableLba = [%xh,%xh]",
+    Header->HeaderLba, Header->BackupLba, Header->FirstUsableLba, Header->LastUsableLba);
+
+  Message(Ok, "DiskUuid = {%x, {%x,%x}, {%x,%x,%x,%x,%x,%x,%x,%x}}",
+    Header->DiskUuid.Uuid_A, Header->DiskUuid.Uuid_B[0], Header->DiskUuid.Uuid_B[1],
+    Header->DiskUuid.Uuid_C[0], Header->DiskUuid.Uuid_C[1], Header->DiskUuid.Uuid_C[2],
+    Header->DiskUuid.Uuid_C[3], Header->DiskUuid.Uuid_C[4], Header->DiskUuid.Uuid_C[5],
+    Header->DiskUuid.Uuid_C[6], Header->DiskUuid.Uuid_C[7]);
+
+  Message(Ok, "PartitionLba = %xh | NumPartitions = %d",
+    Header->PartitionLba, Header->NumPartitions);
+
+  Message(Ok, "PartitionEntrySize = %xh | PartitionCrc32 = %xh",
+    Header->PartitionEntrySize, Header->PartitionCrc32);
+
+  // Now that we've passed all of these checks, we can return `true`
+  // to indicate that the given GPT header is likely valid.
+
   return true;
+
 }
 
 
@@ -229,42 +329,66 @@ static uint16 DetectPartitionMap(mbrHeader* Mbr, uint16 VolumeNum) {
 
   }
 
-  // If we *are* dealing with a GPT-formatted disk, then we'll need
-  // to read from more than just the 512-byte bootsector (`Mbr`);
-  // more specifically, we'll need to read LBAs 1 through 33.
-
-  // (If `GptPartitionMap` is true, allocate a buffer wide enough
-  // to store 33 sectors in)
-
-  // TODO - The documentation doesn't actually say that - you
-  // need to read the second LBA (LBA 1), which is the GPT header,
-  // which then has the correct LBA amounts and such
-
-  // TODO TODO TODO TODO (Fix the thing above) TODO TODO TODO TODO
+  // (Save the current number of volumes on the disk)
 
   const uint16 SaveNumVolumes = NumVolumes;
-  const uintptr GptSize = (VolumeList[VolumeNum].BytesPerSector * 33);
-  void* Gpt = NULL;
+
+  // If we *are* dealing with a GPT-formatted disk, then we'll need to
+  // read from more than just the bootsector; more specifically, we'll
+  // need to read the GPT headers from the second and last LBAs.
+
+  // (Unlike MBR, GPT requires a backup of the header and partition
+  // tables, which is always located at the end of the disk)
+
+  bool UseBackupGptHeader = false;
+  volumeInfo* Volume = &VolumeList[VolumeNum];
+  const uintptr SectorSize = Volume->BytesPerSector;
+
+  [[maybe_unused]] gptHeader* PrimaryGptHeader = NULL;
+  [[maybe_unused]] gptHeader* BackupGptHeader = NULL;
 
   if (GptPartitionMap == true) {
 
-    Gpt = Allocate(&GptSize);
+    // (Allocate space for `PrimaryGptHeader` and `BackupGptHeader`)
 
-    if (Gpt == NULL) {
-      return SaveNumVolumes;
+    PrimaryGptHeader = (gptHeader*)(Allocate(&SectorSize));
+    BackupGptHeader = (gptHeader*)(Allocate(&SectorSize));
+
+    if ((PrimaryGptHeader == NULL) || (BackupGptHeader == NULL)) {
+      goto Cleanup;
     }
 
-  }
+    // (Read the second (LBA 1) and last (LBA -1) sectors from the disk
+    // into their respective headers)
 
-  // (Read the data into the area we just allocated)
+    bool ReadPrimaryGptHeader = ReadDisk((void*)PrimaryGptHeader,
+                                         (1 * SectorSize),
+                                         SectorSize, VolumeNum);
 
-  if (GptPartitionMap == true) {
+    bool ReadBackupGptHeader = ReadDisk((void*)BackupGptHeader,
+                                        ((Volume->NumSectors - 1) * SectorSize),
+                                        SectorSize, VolumeNum);
 
-    auto Offset = VolumeList[VolumeNum].BytesPerSector;
-    auto Size = (Offset * 33);
-
-    if (ReadDisk(Gpt, Offset, Size, VolumeNum) == false) {
+    if ((ReadPrimaryGptHeader == false) || (ReadBackupGptHeader == false)) {
       goto Cleanup;
+    }
+
+    // Finally, now that we've successfully read those headers, we can
+    // pass them onto ValidateGptHeader() to make sure they're valid.
+
+    // (We first check the primary GPT header, and if that's corrupt,
+    // we *then* check the backup GPT header as well)
+
+    Message(Info, "&VolumeList[VolumeNum], or *Volume, is %xh and %xh.", (uintptr)&VolumeList[VolumeNum], (uintptr)Volume);
+
+    if (ValidateGptHeader(PrimaryGptHeader, VolumeNum) == false) {
+
+      if (ValidateGptHeader(BackupGptHeader, VolumeNum) == false) {
+        goto Cleanup;
+      } else {
+        UseBackupGptHeader = true;
+      }
+
     }
 
   }
@@ -277,6 +401,10 @@ static uint16 DetectPartitionMap(mbrHeader* Mbr, uint16 VolumeNum) {
 
     // (TODO - Handle GPT partitions; limit is 32)
 
+    // I might need something to actually check if the partition tables
+    // are valid or corrupt - the headers aren't, but I can't say
+    // the same about the actual partition tables :(
+
   } else {
 
     // (TODO - Handle MBR partitions; limit is 4)
@@ -284,13 +412,17 @@ static uint16 DetectPartitionMap(mbrHeader* Mbr, uint16 VolumeNum) {
   }
 
 
-  // (If applicable, free what we allocated, and return the value
-  // we saved earlier on)
+
+  // (No matter what, we *have* to free what we allocated)
 
   Cleanup:
 
-  if (Gpt != NULL) {
-    [[maybe_unused]] bool Result = Free(Gpt, &GptSize);
+  if (PrimaryGptHeader != NULL) {
+    [[maybe_unused]] bool Result = Free((void*)PrimaryGptHeader, &SectorSize);
+  }
+
+  if (BackupGptHeader != NULL) {
+    [[maybe_unused]] bool Result = Free((void*)BackupGptHeader, &SectorSize);
   }
 
   return SaveNumVolumes;
@@ -341,7 +473,7 @@ static uint16 DetectPartitionMap(mbrHeader* Mbr, uint16 VolumeNum) {
     // Even a GPT-partitioned disk must still have a protective MBR at
     // the beginning, so it should be safe to assume one exists.
 
-    mbrHeader* Mbr = (mbrHeader*)((uintptr)Bootsector + 446);
+    mbrHeader* Mbr = (mbrHeader*)Bootsector;
     bool IsPartitioned = ValidateMbrHeader(Mbr, Index);
 
     // Now that we know for sure whether the volume is partitioned
@@ -349,6 +481,11 @@ static uint16 DetectPartitionMap(mbrHeader* Mbr, uint16 VolumeNum) {
 
     // (If the volume is partitioned, add each partition to the
     // volume list)
+
+    if (IsPartitioned == true) {
+      DetectPartitionMap(Mbr, Index);
+    }
+
     // TODO - Add a function to do that
 
     // (If the volume isn't partitioned *or* we just finished

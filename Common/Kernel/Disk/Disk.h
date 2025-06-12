@@ -145,6 +145,11 @@
 
   typedef struct _mbrHeader {
 
+    // [Bootstrap code, and optional attributes that we don't use]
+
+    uint8 Bootstrap[440]; // (Bootstrap code - we don't use this at all)
+    uint8 Optional[6]; // (Optional attributs - we don't use these either)
+
     // [Partition entries]
 
     struct {
@@ -184,6 +189,7 @@
   } __attribute__((packed)) mbrHeader;
 
   #define gptHeaderSignature 0x5452415020494645
+  #define gptHeaderRevision 0x10000
 
   typedef struct _gptHeader {
 
@@ -193,7 +199,8 @@
     uint32 Revision; // (Should be at least 10000h (EFI 1.1))
     uint32 Size; // (Should be at least sizeof(gptHeader))
 
-    uint32 Unused[2]; // (We don't use the data here; contains CRC32 and reserved byte)
+    uint32 Crc32; // (The CRC-32 hash of the table, with this field zeroed out)
+    uint32 Reserved; // (Reserved for firmware use, apparently?)
 
     // [Partition-related information]
 
@@ -210,12 +217,12 @@
     uint64 PartitionLba; // (The first sector that holds partition entries)
     uint32 NumPartitions; // (The number of partition entries)
     uint32 PartitionEntrySize; // (The size of a partition entry)
-    uint32 PartitionUnused; // (We don't use the data here - contains CRC32)
+    uint32 PartitionCrc32; // (The CRC-32 hash of every partition entry)
 
   } __attribute__((packed)) gptHeader;
 
   static_assert((sizeof(chsAddress) == 3), "chsAddress{} was not packed correctly by the compiler.");
-  static_assert((sizeof(mbrHeader) == 66), "mbrHeader{} was not packed correctly by the compiler.");
+  static_assert((sizeof(mbrHeader) == 512), "mbrHeader{} was not packed correctly by the compiler.");
   static_assert((sizeof(gptHeader) == 92), "gptHeader{} was not packed correctly by the compiler.");
 
 
