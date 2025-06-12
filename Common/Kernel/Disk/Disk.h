@@ -114,7 +114,7 @@
     uint32 MediaId; // (The media ID of the device (*EFI Block IO only*))
     uint64 NumSectors; // (The total number of sectors/blocks in the volume)
 
-  } __attribute__((packed)) volumeInfo;
+  } volumeInfo;
 
 
   // Include functions and global variables from Disk.c
