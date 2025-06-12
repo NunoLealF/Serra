@@ -33,7 +33,7 @@ OBJD = x86_64-elf-objdump
 # -Wpedantic: Be pedantic about the C standard / any possible mistakes
 
 LDFLAGS = -nostdlib -mno-red-zone -pie -Wl,--no-dynamic-linker
-CFLAGS = -std=c23 -funsigned-char -ffreestanding -fpie -maccumulate-outgoing-args -march=x86-64 -mmmx -msse -msse2 -mno-red-zone -O3 -Wall -Wextra -Wpedantic
+CFLAGS = -std=c23 -funsigned-char -ffreestanding -fpie -maccumulate-outgoing-args -march=x86-64 -mmmx -msse -msse2 -mno-red-zone -O3 -Wall -Wextra -Wshadow -Wpedantic
 
 # (Include the build configuration file, from the root directory)
 

@@ -460,13 +460,13 @@ static inline allocationNode* FreeBlock(void* Pointer, uintptr Size) {
 
     // (Declare a node, and push it with `PushBlock()`
 
-    allocationNode* Node = (allocationNode*)Address;
-    PushBlock(Node, (void*)Location, PreviousNode, NextNode, Buffer[Index]);
+    allocationNode* ThisNode = (allocationNode*)Address;
+    PushBlock(ThisNode, (void*)Location, PreviousNode, NextNode, Buffer[Index]);
 
     // (Update `PreviousNode` to point to this node - `NextNode`
     // shouldn't need to be updated, however)
 
-    PreviousNode = Node;
+    PreviousNode = ThisNode;
 
     // (Update `Address` and `Location` to point to the next block)
 
