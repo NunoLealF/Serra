@@ -216,7 +216,7 @@ static efiBlockIoProtocol** EfiBlockIoProtocols = NULL;
     Volume->Alignment = 0;
     Volume->BytesPerSector = Protocol->Media->BlockSize;
     Volume->MediaId = Protocol->Media->MediaId;
-    Volume->NumSectors = Protocol->Media->LastBlock;
+    Volume->NumSectors = Protocol->Media->LastBlock + 1;
 
     // (Calculate the alignment as a power of two - any transfer buffer
     // must be aligned to (1 << Volume->Alignment) == (Media->IoAlign))
