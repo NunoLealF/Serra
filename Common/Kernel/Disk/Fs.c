@@ -379,8 +379,6 @@ static uint16 DetectPartitionMap(mbrHeader* Mbr, uint16 VolumeNum) {
     // (We first check the primary GPT header, and if that's corrupt,
     // we *then* check the backup GPT header as well)
 
-    Message(Info, "&VolumeList[VolumeNum], or *Volume, is %xh and %xh.", (uintptr)&VolumeList[VolumeNum], (uintptr)Volume);
-
     if (ValidateGptHeader(PrimaryGptHeader, VolumeNum) == false) {
 
       if (ValidateGptHeader(BackupGptHeader, VolumeNum) == false) {

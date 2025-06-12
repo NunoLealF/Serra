@@ -1531,6 +1531,7 @@ void S3Bootloader(void) {
 
       // (Manually handle each relocation type)
 
+      uint64* Base = (uint64*)((uintptr)KernelArea + (uintptr)RelocationList[Index].Offset);
       bool RelocationCanBeHandled = true;
       elfRelocationType Type = RelocationList[Index].Type;
 
@@ -1540,8 +1541,7 @@ void S3Bootloader(void) {
           break;
 
         case elfRelocationType_Relative:
-          // (TODO - Cast to pointer from int of different size)
-          *(uint64*)((uintptr)KernelArea + RelocationList[Index].Offset) = (uint64)((uintptr)KernelArea + RelocationList[Index].Addend);
+          *Base = ((uintptr)KernelArea + RelocationList[Index].Addend);
           break;
 
         default:

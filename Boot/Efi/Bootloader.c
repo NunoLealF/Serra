@@ -1284,6 +1284,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
       // (Manually handle each relocation type)
 
+      uint64* Base = (uint64*)((uintptr)KernelArea + (uintptr)RelocationList[Index].Offset);
       bool RelocationCanBeHandled = true;
       elfRelocationType Type = RelocationList[Index].Type;
 
@@ -1293,7 +1294,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
           break;
 
         case elfRelocationType_Relative:
-          *(uint64*)((uintptr)KernelArea + RelocationList[Index].Offset) = (uint64)((uintptr)KernelArea + RelocationList[Index].Addend);
+          *Base = ((uintptr)KernelArea + RelocationList[Index].Addend);
           break;
 
         default:

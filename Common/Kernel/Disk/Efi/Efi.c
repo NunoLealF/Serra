@@ -112,31 +112,6 @@ static efiBlockIoProtocol** EfiBlockIoProtocols = NULL;
     return false;
   }
 
-  // Additionally, if the first handle doesn't match DiskInfo.Efi.Handle,
-  // then let's iterate through each handle, and swap in the first one
-  // that does - this should make the first handle the boot drive.
-
-  if (EfiBlockIoHandles[0] != DiskInfo.Efi.Handle) {
-
-    for (uint64 Index = 1; Index < NumEfiBlockIoHandles; Index++) {
-
-      // (If we find a handle that matches `DiskInfo.Efi.Handle`, then
-      // swap it with the first handle, and break)
-
-      if (EfiBlockIoHandles[Index] == DiskInfo.Efi.Handle) {
-
-        efiHandle SwapHandle = EfiBlockIoHandles[0];
-        EfiBlockIoHandles[0] = EfiBlockIoHandles[Index];
-        EfiBlockIoHandles[Index] = SwapHandle;
-
-        break;
-
-      }
-
-    }
-
-  }
-
   // Finally, now that we have a list of usable handles, let's fill out
   // `EfiBlockIoProtocols` by opening each corresponding protocol.
 
