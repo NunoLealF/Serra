@@ -1225,6 +1225,100 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
 
 
+  // [Process ELF relocations]
+
+  // Even though our kernel is position-independent - and doesn't require
+  // a dynamic linker - it can still sometimes rely on relocation
+  // tables that need to be processed.
+
+  // More specifically, even though we likely won't need to process any
+  // GOT or PLT relocations, we may still need to handle a few other
+  // relocations - see elfRelocationType{} for more details.
+
+  Print(u"\n\r", 0);
+  Message(Boot, u"Preparing to process ELF relocations.");
+
+  // (Define a few important macros)
+
+  #define SectionHdrSize KernelHeader->SectionHeaderSize
+  #define GetSectionHeader(Start, Index) (elfSectionHeader*)(Start + SectionHdrOffset + (Index * SectionHdrSize))
+
+  // (Iterate through each section within the executable to try to find
+  // the dynamic relocation (`.rela.dyn`) section)
+
+  elfSectionHeader* DynamicRelocationSection = NULL;
+
+  for (uint64 Index = 0; Index < NumSectionHdrs; Index++) {
+
+    elfSectionHeader* Section = GetSectionHeader((uint64)KernelHeader, Index);
+
+    if (Section->Type == 4) {
+
+      DynamicRelocationSection = Section;
+      break;
+
+    }
+
+  }
+
+  // If we found it, try to manually handle each relocation - the section
+  // data is just an array of elfRelocationWithAddend{} structures that
+  // we need to process.
+
+  // (We can't handle *all* types of relocations, but `--no-dynamic-linker`
+  // should limit how many we need, hopefully)
+
+  if (DynamicRelocationSection != NULL) {
+
+    // (Calculate the number of relocations in the section)
+
+    auto NumRelocations = (DynamicRelocationSection->Size / sizeof(elfRelocationWithAddend));
+    elfRelocationWithAddend* RelocationList = (elfRelocationWithAddend*)((uintptr)Kernel + DynamicRelocationSection->Offset);
+
+    Message(Ok, u"Found `.rela.dyn` section at %xh.", (uintptr)DynamicRelocationSection);
+    Message(Info, u"Section appears to contain %d relocation(s).", (uint64)NumRelocations);
+
+    // (Handle each relocation)
+
+    for (uint64 Index = 0; Index < NumRelocations; Index++) {
+
+      // (Manually handle each relocation type)
+
+      bool RelocationCanBeHandled = true;
+      elfRelocationType Type = RelocationList[Index].Type;
+
+      switch (Type) {
+
+        case elfRelocationType_None:
+          break;
+
+        case elfRelocationType_Relative:
+          *(uint64*)((uintptr)KernelArea + RelocationList[Index].Offset) = (uint64)((uintptr)KernelArea + RelocationList[Index].Addend);
+          break;
+
+        default:
+          RelocationCanBeHandled = false;
+          break;
+
+      }
+
+      // (If the relocation type couldn't be handled, show a warning)
+
+      if (RelocationCanBeHandled == true) {
+        Message(Ok, u"Successfully processed (type %d) relocation.", (uint64)Type);
+      } else {
+        Message(Warning, u"Can't handle type %d relocation - are you linking with `--no-dynamic-linker`?", (uint64)Type);
+      }
+
+    }
+
+  } else {
+
+    Message(Ok, u"The kernel executable doesn't appear to have a `.rela.dyn` section.");
+
+  }
+
+
 
   // [Obtain the system memory map]
 

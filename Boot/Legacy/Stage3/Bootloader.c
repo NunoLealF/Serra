@@ -1477,6 +1477,97 @@ void S3Bootloader(void) {
 
 
 
+  // [Process ELF relocations]
+
+  // Even though our kernel is position-independent - and doesn't require
+  // a dynamic linker - it can still sometimes rely on relocation
+  // tables that need to be processed.
+
+  // More specifically, even though we likely won't need to process any
+  // GOT or PLT relocations, we may still need to handle a few other
+  // relocations - see elfRelocationType{} for more details.
+
+  Putchar('\n', 0);
+  Message(Boot, "Preparing to process ELF relocations.");
+
+  // (Iterate through each section within the executable to try to find
+  // the dynamic relocation (`.rela.dyn`) section)
+
+  elfSectionHeader* DynamicRelocationSection = NULL;
+
+  for (auto Index = 0; Index < KernelHeader->NumSectionHeaders; Index++) {
+
+    elfSectionHeader* Section = GetSectionHeader(KernelImage, KernelHeader, Index);
+
+    if (Section->Type == 4) {
+
+      DynamicRelocationSection = Section;
+      break;
+
+    }
+
+  }
+
+  // If we found it, try to manually handle each relocation - the section
+  // data is just an array of elfRelocationWithAddend{} structures that
+  // we need to process.
+
+  // (We can't handle *all* types of relocations, but `--no-dynamic-linker`
+  // should limit how many we need, hopefully)
+
+  if (DynamicRelocationSection != NULL) {
+
+    // (Calculate the number of relocations in the section)
+
+    auto NumRelocations = ((uint32)DynamicRelocationSection->Size / sizeof(elfRelocationWithAddend));
+    elfRelocationWithAddend* RelocationList = (elfRelocationWithAddend*)(KernelImage + (uintptr)DynamicRelocationSection->Offset);
+
+    Message(Ok, "Found `.rela.dyn` section at %xh.", (uintptr)DynamicRelocationSection);
+    Message(Info, "Section appears to contain %d relocation(s).", (uint32)NumRelocations);
+
+    // (Handle each relocation)
+
+    for (uint64 Index = 0; Index < NumRelocations; Index++) {
+
+      // (Manually handle each relocation type)
+
+      bool RelocationCanBeHandled = true;
+      elfRelocationType Type = RelocationList[Index].Type;
+
+      switch (Type) {
+
+        case elfRelocationType_None:
+          break;
+
+        case elfRelocationType_Relative:
+          // (TODO - Cast to pointer from int of different size)
+          *(uint64*)((uintptr)KernelArea + RelocationList[Index].Offset) = (uint64)((uintptr)KernelArea + RelocationList[Index].Addend);
+          break;
+
+        default:
+          RelocationCanBeHandled = false;
+          break;
+
+      }
+
+      // (If the relocation type couldn't be handled, show a warning)
+
+      if (RelocationCanBeHandled == true) {
+        Message(Ok, "Successfully processed (type %d) relocation.", (uint32)Type);
+      } else {
+        Message(Warning, "Can't handle type %d relocation - are you linking with `--no-dynamic-linker`?", (uint32)Type);
+      }
+
+    }
+
+  } else {
+
+    Message(Ok, "The kernel executable doesn't appear to have a `.rela.dyn` section.");
+
+  }
+
+
+
 
   // [Inform the BIOS about our intended execution mode]
 

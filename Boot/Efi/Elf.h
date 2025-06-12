@@ -75,7 +75,7 @@
   typedef struct _elfSectionHeader {
 
     uint32 NameOffset; // (The offset for the name string, in .shstrtab (StringSectionIndex))
-    uint32 Type; // (1 = load, 3 = string, otherwise ignore)
+    uint32 Type; // (1 = load, 3 = string, 4 = relocations, otherwise ignore)
     uint64 Flags; // (Can be ignored)
 
     uint64 Address; // (Same as elfProgramHeader->VirtAddress)
@@ -89,5 +89,28 @@
     uint64 EntrySize; // (If this section is for a table, the size of each entry)
 
   } __attribute__((packed)) elfSectionHeader;
+
+  typedef enum : uint32 {
+
+    elfRelocationType_None = 0, // (Can be ignored)
+    elfRelocationType_Relative = 8, // (Set (base+offset) to (base+addend))
+
+  } elfRelocationType;
+
+  typedef struct {
+
+    uint64 Offset; // (The offset, at which to add it)
+    elfRelocationType Type; // (The specific relocation type)
+    uint32 Symbol; // (The index within the symbol table)
+
+    int64 Addend; // (The addend used to calculate the final value)
+
+  } __attribute__((packed)) elfRelocationWithAddend;
+
+  static_assert((sizeof(elfHeader) == 64), "elfHeader{} was not packed correctly by the compiler.");
+  static_assert((sizeof(elfProgramHeader) == 56), "elfProgramHeader{} was not packed correctly by the compiler.");
+  static_assert((sizeof(elfSectionHeader) == 64), "elfSectionHeader{} was not packed correctly by the compiler.");
+  static_assert((sizeof(elfRelocationWithAddend) == 24), "elfRelocationWithAddend{} was not packed correctly by the compiler.");
+
 
 #endif
