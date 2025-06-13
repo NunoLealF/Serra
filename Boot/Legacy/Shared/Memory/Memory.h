@@ -7,7 +7,7 @@
 
   // Standard memory functions (Memcpy, Memmove, etc.), from Memory.c.
 
-  bool Memcmp(const void* BufferA, const void* BufferB, uint32 Size);
+  int Memcmp(const void* BufferA, const void* BufferB, uint32 Size);
   void Memcpy(void* Destination, const void* Source, uint32 Size);
   void Memmove(void* Destination, const void* Source, uint32 Size);
   void Memset(void* Buffer, uint8 Character, uint32 Size);
@@ -26,7 +26,7 @@
 
   // (It's true they already exist, but they aren't named identically)
 
-  bool memcmp(const void*, const void*, uint32);
+  int memcmp(const void*, const void*, uint32);
   void* memcpy(void*, const void*, uint32);
   void* memmove(void*, const void*, uint32);
   void* memset(void*, int, uint32);

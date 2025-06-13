@@ -11,6 +11,7 @@
 
   // Include standard library functions from Memory.c
 
+  int Memcmp(const void* BufferA, const void* BufferB, uintptr Size);
   void Memcpy(void* Destination, const void* Source, uintptr Size);
   void Memmove(void* Destination, const void* Source, uintptr Size);
   void Memset(void* Buffer, uint8 Character, uintptr Size);
@@ -21,6 +22,7 @@
 
   // Include compiler-required wrappers from Memory.c
 
+  int memcmp(const void*, const void*, uintptr);
   void* memcpy(void*, const void*, uintptr);
   void* memset(void*, int, uintptr);
   void* memmove(void*, const void*, uintptr);

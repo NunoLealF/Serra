@@ -6,6 +6,64 @@
 #include "../System/System.h"
 #include "Memory.h"
 
+/* int Memcmp(), memcmp()
+
+   Inputs: const void* BufferA - The first buffer you want to compare.
+           const void* BufferB - The second buffer you want to compare.
+           uintptr Size - The size of the buffers you want to compare.
+
+   Outputs: int - Whether the two buffers are equal (0) or not (-1, +1).
+
+   This function compares the contents of two buffers / memory areas of a
+   given size, and returns 0 if their contents are equal (and otherwise,
+   -1 or +1, depending on the first differing byte).
+
+   The main use of this function is to compare variables and memory areas
+   that can't be directly compared with the == operator, like UUIDs;
+   for example:
+
+   -> bool UuidIsEqual = Memcmp(&Uuid1, &Uuid2, sizeof(genericUuid));
+
+   Please keep in mind that this function is quite slow, since it only
+   compares one byte at a time - unlike Memcpy() and Memset(), it
+   doesn't use hardware-optimized implementations.
+
+*/
+
+int Memcmp(const void* BufferA, const void* BufferB, uintptr Size) {
+
+  // Translate each const void* pointer into a const uint8* pointer.
+
+  const uint8* ArrayA = (const uint8*)BufferA;
+  const uint8* ArrayB = (const uint8*)BufferB;
+
+  // Compare each individual byte across both memory areas, returning
+  // -1 or +1 if we find a mismatch.
+
+  for (uintptr Index = 0; Index < Size; Index++) {
+
+    // (-1 means (A[i] < B[i]), whereas 1 means (A[i] > B[i]))
+
+    if (ArrayA[Index] < ArrayB[Index]) {
+      return -1;
+    } else if (ArrayA[Index] > ArrayB[Index]) {
+      return 1;
+    }
+
+  }
+
+  // Finally, if we didn't find any mismatch, we can return 0.
+
+  return 0;
+
+}
+
+int memcmp(const void* BufferA, const void* BufferB, uintptr Size) {
+  return Memcmp(BufferA, BufferB, Size);
+}
+
+
+
 // (TODO - Write documentation)
 // [Platform-specific Memcpy - for x64 (AMD64 / Intel 64)]
 

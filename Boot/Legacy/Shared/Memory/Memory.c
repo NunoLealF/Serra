@@ -5,55 +5,59 @@
 #include "../Stdint.h"
 #include "Memory.h"
 
-/* bool Memcmp(), memcmp()
+/* int Memcmp(), memcmp()
 
    Inputs: const void* BufferA - The first buffer you want to compare.
            const void* BufferB - The second buffer you want to compare.
            uint32 Size - The size of the buffers you want to compare.
 
-   Outputs: bool - Whether the two buffers are equal or not.
+   Outputs: int - Whether the two buffers are equal (0) or not (-1, +1).
 
    This function compares the contents of two buffers / memory areas of a
-   given size, and returns `true` if their contents are equal (otherwise,
-   `false`).
+   given size, and returns 0 if their contents are equal (and otherwise,
+   -1 or +1, depending on the first differing byte).
 
-   The main use of this function within the EFI bootloader is just to
-   compare UUIDs; for example:
+   The main use of this function is to compare variables and memory areas
+   that can't be directly compared with the == operator, like UUIDs;
+   for example:
 
-   -> // (sizeof(EfiUuid) == 16)
-   -> bool IsGenericTable = Memcmp(&TableUuid, &SelectedUuid, 16);
+   -> bool UuidIsEqual = Memcmp(&Uuid1, &Uuid2, sizeof(genericUuid));
 
    Please keep in mind that this function is quite slow, since it only
-   compares one byte at a time - use SSE instructions for more complicated
-   instructions.
+   compares one byte at a time - unlike Memcpy() and Memset(), it
+   doesn't use hardware-optimized implementations.
 
 */
 
-bool Memcmp(const void* BufferA, const void* BufferB, uint32 Size) {
+int Memcmp(const void* BufferA, const void* BufferB, uint32 Size) {
 
-  // Translate each (const) void* pointer into a (const) uint8* pointer.
+  // Translate each const void* pointer into a const uint8* pointer.
 
-  const uint8* ByteA = (const uint8*)BufferA;
-  const uint8* ByteB = (const uint8*)BufferB;
+  const uint8* ArrayA = (const uint8*)BufferA;
+  const uint8* ArrayB = (const uint8*)BufferB;
 
-  // Compare every individual byte in both memory areas, returning false
-  // if we find a mismatch.
+  // Compare each individual byte across both memory areas, returning
+  // -1 or +1 if we find a mismatch.
 
-  for (uint32 i = 0; i < Size; i++) {
+  for (uintptr Index = 0; Index < Size; Index++) {
 
-    if (ByteA[i] != ByteB[i]) {
-      return false;
+    // (-1 means (A[i] < B[i]), whereas 1 means (A[i] > B[i]))
+
+    if (ArrayA[Index] < ArrayB[Index]) {
+      return -1;
+    } else if (ArrayA[Index] > ArrayB[Index]) {
+      return 1;
     }
 
   }
 
-  // Finally, if we didn't find a single mismatch, return true.
+  // Finally, if we didn't find any mismatch, we can return 0.
 
-  return true;
+  return 0;
 
 }
 
-bool memcmp(const void* BufferA, const void* BufferB, uint32 Size) {
+int memcmp(const void* BufferA, const void* BufferB, uint32 Size) {
   return Memcmp(BufferA, BufferB, Size);
 }
 

@@ -608,7 +608,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
     // (Scan for ACPI 1 tables, making sure to not overwrite any existing
     // ACPI 2+ tables if they exist.)
 
-    if (Memcmp(&Table->VendorGuid, &efiAcpiTable_Uuid, sizeof(efiUuid))) {
+    if (Memcmp(&Table->VendorGuid, &efiAcpiTable_Uuid, sizeof(efiUuid)) == 0) {
 
       if (SupportsNewAcpi == false) {
         AcpiTable = Table->VendorTable;
@@ -623,7 +623,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
     // (Scan for ACPI 2+ tables.)
 
-    if (Memcmp(&Table->VendorGuid, &efiAcpi2Table_Uuid, sizeof(efiUuid))) {
+    if (Memcmp(&Table->VendorGuid, &efiAcpi2Table_Uuid, sizeof(efiUuid)) == 0) {
 
       SupportsNewAcpi = true;
       AcpiTable = Table->VendorTable;
@@ -636,7 +636,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
     // (Scan for SMBIOS 1/2 tables, making sure not to overwrite any existing
     // SMBIOS 3+ tables if they exist.)
 
-    if (Memcmp(&Table->VendorGuid, &efiSmbiosTable_Uuid, sizeof(efiUuid))) {
+    if (Memcmp(&Table->VendorGuid, &efiSmbiosTable_Uuid, sizeof(efiUuid)) == 0) {
 
       if (SupportsNewSmbios == false) {
         SmbiosTable = Table->VendorTable;
@@ -651,7 +651,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
     // (Scan for SMBIOS 3+ tables.)
 
-    if (Memcmp(&Table->VendorGuid, &efiAcpi2Table_Uuid, sizeof(efiUuid))) {
+    if (Memcmp(&Table->VendorGuid, &efiAcpi2Table_Uuid, sizeof(efiUuid)) == 0) {
 
       SupportsNewSmbios = true;
       SmbiosTable = Table->VendorTable;
