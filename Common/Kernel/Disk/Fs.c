@@ -267,30 +267,6 @@
 
   }
 
-  // DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG
-
-  Message(Kernel, "Volume %d has a valid GPT header.", VolumeNum);
-
-  Message(Ok, "Signature = %xh | Revision = %xh | Size = %xh | Crc32 = %xh",
-    Header->Signature, Header->Revision, Header->Size, Header->Crc32);
-
-  Message(Ok, "[Header,Backup]Lba = [%xh,%xh] | [First,Last]UsableLba = [%xh,%xh]",
-    Header->HeaderLba, Header->BackupLba, Header->FirstUsableLba, Header->LastUsableLba);
-
-  Message(Ok, "DiskUuid = {%x, {%x,%x}, {%x,%x,%x,%x,%x,%x,%x,%x}}",
-    Header->DiskUuid.Uuid_A, Header->DiskUuid.Uuid_B[0], Header->DiskUuid.Uuid_B[1],
-    Header->DiskUuid.Uuid_C[0], Header->DiskUuid.Uuid_C[1], Header->DiskUuid.Uuid_C[2],
-    Header->DiskUuid.Uuid_C[3], Header->DiskUuid.Uuid_C[4], Header->DiskUuid.Uuid_C[5],
-    Header->DiskUuid.Uuid_C[6], Header->DiskUuid.Uuid_C[7]);
-
-  Message(Ok, "PartitionLba = %xh | NumPartitions = %d",
-    Header->PartitionLba, Header->NumPartitions);
-
-  Message(Ok, "PartitionEntrySize = %xh | PartitionCrc32 = %xh",
-    Header->PartitionEntrySize, Header->PartitionCrc32);
-
-  Printf("\n\r", false, 0x0F);
-
   // Now that we've passed all of these checks, we can return `true`
   // to indicate that the given GPT header is likely valid.
 
@@ -449,6 +425,11 @@ static uint16 DetectPartitionMap(mbrHeader* Mbr, uint16 VolumeNum) {
 
     for (uint32 Index = 0; Index < Header->NumPartitions; Index++) {
 
+      Message(Kernel, "Volume %d has a GPT partition (%d)", VolumeNum, Index);
+      Message(-1, "TODO: Add it to the volume list. \n\r");
+
+      /*
+
       // [DEBUG] [DEBUG] [DEBUG] [DEBUG] [DEBUG] [DEBUG] [DEBUG] [DEBUG] [DEBUG]
 
       // (Skip null partitions)
@@ -493,6 +474,8 @@ static uint16 DetectPartitionMap(mbrHeader* Mbr, uint16 VolumeNum) {
       Message(Ok, "Attributes = 0b%b", Partition->Attributes);
       Printf("\n\r", false, 0x0F);
 
+      */
+
     }
 
     // (Free the buffer we allocated for the partition array, if applicable)
@@ -508,6 +491,11 @@ static uint16 DetectPartitionMap(mbrHeader* Mbr, uint16 VolumeNum) {
     // (TODO - Handle MBR partitions; limit is 4)
 
     for (auto Index = 0; Index < 4; Index++) {
+
+      Message(Kernel, "Volume %d has an MBR partition (%d)", VolumeNum, Index);
+      Message(-1, "TODO: Add it to the volume list. \n\r");
+
+      /*
 
       // [DEBUG] [DEBUG] [DEBUG] [DEBUG] [DEBUG] [DEBUG] [DEBUG] [DEBUG] [DEBUG]
 
@@ -532,6 +520,8 @@ static uint16 DetectPartitionMap(mbrHeader* Mbr, uint16 VolumeNum) {
                   Mbr->Entry[Index].Lba, Index, Mbr->Entry[Index].NumSectors);
 
       Printf("\n\r", false, 0x0F);
+
+      */
 
     }
 
