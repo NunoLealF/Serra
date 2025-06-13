@@ -58,7 +58,7 @@
 
     // (If this entry doesn't represent any partition type, skip it)
 
-    if (Header->Entry[Index].Type == MbrEntryType_None) {
+    if (Header->Entry[Index].Type == MbrPartitionType_None) {
       continue;
     }
 
@@ -118,7 +118,7 @@
     // (If this partition entry's type is none (or 00h), increment
     // `NumEmptyEntries` and move onto the next entry)
 
-    if (Header->Entry[Index].Type == MbrEntryType_None) {
+    if (Header->Entry[Index].Type == MbrPartitionType_None) {
 
       NumEmptyEntries++;
       continue;
@@ -137,7 +137,7 @@
 
     if (PartitionEnd[Index] > SectorLimit) {
 
-      if (Header->Entry[Index].Type != MbrEntryType_Gpt) {
+      if (Header->Entry[Index].Type != MbrPartitionType_Gpt) {
         return false;
       }
 
@@ -160,32 +160,6 @@
     return false;
   }
 
-  // [DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG]
-
-  Message(Kernel, "Volume %d is partitioned.", VolumeNum);
-
-  for (auto i = 0; i < 4; i++) {
-
-    if (Header->Entry[i].Type == 0) continue;
-
-    Message(Ok, "[%d].Attributes = %xh; [%d].Type = %xh", i,
-                Header->Entry[i].Attributes, i, Header->Entry[i].Type);
-
-    Message(Ok, "[%d].ChsStart @ (Cylinders = %xh, Heads = %xh, Sectors = %xh)", i,
-                (uint64)Header->Entry[i].ChsStart.Cylinders,
-                (uint64)Header->Entry[i].ChsStart.Heads,
-                (uint64)Header->Entry[i].ChsStart.Sectors);
-
-    Message(Ok, "[%d].ChsEnd @ (Cylinders = %xh, Heads = %xh, Sectors = %xh)", i,
-                (uint64)Header->Entry[i].ChsEnd.Cylinders,
-                (uint64)Header->Entry[i].ChsEnd.Heads,
-                (uint64)Header->Entry[i].ChsEnd.Sectors);
-
-    Message(Ok, "[%d].Lba = %xh, [%d].NumSectors = %xh", i,
-                Header->Entry[i].Lba, i, Header->Entry[i].NumSectors);
-
-  }
-
   // If we've managed to pass all of these checks, that means we're
   // likely dealing with a valid MBR, so let's return `true`.
 
@@ -206,16 +180,12 @@
     return false;
   }
 
-  // Additionally, we want to check if the revision is valid; in that
+  // Additionally, we want to check if the revision is valid; in our
   // case, it should be at least `gptHeaderRevision`.
 
   if (Header->Revision < gptHeaderRevision) {
     return false;
   }
-
-  // (TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO - CRC32)
-  // (TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO - CRC32)
-  // (TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO - CRC32)
 
   // We also want to check whether the size of the header is valid;
   // it should be at least `sizeof(gptHeader)`, but it shouldn't
@@ -232,7 +202,7 @@
 
   // In order to do this, we need to clear out `Header->Crc32` before
   // doing the calculation with CalculateCrc32() - then, we just
-  // have to compare the return value.
+  // have to compare the return value:
 
   const uint32 Checksum = Header->Crc32;
   Header->Crc32 = 0;
@@ -259,9 +229,12 @@
   // In theory, that should be everything that's *officially* needed
   // to verify a GPT header.. but just in case:
 
-  // (1) Check that `PartitionLba` comes after Header->HeaderLba:
+  // (1) Check that `PartitionLba` comes after Header->HeaderLba,
+  // and before Header->BackupLba:
 
   if (Header->PartitionLba <= Header->HeaderLba) {
+    return false;
+  } else if (Header->PartitionLba >= Header->BackupLba) {
     return false;
   }
 
@@ -271,9 +244,12 @@
     return false;
   }
 
-  // (3) Check that the partition entry size is a multiple of 8:
+  // (3) Check that the partition entry size is at least 128, as
+  // well as a multiple of 8:
 
-  if ((Header->PartitionEntrySize % 8) != 0) {
+  if (Header->PartitionEntrySize < 128) {
+    return false;
+  } else if ((Header->PartitionEntrySize % 8) != 0) {
     return false;
   }
 
@@ -313,6 +289,8 @@
   Message(Ok, "PartitionEntrySize = %xh | PartitionCrc32 = %xh",
     Header->PartitionEntrySize, Header->PartitionCrc32);
 
+  Printf("\n\r", false, 0x0F);
+
   // Now that we've passed all of these checks, we can return `true`
   // to indicate that the given GPT header is likely valid.
 
@@ -342,7 +320,7 @@ static uint16 DetectPartitionMap(mbrHeader* Mbr, uint16 VolumeNum) {
 
   for (auto EntryNum = 0; EntryNum < 4; EntryNum++) {
 
-    if (Mbr->Entry[EntryNum].Type == MbrEntryType_Gpt) {
+    if (Mbr->Entry[EntryNum].Type == MbrPartitionType_Gpt) {
 
       GptPartitionMap = true;
       break;
@@ -406,6 +384,7 @@ static uint16 DetectPartitionMap(mbrHeader* Mbr, uint16 VolumeNum) {
       if (ValidateGptHeader(BackupGptHeader, VolumeNum) == false) {
         goto Cleanup;
       } else {
+        Message(Warning, "Using backup GPT header.");
         UseBackupGptHeader = true;
       }
 
@@ -417,17 +396,144 @@ static uint16 DetectPartitionMap(mbrHeader* Mbr, uint16 VolumeNum) {
   // of the volume's partitions - we'll need to create a separate
   // volume for each one, like this:
 
+  uintptr GptPartitionArraySize = 0;
+  [[maybe_unused]] gptPartition* GptPartitionArray = NULL;
+
   if (GptPartitionMap == true) {
 
-    // (TODO - Handle GPT partitions; limit is 32)
+    // (Depending on the value of `UseBackupGptHeader`, pick the
+    // right GPT header)
 
-    // I might need something to actually check if the partition tables
-    // are valid or corrupt - the headers aren't, but I can't say
-    // the same about the actual partition tables :(
+    gptHeader* Header = PrimaryGptHeader;
+
+    if (UseBackupGptHeader == true) {
+      Header = BackupGptHeader;
+    }
+
+    // Before we do anything else, we need to load the partition entry
+    // array from the disk.
+
+    // (Calculate the necessary size to hold each partition entry, and
+    // allocate a buffer of that size)
+
+    GptPartitionArraySize = (Header->NumPartitions * Header->PartitionEntrySize);
+    GptPartitionArray = (gptPartition*)(Allocate(&GptPartitionArraySize));
+
+    // (Check if the allocation was successful)
+
+    if (GptPartitionArray == NULL) {
+      goto Cleanup;
+    }
+
+    // (Load in the partition entry array)
+
+    bool ReadGptPartitionArray = ReadDisk((void*)GptPartitionArray,
+                                          (Header->PartitionLba * SectorSize),
+                                          GptPartitionArraySize, VolumeNum);
+
+    if (ReadGptPartitionArray == false) {
+      goto CleanupPartition;
+    }
+
+    // (Calculate the CRC-32 checksum of the partition entry array in
+    // order to make sure that it's actually valid)
+
+    auto Checksum = CalculateCrc32(GptPartitionArray, GptPartitionArraySize);
+
+    if (Checksum != Header->PartitionCrc32) {
+      goto CleanupPartition;
+    }
+
+    // Now that we *know* we have a valid partition table array, we can
+    // move onto the next part - actually interpreting each partition.
+
+    for (uint32 Index = 0; Index < Header->NumPartitions; Index++) {
+
+      // [DEBUG] [DEBUG] [DEBUG] [DEBUG] [DEBUG] [DEBUG] [DEBUG] [DEBUG] [DEBUG]
+
+      // (Skip null partitions)
+
+      gptPartition* Partition = &GptPartitionArray[Index];
+
+      if (Partition->Type.Uuid_A == GptPartitionType_None.Uuid_A) {
+        continue;
+      }
+
+      // (Get regular / ASCII name)
+
+      char RegularName[36] = {0};
+      char16 WideName[36]; Memcpy((void*)WideName, &GptPartitionArray[Index].Name, 72);
+
+      #include "../Libraries/String.h"
+      for (auto Index2 = 0; Index2 < StrlenWide(WideName); Index2++) {
+        RegularName[Index2] = (WideName[Index2] <= 0xFF) ? ((uint8)WideName[Index2]) : '?';
+      }
+
+      Message(Kernel, "Volume %d has a GPT partition (%d)", VolumeNum, Index);
+      Message(Info, "Partition name is `%s`", RegularName);
+
+      // (Show rest of info)
+
+      Message(Ok, "Type = {%x, {%x,%x}, {%x,%x,%x,%x,%x,%x,%x,%x}}",
+      Partition->Type.Uuid_A, Partition->Type.Uuid_B[0], Partition->Type.Uuid_B[1],
+      Partition->Type.Uuid_C[0], Partition->Type.Uuid_C[1], Partition->Type.Uuid_C[2],
+      Partition->Type.Uuid_C[3], Partition->Type.Uuid_C[4], Partition->Type.Uuid_C[5],
+      Partition->Type.Uuid_C[6], Partition->Type.Uuid_C[7]);
+
+      Message(Ok, "UniqueId = {%x, {%x,%x}, {%x,%x,%x,%x,%x,%x,%x,%x}}",
+      Partition->UniqueId.Uuid_A, Partition->UniqueId.Uuid_B[0], Partition->UniqueId.Uuid_B[1],
+      Partition->UniqueId.Uuid_C[0], Partition->UniqueId.Uuid_C[1], Partition->UniqueId.Uuid_C[2],
+      Partition->UniqueId.Uuid_C[3], Partition->UniqueId.Uuid_C[4], Partition->UniqueId.Uuid_C[5],
+      Partition->UniqueId.Uuid_C[6], Partition->UniqueId.Uuid_C[7]);
+
+      Message(Ok, "StartingLba = %xh (%d); EndingLba = %xh (%d)",
+      Partition->StartingLba, Partition->StartingLba,
+      Partition->EndingLba, Partition->EndingLba);
+
+      Message(Ok, "Attributes = 0b%b", Partition->Attributes);
+      Printf("\n\r", false, 0x0F);
+
+    }
+
+    // (Free the buffer we allocated for the partition array, if applicable)
+
+    CleanupPartition:
+
+    if (GptPartitionArray != NULL) {
+      [[maybe_unused]] bool Result = Free((void*)GptPartitionArray, &GptPartitionArraySize);
+    }
 
   } else {
 
     // (TODO - Handle MBR partitions; limit is 4)
+
+    for (auto Index = 0; Index < 4; Index++) {
+
+      // [DEBUG] [DEBUG] [DEBUG] [DEBUG] [DEBUG] [DEBUG] [DEBUG] [DEBUG] [DEBUG]
+
+      if (Mbr->Entry[Index].Type == 0) continue; // (Skip null entries)
+
+      Message(Kernel, "Volume %d has an MBR partition (%d)", VolumeNum, Index);
+
+      Message(Ok, "[%d].Attributes = %xh; [%d].Type = %xh", Index,
+                  Mbr->Entry[Index].Attributes, Index, Mbr->Entry[Index].Type);
+
+      Message(Ok, "[%d].ChsStart @ (Cylinders = %xh, Heads = %xh, Sectors = %xh)", Index,
+                  (uint64)Mbr->Entry[Index].ChsStart.Cylinders,
+                  (uint64)Mbr->Entry[Index].ChsStart.Heads,
+                  (uint64)Mbr->Entry[Index].ChsStart.Sectors);
+
+      Message(Ok, "[%d].ChsEnd @ (Cylinders = %xh, Heads = %xh, Sectors = %xh)", Index,
+                  (uint64)Mbr->Entry[Index].ChsEnd.Cylinders,
+                  (uint64)Mbr->Entry[Index].ChsEnd.Heads,
+                  (uint64)Mbr->Entry[Index].ChsEnd.Sectors);
+
+      Message(Ok, "[%d].Lba = %xh, [%d].NumSectors = %xh", Index,
+                  Mbr->Entry[Index].Lba, Index, Mbr->Entry[Index].NumSectors);
+
+      Printf("\n\r", false, 0x0F);
+
+    }
 
   }
 

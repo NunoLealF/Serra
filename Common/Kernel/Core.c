@@ -235,6 +235,8 @@ void KernelCore(commonInfoTable* InfoTable) {
 
   // (Show memory allocation nodes and such)
 
+  /*
+
   for (uint16 Limit = 0; Limit < 64; Limit++) {
 
     uint64 Num = 0;
@@ -257,6 +259,8 @@ void KernelCore(commonInfoTable* InfoTable) {
     }
 
   }
+
+  */
 
   // (Try to read the MBR from the disk - or, at least, the bootsector,
   // in the case of `unpart` / non-partitioned builds)

@@ -164,19 +164,19 @@
 
       enum : uint8 {
 
-        MbrEntryType_None = 0x00, // (Partition doesn't exist)
+        MbrPartitionType_None = 0x00, // (Partition doesn't exist)
 
-        MbrEntryType_Fat12 = 0x01, // (FAT12 partition, small)
+        MbrPartitionType_Fat12 = 0x01, // (FAT12 partition, small)
 
-        MbrEntryType_Fat16_A = 0x04, // (FAT16 partition, small)
-        MbrEntryType_Fat16_B = 0x06, // (FAT16 partition, large)
+        MbrPartitionType_Fat16_A = 0x04, // (FAT16 partition, small)
+        MbrPartitionType_Fat16_B = 0x06, // (FAT16 partition, large)
 
-        MbrEntryType_Fat32_A = 0x0B, // (FAT32 partition, CHS variant)
-        MbrEntryType_Fat32_B = 0x0C, // (FAT32 partition, LBA variant)
-        MbrEntryType_Fat16_C = 0x0E, // (FAT16 partition, LBA)
+        MbrPartitionType_Fat32_A = 0x0B, // (FAT32 partition, CHS variant)
+        MbrPartitionType_Fat32_B = 0x0C, // (FAT32 partition, LBA variant)
+        MbrPartitionType_Fat16_C = 0x0E, // (FAT16 partition, LBA)
 
-        MbrEntryType_Gpt = 0xEE, // (Protective MBR partition)
-        MbrEntryType_Esp = 0xEF, // (EFI System Partition (FAT))
+        MbrPartitionType_Gpt = 0xEE, // (Protective MBR partition)
+        MbrPartitionType_Esp = 0xEF, // (EFI System Partition (FAT))
 
       } Type;
 
@@ -226,10 +226,26 @@
 
   } __attribute__((packed)) gptHeader;
 
+  constexpr genericUuid GptPartitionType_None = {0x00000000, {0x0000, 0x0000}, {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}};
+  constexpr genericUuid GptPartitionType_Esp = {0xC12A7328, {0xF81F, 0x11D2}, {0xBA, 0x4B, 0x00, 0xA0, 0xC9, 0x3E, 0xC9, 0x3B}};
+
+  typedef struct _gptPartition {
+
+    genericUuid Type; // (The partition type - see GptPartitionType_*)
+    genericUuid UniqueId; // (The unique UUID of this specific partition)
+
+    uint64 StartingLba; // (The *first* LBA that belongs to this partition)
+    uint64 EndingLba; // (The *last* LBA that belongs to this partition)
+
+    uint64 Attributes; // (The partition's attributes)
+    char16 Name[36]; // (The partition name - this uses 16-bit characters)
+
+  } __attribute__((packed)) gptPartition;
+
   static_assert((sizeof(chsAddress) == 3), "chsAddress{} was not packed correctly by the compiler.");
   static_assert((sizeof(mbrHeader) == 512), "mbrHeader{} was not packed correctly by the compiler.");
   static_assert((sizeof(gptHeader) == 92), "gptHeader{} was not packed correctly by the compiler.");
-
+  static_assert((sizeof(gptPartition) == 128), "gptPartition{} was not packed correctly by the compiler.");
 
   // Include functions and global variables from Fs.c
 
