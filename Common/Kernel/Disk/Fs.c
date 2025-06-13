@@ -9,6 +9,8 @@
 // (DEBUG)
 #include "../Libraries/Stdio.h"
 
+
+
 // (TODO - Include a function to process an unpartitioned volume / an
 // individual filesystem)
 
@@ -216,9 +218,29 @@
   // (TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO - CRC32)
 
   // We also want to check whether the size of the header is valid;
-  // it should be at least `sizeof(gptHeader)`.
+  // it should be at least `sizeof(gptHeader)`, but it shouldn't
+  // exceed the size of one sector/LBA either.
 
   if (Header->Size < sizeof(gptHeader)) {
+    return false;
+  } else if (Header->Size > VolumeList[VolumeNum].BytesPerSector) {
+    return false;
+  }
+
+  // Now that we know the header size is likely valid, we can move onto
+  // the next step: calculating the checksum of the header.
+
+  // In order to do this, we need to clear out `Header->Crc32` before
+  // doing the calculation with CalculateCrc32() - then, we just
+  // have to compare the return value.
+
+  const uint32 Checksum = Header->Crc32;
+  Header->Crc32 = 0;
+
+  const uint32 CalculatedChecksum = CalculateCrc32(Header, Header->Size);
+  Header->Crc32 = Checksum;
+
+  if (Checksum != CalculatedChecksum) {
     return false;
   }
 

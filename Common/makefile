@@ -121,6 +121,10 @@ Kernel/Disk/Bios/Int13.bin:
 
 # (Kernel libraries)
 
+Kernel/Disk/Crc32.o:
+	@echo "Building $@"
+	@$(CC) $(CFLAGS) -c Kernel/Disk/Crc32.c -o Kernel/Disk/Crc32.o
+
 Kernel/Disk/Disk.o:
 	@echo "Building $@"
 	@$(CC) $(CFLAGS) -c Kernel/Disk/Disk.c -o Kernel/Disk/Disk.o
@@ -201,6 +205,6 @@ Kernel/System/x64.o:
 
 # Link everything into one .elf file
 
-Kernel/Kernel.elf: Kernel/Entry.o Kernel/Core.o Kernel/Disk/Disk.o Kernel/Disk/Fs.o Kernel/Disk/Bios/Bios.o Kernel/Disk/Efi/Efi.o Kernel/Firmware/Efi.o Kernel/Graphics/Graphics.o Kernel/Graphics/Console/Console.o Kernel/Graphics/Console/Exceptions.o Kernel/Graphics/Console/Format.o Kernel/Graphics/Console/Efi/Efi.o Kernel/Graphics/Console/Graphical/Graphical.o Kernel/Graphics/Console/Vga/Vga.o Kernel/Graphics/Fonts/Bitmap.o Kernel/Libraries/String.o Kernel/Memory/Memory.o Kernel/Memory/Mm.o Kernel/Memory/x64/Memcpy.o Kernel/Memory/x64/Memset.o Kernel/System/x64.o
+Kernel/Kernel.elf: Kernel/Entry.o Kernel/Core.o Kernel/Disk/Crc32.o Kernel/Disk/Disk.o Kernel/Disk/Fs.o Kernel/Disk/Bios/Bios.o Kernel/Disk/Efi/Efi.o Kernel/Firmware/Efi.o Kernel/Graphics/Graphics.o Kernel/Graphics/Console/Console.o Kernel/Graphics/Console/Exceptions.o Kernel/Graphics/Console/Format.o Kernel/Graphics/Console/Efi/Efi.o Kernel/Graphics/Console/Graphical/Graphical.o Kernel/Graphics/Console/Vga/Vga.o Kernel/Graphics/Fonts/Bitmap.o Kernel/Libraries/String.o Kernel/Memory/Memory.o Kernel/Memory/Mm.o Kernel/Memory/x64/Memcpy.o Kernel/Memory/x64/Memset.o Kernel/System/x64.o
 	@echo "Building $@"
 	@$(CC) -T Linker.ld $(LDFLAGS) -o Kernel/Kernel.elf -ffreestanding -nolibc -nostdlib -lgcc $^

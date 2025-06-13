@@ -13,6 +13,11 @@
   #include "Efi/Efi.h"
 
 
+  // Include CRC-related functions from Crc32.c
+
+  uint32 CalculateCrc32(void* Buffer, uintptr Length);
+
+
   // Include data structures from Disk.c
 
   typedef struct _diskInfo {
