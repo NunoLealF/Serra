@@ -16,6 +16,131 @@
 
 
 
+
+// (TODO - Include a function to convert a CHS address into an LBA, using
+// predetermined `SectorsPerHead` and `HeadsPerCylinder` values)
+
+// (WARNING - This uses a predetermined number of sectors per head, and
+// heads per cylinder; that's not out of laziness, it's just that
+// there's no standard way to figure that out)
+
+// (The *vast* majority of MBRs out there support LBA values, which
+// are much more reliable - this is just a fallback)
+
+static uint64 ConvertChsToLba(chsAddress Chs) [[reproducible]] {
+
+  // (Keep in mind that the number of sectors in the CHS format
+  // always needs to be decremented by one)
+
+  #define SectorsPerHead 63
+  #define HeadsPerCylinder 255
+
+  return ((Chs.Sectors - 1) + (Chs.Heads * SectorsPerHead) +
+          (Chs.Cylinders * SectorsPerHead * HeadsPerCylinder));
+
+}
+
+
+// (TODO - Include a function to get the sector/LBA offset of an MBR
+// partition entry (this is just in case LBA isn't available))
+
+static uint64 CalculateMbrOffset(mbrHeader* Header, uint16 Partition) {
+
+  // (If LBA values are available, use those - otherwise, try to
+  // use the CHS values (using ConvertChsToLba()))
+
+  if (Header->Entry[Partition].Lba != 0) {
+    return Header->Entry[Partition].Lba;
+  } else {
+    return ConvertChsToLba(Header->Entry[Partition].ChsStart);
+  }
+
+}
+
+
+// (TODO - Same as above, but for the size)
+
+static uint64 CalculateMbrSize(mbrHeader* Header, uint16 Partition) {
+
+  // (Depending on whether CHS or LBA is available, calculate
+  // the necessary size)
+
+  if (Header->Entry[Partition].NumSectors != 0) {
+
+    // (If LBA values are available, so is the `NumSectors` field, so
+    // we just need to return that)
+
+    return Header->Entry[Partition].NumSectors;
+
+  } else {
+
+    // (Otherwise, we need to convert the start and end CHS values to
+    // LBA, and return the difference between them)
+
+    uint64 Start = ConvertChsToLba(Header->Entry[Partition].ChsStart);
+    uint64 End = ConvertChsToLba(Header->Entry[Partition].ChsEnd);
+
+    return (End + Start - 1);
+
+  }
+
+}
+
+
+// (TODO - Include a function to convert an MBR partition type into one
+// understood by volumeInfo.Type)
+
+static uint16 ConvertMbrPartitionType(const uint8 PartitionType) [[reproducible]] {
+
+  // (Compare `PartitionType` with our supported MBR partition types)
+
+  switch (PartitionType) {
+
+    // (Completely ignore empty and GPT protective partitions)
+
+    case MbrPartitionType_None:
+      [[fallthrough]];
+
+    case MbrPartitionType_Gpt:
+      return VolumeType_Unknown;
+      break;
+
+    // (FAT-12, FAT-16, FAT-32 and the EFI System Partition are
+    // all equivalent to `VolumeType_Partition_Fat`)
+
+    case MbrPartitionType_Fat12:
+      [[fallthrough]];
+
+    case MbrPartitionType_Fat16_A:
+      [[fallthrough]];
+
+    case MbrPartitionType_Fat16_B:
+      [[fallthrough]];
+
+    case MbrPartitionType_Fat16_C:
+      [[fallthrough]];
+
+    case MbrPartitionType_Fat32_A:
+      [[fallthrough]];
+
+    case MbrPartitionType_Fat32_B:
+      [[fallthrough]];
+
+    case MbrPartitionType_Esp:
+      return VolumeType_Partition_Fat;
+      break;
+
+  }
+
+  // (Otherwise, return `VolumeType_Partition_Unknown`, in order to
+  // indicate that we don't support the given partition type)
+
+  return VolumeType_Partition_Unknown;
+
+}
+
+
+
 // (TODO - Include a function to validate an MBR header)
 
 [[nodiscard]] static bool ValidateMbrHeader(mbrHeader* Header, uint16 VolumeNum) {
@@ -62,48 +187,13 @@
       continue;
     }
 
-    // (Check whether the LBA values for this specific entry are empty,
-    // and if they are, use the CHS values)
+    // (Calculate the value of PartitionStart[] and PartitionEnd[]
+    // using CalculateMbrOffset() and CalculateMbrSize())
 
-    if (Header->Entry[Index].Lba != 0) {
+    PartitionStart[Index] = CalculateMbrOffset(Header, Index);
 
-      // (Calculate LBA values)
-
-      // Here, we're assuming the sector size is the native one.
-
-      if (Header->Entry[Index].NumSectors != 0) {
-
-        PartitionStart[Index] = Header->Entry[Index].Lba;
-        PartitionEnd[Index] = (Header->Entry[Index].Lba + Header->Entry[Index].NumSectors);
-
-        PartitionStart[Index] *= Volume->BytesPerSector;
-        PartitionEnd[Index] *= Volume->BytesPerSector;
-
-      }
-
-    } else if (Header->Entry[Index].ChsStart.Sectors != 0) {
-
-      // (Calculate CHS values)
-
-      // Here, we're assuming 63 sectors per head and 255 heads per
-      // cylinder, as well as a sector size of 512 bytes.
-
-      if (Header->Entry[Index].ChsEnd.Sectors != 0) {
-
-        PartitionStart[Index] = ((uint64)Header->Entry[Index].ChsStart.Sectors - 1 +
-                                ((uint64)Header->Entry[Index].ChsStart.Heads * 63) +
-                                ((uint64)Header->Entry[Index].ChsStart.Cylinders * 255 * 63));
-
-        PartitionEnd[Index] = ((uint64)Header->Entry[Index].ChsEnd.Sectors - 1 +
-                              ((uint64)Header->Entry[Index].ChsEnd.Heads * 63) +
-                              ((uint64)Header->Entry[Index].ChsEnd.Cylinders * 255 * 63));
-
-        PartitionStart[Index] *= 512;
-        PartitionEnd[Index] *= 512;
-
-      }
-
-    }
+    PartitionEnd[Index] = (CalculateMbrOffset(Header, Index) +
+                           CalculateMbrSize(Header, Index));
 
   }
 
@@ -164,6 +254,43 @@
   // likely dealing with a valid MBR, so let's return `true`.
 
   return true;
+
+}
+
+
+
+// (TODO - Include a function to convert an MBR partition type into one
+// understood by volumeInfo.Type)
+
+static uint16 ConvertGptPartitionType(const genericUuid PartitionType) [[reproducible]] {
+
+  // (Define a macro that can be used to compare `PartitionType` with
+  // another partition type (defined as `genericUuid`))
+
+  // C doesn't allow you to directly compare structures, and since UUIDs
+  // are represented as such, we need to use Memcmp(), like this:
+
+  #define MatchesPartitionType(Type) ((Memcmp(&Type, &PartitionType, sizeof(genericUuid)) == 0) ? true : false)
+
+  // (EFI System Partitions are always `VolumeType_Partition_Fat`)
+
+  if (MatchesPartitionType(GptPartitionType_Esp)) {
+    return VolumeType_Partition_Fat;
+  }
+
+  // (Microsoft and Linux basic data partitions can be FAT, but aren't
+  // guaranteed to, so, use `VolumeType_Partition_BasicData`)
+
+  if (MatchesPartitionType(GptPartitionType_BasicData)) {
+    return VolumeType_Partition_BasicData;
+  } else if (MatchesPartitionType(GptPartitionType_LinuxData)) {
+    return VolumeType_Partition_BasicData;
+  }
+
+  // (If we've gotten this far, then it doesn't match any of the supported
+  // types, so we can just return `VolumeType_Partition_Unknown`)
+
+  return VolumeType_Partition_Unknown;
 
 }
 
@@ -425,56 +552,56 @@ static uint16 DetectPartitionMap(mbrHeader* Mbr, uint16 VolumeNum) {
 
     for (uint32 Index = 0; Index < Header->NumPartitions; Index++) {
 
-      Message(Kernel, "Volume %d has a GPT partition (%d)", VolumeNum, Index);
-      Message(-1, "TODO: Add it to the volume list. \n\r");
+      // (Declare initial variables)
 
-      /*
+      const gptPartition* Partition = &GptPartitionArray[Index];
+      const genericUuid Type = Partition->Type;
 
-      // [DEBUG] [DEBUG] [DEBUG] [DEBUG] [DEBUG] [DEBUG] [DEBUG] [DEBUG] [DEBUG]
+      // If this partition entry is empty (`GptPartitionType_None`),
+      // then move onto the next entry.
 
-      // (Skip null partitions)
-
-      gptPartition* Partition = &GptPartitionArray[Index];
-
-      if (Partition->Type.Uuid_A == GptPartitionType_None.Uuid_A) {
+      if (Memcmp(&Type, &GptPartitionType_None, sizeof(genericUuid)) == 0) {
         continue;
       }
 
-      // (Get regular / ASCII name)
+      // Otherwise, create a volume for the current partition entry,
+      // updating `NumVolumes` in the process:
 
-      char RegularName[36] = {0};
-      char16 WideName[36]; Memcpy((void*)WideName, &GptPartitionArray[Index].Name, 72);
+      auto VolumeLimit = (sizeof(VolumeList) / sizeof(volumeInfo));
 
-      #include "../Libraries/String.h"
-      for (auto Index2 = 0; Index2 < StrlenWide(WideName); Index2++) {
-        RegularName[Index2] = (WideName[Index2] <= 0xFF) ? ((uint8)WideName[Index2]) : '?';
+      if (NumVolumes < VolumeLimit) {
+
+        // (Add a new volume to the list, and increment `NumPointers`)
+
+        volumeInfo* PartitionVolume = &VolumeList[NumVolumes];
+        NumVolumes++;
+
+        // (Fill out drive-specific values, copying them from `Volume`)
+
+        PartitionVolume->Method = Volume->Method;
+        PartitionVolume->Drive = Volume->Drive;
+
+        PartitionVolume->Alignment = Volume->Alignment;
+        PartitionVolume->BytesPerSector = Volume->BytesPerSector;
+        PartitionVolume->MediaId = Volume->MediaId;
+
+        // (Fill out partition-specific values from our GPT partition entry)
+
+        PartitionVolume->IsPartition = true;
+        PartitionVolume->Partition = (uint16)Index;
+
+        PartitionVolume->NumSectors = (1 + Partition->EndingLba - Partition->StartingLba);
+        PartitionVolume->PartitionOffset = Partition->StartingLba;
+
+        PartitionVolume->Type = ConvertGptPartitionType(Partition->Type);
+
+      } else {
+
+        // (If we've exceeded the volume limit, stop)
+
+        break;
+
       }
-
-      Message(Kernel, "Volume %d has a GPT partition (%d)", VolumeNum, Index);
-      Message(Info, "Partition name is `%s`", RegularName);
-
-      // (Show rest of info)
-
-      Message(Ok, "Type = {%x, {%x,%x}, {%x,%x,%x,%x,%x,%x,%x,%x}}",
-      Partition->Type.Uuid_A, Partition->Type.Uuid_B[0], Partition->Type.Uuid_B[1],
-      Partition->Type.Uuid_C[0], Partition->Type.Uuid_C[1], Partition->Type.Uuid_C[2],
-      Partition->Type.Uuid_C[3], Partition->Type.Uuid_C[4], Partition->Type.Uuid_C[5],
-      Partition->Type.Uuid_C[6], Partition->Type.Uuid_C[7]);
-
-      Message(Ok, "UniqueId = {%x, {%x,%x}, {%x,%x,%x,%x,%x,%x,%x,%x}}",
-      Partition->UniqueId.Uuid_A, Partition->UniqueId.Uuid_B[0], Partition->UniqueId.Uuid_B[1],
-      Partition->UniqueId.Uuid_C[0], Partition->UniqueId.Uuid_C[1], Partition->UniqueId.Uuid_C[2],
-      Partition->UniqueId.Uuid_C[3], Partition->UniqueId.Uuid_C[4], Partition->UniqueId.Uuid_C[5],
-      Partition->UniqueId.Uuid_C[6], Partition->UniqueId.Uuid_C[7]);
-
-      Message(Ok, "StartingLba = %xh (%d); EndingLba = %xh (%d)",
-      Partition->StartingLba, Partition->StartingLba,
-      Partition->EndingLba, Partition->EndingLba);
-
-      Message(Ok, "Attributes = 0b%b", Partition->Attributes);
-      Printf("\n\r", false, 0x0F);
-
-      */
 
     }
 
@@ -486,48 +613,76 @@ static uint16 DetectPartitionMap(mbrHeader* Mbr, uint16 VolumeNum) {
       [[maybe_unused]] bool Result = Free((void*)GptPartitionArray, &GptPartitionArraySize);
     }
 
+    goto Cleanup;
+
   } else {
 
-    // (TODO - Handle MBR partitions; limit is 4)
+    // If we're dealing with an MBR-partitioned disk, then we've already
+    // gone through the validation process, so we can skip right
+    // onto adding each partition to the volume list:
 
     for (auto Index = 0; Index < 4; Index++) {
 
-      Message(Kernel, "Volume %d has an MBR partition (%d)", VolumeNum, Index);
-      Message(-1, "TODO: Add it to the volume list. \n\r");
+      // If the current partition entry is empty or GPT protective, move
+      // onto the next entry in the list.
 
-      /*
+      if (Mbr->Entry[Index].Type == MbrPartitionType_None) {
+        continue;
+      } else if (Mbr->Entry[Index].Type == MbrPartitionType_Gpt) {
+        continue;
+      }
 
-      // [DEBUG] [DEBUG] [DEBUG] [DEBUG] [DEBUG] [DEBUG] [DEBUG] [DEBUG] [DEBUG]
+      // Otherwise, create an entry in the volume list (as long as
+      // there's enough space, obviously):
 
-      if (Mbr->Entry[Index].Type == 0) continue; // (Skip null entries)
+      auto VolumeLimit = (sizeof(VolumeList) / sizeof(volumeInfo));
 
-      Message(Kernel, "Volume %d has an MBR partition (%d)", VolumeNum, Index);
+      if (NumVolumes < VolumeLimit) {
 
-      Message(Ok, "[%d].Attributes = %xh; [%d].Type = %xh", Index,
-                  Mbr->Entry[Index].Attributes, Index, Mbr->Entry[Index].Type);
+        // (Add a new volume to the list, and increment `NumPointers`)
 
-      Message(Ok, "[%d].ChsStart @ (Cylinders = %xh, Heads = %xh, Sectors = %xh)", Index,
-                  (uint64)Mbr->Entry[Index].ChsStart.Cylinders,
-                  (uint64)Mbr->Entry[Index].ChsStart.Heads,
-                  (uint64)Mbr->Entry[Index].ChsStart.Sectors);
+        volumeInfo* PartitionVolume = &VolumeList[NumVolumes];
+        NumVolumes++;
 
-      Message(Ok, "[%d].ChsEnd @ (Cylinders = %xh, Heads = %xh, Sectors = %xh)", Index,
-                  (uint64)Mbr->Entry[Index].ChsEnd.Cylinders,
-                  (uint64)Mbr->Entry[Index].ChsEnd.Heads,
-                  (uint64)Mbr->Entry[Index].ChsEnd.Sectors);
+        // (Fill out drive-specific values, copying them from `Volume`)
 
-      Message(Ok, "[%d].Lba = %xh, [%d].NumSectors = %xh", Index,
-                  Mbr->Entry[Index].Lba, Index, Mbr->Entry[Index].NumSectors);
+        PartitionVolume->Method = Volume->Method;
+        PartitionVolume->Drive = Volume->Drive;
 
-      Printf("\n\r", false, 0x0F);
+        PartitionVolume->Alignment = Volume->Alignment;
+        PartitionVolume->BytesPerSector = Volume->BytesPerSector;
+        PartitionVolume->MediaId = Volume->MediaId;
 
-      */
+        // (Fill out partition-specific values from our MBR partition entry)
+
+        PartitionVolume->IsPartition = true;
+        PartitionVolume->Partition = Index;
+
+        PartitionVolume->NumSectors = CalculateMbrSize(Mbr, Index);
+        PartitionVolume->PartitionOffset = CalculateMbrOffset(Mbr, Index);
+
+        PartitionVolume->Type = ConvertMbrPartitionType(Mbr->Entry[Index].Type);
+
+      } else {
+
+        // (If we've exceeded the volume limit, stop)
+
+        break;
+
+      }
 
     }
 
   }
 
+  // Finally, now that we're done adding partition volumes, we also want
+  // to update *our own* volume entry with the correct type:
 
+  if (GptPartitionMap == true) {
+    Volume->Type = VolumeType_Gpt;
+  } else {
+    Volume->Type = VolumeType_Mbr;
+  }
 
   // (No matter what, we *have* to free what we allocated)
 
@@ -592,14 +747,45 @@ static uint16 DetectPartitionMap(mbrHeader* Mbr, uint16 VolumeNum) {
     mbrHeader* Mbr = (mbrHeader*)Bootsector;
     bool IsPartitioned = ValidateMbrHeader(Mbr, Index);
 
-    // Now that we know for sure whether the volume is partitioned
-    // or not, we can move onto processing it.
-
-    // (If the volume is partitioned, add each partition to the
-    // volume list)
+    // Now that we know for sure whether the volume is partitioned or
+    // not, we can move onto the next step - processing it.
 
     if (IsPartitioned == true) {
-      DetectPartitionMap(Mbr, Index);
+
+      // (If the volume is *partitioned*, try to interpret the partition
+      // map, and add each entry to the volume list)
+
+      Message(Kernel, "Preparing to process volume (%d).", (uint64)Index);
+
+      uint16 OldNumVolumes = DetectPartitionMap(Mbr, Index);
+
+      Message(Info, "Volume (%d) uses %s partition map.", (uint64)Index,
+                    ((VolumeList[Index].Type == VolumeType_Mbr) ? "an MBR" : "a GPT"));
+
+      for (auto VolumeIndex = OldNumVolumes; VolumeIndex < NumVolumes; VolumeIndex++) {
+
+        Message(Ok, "Successfully added a volume entry (%d) for method(%d)drive(%d)partition(%d)",
+                    (uint64)OldNumVolumes, (uint64)VolumeList[VolumeIndex].Method,
+                    (uint64)VolumeList[VolumeIndex].Drive,
+                    (uint64)VolumeList[VolumeIndex].Partition);
+
+        Message(Info, "Volume entry (%d) is a partition of type %xh (see volumeInfo{}.Type)",
+                      (uint64)Index, (uint64)VolumeList[VolumeIndex].Type);
+
+        Message(Info, "Volume entry (%d) has a sector size of %d bytes, and %d sectors",
+                      (uint64)Index, (uint64)VolumeList[VolumeIndex].BytesPerSector,
+                      (uint64)VolumeList[VolumeIndex].NumSectors);
+
+        uint64 Size = (VolumeList[VolumeIndex].BytesPerSector *
+                       VolumeList[VolumeIndex].NumSectors);
+
+        Message(Info, "(Which corresponds to a total size of %d MiB, or %d GiB)",
+                      (Size / (1024 * 1024)), (Size / (1024 * 1024 * 1024)));
+
+      }
+
+      Print("\n\r", false, 0x07);
+
     }
 
     // TODO - Add a function to do that

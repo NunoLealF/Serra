@@ -90,20 +90,16 @@
       // (If this volume represents an entire device, and is partitioned,
       // show the partition map type (for example, MBR or GPT))
 
-      // `Partition == 0`, bit 8 is cleared.
-
       VolumeType_Unknown = 0, // (Couldn't determine type)
-      VolumeType_Mbr, // (Appears to be a 'raw' MBR volume)
-      VolumeType_Gpt, // (Appears to be a 'raw' GPT volume)
+      VolumeType_Mbr, // (Appears to be a MBR-partitioned volume)
+      VolumeType_Gpt, // (Appears to be a GPT-partitioned volume)
 
       // (Otherwise, if it only represents a specific partition, or the
       // device itself is unpartitioned, show the filesystem type)
 
-      // `Partition != 0`, bit 8 is set.
-
-      VolumeType_Fat12 = (1ULL << 8), // (Appears to be a FAT12 partition)
-      VolumeType_Fat16, // (Appears to be a FAT16 partition)
-      VolumeType_Fat32, // (Appears to be a FAT32 partition)
+      VolumeType_Partition_Unknown = (1ULL << 8), // (Couldn't determine type)
+      VolumeType_Partition_BasicData, // (Analyze the filesystem type first)
+      VolumeType_Partition_Fat, // (Appears to be a FAT partition)
 
       // TODO - Add more partition types, FAT is just the bare minimum
 
@@ -171,12 +167,15 @@
         MbrPartitionType_Fat16_A = 0x04, // (FAT16 partition, small)
         MbrPartitionType_Fat16_B = 0x06, // (FAT16 partition, large)
 
+        MbrPartitionType_Exfat = 0x07, // (exFAT or NTFS partition)
+        MbrPartitionType_Ntfs = 0x07, // (exFAT or NTFS partition)
+
         MbrPartitionType_Fat32_A = 0x0B, // (FAT32 partition, CHS variant)
         MbrPartitionType_Fat32_B = 0x0C, // (FAT32 partition, LBA variant)
         MbrPartitionType_Fat16_C = 0x0E, // (FAT16 partition, LBA)
 
         MbrPartitionType_Gpt = 0xEE, // (Protective MBR partition)
-        MbrPartitionType_Esp = 0xEF, // (EFI System Partition (FAT))
+        MbrPartitionType_Esp = 0xEF // (EFI System Partition (FAT))
 
       } Type;
 
@@ -226,8 +225,17 @@
 
   } __attribute__((packed)) gptHeader;
 
-  constexpr genericUuid GptPartitionType_None = {0x00000000, {0x0000, 0x0000}, {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}};
-  constexpr genericUuid GptPartitionType_Esp = {0xC12A7328, {0xF81F, 0x11D2}, {0xBA, 0x4B, 0x00, 0xA0, 0xC9, 0x3E, 0xC9, 0x3B}};
+  constexpr genericUuid GptPartitionType_None = // (Partition doesn't exist)
+  {0x00000000, {0x0000, 0x0000}, {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}};
+
+  constexpr genericUuid GptPartitionType_BasicData = // (Microsoft basic data partition - can be FAT, exFAT or NTFS)
+  {0xEBD0A0A2, {0xB9E5, 0x4433}, {0x87, 0xC0, 0x68, 0xB6, 0xB7, 0x26, 0x99, 0xC7}};
+
+  constexpr genericUuid GptPartitionType_Esp = // (EFI System Partition - can be FAT)
+  {0xC12A7328, {0xF81F, 0x11D2}, {0xBA, 0x4B, 0x00, 0xA0, 0xC9, 0x3E, 0xC9, 0x3B}};
+
+  constexpr genericUuid GptPartitionType_LinuxData = // (Linux basic data partition - can be anything)
+  {0x4F68BCE3, {0xE8CD, 0x4DB1}, {0x96, 0xE7, 0xFB, 0xCA, 0xF9, 0x84, 0xB7, 0x09}};
 
   typedef struct _gptPartition {
 
