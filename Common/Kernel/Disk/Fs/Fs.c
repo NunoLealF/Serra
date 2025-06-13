@@ -2,18 +2,19 @@
 // This file is part of the Serra project, which is released under the MIT license.
 // For more information, please refer to the accompanying license agreement. <3
 
-#include "../Libraries/Stdint.h"
-#include "../Memory/Memory.h"
-#include "Disk.h"
+#include "../../Libraries/Stdint.h"
+#include "../../Memory/Memory.h"
+#include "../Disk.h"
+#include "Fs.h"
 
-// (DEBUG)
-#include "../Libraries/Stdio.h"
+// (NOTE - This is for debug/information messages only)
+
+#include "../../Libraries/Stdio.h"
 
 
 
 // (TODO - Include a function to process an unpartitioned volume / an
 // individual filesystem)
-
 
 
 
@@ -24,8 +25,8 @@
 // heads per cylinder; that's not out of laziness, it's just that
 // there's no standard way to figure that out)
 
-// (The *vast* majority of MBRs out there support LBA values, which
-// are much more reliable - this is just a fallback)
+// The *vast* majority of MBRs out there support LBA values, which
+// are much more reliable - this is just a fallback.
 
 static uint64 ConvertChsToLba(chsAddress Chs) [[reproducible]] {
 
@@ -39,6 +40,7 @@ static uint64 ConvertChsToLba(chsAddress Chs) [[reproducible]] {
           (Chs.Cylinders * SectorsPerHead * HeadsPerCylinder));
 
 }
+
 
 
 // (TODO - Include a function to get the sector/LBA offset of an MBR
@@ -56,6 +58,7 @@ static uint64 CalculateMbrOffset(mbrHeader* Header, uint16 Partition) {
   }
 
 }
+
 
 
 // (TODO - Same as above, but for the size)
@@ -85,6 +88,7 @@ static uint64 CalculateMbrSize(mbrHeader* Header, uint16 Partition) {
   }
 
 }
+
 
 
 // (TODO - Include a function to convert an MBR partition type into one
@@ -806,9 +810,3 @@ static uint16 DetectPartitionMap(mbrHeader* Mbr, uint16 VolumeNum) {
   }
 
 }
-
-
-
-// (TODO - Include a function to initialize the filesystem subsystem..
-// or, better, this is the disk subsystem, to just do the things above
-// and try to automatically identify partitions and all)

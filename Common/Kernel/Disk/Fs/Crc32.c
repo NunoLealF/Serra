@@ -2,8 +2,8 @@
 // This file is part of the Serra project, which is released under the MIT license.
 // For more information, please refer to the accompanying license agreement. <3
 
-#include "../Libraries/Stdint.h"
-#include "Disk.h"
+#include "../../Libraries/Stdint.h"
+#include "Fs.h"
 
 // In order to verify whether a GPT partition is working or not, we need
 // to calculate a CRC-32 checksum, which for performance reasons,
