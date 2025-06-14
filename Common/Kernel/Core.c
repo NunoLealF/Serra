@@ -258,10 +258,101 @@ void KernelCore(commonInfoTable* InfoTable) {
 
   }
 
-  // (Test the filesystem/partition subsystem)
+  // (Initialize the filesystem/partition subsystem - it's still not ready,
+  // so we initialize it here rather than in Entry.c to catch error
+  // messages and such)
 
-  Putchar('\n', false, 0x0F);
+  Print("\n\r", false, 0x0F);
   [[maybe_unused]] bool Thing2 = InitializeFsSubsystem();
+
+  // (NOTE - Sim, isto é a única parte do projeto inteiro em português)
+
+  // (O font renderer que estou a usar só aceita caracteres ASCII ingleses
+  // por padrão, e é o mesmo para os modos de texto - é possível mostrar
+  // caracteres com acentos, mas não é estandardizado)
+
+  // (Mostrar um demo gráfico)
+
+  if (ConsoleData.Type == GraphicalConsole) {
+
+    // (Fazer print normalmente - isto é só para atualizar `PosX` e `PosY`
+    // em `ConsoleData`)
+
+    Print("[Serra] - um novo boot manager.", true, 0x0F);
+
+    // (Deixar o fundo ficar mais e mais azul)
+
+    for (uint64 Multiplier = 0; Multiplier < 0x80; Multiplier++) {
+
+      for (uint64 Delay = 0; Delay < 10000 * (0x80 - Multiplier); Delay++) {
+        __asm__ __volatile__ ("nop");
+      }
+
+      DrawBitmapFont("[Serra] - um novo boot manager.", &BitmapFontData,
+                      0xFFFFFF, (Multiplier * 0x0101), 0,
+                      (ConsoleData.PosY * BitmapFontData.Height));
+
+    }
+
+    // (Quando o fundo finalmente ficar azul, mostrar um gradiante
+    // da esquerda à direita)
+
+    auto Start = (ConsoleData.PosX * BitmapFontData.Width);
+    auto End = GraphicsData.LimitX;
+
+    for (uint64 X = Start; X < End; X++) {
+
+      for (uint64 Delay = 0; Delay < 500 * (End - X); Delay++) {
+        __asm__ __volatile__ ("nop");
+      }
+
+      uint8 Multiplier = 0x80 - (uint8)(((X - Start) * 0x80) / (End - Start));
+
+      DrawRectangle((Multiplier * 0x0101), X,
+                    (ConsoleData.PosY * BitmapFontData.Height), 1, BitmapFontData.Height);
+
+    }
+
+  } else {
+
+    // (Se não for possível mostrar o demo gráfico (por estar em modo de
+    // texto), mostrar normalmente com 3Fh (fundo azul + texto branco))
+
+    Print("[Serra] - um novo boot manager.", true, 0x3F);
+
+  }
+
+  // (Mostrar string informativa)
+
+  Print("\n\r", true, 0x0F);
+  Print("Nuno Filipe Leal Faria (n. 15962) - TGPSI3 (Escola da APEL) - ", true, 0x0F);
+
+  // Se a console está limitado a menos do que 82 caracteres, não há espaço
+  // para mostrar "14 de junho de 2025", só "14 junho 2025":
+
+  if (ConsoleData.LimitX < 82) {
+    Print("14 junho 2025 \n\r", true, 0x0F);
+  } else {
+    Print("14 de junho de 2025 \n\r", true, 0x0F);
+  }
+
+  // A font gráfica que estou a usar não suporta caracteres especiais de forma
+  // 'normal', mas ainda consegui descubrir que:
+
+  // (Font gráfica / Tamzen) \x1C == 'ã', \x82 == 'é', \x87 == 'ç'
+  // (VGA / code page 437) \x83 == 'ã', \x82 == 'é', \x87 == 'ç'
+  // (EFI) A maioria dos sistemas não suportam caracteres especiais
+
+  // (Por isso, dependendo do valor de `ConsoleData.Type`, eu acabo por
+  // mostrar uma string diferente)
+
+  if (ConsoleData.Type == GraphicalConsole) {
+    Printf("Prova de Aptid%co Profissional (T%ccnico de Gest%co e Programa%c%co de Sist. Inf.)\n\r", true, 0x07, 0x1C, 0x82, 0x1C, 0x87, 0x1C); // Tamzen (não parece ser standard)
+  } else if (ConsoleData.Type == VgaConsole) {
+    Printf("Prova de Aptid%co Profissional (T%ccnico de Gest%co e Programa%c%co de Sist. Inf.)\n\r", true, 0x07, 0x83, 0x82, 0x83, 0x87, 0x83); // VGA (code page 437)
+  } else if (ConsoleData.Type == EfiConsole) {
+    Printf("Prova de Aptidao Profissional (Tecnico de Gestao e Programacao de Sist. Inf.)\n\r", true, 0x07); // EFI (normalmente não suporta acentos (?))
+  }
 
   // (Depending on the system type, either wait for a keypress or just
   // stall the system for a while)
@@ -269,6 +360,9 @@ void KernelCore(commonInfoTable* InfoTable) {
   if ((InfoTable->Firmware.Type == FirmwareType_Efi) && (InfoTable->Firmware.Efi.SupportsConIn == true)) {
 
     // (Wait for a keypress)
+
+    Print("\n\r", true, 0x07);
+    Message(Warning, "Press any key to return.");
 
     efiInputKey PhantomKey;
     while (gST->ConIn->ReadKeyStroke(gST->ConIn, &PhantomKey) == EfiNotReady);

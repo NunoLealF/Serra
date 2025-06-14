@@ -769,15 +769,15 @@ static uint16 DetectPartitionMap(mbrHeader* Mbr, uint16 VolumeNum) {
       for (auto VolumeIndex = OldNumVolumes; VolumeIndex < NumVolumes; VolumeIndex++) {
 
         Message(Ok, "Successfully added a volume entry (%d) for method(%d)drive(%d)partition(%d)",
-                    (uint64)OldNumVolumes, (uint64)VolumeList[VolumeIndex].Method,
+                    (uint64)VolumeIndex, (uint64)VolumeList[VolumeIndex].Method,
                     (uint64)VolumeList[VolumeIndex].Drive,
                     (uint64)VolumeList[VolumeIndex].Partition);
 
         Message(Info, "Volume entry (%d) is a partition of type %xh (see volumeInfo{}.Type)",
-                      (uint64)Index, (uint64)VolumeList[VolumeIndex].Type);
+                      (uint64)VolumeIndex, (uint64)VolumeList[VolumeIndex].Type);
 
         Message(Info, "Volume entry (%d) has a sector size of %d bytes, and %d sectors",
-                      (uint64)Index, (uint64)VolumeList[VolumeIndex].BytesPerSector,
+                      (uint64)VolumeIndex, (uint64)VolumeList[VolumeIndex].BytesPerSector,
                       (uint64)VolumeList[VolumeIndex].NumSectors);
 
         uint64 Size = (VolumeList[VolumeIndex].BytesPerSector *
