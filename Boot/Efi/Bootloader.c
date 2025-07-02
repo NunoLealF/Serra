@@ -219,7 +219,14 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   int32 ConOutMode = 0;
   uint32 ConOutResolution[2] = {0, 0};
 
+  int32 SaveConOutMode = 0;
+
   if (SupportsConOut == true) {
+
+    // Before we do anything else, let's save the current EFI text
+    // mode number, in case we need to restore it later on.
+
+    SaveConOutMode = gST->ConOut->Mode->Mode;
 
     // EFI mode numbers run between 0 and (MaxMode - 1), so the first
     // thing we need to do is look for MaxMode.
@@ -1849,16 +1856,20 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   // mode and show the return status (before exiting the application),
   // which we can do like this:
 
-  // (Disable graphics/GOP mode, if it was enabled earlier.)
+  // (Disable graphics/GOP mode, if it was enabled earlier, and
+  // restore the original text mode)
 
   if (SupportsGop == true) {
 
     GopProtocol->SetMode(GopProtocol, 0);
 
     if (SupportsConOut == true) {
-      gST->ConOut->SetMode(gST->ConOut, 0);
-
+      gST->ConOut->SetMode(gST->ConOut, SaveConOutMode);
     }
+
+  } else if (ConOutMode != SaveConOutMode) {
+
+    gST->ConOut->SetMode(gST->ConOut, SaveConOutMode);
 
   }
 
@@ -1866,8 +1877,8 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
 
   DebugFlag = true;
 
-  #define HighEntrypointStatus (uint64)(EntrypointStatusCode >> 32)
-  #define LowEntrypointStatus (uint64)(EntrypointStatusCode & 0xFFFFFFFF)
+  const uint64 HighEntrypointStatus = (EntrypointStatusCode >> 32);
+  const uint64 LowEntrypointStatus = (EntrypointStatusCode & 0xFFFFFFFF);
 
   Print(u"\n\r", 0);
   Message(Info, u"Entrypoint returned with a status code of (%d:%d)",

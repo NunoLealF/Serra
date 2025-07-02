@@ -624,7 +624,7 @@ void S3Bootloader(void) {
   // [Check for VESA (VBE 2.0+) support, and obtain data if possible]
 
   Putchar('\n', 0);
-  Message(Boot, "Preparing to get VESA-related data.");
+  Message(Boot, "Preparing to check for VESA VBE (graphics mode) support.");
 
   // Let's start by obtaining the VBE info block - this not only lets us
   // see if VESA VBE is supported at all (by checking the return status),
@@ -637,21 +637,24 @@ void S3Bootloader(void) {
   // (We also skip this step if graphics support is explicitly disabled,
   // which you can do by defining `Graphical` as false in makefile.config)
 
-  volatile vbeInfoBlock VbeInfo = {0};
-  uint32 VbeReturnStatus = GetVbeInfoBlock(&VbeInfo);
+  [[maybe_unused]] volatile vbeInfoBlock VbeInfo = {0};
+  bool SupportsVbe = false;
 
-  bool SupportsVbe;
+  if (GraphicalFlag == true) {
 
-  if ((VbeReturnStatus != 0x004F) || (VbeInfo.Version < 0x200) || (GraphicalFlag == false)) {
+    uint32 VbeReturnStatus = GetVbeInfoBlock(&VbeInfo);
 
-    SupportsVbe = false;
-    Message(Warning, "VBE (2.0+) appears to be unsupported.");
+    if ((VbeReturnStatus != 0x004F) || (VbeInfo.Version < 0x200)) {
 
-  } else {
+      Message(Warning, "VESA BIOS Extensions appear to be unsupported.");
 
-    SupportsVbe = true;
-    Message(Ok, "VBE (2.0+) appears to be supported.");
-    Message(Info, "The VBE info block table is located at %xh", &VbeInfo);
+    } else {
+
+      Message(Ok, "VESA BIOS Extensions appears to be supported.");
+      Message(Info, "The VBE info block table is located at %xh", &VbeInfo);
+      SupportsVbe = true;
+
+    }
 
   }
 
@@ -663,23 +666,22 @@ void S3Bootloader(void) {
   // but we still don't know which ones the monitor supports; that's
   // where EDID comes in.)
 
-  volatile edidInfoBlock EdidInfo = {0};
-
-  uint32 EdidReturnStatus = GetEdidInfoBlock(&EdidInfo, 0x00);
+  [[maybe_unused]] volatile edidInfoBlock EdidInfo = {0};
   bool SupportsEdid = false;
 
   if (SupportsVbe == true) {
 
-    if (((EdidReturnStatus & 0xFF) != 0x4F) || (SupportsVbe == false)) {
+    uint32 EdidReturnStatus = GetEdidInfoBlock(&EdidInfo, 0x00);
 
-      SupportsEdid = false;
+    if ((EdidReturnStatus & 0xFF) != 0x4F) {
+
       Message(Warning, "EDID appears to be unsupported; using lowest video mode.");
 
     } else {
 
-      SupportsEdid = true;
       Message(Ok, "EDID appears to be supported.");
       Message(Info, "The EDID info block table is located at %xh", &EdidInfo);
+      SupportsEdid = true;
 
     }
 
