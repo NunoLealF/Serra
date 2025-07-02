@@ -88,6 +88,26 @@
 
   } efiEdidProtocol;
 
+  typedef struct _efiGraphicsOutputBltPixel {
+
+    uint8 Blue;
+    uint8 Green;
+    uint8 Red;
+    uint8 Reserved;
+
+  } efiGraphicsOutputBltPixel;
+
+  typedef enum _efiGraphicsOutputBltOperation {
+
+    EfiBltVideoFill,
+    EfiBltVideoToBltBuffer,
+    EfiBltBufferToVideo,
+    EfiBltVideoToVideo,
+
+    EfiGraphicsOutputBltOperationMax
+
+  } efiGraphicsOutputBltOperation;
+
   typedef struct _efiGraphicsOutputModeInformation {
 
     uint32 Version;
@@ -134,13 +154,15 @@
 
   typedef efiStatus (efiAbi *efiQueryMode) (efiProtocol This, uint32 ModeNumber, volatile uint64* SizeOfInfo, volatile efiGraphicsOutputModeInformation** EfiTable);
   typedef efiStatus (efiAbi *efiSetMode) (efiProtocol This, uint32 ModeNumber);
+  typedef efiStatus (efiAbi *efiBlt) (efiProtocol This, volatile efiGraphicsOutputBltPixel* BltBuffer, efiGraphicsOutputBltOperation BltOperation, uintptr SourceX, uintptr SourceY, uintptr DestinationX, uintptr DestinationY, uintptr Width, uintptr Height, uintptr Delta);
+
   constexpr efiUuid efiGraphicsOutputProtocol_Uuid = {0x9042A9DE, {0x23DC, 0x4A38}, {0x96, 0xFB, 0x7A, 0xDE, 0xD0, 0x80, 0x51, 0x6A}};
 
   typedef struct _efiGraphicsOutputProtocol {
 
     efiQueryMode QueryMode;
     efiSetMode SetMode;
-    efiNotImplemented Blt;
+    efiBlt Blt;
 
     efiGraphicsOutputProtocolMode* Mode;
 

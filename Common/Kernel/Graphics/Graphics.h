@@ -30,7 +30,12 @@
     void* Framebuffer; // (A pointer to the framebuffer)
     void* Buffer; // (A pointer to the double buffer)
 
-    // (Color information; [0] is red, [1] is green, [2] is blue)
+    // (Firmware or hardware-related information)
+
+    void* Gop; // (A pointer to the current GOP protocol instance - EFI only)
+
+    // (Color information - Colors[0] is red, Colors[1] is green, and
+    // Colors[2] is blue)
 
     struct {
 
@@ -47,6 +52,7 @@
 
   extern graphicsSubsystemData GraphicsData;
   bool InitializeGraphicsSubsystem(void* InfoTable);
+  uint64 TranslateRgbColorValue(uint32 Color) [[reproducible]];
 
   void DrawPixel(uint32 Color, uint16 PosX, uint16 PosY);
   void DrawRectangle(uint32 Color, uint16 PosX, uint16 PosY, uint16 Width, uint16 Height);

@@ -4,12 +4,13 @@
 
 #include "../../../Libraries/Stdint.h"
 #include "../../../Libraries/String.h"
+#include "../../../Firmware/Firmware.h"
 #include "../../Graphics.h"
 #include "../../Fonts/Fonts.h"
 #include "../Console.h"
 #include "Graphical.h"
 
-// (TODO - This macro converts a color attribute into actual RGB
+// (TODO - This function converts a color attribute into actual RGB
 // color values, which is nice)
 
 static inline uint32 ConvertAttributeToRgb(uint8 Attribute) [[reproducible]] {
@@ -34,6 +35,88 @@ static inline uint32 ConvertAttributeToRgb(uint8 Attribute) [[reproducible]] {
   return Color;
 
 }
+
+
+
+// (TODO - This function scrolls using the best possible method, updating
+// the backbuffer as well in the process)
+
+static void Scroll_Graphical(uintptr Lines) {
+
+  // First, let's calculate the number of lines we need to clear.
+
+  auto ClearLines = (ConsoleData.LimitY - Lines);
+
+  // Next, let's update the back buffer. We need to scroll everything
+  // back by `Lines`, and clear the last `ClearLines`.
+
+  auto Multiplier = (BitmapFontData.Height * GraphicsData.Pitch);
+
+  Memmove((void*)GraphicsData.Buffer,
+          (const void*)((uintptr)GraphicsData.Buffer + (ClearLines * Multiplier)),
+          (uintptr)(Lines * Multiplier));
+
+  Memset((void*)((uintptr)GraphicsData.Buffer + (Lines * Multiplier)),
+         (uint8)0, (ClearLines * Multiplier));
+
+  // (Update the current vertical position)
+
+  ConsoleData.PosY -= ClearLines;
+
+  // Now, depending on the graphics type (and the presence of hardware
+  // acceleration, like GOP's BLT), we'll either:
+
+  // (TODO - I don't have a proper way to rapidly copy things to the
+  // framebuffer, usually this wouldn't be necessary and you'd just
+  // have some sort of FramebufferMemcpy() function)
+
+  bool SameAsGopBltFormat = (TranslateRgbColorValue(0xABCDEF) == 0xABCDEF);
+
+  if ((GraphicsData.Gop == NULL) || (SameAsGopBltFormat == false)) {
+
+    // (A) Copy directly from the backbuffer to the framebuffer
+
+    Memcpy((void*)GraphicsData.Framebuffer,
+           (const void*)GraphicsData.Buffer,
+           (uintptr)(GraphicsData.LimitY * GraphicsData.Pitch));
+
+  } else {
+
+    // (B) Use GOP functions to quickly move data to the framebuffer.
+
+    efiGraphicsOutputProtocol* Gop = GraphicsData.Gop;
+
+    if (GraphicsData.Pitch == (GraphicsData.Bpp * GraphicsData.LimitX)) {
+
+      // (Copy everything in one go)
+
+      Gop->Blt(Gop, (volatile efiGraphicsOutputBltPixel*)GraphicsData.Buffer,
+               EfiBltBufferToVideo, 0, 0, 0, 0,
+               GraphicsData.LimitX, GraphicsData.LimitY, 0);
+
+    } else {
+
+      // (Individually copy each line)
+
+      for (uint16 Line = 0; Line < GraphicsData.LimitY; Line++) {
+
+        Gop->Blt(Gop, (volatile efiGraphicsOutputBltPixel*)GraphicsData.Buffer,
+                 EfiBltBufferToVideo, 0, Line, 0, Line,
+                 GraphicsData.LimitX, 1, 0);
+
+      }
+
+    }
+
+  }
+
+  // Now that we're done, let's return.
+
+  return;
+
+}
+
+
 
 
 
@@ -109,37 +192,8 @@ void Print_Graphical(const char* String, uint8 Attribute) {
 
   if (PosY >= ConsoleData.LimitY) {
 
-    // First, let's calculate the amount of lines we need to *make room
-    // for*, as well as the amount of lines we need to *scroll*.
-    // as well as the amount of lines we need to *clear*.
-
-    auto ClearLines = min((PosY + 1 - ConsoleData.LimitY), ConsoleData.LimitY);
-    auto ScrollLines = (ConsoleData.LimitY - ClearLines);
-
-    // (Scroll every line back by `ClearLines`, using Memmove())
-
-    uintptr Buffer = (uintptr)GraphicsData.Buffer;
-    auto Multiplier = (BitmapFontData.Height * GraphicsData.Pitch);
-
-    Memmove((void*)Buffer,
-            (const void*)(Buffer + (ClearLines * Multiplier)),
-            (uint64)(ScrollLines * Multiplier));
-
-    // (Clear out the last few lines, using Memset(), and update PosY
-    // to correspond to the start of those lines)
-
-    Memset((void*)(Buffer + (ScrollLines * Multiplier)),
-           (uint8)0x00,
-           (uint64)(ClearLines * Multiplier));
-
-    ConsoleData.PosY -= ClearLines;
-
-    // (Copy the entire back buffer to the framebuffer in one operation;
-    // that way, we only copy to the framebuffer once.)
-
-    Memcpy((void*)GraphicsData.Framebuffer,
-           (const void*)GraphicsData.Buffer,
-           (uint64)(GraphicsData.LimitY * GraphicsData.Pitch));
+    auto Lines = min((PosY + 1 - ConsoleData.LimitY), ConsoleData.LimitY);
+    Scroll_Graphical(ConsoleData.LimitY - Lines);
 
   }
 
