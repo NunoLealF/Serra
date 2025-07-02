@@ -50,6 +50,6 @@
 
   void DrawPixel(uint32 Color, uint16 PosX, uint16 PosY);
   void DrawRectangle(uint32 Color, uint16 PosX, uint16 PosY, uint16 Width, uint16 Height);
-  void DrawBitmapFont(const char* String, const bitmapFontData* Font, uint32 ForegroundColor, uint32 BackgroundColor, uint16 PosX, uint16 PosY);
+  void DrawBitmapFont(const char* String, const bitmapFontData* Font, bool UpdateFramebuffer, uint32 ForegroundColor, uint32 BackgroundColor, uint16 PosX, uint16 PosY);
 
 #endif

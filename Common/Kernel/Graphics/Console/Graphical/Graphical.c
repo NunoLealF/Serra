@@ -146,7 +146,10 @@ void Print_Graphical(const char* String, uint8 Attribute) {
   // Finally, now that we've finished scrolling, we can call DrawBitmapFont()
   // to draw each line as needed.
 
-  uint16 InitialPosition[2] = {ConsoleData.PosX, ConsoleData.PosY};
+  uintptr BufferPosition[2] = {(ConsoleData.PosX * BitmapFontData.Width),
+                               (ConsoleData.PosY * BitmapFontData.Height)};
+
+  uintptr InitialPosition[2] = {BufferPosition[0], BufferPosition[1]};
 
   auto LineIndex = 0;
   char LineString[Index];
@@ -203,21 +206,41 @@ void Print_Graphical(const char* String, uint8 Attribute) {
       // to the framebuffer.)
 
       LineString[LineIndex] = '\0';
-      DrawBitmapFont(LineString, &BitmapFontData, ForegroundColor, BackgroundColor, (InitialPosition[0] * BitmapFontData.Width), (InitialPosition[1] * BitmapFontData.Height));
+      DrawBitmapFont(LineString, &BitmapFontData, false, ForegroundColor, BackgroundColor, BufferPosition[0], BufferPosition[1]);
 
       // (Reset LineIndex, to start a new line.)
 
       LineIndex = 0;
 
-      // (Update InitialPosition[] to correspond to the start of the next
+      // (Update BufferPosition[] to correspond to the start of the next
       // line's string, if applicable.)
 
-      InitialPosition[0] = ConsoleData.PosX;
-      InitialPosition[1] = ConsoleData.PosY;
+      BufferPosition[0] = (ConsoleData.PosX * BitmapFontData.Width);
+      BufferPosition[1] = (ConsoleData.PosY * BitmapFontData.Height);
 
     }
 
   }
+
+  // Now that we've drawn everything, we can copy over everything to the
+  // framebuffer.
+
+  // (Calculate offset)
+
+  const uintptr Start = ((InitialPosition[0] * GraphicsData.Bpp) +
+                         (InitialPosition[1] * GraphicsData.Pitch));
+
+  const uintptr End = ((BufferPosition[0] * GraphicsData.Bpp) +
+                       (BufferPosition[1] * GraphicsData.Pitch));
+
+  // (Get back+front buffers)
+
+  const uintptr Backbuffer = ((uintptr)GraphicsData.Buffer + Start);
+  const uintptr Framebuffer = ((uintptr)GraphicsData.Framebuffer + Start);
+
+  // (Actually copy the data itself.)
+
+  Memcpy((void*)Framebuffer, (const void*)Backbuffer, (End - Start + 1));
 
   return;
 

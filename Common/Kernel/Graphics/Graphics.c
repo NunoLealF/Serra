@@ -265,12 +265,12 @@ void DrawRectangle(uint32 Color, uint16 PosX, uint16 PosY, uint16 Width, uint16 
 
 
 
-// (TODO - A function that draws a bitmap font, with optional transparency)
+// (TODO - A function that draws a bitmap font)
 
 // As with PSF2 bitmaps, 'Width' is padded out as necessary; for example,
 // a 5-bit bitmap is drawn as if it were an 8-bit one
 
-void DrawBitmapFont(const char* String, const bitmapFontData* Font, uint32 ForegroundColor, uint32 BackgroundColor, uint16 PosX, uint16 PosY) {
+void DrawBitmapFont(const char* String, const bitmapFontData* Font, bool UpdateFramebuffer, uint32 ForegroundColor, uint32 BackgroundColor, uint16 PosX, uint16 PosY) {
 
   // First, let's calculate the length of the string we were given.
 
@@ -341,9 +341,9 @@ void DrawBitmapFont(const char* String, const bitmapFontData* Font, uint32 Foreg
               // foreground or the background color.
 
               if ((Byte & (1ULL << --Bit)) != 0) {
-                Memcpy(GetBitmapLutPosition(Byte, Complement++), &FgColor, GraphicsData.Bpp);
+                *(uint64*)GetBitmapLutPosition(Byte, Complement++) = FgColor;
               } else {
-                Memcpy(GetBitmapLutPosition(Byte, Complement++), &BgColor, GraphicsData.Bpp);
+                *(uint64*)GetBitmapLutPosition(Byte, Complement++) = BgColor;
               }
 
             }
@@ -425,14 +425,18 @@ void DrawBitmapFont(const char* String, const bitmapFontData* Font, uint32 Foreg
       // Now that we've finished drawing to the back buffer, we can
       // finally copy everything to the framebuffer in one go.
 
-      // (Calculate the distance between the start (`Backbuffer`) and
-      // the end (`Address`) of the text we just finished drawing)
+      if (UpdateFramebuffer == true) {
 
-      uintptr Delta = (Address - Backbuffer);
+        // (Calculate the distance between the start (`Backbuffer`) and
+        // the end (`Address`) of the text we just finished drawing)
 
-      // (Copy from the back bufer to the framebuffer, using Memcpy())
+        uintptr Delta = (Address - Backbuffer);
 
-      Memcpy((void*)Framebuffer, (const void*)Backbuffer, (uint64)Delta);
+        // (Copy from the back buffer to the framebuffer, using Memcpy())
+
+        Memcpy((void*)Framebuffer, (const void*)Backbuffer, (uint64)Delta);
+
+      }
 
     }
 
