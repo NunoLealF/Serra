@@ -1836,6 +1836,7 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
   // (Calculate the table checksum - we do this by manually summing every
   // byte in the table, up to the Checksum element)
 
+  CommonInfoTable.Checksum = 0;
   uint16 ChecksumSize = CommonInfoTable.Size - sizeof(CommonInfoTable.Checksum);
   const uint8* RawInfoTable = (const uint8*)(&CommonInfoTable);
 

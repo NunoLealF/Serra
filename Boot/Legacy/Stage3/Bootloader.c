@@ -1703,6 +1703,7 @@ void S3Bootloader(void) {
 
   // (Calculate the information table checksum.)
 
+  CommonInfoTable.Checksum = 0;
   uint16 ChecksumSize = (sizeof(CommonInfoTable) - sizeof(CommonInfoTable.Checksum));
   const uint8* RawInfoTable = (const uint8*)(&CommonInfoTable);
 
