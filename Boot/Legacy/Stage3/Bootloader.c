@@ -123,7 +123,8 @@ void S3Bootloader(void) {
   // If it is, then that means we have a valid InfoTable, so let's set
   // up the terminal/console:
 
-  Memcpy(&TerminalTable, &InfoTable->TerminalInfo, sizeof(InfoTable->TerminalInfo));
+  Memcpy((void*)&TerminalTable, (const void*)&InfoTable->TerminalInfo,
+         (uint32)sizeof(InfoTable->TerminalInfo));
 
   Putchar('\n', 0);
   Message(Boot, "Successfully entered the third-stage bootloader.");

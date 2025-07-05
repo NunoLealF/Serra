@@ -3,8 +3,8 @@
 // For more information, please refer to the accompanying license agreement. <3
 
 #include "../../Shared/Stdint.h"
-#include "../Memory/Memory.h"
 #include "../Graphics/Graphics.h"
+#include "../Memory/Memory.h"
 #include "Int.h"
 
 /* void LoadIdt()

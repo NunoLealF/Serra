@@ -15,9 +15,11 @@
   bool CheckA20(void);
   void WaitA20(void);
 
-  // Standard memory functions from the (shared) Memory folder
+  // Standard memory functions from the (shared) Memory folder; we
+  // also include Common.h from the kernel for usableMmapEntry{}
 
   #include "../../Shared/Memory/Memory.h"
+  #include "../../../../Common/Common.h"
 
   // Memory-map-related structures, from Mmap/Mmap.c.
 
@@ -45,15 +47,6 @@
     uint32 Acpi;
 
   } __attribute__((packed)) mmapEntry;
-
-  // Usable memory map-related structures, used in the kernel infotable.
-
-  typedef struct _usableMmapEntry {
-
-    uint64 Base;
-    uint64 Limit;
-
-  } __attribute__((packed)) usableMmapEntry;
 
   // Memory-map-related functions, from Mmap/Mmap.c.
 

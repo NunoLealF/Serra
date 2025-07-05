@@ -187,7 +187,7 @@ void RestoreState(void) {
 
     Table = ReadSector(1, 0xAE00, 0);
 
-    if (hasFlag(Table->Eflags, CarryFlag) == true) {
+    if (hasFlag(Table->Eflags, CarryFlag)) {
       Panic("Unable to successfully load data from the drive.", 0);
     } else if (*SanityCheck == SanityCheckValue) {
       Panic("Unable to successfully load data from the drive.", 0);
@@ -205,10 +205,10 @@ void RestoreState(void) {
 
   #define BpbAddress 0x7C00
 
-  biosParameterBlock Bpb = *(biosParameterBlock*)(BpbAddress + 3);
+  const biosParameterBlock Bpb = *(biosParameterBlock*)(BpbAddress + 3);
 
-  [[maybe_unused]] biosParameterBlock_Fat16 ExtendedBpb_16 = *(biosParameterBlock_Fat16*)(BpbAddress + 36);
-  [[maybe_unused]] biosParameterBlock_Fat32 ExtendedBpb_32 = *(biosParameterBlock_Fat32*)(BpbAddress + 36);
+  [[maybe_unused]] const biosParameterBlock_Fat16 ExtendedBpb_16 = *(biosParameterBlock_Fat16*)(BpbAddress + 36);
+  [[maybe_unused]] const biosParameterBlock_Fat32 ExtendedBpb_32 = *(biosParameterBlock_Fat32*)(BpbAddress + 36);
 
   Putchar('\n', 0);
 
@@ -296,17 +296,12 @@ void RestoreState(void) {
 
   // (First, we need to get the root cluster, along with the sector offset of that cluster)
 
-  uint32 RootCluster;
-
-  if (PartitionIsFat32 == false) {
-    RootCluster = 2;
-  } else {
-    RootCluster = ExtendedBpb_32.RootCluster;
-  }
-
+  uint32 RootCluster = 2;
   uint32 RootSectorOffset = DataSectorOffset;
 
-  if (PartitionIsFat32 == false) {
+  if (PartitionIsFat32 == true) {
+    RootCluster = ExtendedBpb_32.RootCluster;
+  } else {
     RootSectorOffset -= NumRootSectors;
   }
 
@@ -384,7 +379,8 @@ void RestoreState(void) {
 
   // (Fill out terminal info)
 
-  Memcpy(&InfoTable->TerminalInfo, &TerminalTable, sizeof(InfoTable->TerminalInfo));
+  Memcpy(&InfoTable->TerminalInfo, (const void*)&TerminalTable,
+         sizeof(InfoTable->TerminalInfo));
 
 
   // And now, all that's left to do is to jump to the next stage (using inline assembly).
