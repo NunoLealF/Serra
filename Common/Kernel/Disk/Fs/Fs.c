@@ -83,7 +83,7 @@ static uint64 CalculateMbrSize(mbrHeader* Header, uint16 Partition) {
     uint64 Start = ConvertChsToLba(Header->Entry[Partition].ChsStart);
     uint64 End = ConvertChsToLba(Header->Entry[Partition].ChsEnd);
 
-    return (End + Start - 1);
+    return (End - Start + 1);
 
   }
 

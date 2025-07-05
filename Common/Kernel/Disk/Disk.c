@@ -220,8 +220,6 @@ bool TerminateDiskSubsystem(void) {
     return false;
   } else if (VolumeNum >= NumVolumes) {
     return false;
-  } else if (VolumeList[VolumeNum].Alignment >= (sizeof(uintptr) * 8)) {
-    return false;
   } else if (VolumeList[VolumeNum].BytesPerSector == 0) {
     return false;
   } else if (VolumeList[VolumeNum].Method == VolumeMethod_Unknown) {
