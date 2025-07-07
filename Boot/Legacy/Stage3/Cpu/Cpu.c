@@ -412,10 +412,10 @@ uint64 ReadFromMsr(uint32 Msr) {
    Outputs: (None, except an updated control register, or a warning message)
 
    This function writes a value to a writeable control register (either
-   CR0, CR3, CR4 or CR8), and shows a warning message otherwise.
+   CR0, CR3, or CR4), and shows a warning message otherwise.
 
-   For example, to clear everything in the CR8 register, you could do:
-   -> WriteToControlRegister(8, 0x00000000);
+   For example, to clear everything in the CR4 register, you could do:
+   -> WriteToControlRegister(4, 0x00000000);
 
 */
 
@@ -430,8 +430,6 @@ void WriteToControlRegister(uint8 Register, uint32 Value) {
     __asm__ __volatile__ ("mov %0, %%cr3" :: "r"(Value));
   } else if (Register == 4) {
     __asm__ __volatile__ ("mov %0, %%cr4" :: "r"(Value));
-  } else if (Register == 8) {
-    __asm__ __volatile__ ("mov %0, %%cr8" :: "r"(Value));
   } else {
     Message(Warning, "Attempted to write to unusable control register (CR%d).", Register);
   }
@@ -452,8 +450,8 @@ void WriteToControlRegister(uint8 Register, uint32 Value) {
             control register is unusable (which will display warning).
 
    This function reads the current value of an accessible control register
-   (either CR0, CR2, CR3, CR4 or CR8) - returning it in Value - and shows
-   a warning message otherwise.
+   (either CR0, CR2, CR3 or CR4) - returning it in Value - and shows a
+   warning message otherwise.
 
    For example, to read the current value of the CR2 register, you could do:
    -> uint32 Cr2 = ReadFromControlRegister(2);
@@ -475,8 +473,6 @@ uint32 ReadFromControlRegister(uint8 Register) {
     __asm__ __volatile__ ("mov %%cr3, %0" : "=r"(Value));
   } else if (Register == 4) {
     __asm__ __volatile__ ("mov %%cr4, %0" : "=r"(Value));
-  } else if (Register == 8) {
-    __asm__ __volatile__ ("mov %%cr8, %0" : "=r"(Value));
   } else {
     Message(Warning, "Attempted to read from an unusable control register (CR%d)", Register);
   }
