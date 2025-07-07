@@ -8,8 +8,8 @@
 # -compile it)
 
 AS = nasm
-CC = x86_64-w64-mingw32-gcc
-LD = x86_64-w64-mingw32-ld
+CC = x86_64-w64-mingw32-gcc # (Don't use Clang for this, it won't work)
+LD = x86_64-w64-mingw32-ld # (Don't use Clang for this, it won't work)
 OBJC = x86_64-w64-mingw32-objcopy
 OBJD = x86_64-w64-mingw32-objdump
 
@@ -26,6 +26,7 @@ OBJD = x86_64-w64-mingw32-objdump
 # -fpie: Compile our code into a position-independent executable.
 # -maccumulate-outgoing-args: Necessary for the EFI/Microsoft ABI on GCC.
 # -march=x86-64: Make sure only base x64 instructions are used.
+# -mcmodel=large: Tell the compiler to assume a large/unbounded memory model.
 # -mmmx, -msse, -msse2: Make sure to *enable* MMX, SSE and SSE2 instructions.
 # -std=c2x: Use the regular C23 standard (GCC 13+, Clang 16+)
 # -O3: Optimize the resulting file/binary for *speed*.
@@ -34,7 +35,7 @@ OBJD = x86_64-w64-mingw32-objdump
 # -Wpedantic: Be pedantic about the C standard / any possible mistakes
 
 LDFLAGS = -e SEfiBootloader -nostdlib -pie -Wl,--no-dynamic-linker -Wl,--subsystem,10
-CFLAGS = -std=c2x -ffreestanding -fpie -maccumulate-outgoing-args -march=x86-64 -mmmx -msse -msse2 -O3 -Wall -Wextra -Wpedantic
+CFLAGS = -std=c2x -ffreestanding -fpie -maccumulate-outgoing-args -march=x86-64 -mcmodel=large -mmmx -msse -msse2 -O3 -Wall -Wextra -Wpedantic
 
 # (Include the build configuration file, from the root directory)
 

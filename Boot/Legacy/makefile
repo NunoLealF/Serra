@@ -2,18 +2,19 @@
 # This file is part of the Serra project, which is released under the MIT license.
 # For more information, please refer to the accompanying license agreement. <3
 
-# You'll need an i686-elf-gcc toolchain and nasm, as well as qemu if you want
+# You'll need an i686-elf toolchain and nasm, as well as qemu if you want
 # to emulate it.
 
 AS = nasm
-CC = i686-elf-gcc
-LD = i686-elf-ld
+CC = i686-elf-gcc # (Can be replaced with `clang`)
+LD = i686-elf-ld # (Can be replaced with `lld`)
 OBJC = i686-elf-objcopy
 OBJD = i686-elf-objdump
 QEMU = qemu-system-x86_64
 
 
 # [Linker flags]
+# -m32: Make sure we're only linking 32-bit code.
 # -Wl,--no-warn-rwx-segments: Don't warn about mixing data and executable sections.
 
 # [Compiler flags]
@@ -21,6 +22,7 @@ QEMU = qemu-system-x86_64
 # (You want to place the main function in the beginning, so this is needed.)
 # -ffreestanding: This is a freestanding environment. Also, implies fno-builtin.
 # -std=c23: Use the regular C23 standard (GCC 15+, Clang 20+)
+# -m32: Make sure we're only compiling 32-bit code.
 # -mno-mmx, -mno-sse, -mno-sse2: Make sure to *disable* MMX, SSE and SSE2 instructions.
 # -Os: Optimize the resulting file/binary for *space*. (O3 may cause problems!)
 # -Wall: Enable all warnings.
@@ -32,8 +34,19 @@ QEMU = qemu-system-x86_64
 # -cpu qemu64: Use QEMU's default 64-bit CPU (with the minimum feature set)
 # -m 128: Limit the virtual machine to 128 MiB of RAM
 
-LDFLAGS = -Wl,--no-warn-rwx-segments
-CFLAGS = -std=c23 -ffunction-sections -funsigned-char -ffreestanding -mno-mmx -mno-sse -mno-sse2 -Os -Wall -Wextra -Wpedantic -Wno-discarded-qualifiers
+LDFLAGS = -m32 -Wl,--no-warn-rwx-segments
+CFLAGS = -m32 -std=c23 -ffunction-sections -funsigned-char -ffreestanding -mno-mmx -mno-sse -mno-sse2 -Os -Wall -Wextra -Wpedantic
+
+# [Compiler-specific options]
+# -Wno-discarded-qualifiers (GCC): Don't warn about discarding qualifiers
+# -Wno-ignored-qualifiers (Clang): Don't warn about discarding qualifiers
+# --target=x86_64-elf (Clang): Specify the target being used
+
+ifneq ('', '$(findstring gcc,$(CC))')
+  CFLAGS += -Wno-discarded-qualifiers
+else ifneq ('', '$(findstring clang,$(CC))')
+	CFLAGS += --target=i686-elf -Wno-ignored-qualifiers
+endif
 
 # (Include the build configuration file, from the root directory)
 
