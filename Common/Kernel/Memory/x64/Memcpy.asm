@@ -135,7 +135,7 @@ Memcpy_Sse2:
     ; XMM registers, using the `movdqu` instruction - keep in mind that
     ; we're reading from [RSI+n], which is the same as (*Source + n))
 
-    prefetchnta [rsi+192]
+    prefetchnta [rsi+128]
 
     movdqu xmm0, [rsi+0]
     movdqu xmm1, [rsi+16]
