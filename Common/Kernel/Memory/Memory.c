@@ -178,8 +178,8 @@ void* memcpy(void* Destination, const void* Source, uintptr Size) {
    (TODO - Something about memmove; this is essentially just a memcpy
    that can deal with overlapping areas.)
 
-   (TODO - Something about the different levels available (for instance,
-   if the memory allocation subsystem is available, it can use that)
+   (TODO - Something about using memcpy if the difference is large
+   enough for it not to crash; this *could absolutely be an issue*)
 
    (TODO - Something about GCC's insistence on memmove())
 
@@ -187,46 +187,17 @@ void* memcpy(void* Destination, const void* Source, uintptr Size) {
 
 void Memmove(void* Destination, const void* Source, uintptr Size) {
 
-  // In order to move overlapping data, we can either manually move
-  // each byte (for smaller or non-memory-managed allocations),
-  // or allocate a temporary buffer for the move.
+  // (Manually copy each byte from `Source` to `Destination`)
 
-  // (If the given size is larger than the system page size, then
-  // attempt to allocate a buffer)
+  // If our destination buffer comes *before* our source buffer, then
+  // we need to copy each byte back-to-front, not front-to-back.
 
-  const uintptr MoveSize = Size;
-  void* MoveBuffer = NULL;
+  uint8* SourceByte = (uint8*)Source;
+  uint8* DestinationByte = (uint8*)Destination;
 
-  if (MmSubsystemData.IsEnabled && (MoveSize >= SystemPageSize)) {
-    MoveBuffer = Allocate(&MoveSize);
-  }
+  if (Destination < Source) {
 
-  // (Depending on whether the buffer was allocated successfully,
-  // either move data manually, or into the buffer.)
-
-  if (MoveBuffer != NULL) {
-
-    // (Copy data from `Source` to `MoveBuffer`, and from `MoveBuffer`
-    // to `Destination`)
-
-    Memcpy(MoveBuffer, Source, MoveSize);
-    Memcpy(Destination, MoveBuffer, MoveSize);
-
-    // (Free `MoveBuffer`, if possible)
-
-    [[maybe_unused]] bool Result = Free(MoveBuffer, &MoveSize);
-
-  } else {
-
-    // (Manually copy each byte from `Source` to `Destination`)
-
-    // If our destination buffer comes *before* our source buffer, then
-    // we need to copy each byte back-to-front, not front-to-back.
-
-    uint8* SourceByte = (uint8*)Source;
-    uint8* DestinationByte = (uint8*)Destination;
-
-    if (Destination < Source) {
+    if (((uintptr)Source - (uintptr)Destination) < 64) {
 
       for (uintptr Index = 0; Index < Size; Index++) {
         DestinationByte[Index] = SourceByte[Index];
@@ -234,9 +205,21 @@ void Memmove(void* Destination, const void* Source, uintptr Size) {
 
     } else {
 
+      Memcpy(Destination, Source, Size); // (TODO - Might be an issue)
+
+    }
+
+  } else {
+
+    if (((uintptr)Destination - (uintptr)Source) < 64) {
+
       for (uintptr Index = Size; Index > 0; Index--) {
         DestinationByte[Index-1] = SourceByte[Index-1];
       }
+
+    } else {
+
+      Memcpy(Destination, Source, Size); // (TODO - Might be an issue)
 
     }
 

@@ -50,6 +50,9 @@ static void Scroll_Graphical(uintptr Lines) {
   // Next, let's update the back buffer. We need to scroll everything
   // back by `Lines`, and clear the last `ClearLines`.
 
+  // (TODO - The `Memmove` here is by far the slowest part, maybe optimize this?)
+  // (TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO)
+
   auto Multiplier = (BitmapFontData.Height * GraphicsData.Pitch);
 
   Memmove((void*)GraphicsData.Buffer,
