@@ -1112,14 +1112,10 @@ void S3Bootloader(void) {
 
 
 
-
   // [Identity-mapping 'low' (below IdentityMapThreshold) and usable memory]
 
   Putchar('\n', 0);
   Message(Boot, "Preparing to identity map low and usable memory.");
-
-  #define UsableFlags (pagePresent | pageRw)
-  #define IdmappedFlags (UsableFlags | pagePcd) // (Add pageSize for 2MiB pages)
 
   // In order to enable long mode - and eventually load our kernel - we
   // first need to enable paging, which is a CPU feature that introduces
@@ -1144,7 +1140,7 @@ void S3Bootloader(void) {
 
   #define IdentityMapThreshold 0x1000000 // (16 MiB; must be a multiple of 2 MiB)
 
-  Offset = InitializePageEntries(0, 0, IdentityMapThreshold, Pml4_Data, IdmappedFlags, true, false, Offset, UsableMmap, NumUsableMmapEntries);
+  Offset = InitializePageEntries(0, 0, IdentityMapThreshold, Pml4_Data, (pagePresent | pageRw), true, false, Offset, UsableMmap, NumUsableMmapEntries);
   Message(Ok, "Successfully identity mapped the first %d MiB of memory", (IdentityMapThreshold / 0x100000));
 
   // Additionally, we'll also identity map everything in the usable memory
@@ -1169,7 +1165,7 @@ void S3Bootloader(void) {
 
     // Initialize page entries
 
-    Offset = InitializePageEntries(Start, Start, Size, Pml4_Data, IdmappedFlags, true, false, Offset, UsableMmap, NumUsableMmapEntries);
+    Offset = InitializePageEntries(Start, Start, Size, Pml4_Data, (pagePresent | pageRw), true, false, Offset, UsableMmap, NumUsableMmapEntries);
     Message(Ok, "Successfully identity mapped %d MiB area starting at %x:%xh", (uint32)(Size / 0x100000), (uint32)(Start >> 32), (uint32)Start);
 
   }
@@ -1220,7 +1216,7 @@ void S3Bootloader(void) {
     // Initialize page entries. If PAT is enabled, we enable the PAT bit,
     // so that the framebuffer can be mapped as write-combining.
 
-    Offset = InitializePageEntries(Address, Address, Size, Pml4_Data, UsableFlags, true, true, Offset, UsableMmap, NumUsableMmapEntries);
+    Offset = InitializePageEntries(Address, Address, Size, Pml4_Data, (pagePresent | pageRw), true, true, Offset, UsableMmap, NumUsableMmapEntries);
     Message(Ok, "Successfully identity mapped %d MiB framebuffer starting at 0:%xh", (Size / 0x100000), Address);
 
   }
