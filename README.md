@@ -14,7 +14,7 @@ My goal here is to develop a universal and reliable boot manager that works
 across different systems, with a focus on code quality and user experience.
 
 It's currently a work in progress - see the [roadmap](#roadmap) below - but
-my goal is to have it ready by **early June**.
+my goal is to have it ready by **later this year**.
 
 &nbsp;
 
@@ -114,4 +114,4 @@ running `make all`.
 This project has been released under the [MIT license](https://choosealicense.com/licenses/mit/).
 For more information, please refer to the accompanying license agreement. <3
 
-*(last updated on June 6th 2025)*
+*(last updated on July 30th 2025)*
