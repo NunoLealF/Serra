@@ -218,7 +218,7 @@ uint64 InitializePageEntries(uint64 PhysAddress, uint64 VirtAddress, uint64 Size
   // we'll be mapping.
 
   uint64 Start = VirtAddress;
-  uint64 End = (Start + Size - 1); // (So it rounds properly)
+  uint64 End = Start + Size;
 
   uint16 InitialPmls[4] = {(Start >> 39) % 512, (Start >> 30) % 512, (Start >> 21) % 512, (Start >> 12) % 512};
   uint16 FinalPmls[4] = {(End >> 39) % 512, (End >> 30) % 512, (End >> 21) % 512, (End >> 12) % 512};
