@@ -271,7 +271,7 @@ void KernelCore(commonInfoTable* InfoTable) {
   // placeholder until the boot manager is actually up and running.)
 
   Message(Kernel, "Hi, this is Serra! <3");
-  Message(Info, "Compiled on July %d%s %x.", 2, "nd", 0x2025);
+  Message(Info, "Compiled on September %d%s %x.", 2, "nd", 0x2025);
 
 
   // (Depending on the system type, either wait for a keypress or just

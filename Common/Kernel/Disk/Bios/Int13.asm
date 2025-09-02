@@ -34,6 +34,12 @@ PrepareProtectedMode64:
   ; there's a real risk of it getting overwritten)
 
   push rbx
+  push rbp
+  push r12
+  push r13
+  push r14
+  push r15
+
   mov [SaveStack], rsp
 
   sgdt [LongModeGdtDescriptor]
@@ -300,6 +306,12 @@ ReturnFromWrapper:
   ; the caller's responsibility to enable them later on.)
 
   mov rsp, [SaveStack]
+
+  pop r15
+  pop r14
+  pop r13
+  pop r12
+  pop rbp
   pop rbx
 
   lidt [LongModeIdtDescriptor]
