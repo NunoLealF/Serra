@@ -11,32 +11,50 @@ SECTIONS
 
   .text : ALIGN(4K)
 	{
-    *(.text.Entrypoint)
-    *(.text)
+    KEEP(*(.text.Entrypoint .ltext.Entrypoint))
+    *(.text* .ltext*)
 	}
 
 	.rodata : ALIGN(4K)
 	{
-		*(.rodata)
+		*(.rodata* .lrodata*)
 	}
 
 	.data : ALIGN(4K)
 	{
-		*(.data)
+		*(.data* .ldata*)
 	}
 
 	.bss : ALIGN(4K)
 	{
 		*(COMMON)
-		*(.bss)
+		*(.bss* .lbss*)
 	}
 
   /* As we're compiling a position-independent executable, we also have a
-  `.dynamic` section, that needs to be page-aligned as with any other */
+  `.dynamic` section that needs to be page-aligned. */
 
   .dynamic : ALIGN(4K)
   {
-    *(.dynamic)
+    *(.dynamic*)
+  }
+
+  /* Additionally, in order to avoid issues with some linkers (lld), we
+  also need to create a separate page-aligned section for `.got.plt`. */
+
+  /* (This is necessary because lld is really fucking stupid.) */
+
+  .got : ALIGN(4K)
+  {
+    *(.got.plt)
+    *(.got*)
+  }
+
+  /* Finally, we can also safely discard some unused sections. */
+
+  /DISCARD/ : {
+    *(.comment*)
+    *(.note*)
   }
 
 }

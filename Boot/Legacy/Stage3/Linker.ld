@@ -11,24 +11,29 @@ SECTIONS
 
   .text :
   {
-    *(.text.S3Bootloader) /* The start of our third stage bootloader should be the S3Bootloader() function. */
+    KEEP(*(.text.S3Bootloader)) /* The start of our third stage bootloader should be the S3Bootloader() function. */
     *(.text*) /* The rest of our third stage bootloader (excluding non-text/code segments). */
   }
 
   .data :
   {
-    *(.data) /* Our binary's data segment. */
+    *(.data*) /* Our binary's data segment. */
   }
 
   .rodata :
   {
-    *(.rodata) /* Our binary's read only data segment. */
+    *(.rodata*) /* Our binary's read only data segment. */
   }
 
   .bss :
   {
     *(COMMON) /* Our binary's COMMON segment. */
-    *(.bss) /* Our binary's bss segment. */
+    *(.bss*) /* Our binary's bss segment. */
+  }
+
+  /DISCARD/ : {
+    *(.comment*)
+    *(.note*)
   }
 
 }

@@ -1313,9 +1313,14 @@ efiStatus efiAbi SEfiBootloader(efiHandle ImageHandle, efiSystemTable* SystemTab
       // (If the relocation type couldn't be handled, show a warning)
 
       if (RelocationCanBeHandled == true) {
-        Message(Ok, u"Successfully processed (type %d) relocation.", (uintptr)Type);
+
+        Message(Ok, u"Successfully processed type %d relocation.", (uintptr)Type);
+
       } else {
-        Message(Warning, u"Can't handle type %d relocation - are you using `--no-dynamic-linker`?", (uintptr)Type);
+
+        Message(Error, u"Can't handle type %d relocation - are you linking correctly?", (uintptr)Type);
+        goto ExitEfiApplication;
+
       }
 
     }

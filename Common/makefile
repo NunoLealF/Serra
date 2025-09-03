@@ -13,12 +13,14 @@ OBJD = x86_64-elf-objdump
 
 
 # [Linker flags]
-# -nostdlib: Don't use or link any standard libraries (except for libgcc).
+
 # -mno-red-zone: Disable the System V ABI 'red zone'; this is necessary for now.
+# -nostdlib: Don't use or link any standard libraries (except for libgcc).
 # -pie: Make a position-independent executable.
 # -Wl,--no-dynamic-linker: Tell the linker to provide its own startup code (no dynamic linker needed).
 
 # [Compiler flags]
+
 # -funsigned-char: Use unsigned chars for characters.
 # -ffreestanding: This is a freestanding environment. Also, implies fno-builtin.
 # -fno-jump-tables: Don't use jump tables - this makes linkage easier.
@@ -34,18 +36,23 @@ OBJD = x86_64-elf-objdump
 # -Wextra: Enable even more warnings. (Not sure why wall doesn't take care of this)
 # -Wpedantic: Be pedantic about the C standard / any possible mistakes
 
-LDFLAGS = -nostdlib -mno-red-zone -pie -Wl,--no-dynamic-linker
+LDFLAGS = -mno-red-zone -nostdlib -pie -Wl,--no-dynamic-linker
 CFLAGS = -std=c23 -funsigned-char -ffreestanding -fno-jump-tables -fno-plt -fpie -march=x86-64 -mcmodel=large -mmmx -msse -msse2 -mno-red-zone -O3 -Wall -Wextra -Wshadow -Wpedantic
 
 # [Compiler-specific options]
+
 # -maccumulate-outgoing-args (GCC): Necessary for the EFI/Microsoft ABI
-# --target=x86_64-elf (Clang): Specify the target being used
+
+# --target=x86_64-pc-none-elf (Clang): Specify the target being used
+# -fuse-ld=$(LD) (Clang): Use the specified linker (this is usually LLD)
 
 ifneq ('', '$(findstring gcc,$(CC))')
   CFLAGS += -maccumulate-outgoing-args
 else ifneq ('', '$(findstring clang,$(CC))')
-	CFLAGS += --target=x86_64-elf
+	CFLAGS += --target=x86_64-pc-none-elf
+	LDFLAGS += -fuse-ld=$(LD)
 endif
+
 
 # (Include the build configuration file, from the root directory)
 
@@ -218,4 +225,4 @@ Kernel/System/x64.o:
 
 Kernel/Kernel.elf: Kernel/Entry.o Kernel/Core.o Kernel/Disk/Disk.o Kernel/Disk/Bios/Bios.o Kernel/Disk/Efi/Efi.o Kernel/Disk/Fs/Crc32.o Kernel/Disk/Fs/Fs.o Kernel/Firmware/Efi.o Kernel/Graphics/Graphics.o Kernel/Graphics/Console/Console.o Kernel/Graphics/Console/Exceptions.o Kernel/Graphics/Console/Format.o Kernel/Graphics/Console/Efi/Efi.o Kernel/Graphics/Console/Graphical/Graphical.o Kernel/Graphics/Console/Vga/Vga.o Kernel/Graphics/Fonts/Bitmap.o Kernel/Libraries/String.o Kernel/Memory/Memory.o Kernel/Memory/Mm.o Kernel/Memory/x64/Memcpy.o Kernel/Memory/x64/Memset.o Kernel/System/x64.o
 	@echo "Building $@"
-	@$(CC) -T Linker.ld $(LDFLAGS) -o Kernel/Kernel.elf -ffreestanding -nolibc -nostdlib -lgcc $^
+	@$(CC) $(LDFLAGS) -Wl,--script=Linker.ld -o Kernel/Kernel.elf -ffreestanding -nolibc -nostdlib -lgcc $^

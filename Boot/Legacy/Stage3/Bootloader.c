@@ -1552,9 +1552,13 @@ void S3Bootloader(void) {
       // (If the relocation type couldn't be handled, show a warning)
 
       if (RelocationCanBeHandled == true) {
-        Message(Ok, "Successfully processed (type %d) relocation.", (uintptr)Type);
+
+        Message(Ok, "Successfully processed type %d relocation.", (uintptr)Type);
+
       } else {
-        Message(Warning, "Can't handle type %d relocation - are you using `--no-dynamic-linker`?", (uintptr)Type);
+
+        Panic("Can't handle type %d relocation - are you linking correctly?", (uintptr)Type);
+
       }
 
     }

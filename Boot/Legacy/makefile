@@ -14,13 +14,17 @@ QEMU = qemu-system-x86_64
 
 
 # [Linker flags]
+
 # -m32: Make sure we're only linking 32-bit code.
-# -Wl,--no-warn-rwx-segments: Don't warn about mixing data and executable sections.
+# -Wl,-no-pie: Make it clear we're not generating a position-independent binary.
 
 # [Compiler flags]
+
 # -ffunction-sections: Split up every function into a separate section in the object file.
 # (You want to place the main function in the beginning, so this is needed.)
 # -ffreestanding: This is a freestanding environment. Also, implies fno-builtin.
+# -fno-pic: Make it clear that we're not generating position-independent code.
+# -funsigned-char: Use unsigned characters by default.
 # -std=c23: Use the regular C23 standard (GCC 15+, Clang 20+)
 # -m32: Make sure we're only compiling 32-bit code.
 # -mno-mmx, -mno-sse, -mno-sse2: Make sure to *disable* MMX, SSE and SSE2 instructions.
@@ -28,25 +32,27 @@ QEMU = qemu-system-x86_64
 # -Wall: Enable all warnings.
 # -Wextra: Enable even more warnings. (Not sure why wall doesn't take care of this)
 # -Wpedantic: Be pedantic about the C standard / any possible mistakes
-# -funsigned-char: Use unsigned chars for characters.
 
-# [Emulator flags]
-# -cpu qemu64: Use QEMU's default 64-bit CPU (with the minimum feature set)
-# -m 128: Limit the virtual machine to 128 MiB of RAM
-
-LDFLAGS = -m32 -Wl,--no-warn-rwx-segments
-CFLAGS = -m32 -std=c23 -ffunction-sections -funsigned-char -ffreestanding -mno-mmx -mno-sse -mno-sse2 -Os -Wall -Wextra -Wpedantic
+LDFLAGS = -m32 -Wl,--no-pie
+CFLAGS = -m32 -std=c23 -ffunction-sections -ffreestanding -fno-pic -funsigned-char -mno-mmx -mno-sse -mno-sse2 -Os -Wall -Wextra -Wpedantic
 
 # [Compiler-specific options]
+
 # -Wno-discarded-qualifiers (GCC): Don't warn about discarding qualifiers
-# -Wno-ignored-qualifiers (Clang): Don't warn about discarding qualifiers
-# --target=x86_64-elf (Clang): Specify the target being used
+# -Wl,--no-warn-rwx-segments (GCC): Don't warn about mixing data and executable sections
+
+# -Wno-ignored-qualifiers (Clang): Don't warn about ignoring qualifiers
+# --target=i686-pc-none-elf (Clang): Specify the target being used
+# -fuse-ld=$(LD) (Clang): Use the specified linker (this is usually LLD)
 
 ifneq ('', '$(findstring gcc,$(CC))')
   CFLAGS += -Wno-discarded-qualifiers
+	LDFLAGS += -Wl,--no-warn-rwx-segments
 else ifneq ('', '$(findstring clang,$(CC))')
-	CFLAGS += --target=i686-elf -Wno-ignored-qualifiers
+	LDFLAGS += -fuse-ld=$(LD)
+	CFLAGS += --target=i686-pc-none-elf -Wno-ignored-qualifiers
 endif
+
 
 # (Include the build configuration file, from the root directory)
 
@@ -232,12 +238,12 @@ Shared/Rm/RmWrapper.o:
 
 Stage2/Stage2.bin: Stage2/Bootloader.o Shared/Disk/Disk.o Shared/Graphics/Exceptions.o Shared/Graphics/Format.o Shared/Graphics/Graphics.o Shared/Memory/Memory.o Shared/Rm/RmWrapper.o
 	@echo "Building $@"
-	@$(CC) -T Stage2/Linker.ld $(LDFLAGS) -o Stage2/Stage2.elf -ffreestanding -nolibc -nostdlib -lgcc $^
+	@$(CC) $(LDFLAGS) -Wl,--script=Stage2/Linker.ld -o Stage2/Stage2.elf -ffreestanding -nolibc -nostdlib -lgcc $^
 	@$(OBJC) -O binary Stage2/Stage2.elf Stage2/Stage2.bin
 
 Stage3/Stage3.bin: Stage3/Bootloader.o Stage3/Elf.o Stage3/Stub.o Stage3/Cpu/Cpu.o Stage3/Memory/A20/A20.o Stage3/Memory/A20/A20_Wrapper.o Stage3/Memory/Mmap/Mmap.o Stage3/Memory/Paging/Paging.o Stage3/Graphics/Vbe.o Stage3/Int/Idt.o Stage3/Int/Irq.o Stage3/Int/Isr.o Shared/Disk/Disk.o Shared/Graphics/Exceptions.o Shared/Graphics/Format.o Shared/Graphics/Graphics.o Shared/Memory/Memory.o Shared/Rm/RmWrapper.o
 	@echo "Building $@"
-	@$(CC) -T Stage3/Linker.ld $(LDFLAGS) -o Stage3/Stage3.elf -ffreestanding -nolibc -nostdlib -lgcc $^
+	@$(CC) $(LDFLAGS) -Wl,--script=Stage3/Linker.ld -o Stage3/Stage3.elf -ffreestanding -nolibc -nostdlib -lgcc $^
 	@$(OBJC) -O binary Stage3/Stage3.elf Stage3/Stage3.bin
 
 Bootx32.bin: Stage3/Stage3.bin
